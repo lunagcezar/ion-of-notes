@@ -1,0 +1,150 @@
+//! Tests for the pure workspace data model (public API only).
+
+use not_notion::model::{Block, BlockKind, Page, Workspace, WorkspaceError};
+
+fn block(id: &str, kind: BlockKind, text: &str) -> Block {
+    Block::new(id, kind, text)
+}
+
+fn page(id: &str, title: &str, parent: Option<&str>) -> Page {
+    let mut p = Page::new(id, title, "P");
+    p.parent = parent.map(|s| s.to_string());
+    p
+}
+
+#[test]
+fn seed_has_expected_pages() {
+    let ws = Workspace::seed("not-notion");
+    assert_eq!(ws.name, "not-notion");
+    assert_eq!(ws.version, 0);
+    let titles: Vec<&str> = ws.pages.iter().map(|p| p.title.as_str()).collect();
+    for expected in ["Home", "Getting Started", "Projects", "Tasks", "Notes"] {
+        assert!(titles.contains(&expected), "missing seeded page: {expected}");
+    }
+    assert!(
+        ws.pages.iter().any(|p| !p.rows.is_empty()),
+        "Tasks page should have table rows"
+    );
+}
+
+#[test]
+fn duplicate_page_id_is_rejected() {
+    let mut ws = Workspace::new("w");
+    ws.add_page(page("a", "A", None)).unwrap();
+    assert_eq!(
+        ws.add_page(page("a", "B", None)),
+        Err(WorkspaceError::DuplicateId("a".to_string()))
+    );
+    assert_eq!(ws.pages.len(), 1);
+}
+
+#[test]
+fn removing_page_removes_descendants() {
+    let mut ws = Workspace::new("w");
+    ws.add_page(page("a", "A", None)).unwrap();
+    ws.add_page(page("b", "B", Some("a"))).unwrap();
+    ws.add_page(page("c", "C", Some("b"))).unwrap();
+    ws.add_page(page("d", "D", None)).unwrap();
+    let removed = ws.remove_page("a").unwrap();
+    assert_eq!(removed.len(), 3);
+    assert!(removed.contains(&"a".to_string()));
+    assert!(removed.contains(&"c".to_string()));
+    assert!(ws.page("a").is_none());
+    assert!(ws.page("b").is_none());
+    assert!(ws.page("c").is_none());
+    assert!(ws.page("d").is_some());
+}
+
+#[test]
+fn breadcrumbs_are_root_first() {
+    let mut ws = Workspace::new("w");
+    ws.add_page(page("a", "A", None)).unwrap();
+    ws.add_page(page("b", "B", Some("a"))).unwrap();
+    ws.add_page(page("c", "C", Some("b"))).unwrap();
+    assert_eq!(ws.breadcrumbs("c"), vec!["A", "B", "C"]);
+    assert!(ws.breadcrumbs("missing").is_empty());
+}
+
+#[test]
+fn search_ranks_title_above_body_and_ignores_case() {
+    let mut ws = Workspace::new("w");
+    let mut notes = page("notes", "Notes", None);
+    notes
+        .blocks
+        .push(block("b1", BlockKind::Paragraph, "The roadmap lives here"));
+    ws.add_page(notes).unwrap();
+    ws.add_page(page("road", "Roadmap", None)).unwrap();
+    let results = ws.search("ROAD");
+    assert_eq!(results.len(), 2);
+    assert_eq!(results[0].page_id, "road");
+    assert!(results[0].score > results[1].score);
+}
+
+#[test]
+fn plain_text_joins_block_text() {
+    let mut p = page("p", "P", None);
+    p.blocks.push(block("b1", BlockKind::Paragraph, "Hello"));
+    p.blocks.push(block("b2", BlockKind::Divider, ""));
+    p.blocks.push(block("b3", BlockKind::Todo, "world"));
+    assert_eq!(p.plain_text(), "Hello world");
+}
+
+#[test]
+fn workspace_json_roundtrip() {
+    let ws = Workspace::seed("roundtrip");
+    let json = serde_json::to_string(&ws).unwrap();
+    let back: Workspace = serde_json::from_str(&json).unwrap();
+    assert_eq!(ws, back);
+}
+
+#[test]
+fn toggle_todo_flips_only_that_block() {
+    let mut p = page("p", "P", None);
+    p.blocks.push(block("t", BlockKind::Todo, "task"));
+    p.blocks.push(block("x", BlockKind::Paragraph, "other"));
+    let other = p.blocks[1].clone();
+    assert!(!p.blocks[0].checked);
+    assert!(p.blocks[0].toggle_todo());
+    assert!(p.blocks[0].checked);
+    assert!(!p.blocks[0].toggle_todo());
+    assert_eq!(p.blocks[1], other);
+}
+
+#[test]
+fn set_kind_preserves_text_and_id() {
+    let mut b = block("b", BlockKind::Paragraph, "keep me");
+    b.set_kind(BlockKind::Heading2);
+    assert_eq!(b.kind, BlockKind::Heading2);
+    assert_eq!(b.text, "keep me");
+    assert_eq!(b.id, "b");
+}
+
+#[test]
+fn bump_version_increments_once() {
+    let mut ws = Workspace::new("w");
+    assert_eq!(ws.version, 0);
+    ws.bump_version();
+    assert_eq!(ws.version, 1);
+}
+
+#[test]
+fn children_and_favorites_are_filtered() {
+    let mut ws = Workspace::new("w");
+    let mut fav = page("a", "A", None);
+    fav.favorite = true;
+    ws.add_page(fav).unwrap();
+    ws.add_page(page("b", "B", Some("a"))).unwrap();
+    ws.add_page(page("c", "C", None)).unwrap();
+    assert_eq!(ws.children(None).len(), 2);
+    assert_eq!(ws.children(Some("a")).len(), 1);
+    assert_eq!(ws.favorites().len(), 1);
+    assert_eq!(ws.favorites()[0].title, "A");
+}
+
+#[test]
+fn block_kind_labels_are_unique() {
+    let labels: Vec<&str> = BlockKind::all().iter().map(|k| k.label()).collect();
+    let unique: std::collections::HashSet<&str> = labels.iter().copied().collect();
+    assert_eq!(labels.len(), unique.len());
+    assert_eq!(BlockKind::Divider.label(), "Divider");
+}

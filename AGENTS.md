@@ -1,0 +1,453 @@
+# AGENTS.md — not-notion
+
+## Project Overview
+
+`not-notion` is a clean-room desktop workspace application: pages made of editable
+blocks, a page tree sidebar, quick search, and an inline table database. It is
+rebuilt from a written request and descriptions only. Nothing inside the original
+program, its files, or its folder is read, listed, run, or decompiled.
+
+The system has two sides, as requested:
+
+- **Client** — the desktop window (Rust + eframe/egui) and an API client that
+  only talks through a documented request/response contract.
+- **Server** — an in-process workspace service with a REST-shaped API, plus an
+  optional loopback HTTP listener (`--serve`) that exposes the very same API.
+  All state lives on the server; the client never mutates server state directly.
+  The decided target is a **self-hosted** server with **accounts, document
+  synchronization, sharing and real-time editing**; v1 keeps the same contract
+  in-process behind the seam (see `docs/adr-003-self-hosted-collaborative-api.md`).
+
+All human-readable documentation and all source code are written in **English**.
+The working name of the application is **not-notion**.
+
+The project is **open source** (MIT, `LICENSE`). That is a license fact, not a
+marketing feature: the person asked that "free & open for all" **not** be
+emphasized in the application. The window therefore shows no free-edition card
+or plan/feature-tier list. Because the product is now a self-hosted
+client/server system **with accounts**, the earlier "no accounts" framing
+(`spec-007`) is retired. The person also repeatedly emphasizes **DRY, Clean
+Code, SOLID and modularization**: the standing guidelines are collected below
+and in `docs/adr-002-architecture-guidelines.md`.
+
+## Tech Stack
+
+| Layer            | Technology                          | Notes                                              |
+| ---------------- | ----------------------------------- | -------------------------------------------------- |
+| Language         | Rust (stable, edition 2024)         | `cargo build`, `cargo test`                        |
+| Window / UI      | eframe 0.37 + egui 0.37             | Immediate-mode UI; light and dark themes            |
+| Data model       | `serde` + `serde_json`              | JSON persistence of the whole workspace             |
+| PNG output       | `image` (png feature only)          | `--screenshot` writes the rendered window           |
+| Display fonts    | Segoe UI (Windows system fonts)     | Optional bold "Strong" family; egui built-ins are the fallback |
+| Server transport | `std::net::TcpListener`             | Optional loopback HTTP/1.1 for `--serve`            |
+| IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
+| Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
+
+Dependencies are kept deliberately small. No web view, no browser engine, no
+network access at runtime except the optional local listener.
+
+## Development Methodology
+
+### Spec-Driven Development (SDD)
+
+Every feature starts with a spec. The order of work is:
+
+1. `AGENTS.md` — architecture, technologies, conventions (this file).
+2. `docs/requirements.md` — functional and non-functional requirements.
+3. `docs/data-model.md` — entities and relationships.
+4. `spec/spec-NNN-purpose.md` — one numbered spec per feature, with:
+   - purpose and scope,
+   - evidence used (what the reference pictures show),
+   - acceptance criteria in **Given / When / Then** form,
+   - test scenarios listed **before** implementation,
+   - a short plan and task list.
+5. Implementation following TDD (below).
+6. `CHANGELOG.md` — updated after each implemented spec.
+7. `AGENTS.md` and `docs/requirements.md` — revisited whenever the foundations
+   change.
+
+Specs live in `spec/` and are numbered sequentially (`001`, `002`, ... `009`).
+A spec is the boundary of one working session: nothing outside its scope is
+built in that session. Reference example for this workflow: `tcg-matchmaker`.
+The 29 pictures in `reference/` are the visual source of truth; every spec that
+touches the window records what was observed in them.
+
+### Test-Driven Development (TDD)
+
+- **No production code without a failing test first.**
+- Red → Green → Refactor for every feature and every bug fix.
+- Tests exercise public interfaces (`model`, `store`, `server`, `client`,
+  `screenshot`), not private implementation details.
+- **Tests never live in implementation files.** Every test is an integration
+  test in `tests/`, one file per module, following the Rust Book ch. 11. Shared
+  fixtures live in `tests/common/mod.rs` so no helper is duplicated (DRY).
+- Tests are deterministic: temporary files use unique names, no wall-clock
+  assertions, no running listeners left behind.
+- `cargo test` must be green before a spec is marked done in `CHANGELOG.md`.
+- The red step is recorded: tests are written, `cargo test` is run and observed
+  to fail (or fail to compile), then the implementation is added.
+
+## Architecture
+
+```
+src/
+  main.rs          CLI wiring only (desktop, --screenshot, --serve)
+  app.rs           composition root (bootstrap): wires adapters to ports
+  lib.rs           crate root and public re-exports
+  model.rs         Workspace, Page, Block, BlockKind, TableRow, search, tree
+  store.rs         WorkspaceStore port + JsonStore / NoStore adapters + JSON I/O + data_path
+  server.rs        WorkspaceServer, WorkspaceApi trait, HTTP router, listener
+  client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
+  collab.rs        accounts/roles, sharing, sync log, realtime DTOs, export tree
+  ollama.rs        AI assistant adapter: Ollama CLI in PATH or service at host:port
+  shortcuts.rs     pure keyboard-shortcut table (Combo -> Action) + docs table
+  screenshot.rs    ColorImage -> RGBA -> PNG
+  cli.rs           argument parsing
+  ui.rs            module root: declarations + public re-exports
+  ui/
+    palette.rs     colors, fonts, tab-title helper, theming (NFR-06)
+    icons.rs       original shape artwork (chrome, sidebar, book, controls)
+    app.rs         state, Command handling, eframe::App, preview hook
+    render.rs      tab strip, sidebar, breadcrumbs, page, blocks, Library,
+                   inline database and floating controls
+    dialogs.rs     quick search, Settings, Share, Inbox, slash-command menu
+tests/
+  common/mod.rs    shared test helpers (DRY; not a test target)
+  model.rs         one integration-test crate per module (named after it)
+  store.rs
+  server.rs
+  client.rs
+  collab.rs
+  cli.rs
+  screenshot.rs
+  ui.rs
+  app.rs
+  ollama.rs
+  shortcuts.rs
+  fidelity.rs
+  store_port.rs
+  integration.rs   end-to-end client/server/store scenario
+```
+
+Dependency direction: `ui -> client -> server -> model`, `server -> store`,
+and `app` (the composition root) wires the concrete adapters into the core.
+`model` and `store` have no UI dependencies. The `WorkspaceApi` trait is the
+seam that makes the client testable and allows a future remote client; the
+`WorkspaceStore` trait is the seam that makes persistence swappable. The
+domain (`model`) knows nothing about egui, eframe, the JSON file or any
+framework; adapters implement ports, never the reverse (see the layer table
+and dependency direction below).
+
+### Architectural patterns (DRY + SOLID)
+
+| Pattern | Where it is applied |
+| ------- | ------------------- |
+| Ports and adapters (hexagonal) | `WorkspaceApi` (transport) and `WorkspaceStore` (persistence) are traits declared by the core; the JSON file and loopback HTTP listener are adapters. |
+| Single Responsibility | One module per concern; `ui/` splits state, theming, icons, rendering, and dialogs. Each function has one job. |
+| Open / Closed | New transports or stores are added as new trait implementations; `WorkspaceServer` is not edited. |
+| Liskov Substitution | Any `WorkspaceApi` or `WorkspaceStore` implementation works everywhere the trait is expected (including test stubs). |
+| Interface Segregation | Traits are small: `WorkspaceApi::handle`, `WorkspaceStore::persist`. |
+| Dependency Inversion | `Client<A: WorkspaceApi>` and `WorkspaceServer` depend on abstractions, not on concrete transports or files. |
+| DRY | Shared test helpers in `tests/common/mod.rs`; colors in `ui::Palette`; one JSON envelope helper in `server`. |
+
+References consulted: The Rust Programming Language ch. 7 "Managing Growing
+Projects with Packages, Crates, and Modules" (module tree, visibility,
+encapsulation), ch. 11 "Test Organization" (integration tests,
+`tests/common/mod.rs`), and ch. 12 "Refactoring to Improve Modularity and
+Error Handling" (`main.rs` wiring, `lib.rs` logic, one task per function); the
+[Rust API Guidelines](https://github.com/rust-lang/api-guidelines) (traits for
+flexibility, small documented public interfaces, future-proofing); and the
+2026-11-05 architecture review (recorded in
+`docs/adr-002-architecture-guidelines.md` and
+`spec/spec-010-architecture-guidelines.md`). The evaluation of a suggested
+external library list is in `docs/adr-001-stack-evaluation.md`.
+
+### Improved architecture guidelines (review, 2026-11-05)
+
+The person supplied an architecture review for Rust desktop applications, the
+Rust API Guidelines, and Rust Book ch. 7. The conventions below are the
+**project guidelines** distilled from them and are the standing reference for
+this file. DRY, SOLID, Clean Architecture and DDD are **tools, not literal
+patterns to implement everywhere**. What actually matters is low coupling,
+high cohesion, explicit dependencies, encapsulation, ease of testing and ease
+of evolving a feature without breaking others — not the number of files.
+
+#### Two different decisions
+
+1. **Code modularization** — how files, modules, responsibilities and
+   dependencies are divided.
+2. **Business architecture** — how rules, entities, use cases and processes
+   are represented.
+
+DRY and SOLID help but do not settle either on their own. We do not start with
+microservices, distributed architecture, or a surplus of abstractions.
+
+#### Chosen style: pragmatic Modular Monolith
+
+- **Modular Monolith**: one executable, organized into modules with clear
+  responsibilities (one crate today).
+- **Clean Architecture, pragmatic**: business rules independent of database,
+  GUI and frameworks.
+- **DDD, selective**: entities, value objects and invariants only where the
+  domain has real complexity. Being a desktop app is not itself a reason to
+  use or avoid DDD, and DDD is not "a class for every noun".
+- **SOLID**: above all Single Responsibility and Dependency Inversion.
+- **DRY**: avoid duplicating *knowledge and rules*, not any code that merely
+  looks similar; do not force a shared abstraction onto similar-looking code.
+
+#### Layers, responsibilities and dependency direction
+
+| Layer | Responsibility | In this crate |
+| ----- | -------------- | ------------- |
+| domain | business rules, entities, invariants | `model.rs` |
+| application | use cases, orchestration, the contracts it needs | `server.rs` (routes / use cases, `WorkspaceApi`), `client.rs` (typed calls) |
+| infrastructure | database, filesystem, APIs, technical adapters | `store.rs` (`JsonStore`, `NoStore`, `data_path`), `server.rs` HTTP listener |
+| presentation | UI, commands, DTOs, input/output adapters | `ui/`; `PageDraft` / `PageSummary` are the DTO-ish shapes |
+| app (bootstrap) | startup, composition root, application state | `app.rs` (`build_server`, `build_desktop`), `main.rs` (CLI wiring only) |
+
+Fundamental rule: **the domain must not know the infrastructure or the GUI.**
+`model.rs` knows nothing about SQLite, egui, eframe or Tauri; no egui type
+appears in `model`, `store`, `server` or `client`.
+
+Direction of dependencies: `domain <- application <- infrastructure /
+presentation`. **The bootstrap connects the concrete implementations to the
+contracts the application needs** — adapters implement ports, never the
+reverse. Concretely: `ui -> client -> server -> model`, `server -> store`, and
+`app` wires `JsonStore` into `WorkspaceServer` and wraps it in `Client`;
+neither `main.rs` nor the window assembles that graph itself any more.
+
+#### Desktop presentation is an input adapter
+
+The GUI must never own business rules. A healthy flow is:
+
+```
+Frontend -> command (input adapter) -> use case -> domain
+                                          |
+                                          v
+                              repository / store contract
+                                          ^
+                                          |
+                              JSON / SQLite adapter
+```
+
+A Tauri command (or an egui / iced handler) only adapts data in and out and
+delegates to a use case; it implements no rule. This keeps the app testable
+without launching a window. In this crate `ui/app.rs` collects `Command`s and
+applies every change through `Client<A: WorkspaceApi>`.
+
+#### Modules, visibility and encapsulation (Rust Book ch. 7)
+
+Modules are not just files: they control **visibility and encapsulation**.
+
+- **Private by default.** Use `pub` only when there is a real need to expose;
+  avoid `pub` indiscriminately.
+- Use `pub(crate)` for functionality shared inside the crate but not part of
+  the public API; keep implementation details private.
+- Use `pub use` in a module root to build one clean public facade:
+
+  ```rust
+  // domain/project/mod.rs
+  mod entity;
+  mod errors;
+  mod repository;
+
+  pub use entity::Project;
+  pub use errors::ProjectError;
+  pub(crate) use repository::ProjectRepository;
+  ```
+
+- In-repo examples: `ui.rs` declares five private submodules and re-exports
+  only `NotionApp` and the palette helpers; `lib.rs` re-exports the crate's
+  public facade; inner `Command` / `ViewState` are `pub(super)`.
+
+#### When to create a file or module
+
+A file represents **one coherent unit of responsibility** — not "one struct
+per file" or "one class per file".
+
+| Situation | Decision |
+| --------- | -------- |
+| A file with many responsibilities | split it |
+| Related concepts in one module | keep them together |
+| A small struct tightly coupled to another | the same file is fine |
+| A large infrastructure implementation | give it its own file |
+| A module exposing too many internals | revisit encapsulation |
+
+There is no magic line count: one cohesive 400-line file can be better than
+four artificially separated 100-line files. Avoid `invoice_id.rs`-style
+fragmentation of tiny definitions. Do not create empty
+`domain/ application/ infrastructure/` folders for features that do not need
+them (e.g. settings that only store a few preferences), and do not create
+abstractions in advance — a single concrete implementation is enough until
+there is a real need to swap, isolate or reuse it.
+
+#### Pragmatic DDD and domain invariants
+
+DDD is chosen by **domain complexity**: complex rules, invariants, multi-step
+processes, a specific vocabulary, several bounded contexts, rules that change
+often. A file manager needs simple modularization; a finance or engineering
+tool may need pragmatic DDD. In Rust the domain is expressed with `struct`,
+`enum`, functions, modules and traits — not class-per-noun OOP. Protect
+invariants with private fields and validating constructors returning
+`Result`, and give each context its own error type:
+
+```rust
+pub struct Project { id: ProjectId, name: String }  // fields private
+
+impl Project {
+    pub fn create(id: ProjectId, name: String) -> Result<Self, ProjectError> {
+        if name.trim().is_empty() { return Err(ProjectError::InvalidName); }
+        Ok(Self { id, name })
+    }
+    pub fn name(&self) -> &str { &self.name }
+}
+```
+
+Pragmatic tradeoff in this crate: `model` structs are serde-friendly data
+shapes with public fields (needed for JSON persistence and immediate-mode
+editing), so invariants are enforced at the boundaries instead — `server`
+rejects empty page titles, `Workspace::add_page` rejects duplicate ids and
+unknown parents (`WorkspaceError`). If the domain grows real behavior, add
+private-field value objects and validated constructors then, not before.
+
+#### Growth path: feature-based modules
+
+The review prefers, for large projects, organizing first by functional
+context and using layers **inside** each feature:
+
+```
+src/
+  shared/            cross-cutting errors / helpers
+  modules/
+    users/{domain, application, infrastructure}
+    projects/{domain, application, infrastructure}
+    settings/        (only the layers it actually needs)
+  presentation/
+  app/               bootstrap / composition root
+```
+
+Advantages: each feature owns its code, responsibilities are easy to locate,
+modules evolve independently, dependencies are visible, and a module can
+later be extracted into its own crate. Decision: keep today's layered,
+single-crate layout while there is one bounded context (the workspace); when
+a second clearly separate context appears, migrate one feature at a time into
+`src/modules/<feature>/`. Split into multiple crates only with a real need for
+independent versioning/build, not pre-emptively. Architecture is not measured
+by file count.
+
+#### Team conventions (quick reference)
+
+| Principle | Convention |
+| --------- | ---------- |
+| Modularization | by feature/context as the project grows; a layered modular monolith today |
+| Architecture | pragmatic Clean Architecture |
+| Domain | independent of frameworks and UI |
+| Use cases | one business operation per unit of implementation |
+| Persistence | repository/store contracts + adapters |
+| Visibility | private by default (`pub(crate)`, `pub use` facade) |
+| Traits | only at boundaries that need abstraction |
+| Errors | specific types per context |
+| DTOs | separate from domain entities |
+| Tests | unit tests in the domain, integration tests at the adapters |
+| Crates | split only with a real need for independence |
+
+### API contract (server)
+
+| Method   | Path                    | Purpose                              |
+| -------- | ----------------------- | ------------------------------------ |
+| `GET`    | `/health`               | Liveness probe                       |
+| `GET`    | `/api/workspace`        | Full workspace snapshot              |
+| `PUT`    | `/api/workspace`        | Replace workspace (used by the UI)   |
+| `GET`    | `/api/pages`            | Page summaries                       |
+| `GET`    | `/api/pages/{id}`       | One page                             |
+| `POST`   | `/api/pages`            | Create page from a draft             |
+| `PATCH`  | `/api/pages/{id}`       | Update one page                      |
+| `DELETE` | `/api/pages/{id}`       | Delete page and its descendants      |
+| `GET`    | `/api/search?q=`        | Ranked search results                |
+| `GET`    | `/api/members`          | People directory (accounts / roles)  |
+| `POST`   | `/api/members`          | Invite a member (`MemberDraft`)       |
+| `GET`    | `/api/shares?page=`     | Permission grants for a page          |
+| `PUT`    | `/api/shares`           | Set a permission (`Share`)            |
+| `GET`    | `/api/sync?since=`      | Versioned changes after a cursor      |
+| `GET`    | `/api/export`           | Notion-style markdown + People export |
+| `GET`    | `/api/realtime`         | Decided WebSocket / CRDT contract     |
+
+Responses are `ApiResponse { status: u16, body: String }`. JSON bodies are
+enveloped as `{ "data": ..., "error": null | "message" }`. Status codes follow
+standard REST (`200`, `201`, `400`, `404`). The loopback server exposes these
+unversioned routes today; the full production contract (`/api/v1`, sessions,
+`WS /ws/workspace/{id}`) is **decided** in
+`docs/adr-003-self-hosted-collaborative-api.md` and scoped by
+`spec/spec-011-collaborative-server.md`. The DTOs live in `src/collab.rs`.
+
+## Code Conventions
+
+- Rust idioms: `Result` over panics in library code, no `unwrap()` on user input.
+- Public functions get short doc comments; module-level docs explain the seam.
+- Pure logic goes in `model.rs`; I/O goes in `store.rs`; protocol logic goes in
+  `server.rs`. No egui types leak into `model`, `server`, `client`, or `store`.
+- **No `#[cfg(test)]` modules in `src/`.** Tests live in `tests/` as separate
+  crates and use only the public API; shared helpers go in `tests/common/mod.rs`.
+- Persistence is reached only through the `WorkspaceStore` port; the JSON
+  adapter is the only code that touches the data file.
+- UI copy is short, neutral sample text. No brand names, logos, photos, or long
+  passages copied from anywhere.
+- Colors and text styles are centralized in `ui::Palette`.
+- Every user-visible command is also reachable through the client API.
+
+## Commands
+
+| Command                                  | Purpose                                  |
+| ---------------------------------------- | ---------------------------------------- |
+| `cargo build`                            | Build the desktop app                    |
+| `cargo test`                             | Run all integration test crates          |
+| `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
+| `cargo run -- --serve 127.0.0.1:8787`   | Run the loopback API server              |
+
+The window opens at 1322x861 logical points, the size of the reference
+pictures. OS decorations are disabled (`with_decorations(false)`): the Rust
+tab strip is the only window frame and doubles as a drag handle.
+`NOT_NOTION_SHOW=library|share|inbox|settings|search|tasks|newtab|ai|shortcuts`
+is a harmless preview hook: it opens one pictured state on startup so it can be
+captured with `--screenshot`. Normal runs (and the rebuild check) never set it.
+
+Do not start long-running watchers or dev servers during a build session.
+
+## Docs Maintenance
+
+- Behavior change → update `docs/requirements.md` and the relevant spec.
+- New entity → update `docs/data-model.md`.
+- Each implemented spec → add a `CHANGELOG.md` entry.
+- Foundation change → update `AGENTS.md`.
+- Architecture review / improved guidelines → **always add the improved
+  project guidelines in `AGENTS.md`** (this file) and record the decision as
+  an ADR under `docs/adr-NNN-*.md`.
+- Stack/library decision → add an ADR under `docs/adr-NNN-*.md`.
+- Keep `docs/unknowns.md` in sync with open questions about the reconstruction.
+
+## External References
+
+- eframe / egui: https://docs.rs/eframe/latest/eframe/ and https://docs.rs/egui/latest/egui/
+- Rust API Guidelines: https://github.com/rust-lang/api-guidelines
+- The Rust Programming Language, ch. 7 "Managing Growing Projects with
+  Packages, Crates, and Modules":
+  https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html
+- 2026-11-05 architecture review (Modular Monolith + Clean Architecture +
+  selective DDD, feature-based growth path, visibility rules, bootstrap layer):
+  recorded in `docs/adr-002-architecture-guidelines.md` and
+  `spec/spec-010-architecture-guidelines.md`.
+- Spec Driven Development: https://www.ibm.com/think/topics/spec-driven-development
+- Self-hosted collaborative API decision (accounts, sync, sharing, real-time,
+  and the workspace export tree): `docs/adr-003-self-hosted-collaborative-api.md`
+  and `spec/spec-011-collaborative-server.md`.
+- Keyboard shortcuts: the app menu in `reference/picture-6.png` ..
+  `reference/picture-11.png` and
+  <https://www.notion.com/help/keyboard-shortcuts> (implemented in
+  `shortcuts.rs`, `spec/spec-012-interaction-polish.md`).
+- AI assistant transport: Ollama — the `ollama` CLI in `PATH` or the service at
+  a network `host:port` (`OLLAMA_HOST`, default `127.0.0.1:11434`). See
+  `src/ollama.rs` and the Settings → AI assistant page.
+- The earlier free/paid feature references (`/product/features`, `/pricing`)
+  informed the now-retired `spec-007` framing. The app no longer emphasizes a
+  free edition; visual scope is the 29 pictures in `reference/`. Mail &
+  Calendar (`reference/picture-22.png`) is deliberately not implemented.

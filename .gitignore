@@ -1,0 +1,12 @@
+# Rust build output
+/target/
+
+# rustfmt / editor backup files
+**/*.rs.bk
+
+# Local OS / editor clutter
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

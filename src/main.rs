@@ -1,0 +1,39 @@
+//! Entry point: desktop window (default or `--screenshot`) or `--serve`.
+
+use not_notion::app;
+use not_notion::cli::{Args, Mode};
+use not_notion::server::serve_forever;
+use not_notion::ui::NotionApp;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse(std::env::args());
+    match args.mode {
+        Mode::Serve { addr } => {
+            // The composition root wires the JSON adapter to the server port.
+            serve_forever(&addr, app::build_server())?;
+            Ok(())
+        }
+        Mode::Desktop { screenshot } => {
+            let options = eframe::NativeOptions {
+                viewport: egui::ViewportBuilder::default()
+                    .with_inner_size([1322.0, 861.0])
+                    .with_min_inner_size([900.0, 600.0])
+                    .with_title("not-notion")
+                    // The window frame (tab strip + minimize/maximize/close) is
+                    // already drawn in Rust by `ui::render::render_title_bar`.
+                    // Asking the OS for decorations too would show two frames.
+                    .with_decorations(false),
+                ..Default::default()
+            };
+            let creator: eframe::AppCreator<'_> = Box::new(
+                move |cc: &eframe::CreationContext<'_>| {
+                    let app: Box<dyn eframe::App> =
+                        Box::new(NotionApp::new(cc, screenshot));
+                    Ok(app)
+                },
+            );
+            eframe::run_native("not-notion", options, creator)?;
+            Ok(())
+        }
+    }
+}

@@ -1,0 +1,256 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+The format follows "Keep a Changelog" and the SDD cycle described in
+`AGENTS.md`: spec → plan → tests (red) → code (green) → changelog → docs.
+
+## [Unreleased]
+
+### Added — spec-001-project-foundation
+
+- Created `AGENTS.md` with the architecture (client + server), the Rust/eframe
+  stack, the SDD workflow, the TDD discipline, the API contract, and commands.
+- Created `docs/requirements.md` (functional FR-01..FR-33 and non-functional
+  NFR-01..NFR-07) and `docs/data-model.md` (Workspace, Page, Block, TableRow,
+  invariants).
+- Created `spec/spec-001` .. `spec/spec-006` with Given/When/Then acceptance
+  criteria and test scenarios written **before** implementation.
+- Created the Cargo project in `app/` and confirmed `cargo build` succeeds.
+
+### Added — spec-002-domain-model
+
+- Red: ten tests in `src/model.rs` were written first and observed failing.
+- Green: `Workspace`, `Page`, `Block`, `BlockKind`, `TableRow`, tree helpers,
+  ranked case-insensitive search, breadcrumbs, JSON round-trip, version bump.
+
+### Added — spec-003-workspace-server
+
+- Red: twelve tests in `src/server.rs` were written first.
+- Green: `WorkspaceApi` trait, `WorkspaceServer` with REST-shaped routes,
+  JSON envelopes, persistence hooks, HTTP parsing/formatting, and the
+  `--serve` loopback listener.
+
+### Added — spec-004-client-layer
+
+- Red: eight tests in `src/client.rs` were written first (including a stub
+  API for error paths).
+- Green: generic `Client<A: WorkspaceApi>` with typed methods and
+  `ClientError` mapping for HTTP and decode failures.
+
+### Added — spec-005-desktop-ui
+
+- Red: palette and menu tests in `src/ui.rs` were written first.
+- Green: eframe/egui window with sidebar, breadcrumb top bar, editable title,
+  ten block renderers, slash-command menu, inline table and board views,
+  quick search, settings/theme dialog, expandable page tree.
+- All UI state changes go through `Client`.
+
+### Added — spec-006-screenshot-mode
+
+- Red: PNG and CLI tests were written first.
+- Green: `--screenshot <file.png>` draws ~120 frames, captures the window via
+  `egui::Context::request_screenshot`, writes a PNG, and exits.
+- Verified by running `--screenshot app/shots/now.png` and inspecting the PNG.
+
+### Changed — visual polish after the first screenshot review
+
+- Reworked the inline table so column widths are fixed; full row names are now
+  visible instead of being clipped, with striped rows and colored status chips.
+- Status chips are clickable and cycle through `Not started` → `In progress` →
+  `Done`, and the slash-command menu gained a `Delete block` action
+  (FR-14).
+- Verified the Tasks page and Board view by running `--screenshot` with the
+  Tasks page set as the landing page; removed the temporary data file so the
+  app re-seeds the normal demo workspace on the next start.
+- Cleaned compiler warnings; `cargo build` and `cargo test` are clean and green.
+
+### Added — spec-007-free-and-open-for-all
+
+- The person clarified the app is non-profit, open, and free for all. Added the
+  `edition` module: one free edition, MIT license, and a full feature list
+  where **every** feature resolves to `Free` — including capabilities normally
+  sold as paid add-ons. No paid tiers, upgrades, billing, or accounts.
+- Red: four tests in `src/edition.rs` were written first and observed failing;
+  green: the policy constants and `tier_for` were corrected.
+- UI: a "Free & open for all" card in the sidebar (click opens Settings) and a
+  "Plans & access" section in Settings listing every feature with its `Free`
+  tier. Added `LICENSE` and `license = "MIT"` to `Cargo.toml`.
+- With 29 dark-theme reference pictures now available, the window defaults to
+  the dark theme (light is still a toggle); `docs/unknowns.md` U-01 resolved.
+
+### Changed — spec-008-modular-architecture
+
+- The person noticed tests and implementation shared a file. **All eight
+  `#[cfg(test)] mod tests` blocks were removed from `src/`** and relocated to
+  one integration-test crate per module in `tests/` (`model`, `store`, `server`,
+  `client`, `cli`, `edition`, `screenshot`, `ui`, `integration`), following the
+  Rust Book ch. 11 test organization.
+- DRY: four duplicated temporary-file helpers and a duplicated
+  `load_or_seed_creates_file` test were replaced by single definitions in
+  `tests/common/mod.rs` and `tests/store.rs`; envelope decoding now uses a
+  shared helper.
+- SRP: the 1700-line `ui.rs` was split into `ui/palette.rs`, `ui/icons.rs`,
+  `ui/app.rs`, `ui/render.rs`, and `ui/dialogs.rs`; `ui.rs` is now a 16-line
+  module root with declarations and re-exports.
+- DIP / OCP: added the `WorkspaceStore` persistence port with `JsonStore` and
+  `NoStore` adapters. `WorkspaceServer` now depends on the trait and exposes
+  `with_store`; `new` and `with_path` keep their original behavior.
+- Red: the four new port tests failed to compile (missing `WorkspaceStore`);
+  green: the port, adapters, and server change were implemented.
+- Researched Rust Book ch. 11/12 and Rust API Guidelines; recorded the
+  architectural patterns in `AGENTS.md` and the evaluation of the suggested
+  library list in `docs/adr-001-stack-evaluation.md` (agree: Rust, Serde;
+  defer: Axum, PostgreSQL, SQLx, WebSocket, Yrs behind the trait seams;
+  decline: Slint, Tauri, OAuth2 for this scope). No new dependencies.
+- `cargo build` and `cargo test` are clean and green; a fresh `--screenshot`
+  was compared with the 29 dark-theme reference pictures.
+
+### Added — spec-009-visual-fidelity
+
+- Re-opened all 29 reference pictures and rebuilt the window to match them:
+  the window is now **1322×861** (the size of the pictures) instead of
+  1280×800.
+- Added a custom top tab strip (sidebar toggle, quick-note button with a
+  notification dot, back/forward history, an active page tab, a new-tab
+  button, and minimize / maximize / close controls).
+- Reshaped the sidebar: a "Search or ask" box with a `Ctrl+K` hint, Library /
+  Settings / Inbox rows, lowercase Favorites and Private sections, a
+  "Customize sidebar" row, the free-edition card, and a local account row.
+- Reshaped the breadcrumb bar (page icons, crumbs, Share with icon, link,
+  star, more-actions) and removed the timestamp that the pictures do not
+  show.
+- Reshaped the page column: an original open-book icon drawn from shapes, a
+  very large bold title, a callout with a small page icon, bold section
+  headings, and block handles that appear only on hover. Neutral English demo
+  content shaped like the pictured document page.
+- Added the opened states the pictures show: a full-width **Library** table,
+  a **Share** popover, an **Inbox** panel, and a wide two-column **Settings**
+  window with a navigation rail. Back/forward page history and tab-title
+  shortening were added too.
+- Typography: Segoe UI is used when the operating-system fonts are present,
+  with a bold "Strong" family for titles and headings; egui's built-in fonts
+  remain the fallback.
+- Added `NOT_NOTION_SHOW` (a harmless preview hook) so each opened state can
+  be rendered with `--screenshot` and compared with the pictures. Normal runs
+  and the rebuild check never set it.
+- Red: six tests in `tests/fidelity.rs` were written first and observed
+  failing (missing `chrome`, `strong_font`, `tab_title`, and the reshaped
+  demo page). Green: `palette.rs`, `icons.rs`, `app.rs`, `render.rs`,
+  `dialogs.rs`, `model.rs` and `main.rs` were implemented.
+- Updated `docs/requirements.md` (FR-37..FR-42, NFR-03),
+  `docs/unknowns.md`, `AGENTS.md` and `README.md`.
+
+### Changed — spec-010-architecture-guidelines
+
+- The person added an architecture review (Rust API Guidelines, Rust Book
+  ch. 7, and a ChatGPT review of Modular Monolith / Clean Architecture /
+  pragmatic DDD) and asked that improved project guidelines always live in
+  `AGENTS.md`. Added them there: the two distinct decisions (code
+  modularization vs business architecture), layer responsibilities and
+  dependency direction, the `app`/bootstrap layer, Rust Book ch. 7 visibility
+  rules (private by default, `pub(crate)`, `pub use` facade), file-creation
+  heuristics, pragmatic DDD invariants and context errors, desktop
+  presentation as an input adapter, the feature-based growth path, and a
+  team-conventions table. Added both new references to External References.
+- Applied the review with one contained refactor: new `src/app.rs` composition
+  root (`build_server`/`build_desktop` and testable `*_at` variants) wires the
+  JSON adapter to the server and client ports. `main.rs` (CLI wiring only) and
+  `ui/app.rs` now delegate to it instead of duplicating the wiring (DRY / SRP).
+- Moved `data_path()` out of `ui/palette.rs` (theming) into `store.rs` (the
+  persistence adapter), since the data file location is an infrastructure
+  decision; removed the stale `ui.rs` re-export and the unused import.
+- Red: two tests in `tests/app.rs` were written first and observed failing
+  (unresolved `not_notion::app`); green: the composition root and its wiring
+  were implemented. `cargo build` and `cargo test` are clean and green.
+- Recorded the decision in `docs/adr-002-architecture-guidelines.md` and this
+  session in `spec/spec-010-architecture-guidelines.md`.
+- Pure refactor: no behavior, API, or visual change; a fresh `--screenshot`
+  was compared with all 29 reference pictures.
+
+### Changed — spec-011-collaborative-server (self-hosted client/server)
+
+- The person de-emphasized "free & open for all": the app is **open source**
+  (MIT) as a license fact, not a marketing feature, and the product is now a
+  **self-hosted client/server with accounts**. Retired `spec-007` and removed
+  the `edition` module, the sidebar "Free & open for all" card and the Settings
+  "Plans & access" feature-tier list. The sidebar card is now "Invite members"
+  and Settings has a neutral "Workspace & sync" section; the demo callout
+  describes the self-hosted, syncing, collaborative server.
+- **Decided the API** in `docs/adr-003-self-hosted-collaborative-api.md`:
+  REST/JSON (`/api/v1`, accounts/sessions, envelopes) plus a WebSocket CRDT
+  real-time channel, a versioned sync log, sharing/permissions DTOs, and the
+  Notion-style export tree. `docs/adr-001-*` is annotated as superseded by this
+  decision; `docs/unknowns.md` U-03/U-07 resolved.
+- Red: ten tests in `tests/collab.rs` were written first and observed failing;
+  green: a new `src/collab.rs` domain module (members/roles, shares/access,
+  sync `Change`/`SyncBatch`, `RealtimeContract`, `ExportFile`, `CollabState`),
+  its re-exports, and `page_markdown` / `people_csv` / `export_tree`.
+- `WorkspaceServer` now owns a `CollabState`; all mutations go through one
+  `write(op, page_id)` path that appends a `Change` (DRY / SRP). New routes
+  `/api/members`, `/api/shares`, `/api/sync`, `/api/export`, `/api/realtime`
+  and typed `Client` methods expose the decided contract. ADR-003 scopes the
+  production Axum/PostgreSQL/WebSocket/Yrs adapters as later work behind the
+  existing seams — no new dependency added.
+- Export reproduces the supplied structure: one markdown file per page,
+  "folder" pages linking to their children (URL-encoded paths), and a `People`
+  folder with `People.md`, `People_all.csv` and one membership file per person.
+- Updated `AGENTS.md` (overview, module tree, API contract table, references),
+  `README.md`, `LICENSE`, `docs/requirements.md` (FR-34..FR-36, FR-43,
+  NFR-04, out-of-scope notes), `docs/data-model.md`, `docs/unknowns.md`.
+  Emphasized DRY / Clean Code / SOLID / modularization.
+- `cargo build` clean, `cargo test` green; a fresh `--screenshot` was compared
+  with all 29 reference pictures.
+
+### Added — spec-012-interaction-polish
+
+- The person asked to drop mail/calendar, integrate the AI assistant with
+  Ollama, remove the duplicated native window frame, fix the misplaced `×`,
+  implement the app-menu + help-site keyboard shortcuts, and give the tab-strip
+  `+` the behaviour shown in the two attachments. Scope, evidence and
+  Given/When/Then criteria are in `spec/spec-012-interaction-polish.md`.
+- **Frameless window:** `main.rs` now builds the viewport with
+  `.with_decorations(false)`; the Rust-drawn tab strip is the only frame and
+  starts a window drag (`ViewportCommand::StartDrag`) when dragged.
+- **Mail & Calendar** removed from the Settings rail; no mail/calendar feature
+  is implemented (FR-45).
+- **Ollama AI assistant:** new `src/ollama.rs` adapter detects either the
+  `ollama` CLI in `PATH` or a service at a network `host:port` (`OLLAMA_HOST`,
+  default `127.0.0.1:11434`). It builds `/api/generate` and `/api/tags`
+  requests with the standard library only, parses plain and chunked HTTP
+  replies, auto-selects an installed model, and runs on a background thread so
+  the window stays responsive. Settings → AI assistant shows the connection
+  status, endpoint, model and a test question; "Search or ask" can ask the
+  model and display the answer. Verified end-to-end against the local Ollama
+  service (a real answer was returned).
+- **Keyboard shortcuts:** new pure `src/shortcuts.rs` table covers the app menu
+  (File/Edit/View/History/Window/Help) and
+  <https://www.notion.com/help/keyboard-shortcuts>. `ui/app.rs` translates
+  exact key combinations into `Command`s and consumes the events so they do not
+  leak into text editors. Added undo/redo, duplicate page, copy link/name,
+  zoom, full screen, back/forward, reload, theme toggle and markdown prefixes
+  (`# `, `## `, `* `, `[] `, …). `F1` opens an in-app shortcut sheet.
+- **Add-tab `+`:** the tab strip now keeps a list of tabs. `+` / Ctrl+T opens
+  the "Open in new tab…" switcher from the attachments (search field, filter
+  row, New chat / New page, Today / Past week page groups, live preview pane,
+  footer hints `Ctrl+↵ / Ctrl+L / Shift+Ctrl+K`). Rows open in a new tab;
+  Ctrl+W closes a tab, Ctrl+Shift+T reopens it, Ctrl+Tab cycles tabs.
+- **Preferences window:** the close `×` is now a fixed top-right control in a
+  rounded well (matching `reference/picture-15..29`) instead of sitting on the
+  heading row. The rail gained glyphs and is wider; Appearance / Input options
+  / Language & time rows now mirror the reference layout.
+- Red: `tests/shortcuts.rs` (6 tests) and `tests/ollama.rs` (7 tests) were
+  written first; green: both modules implemented. `cargo build` clean,
+  `cargo test` green, and a fresh `--screenshot` compared with all 29
+  reference pictures. A stale demo `workspace.json` from an earlier session
+  was reset so the default view re-seeds the clean 5-page workspace.
+
+### Notes
+
+- Visual design now follows the 29 reference pictures (dark theme, tab strip,
+  sidebar, centered page column, and the Library / Share / Inbox / Settings
+  opened states); see `docs/unknowns.md`.
+- No code, assets, or text were taken from the original program (clean room).
+- 78 tests pass (all in `tests/`, plus one end-to-end scenario); the red step
+  for each spec was observed before implementation. `cargo build` and
+  `cargo test` are clean and green, and `--screenshot` was compared by eye
+  with the 29 reference pictures after each build.
