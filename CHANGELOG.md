@@ -244,6 +244,56 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   reference pictures. A stale demo `workspace.json` from an earlier session
   was reset so the default view re-seeds the clean 5-page workspace.
 
+### Added — spec-013-interaction-polish-and-modularity
+
+- **Architecture answer** (`docs/adr-004-modularization-decision.md` and
+  `AGENTS.md`): the `tcg-matchmaker` worker tree is feature-first
+  modularization (vertical slices), not DDD. The decision stays the pragmatic
+  Modular Monolith of ADR-002: split a file when it holds more than one
+  coherent responsibility, never by line count or one-struct-per-file; adopt
+  feature-based `src/modules/<feature>/` only when a second bounded context
+  appears. Applied with two contained extractions instead of a layer scaffold:
+  `ui/switcher.rs` (one shared search / new-tab window — DRY) and
+  `ui/page_icon.rs` (page-icon feature). `ui.rs` remains the small facade.
+- **Bug — keyboard hijack:** `ui/app.rs` now only trusts a key as a shortcut
+  when the window has keyboard focus, the pointer is over the window, and the
+  event's modifiers agree with the frame's held modifiers (pure, tested
+  `shortcuts::shortcut_context_ok`). Key events arriving after the pointer
+  leaves the window, or with a stale `Ctrl`/`Alt` left over from a focus
+  change, no longer turn ordinary typing into global commands.
+- **Bug — sidebar overflow:** the sidebar page list is now a bounded vertical
+  `ScrollArea`; the search box and the account / invite / customize group stay
+  fixed when the list grows.
+- **Compact top bar:** 36 px tab strip, no person/settings control (Settings
+  lives in the sidebar), tighter breadcrumb row.
+- **Shared search / new-tab window:** both opened states now use one renderer
+  with a hint field, Today / Past week groups, a preview (highlight) pane, a
+  footer of keyboard hints, and working **show/hide highlight pane** and
+  **show/hide filters** toggles. `NOT_NOTION_SHOW=search|newtab` previews them.
+- **Page actions:** the "..." control opens a searchable page-actions menu
+  (Copy link, Duplicate, Move to Trash, Show/hide sidebar, …) with Appearance
+  & layout (Default / Serif / Mono, Small text, Full width), Available offline
+  / Lock page toggles and a Last edited footer. `NOT_NOTION_SHOW=pageactions`
+  previews it.
+- **Show / hide sidebar:** the tab-strip panel control (tooltip + `Ctrl+\\`)
+  and the breadcrumb ">" control toggles it.
+- **Block handles:** the "+" inserts a block **below** (Alt-click inserts
+  **above**) and opens the block menu for the new block; the six-dot grip is
+  now click-and-drag, reorders blocks to the hovered position, and opens a
+  categorized Notion-style block menu (Suggested / Basic blocks / Media /
+  Database / Advanced blocks / Inline / Embeds).
+- **Customizable page icon:** clicking the large book icon opens an
+  Emoji / Icons / Upload picker with a filter field, shuffle and Remove. The
+  chosen icon is stored on the `Page` and rendered by one helper in the
+  header, sidebar, breadcrumbs, tab strip and switcher preview. Segoe UI
+  Symbol and Times New Roman were registered as fallback faces for the glyphs
+  and the Serif font style. `NOT_NOTION_SHOW=iconpicker` previews it.
+- Red: two tests in `tests/shortcuts.rs` were written first and observed
+  failing; green: the pure guard and the UI wiring were implemented.
+  `cargo build` clean, `cargo test` green (80 tests), and a fresh
+  `--screenshot` was compared with all 29 reference pictures. A stale demo
+  `workspace.json` was reset so the clean 5-page workspace re-seeds.
+
 ### Notes
 
 - Visual design now follows the 29 reference pictures (dark theme, tab strip,

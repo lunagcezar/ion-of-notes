@@ -270,7 +270,10 @@ impl Workspace {
 
         // Neutral demo content shaped like the pictured document page: a
         // callout, bold section headings, body paragraphs and a short list.
-        let mut home = make("p-home", "Home", "H", None);
+        // An empty icon is the default open-book artwork. The other pages use
+        // customizable glyphs so the choice is also visible in the sidebar,
+        // breadcrumbs and tabs (spec-013).
+        let mut home = make("p-home", "Home", "", None);
         home.favorite = true;
         home.blocks = vec![
             Block::new(
@@ -295,7 +298,7 @@ impl Workspace {
         ];
         ws.add_page(home).expect("seed: home");
 
-        let mut start = make("p-start", "Getting Started", "G", None);
+        let mut start = make("p-start", "Getting Started", "✦", None);
         start.blocks = vec![
             Block::new("s1", BlockKind::Heading1, "Getting Started"),
             Block::new(
@@ -315,7 +318,7 @@ impl Workspace {
         ];
         ws.add_page(start).expect("seed: getting started");
 
-        let mut projects = make("p-projects", "Projects", "P", None);
+        let mut projects = make("p-projects", "Projects", "◆", None);
         projects.blocks = vec![
             Block::new("p1", BlockKind::Heading1, "Projects"),
             Block::new(
@@ -329,7 +332,7 @@ impl Workspace {
         ];
         ws.add_page(projects).expect("seed: projects");
 
-        let mut tasks = make("p-tasks", "Tasks", "T", Some("p-projects"));
+        let mut tasks = make("p-tasks", "Tasks", "☑", Some("p-projects"));
         tasks.favorite = true;
         tasks.blocks = vec![
             Block::new("t1", BlockKind::Heading1, "Tasks"),
@@ -348,7 +351,7 @@ impl Workspace {
         ];
         ws.add_page(tasks).expect("seed: tasks");
 
-        let mut notes = make("p-notes", "Notes", "N", None);
+        let mut notes = make("p-notes", "Notes", "✎", None);
         notes.blocks = vec![
             Block::new("n1", BlockKind::Heading1, "Notes"),
             Block::new(

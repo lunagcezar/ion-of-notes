@@ -148,6 +148,35 @@ pub fn lookup(combo: Combo) -> Option<Action> {
     None
 }
 
+/// Guard for global shortcut handling (spec-013).
+///
+/// A key event is only trusted as an application shortcut when the native
+/// window owns the keyboard focus, the pointer is actually over the window,
+/// and every modifier the event claims is also held for this frame. The last
+/// two conditions fix the reported "keyboard input is hijacked when the mouse
+/// pointer is outside the program window": winit drops key-up events when the
+/// window loses focus, so egui may keep reporting a stale `Ctrl`/`Alt` and
+/// ordinary typing would be mistaken for `Ctrl+<letter>` shortcuts. Requiring
+/// a present pointer also stops key events that arrive while the pointer is
+/// elsewhere from firing global commands.
+///
+/// `event` and `frame` are `(ctrl, shift, alt)`. The modifier check is
+/// lenient: it only rejects an event that *claims* a modifier the frame does
+/// not have, which is exactly the stale-state case.
+pub fn shortcut_context_ok(
+    window_focused: bool,
+    pointer_over_window: bool,
+    event: (bool, bool, bool),
+    frame: (bool, bool, bool),
+) -> bool {
+    if !window_focused || !pointer_over_window {
+        return false;
+    }
+    let (ec, es, ea) = event;
+    let (fc, fs, fa) = frame;
+    (!ec || fc) && (!es || fs) && (!ea || fa)
+}
+
 /// Documentation of every shortcut shown in the app menu / help page, plus the
 /// ones taken from the Notion help site. Used by the in-app shortcut sheet and
 /// by the specs, so the list exists in exactly one place (DRY).

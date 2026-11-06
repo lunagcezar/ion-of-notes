@@ -2,16 +2,17 @@
 //! settings (preferences + AI assistant), share, inbox, shortcut sheet and the
 //! slash menu (SRP). Drawing collects `Command`s; it never mutates state.
 
-use crate::model::Workspace;
+use crate::model::{Page, Workspace};
 use crate::shortcuts::SHORTCUT_TABLE;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
 
-use super::app::{new_tab_choices, Command, NewTabChoice, ViewState};
+use super::app::{new_tab_choices, Command, FontStyle, NewTabChoice, ViewState};
 use super::icons::{
-    draw_book, draw_grid, draw_help, draw_inbox, draw_link, draw_note, draw_page, draw_panel,
-    draw_person, draw_search, draw_settings, draw_sliders,
+    draw_grid, draw_help, draw_inbox, draw_link, draw_note, draw_page, draw_panel, draw_person,
+    draw_search, draw_settings,
 };
-use super::palette::{block_menu_options, strong_font, Palette};
+use super::palette::{strong_font, Palette};
+use super::switcher::{render_switcher, SwitcherMode, SwitcherRow, SwitcherSpec};
 
 /// A compact window frame shared by the popovers.
 fn popover_frame(palette: &Palette) -> egui::Frame {
@@ -97,52 +98,106 @@ fn settings_nav(
     }
 }
 
-// ---- "Open in new tab…" switcher (the tab-strip "+") ----------------------
+// ---- Shared "Open in new tab…" / Search switcher (spec-013) ---------------
 
-/// A simple speech-bubble glyph for the "New chat" row.
-fn draw_chat(painter: &egui::Painter, rect: Rect, color: Color32) {
-    let bubble = Rect::from_min_size(rect.min + Vec2::new(1.0, 1.0), Vec2::new(14.0, 11.0));
-    painter.rect_stroke(
-        bubble,
-        CornerRadius::same(5),
-        Stroke::new(1.3, color),
-        egui::StrokeKind::Inside,
-    );
-    painter.line(
-        vec![
-            bubble.min + Vec2::new(3.0, 10.0),
-            bubble.min + Vec2::new(1.0, 14.0),
-            bubble.min + Vec2::new(7.0, 10.0),
-        ],
-        Stroke::new(1.3, color),
-    );
+/// A breadcrumb-style suffix shown after a result title.
+fn page_detail(ws: &Workspace, page: &Page) -> String {
+    let trail = ws.breadcrumbs(&page.id);
+    let parents: Vec<String> = trail[..trail.len().saturating_sub(1)].to_vec();
+    let text = if parents.is_empty() {
+        ws.name.clone()
+    } else {
+        parents.join(" / ")
+    };
+    format!("   — {text}")
 }
 
-/// The footer hint strip shared by the search popovers (attachments).
-fn switcher_footer(ui: &mut egui::Ui, palette: &Palette) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 18.0;
-        for (keys, label) in [
-            ("Ctrl+↵", "Open in new tab"),
-            ("Ctrl+L", "Copy link"),
-            ("Shift+Ctrl+K", "Command Search"),
-        ] {
-            ui.label(
-                egui::RichText::new(keys)
-                    .size(11.0)
-                    .color(palette.muted),
-            );
-            ui.label(
-                egui::RichText::new(label)
-                    .size(11.0)
-                    .color(palette.muted),
-            );
-        }
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let (rect, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
-            draw_sliders(ui.painter(), rect, palette.muted);
-        });
-    });
+fn build_new_tab_rows(ws: &Workspace, choices: &[NewTabChoice]) -> Vec<SwitcherRow> {
+    choices
+        .iter()
+        .enumerate()
+        .map(|(index, choice)| {
+            let (label, icon, id, special, detail) = match choice {
+                NewTabChoice::NewChat => (
+                    "New chat".to_string(),
+                    String::new(),
+                    "new-chat".to_string(),
+                    true,
+                    String::new(),
+                ),
+                NewTabChoice::NewPage => (
+                    "New page".to_string(),
+                    String::new(),
+                    "new-page".to_string(),
+                    true,
+                    String::new(),
+                ),
+                NewTabChoice::Page(id) => {
+                    let page = ws.page(id);
+                    (
+                        page.map(|p| p.title.clone()).unwrap_or_else(|| "Untitled".to_string()),
+                        page.map(|p| p.icon.clone()).unwrap_or_default(),
+                        id.clone(),
+                        false,
+                        page.map(|p| page_detail(ws, p)).unwrap_or_default(),
+                    )
+                }
+            };
+            let group = match index {
+                0 | 1 => "",
+                2 => "Today",
+                _ => "Past week",
+            };
+            SwitcherRow { label, detail, group, icon, id, special }
+        })
+        .collect()
+}
+
+fn build_search_rows(ws: &Workspace, view: &ViewState) -> Vec<SwitcherRow> {
+    view.search_results
+        .iter()
+        .enumerate()
+        .map(|(index, result)| {
+            let page = ws.page(&result.page_id);
+            SwitcherRow {
+                label: result.page_title.clone(),
+                detail: page.map(|p| page_detail(ws, p)).unwrap_or_default(),
+                group: if index == 0 { "Today" } else { "Past week" },
+                icon: page.map(|p| p.icon.clone()).unwrap_or_default(),
+                id: result.page_id.clone(),
+                special: false,
+            }
+        })
+        .collect()
+}
+
+/// Build the shared spec, then hand it to the one switcher renderer (DRY).
+fn switcher_spec<'a>(
+    id: &'static str,
+    hint: &'a str,
+    query: &'a str,
+    rows: &'a [SwitcherRow],
+    selected: usize,
+    mode: SwitcherMode,
+    ws: &'a Workspace,
+    view: &'a ViewState,
+) -> SwitcherSpec<'a> {
+    SwitcherSpec {
+        id,
+        hint,
+        query,
+        rows,
+        selected,
+        highlight: view.highlight_pane,
+        filters: view.filters,
+        mode,
+        ws,
+        ai_query: &view.ai_query,
+        ai_status: &view.ai_status,
+        ai_answer: view.ai_answer.as_deref(),
+        ai_error: view.ai_error.as_deref(),
+        ai_busy: view.ai_busy,
+    }
 }
 
 pub(super) fn render_new_tab(
@@ -152,459 +207,255 @@ pub(super) fn render_new_tab(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    let screen = ctx.viewport_rect();
-    let size = Vec2::new(1000.0, 690.0);
-    let pos = Pos2::new(
-        screen.left() + ((screen.width() - size.x) / 2.0).max(0.0),
-        screen.top() + 110.0,
+    let choices = new_tab_choices(ws, &view.new_tab_query);
+    let rows = build_new_tab_rows(ws, &choices);
+    let spec = switcher_spec(
+        "new_tab_switcher",
+        "Open in new tab...",
+        &view.new_tab_query,
+        &rows,
+        view.new_tab_selected,
+        SwitcherMode::NewTab,
+        ws,
+        view,
     );
-    egui::Window::new("new_tab_switcher")
-        .title_bar(false)
-        .collapsible(false)
-        .resizable(false)
-        .fixed_size(size)
-        .fixed_pos(pos)
-        .frame(
-            egui::Frame::NONE
-                .fill(palette.content)
-                .corner_radius(CornerRadius::same(10))
-                .inner_margin(Margin::same(16))
-                .stroke(Stroke::new(1.0, palette.border)),
-        )
-        .show(ctx, |ui| {
-            // Search header.
-            ui.horizontal(|ui| {
-                ui.add_space(4.0);
-                let (icon, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
-                draw_search(ui.painter(), icon, palette.muted);
-                ui.add_space(6.0);
-                let mut query = view.new_tab_query.clone();
-                let field = ui.add(
-                    egui::TextEdit::singleline(&mut query)
-                        .id(egui::Id::unique("new_tab_query"))
-                        .frame(egui::Frame::NONE)
-                        .font(FontId::proportional(16.0))
-                        .desired_width(700.0)
-                        .hint_text("Open in new tab...")
-                        .text_color(palette.text),
-                );
-                field.request_focus();
-                if field.changed() {
-                    commands.push(Command::SetNewTabQuery(query));
-                }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let (help, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
-                    draw_help(ui.painter(), help, palette.accent);
-                    let (panel, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
-                    let blue = palette.accent;
-                    ui.painter().rect_stroke(
-                        panel.shrink(2.0),
-                        CornerRadius::same(2),
-                        Stroke::new(1.3, blue),
-                        egui::StrokeKind::Inside,
-                    );
-                    ui.painter().vline(
-                        panel.center().x + 2.0,
-                        panel.y_range().shrink(2.0),
-                        Stroke::new(1.3, blue),
-                    );
-                });
-            });
-            ui.add_space(12.0);
-
-            // Filter row.
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 18.0;
-                ui.add_space(24.0);
-                for text in ["Aa  Title only", "Created by ⌄", "In ⌄", "+ Filter"] {
-                    ui.label(
-                        egui::RichText::new(text)
-                            .size(12.0)
-                            .color(palette.muted),
-                    );
-                }
-            });
-            ui.add_space(8.0);
-            ui.separator();
-            ui.add_space(8.0);
-
-            let body_height = (ui.available_height() - 44.0).max(200.0);
-            let list_width = 545.0;
-            let preview_width = ui.available_width() - list_width - 18.0;
-            let choices = new_tab_choices(ws, &view.new_tab_query);
-
-            ui.horizontal_top(|ui| {
-                // Result list.
-                ui.vertical(|ui| {
-                    ui.set_width(list_width);
-                    ui.set_height(body_height);
-                    egui::ScrollArea::vertical()
-                        .auto_shrink([false, false])
-                        .show(ui, |ui| {
-                            for (index, choice) in choices.iter().enumerate() {
-                                if index == 2 {
-                                    section_label(ui, "Today", palette);
-                                }
-                                if index == 3 {
-                                    section_label(ui, "Past week", palette);
-                                }
-                                let (rect, response) = ui.allocate_exact_size(
-                                    Vec2::new(ui.available_width(), 34.0),
-                                    Sense::click(),
-                                );
-                                let selected = view.new_tab_selected == index;
-                                if selected {
-                                    ui.painter().rect_filled(
-                                        rect,
-                                        CornerRadius::same(6),
-                                        palette.selected,
-                                    );
-                                } else if response.hovered() {
-                                    ui.painter().rect_filled(
-                                        rect,
-                                        CornerRadius::same(6),
-                                        palette.hover,
-                                    );
-                                }
-                                let icon_rect = Rect::from_min_size(
-                                    rect.min + Vec2::new(10.0, 9.0),
-                                    Vec2::splat(16.0),
-                                );
-                                let label = match choice {
-                                    NewTabChoice::NewChat => {
-                                        draw_chat(ui.painter(), icon_rect, palette.muted);
-                                        "New chat".to_string()
-                                    }
-                                    NewTabChoice::NewPage => {
-                                        draw_page(ui.painter(), icon_rect, palette.muted);
-                                        "New page".to_string()
-                                    }
-                                    NewTabChoice::Page(id) => {
-                                        draw_page(ui.painter(), icon_rect, palette.muted);
-                                        ws.page(id)
-                                            .map(|p| p.title.clone())
-                                            .unwrap_or_else(|| "Untitled".to_string())
-                                    }
-                                };
-                                ui.painter().text(
-                                    rect.min + Vec2::new(36.0, 17.0),
-                                    Align2::LEFT_CENTER,
-                                    &label,
-                                    FontId::proportional(13.5),
-                                    palette.text,
-                                );
-                                if let NewTabChoice::Page(id) = choice {
-                                    let crumb = ws
-                                        .page(id)
-                                        .and_then(|p| p.parent.clone())
-                                        .and_then(|pid| ws.page(&pid).map(|p| p.title.clone()))
-                                        .unwrap_or_else(|| ws.name.clone());
-                                    let suffix = format!("— {crumb}");
-                                    let x = rect.min.x
-                                        + 40.0
-                                        + label.chars().count() as f32 * 7.2;
-                                    ui.painter().text(
-                                        Pos2::new(x, rect.min.y + 17.0),
-                                        Align2::LEFT_CENTER,
-                                        suffix,
-                                        FontId::proportional(12.0),
-                                        palette.muted,
-                                    );
-                                }
-                                if selected {
-                                    ui.painter().text(
-                                        rect.max + Vec2::new(-12.0, -17.0),
-                                        Align2::RIGHT_CENTER,
-                                        "↵",
-                                        FontId::proportional(13.0),
-                                        palette.muted,
-                                    );
-                                }
-                                if response.hovered() && !selected {
-                                    commands.push(Command::SetNewTabSelected(index));
-                                }
-                                if response.clicked() {
-                                    commands
-                                        .push(Command::ActivateNewTab(choice.clone()));
-                                }
-                            }
-                        });
-                });
-
-                ui.add_space(18.0);
-
-                // Preview pane.
-                ui.vertical(|ui| {
-                    ui.set_width(preview_width);
-                    ui.set_height(body_height);
-                    let (card, _) = ui.allocate_exact_size(
-                        Vec2::new(preview_width, body_height),
-                        Sense::hover(),
-                    );
-                    ui.painter().rect_filled(
-                        card,
-                        CornerRadius::same(8),
-                        palette.callout,
-                    );
-                    ui.painter().rect_stroke(
-                        card,
-                        CornerRadius::same(8),
-                        Stroke::new(1.0, palette.border),
-                        egui::StrokeKind::Inside,
-                    );
-                    // Two small controls in the top-right of the preview.
-                    let link = Rect::from_min_size(
-                        card.max + Vec2::new(-56.0, 12.0),
-                        Vec2::splat(16.0),
-                    );
-                    ui.painter().rect_stroke(
-                        link.shrink(2.0),
-                        CornerRadius::same(3),
-                        Stroke::new(1.2, palette.muted),
-                        egui::StrokeKind::Inside,
-                    );
-                    let expand = Rect::from_min_size(
-                        card.max + Vec2::new(-34.0, 12.0),
-                        Vec2::splat(16.0),
-                    );
-                    ui.painter().line(
-                        vec![
-                            expand.min + Vec2::new(3.0, 8.0),
-                            expand.min + Vec2::new(13.0, 3.0),
-                        ],
-                        Stroke::new(1.2, palette.muted),
-                    );
-
-                    let selected = choices.get(view.new_tab_selected);
-                    match selected {
-                        Some(NewTabChoice::Page(id)) => {
-                            if let Some(page) = ws.page(id) {
-                                draw_book(
-                                    ui.painter(),
-                                    Rect::from_min_size(
-                                        card.min + Vec2::new(24.0, 28.0),
-                                        Vec2::splat(48.0),
-                                    ),
-                                );
-                                ui.painter().text(
-                                    card.min + Vec2::new(24.0, 90.0),
-                                    Align2::LEFT_CENTER,
-                                    &ws.name,
-                                    FontId::proportional(11.0),
-                                    palette.muted,
-                                );
-                                ui.painter().text(
-                                    card.min + Vec2::new(24.0, 116.0),
-                                    Align2::LEFT_CENTER,
-                                    &page.title,
-                                    strong_font(22.0),
-                                    palette.text,
-                                );
-                                let snippet: String =
-                                    page.plain_text().chars().take(220).collect();
-                                let mut y = card.min.y + 164.0;
-                                for line in wrap_text(&snippet, 44) {
-                                    ui.painter().text(
-                                        Pos2::new(card.min.x + 24.0, y),
-                                        Align2::LEFT_CENTER,
-                                        line,
-                                        FontId::proportional(12.5),
-                                        palette.muted,
-                                    );
-                                    y += 20.0;
-                                    if y > card.max.y - 20.0 {
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        _ => {
-                            // A soft skeleton, as in attachments/picture-1.png.
-                            ui.painter().circle_filled(
-                                card.min + Vec2::new(60.0, 90.0),
-                                22.0,
-                                palette.hover,
-                            );
-                            for (i, width) in [220.0, 180.0, 120.0].iter().enumerate() {
-                                let y = card.min.y + 130.0 + i as f32 * 30.0;
-                                ui.painter().rect_filled(
-                                    Rect::from_min_size(
-                                        Pos2::new(card.min.x + 24.0, y),
-                                        Vec2::new(*width, 9.0),
-                                    ),
-                                    CornerRadius::same(4),
-                                    palette.hover,
-                                );
-                            }
-                        }
-                    }
-                });
-            });
-            ui.add_space(8.0);
-            ui.separator();
-            ui.add_space(6.0);
-            switcher_footer(ui, palette);
-        });
+    render_switcher(ctx, &spec, palette, commands);
 }
-
-/// Rough word wrap for the preview text (display only).
-fn wrap_text(text: &str, width: usize) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut line = String::new();
-    for word in text.split_whitespace() {
-        if line.len() + word.len() + 1 > width && !line.is_empty() {
-            lines.push(line.clone());
-            line.clear();
-        }
-        if !line.is_empty() {
-            line.push(' ');
-        }
-        line.push_str(word);
-    }
-    if !line.is_empty() {
-        lines.push(line);
-    }
-    lines
-}
-
-// ---- Quick search / AI chat ------------------------------------------------
 
 pub(super) fn render_search(
     ctx: &egui::Context,
+    ws: &Workspace,
     view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    egui::Window::new("quick_search")
+    let rows = build_search_rows(ws, view);
+    let spec = switcher_spec(
+        "quick_search",
+        "Search or ask a question...",
+        &view.search_query,
+        &rows,
+        view.search_selected,
+        SwitcherMode::Search,
+        ws,
+        view,
+    );
+    render_switcher(ctx, &spec, palette, commands);
+}
+
+// ---- Page settings and actions (the "..." menu, spec-013) ------------------
+
+/// A clickable row with a label and an optional shortcut hint.
+fn menu_button(
+    ui: &mut egui::Ui,
+    label: &str,
+    hint: &str,
+    palette: &Palette,
+) -> egui::Response {
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), 27.0), Sense::click());
+    if response.hovered() {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(5), palette.hover);
+    }
+    ui.painter().text(
+        rect.min + Vec2::new(10.0, 13.5),
+        Align2::LEFT_CENTER,
+        label,
+        FontId::proportional(13.0),
+        palette.text,
+    );
+    if !hint.is_empty() {
+        ui.painter().text(
+            rect.max + Vec2::new(-8.0, -13.5),
+            Align2::RIGHT_CENTER,
+            hint,
+            FontId::proportional(11.0),
+            palette.muted,
+        );
+    }
+    response
+}
+
+/// A row with a small on/off pill on the right.
+fn toggle_button(
+    ui: &mut egui::Ui,
+    label: &str,
+    on: bool,
+    palette: &Palette,
+) -> egui::Response {
+    let response = menu_button(ui, label, "", palette);
+    let rect = response.rect;
+    let pill = Rect::from_min_size(
+        rect.max + Vec2::new(-40.0, -21.5),
+        Vec2::new(30.0, 16.0),
+    );
+    ui.painter().rect_filled(
+        pill,
+        CornerRadius::same(8),
+        if on { palette.accent } else { palette.hover },
+    );
+    let knob_x = if on { pill.max.x - 9.0 } else { pill.min.x + 9.0 };
+    ui.painter().circle_filled(
+        Pos2::new(knob_x, pill.center().y),
+        6.0,
+        Color32::WHITE,
+    );
+    response
+}
+
+fn action_items(view: &ViewState) -> Vec<(&'static str, &'static str, Command)> {
+    vec![
+        ("Copy link", "Ctrl+L", Command::CopyLink),
+        ("Copy page contents", "", Command::ClosePageActions),
+        ("Duplicate", "Ctrl+D", Command::DuplicatePage),
+        ("Move to", "Ctrl+Shift+P", Command::ClosePageActions),
+        ("Version history", "", Command::ClosePageActions),
+        ("Updates & analytics", "", Command::ClosePageActions),
+        ("Suggest edits", "", Command::ClosePageActions),
+        ("Use with AI", "", Command::OpenAiChat),
+        ("Notify me", "Comments", Command::ClosePageActions),
+        ("Archive", "", Command::ClosePageActions),
+        (
+            "Move to Trash",
+            "",
+            Command::DeletePage(view.current_page.clone()),
+        ),
+        ("Show / hide sidebar", "Ctrl+\\", Command::ToggleSidebar),
+        ("More", "", Command::ClosePageActions),
+    ]
+}
+
+pub(super) fn render_page_actions(
+    ctx: &egui::Context,
+    ws: &Workspace,
+    view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    let screen = ctx.viewport_rect();
+    egui::Window::new("page_actions")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_size(Vec2::new(640.0, 480.0))
-        .anchor(Align2::CENTER_CENTER, Vec2::new(0.0, -60.0))
-        .frame(popover_frame(palette))
+        .fixed_size(Vec2::new(300.0, 620.0))
+        .fixed_pos(Pos2::new(screen.right() - 316.0, screen.top() + 76.0))
+        .frame(
+            egui::Frame::NONE
+                .fill(palette.content)
+                .corner_radius(CornerRadius::same(10))
+                .inner_margin(Margin::same(12))
+                .stroke(Stroke::new(1.0, palette.border)),
+        )
         .show(ctx, |ui| {
-            let mut query = view.ai_query.clone();
+            // Search actions field (filters the list below).
+            let id = egui::Id::unique("page_actions_query");
+            let mut query: String = ctx.data(|d| d.get_temp(id).unwrap_or_default());
             let field = ui.add(
                 egui::TextEdit::singleline(&mut query)
-                    .id(egui::Id::unique("quick_search_query"))
-                    .frame(egui::Frame::NONE)
                     .desired_width(f32::INFINITY)
-                    .hint_text("Search or ask a question...")
+                    .hint_text("Search actions...")
                     .text_color(palette.text),
             );
-            field.request_focus();
             if field.changed() {
-                commands.push(Command::SetAiQuery(query.clone()));
-                commands.push(Command::SetSearchQuery(query));
+                ctx.data_mut(|d| d.insert_temp(id, query.clone()));
             }
             ui.add_space(8.0);
-            ui.separator();
+
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
-                .max_height(190.0)
                 .show(ui, |ui| {
-                    for result in &view.search_results {
-                        let (rect, response) = ui.allocate_exact_size(
-                            Vec2::new(ui.available_width(), 46.0),
-                            Sense::click(),
-                        );
-                        if response.hovered() {
-                            ui.painter()
-                                .rect_filled(rect, CornerRadius::same(6), palette.hover);
+                    let q = query.trim().to_lowercase();
+                    for (label, hint, command) in action_items(view) {
+                        if !q.is_empty() && !label.to_lowercase().contains(&q) {
+                            continue;
                         }
-                        ui.painter().rect_filled(
-                            Rect::from_min_size(
-                                rect.min + Vec2::new(8.0, 10.0),
-                                Vec2::splat(26.0),
-                            ),
-                            CornerRadius::same(5),
-                            palette.icon_bg,
-                        );
-                        ui.painter().text(
-                            rect.min + Vec2::new(44.0, 16.0),
-                            Align2::LEFT_CENTER,
-                            &result.page_title,
-                            FontId::proportional(14.0),
-                            palette.text,
-                        );
-                        let snippet: String = result.snippet.chars().take(70).collect();
-                        ui.painter().text(
-                            rect.min + Vec2::new(44.0, 33.0),
-                            Align2::LEFT_CENTER,
-                            snippet,
-                            FontId::proportional(11.0),
-                            palette.muted,
-                        );
-                        if response.clicked() {
-                            commands.push(Command::SelectPage(result.page_id.clone()));
-                            commands.push(Command::CloseSearch);
+                        if menu_button(ui, label, hint, palette).clicked() {
+                            commands.push(command);
+                            commands.push(Command::ClosePageActions);
                         }
                     }
-                });
-            ui.add_space(8.0);
-            ui.separator();
-            ui.add_space(6.0);
-            ui.horizontal(|ui| {
-                ui.label(
-                    egui::RichText::new("Ask AI")
-                        .size(13.0)
-                        .strong()
-                        .color(palette.text),
-                );
-                ui.label(
-                    egui::RichText::new("Ollama · CLI in PATH or service on the network")
-                        .size(11.0)
-                        .color(palette.muted),
-                );
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
-                        .add(
-                            egui::Button::new(
-                                egui::RichText::new("Ask").size(12.0).color(Color32::WHITE),
-                            )
-                            .fill(palette.accent)
-                            .corner_radius(CornerRadius::same(6)),
-                        )
-                        .clicked()
-                    {
-                        commands.push(Command::AskAi(view.ai_query.clone()));
-                    }
-                });
-            });
-            ui.add_space(6.0);
-            if view.ai_busy {
-                ui.label(
-                    egui::RichText::new("Thinking…")
-                        .size(12.0)
-                        .color(palette.accent),
-                );
-            } else if let Some(answer) = &view.ai_answer {
-                egui::Frame::NONE
-                    .fill(palette.callout)
-                    .corner_radius(CornerRadius::same(6))
-                    .inner_margin(Margin::same(10))
-                    .show(ui, |ui| {
+                    ui.add_space(8.0);
+                    ui.separator();
+                    ui.add_space(6.0);
+
+                    if q.is_empty() {
+                        // Appearance & layout.
                         ui.label(
-                            egui::RichText::new(answer)
-                                .size(12.5)
+                            egui::RichText::new("Appearance & layout")
+                                .size(11.0)
+                                .color(palette.muted),
+                        );
+                        ui.add_space(4.0);
+                        ui.horizontal(|ui| {
+                            for (label, style) in [
+                                ("Default", FontStyle::Default),
+                                ("Serif", FontStyle::Serif),
+                                ("Mono", FontStyle::Mono),
+                            ] {
+                                let active = view.font_style == style;
+                                if ui
+                                    .add(
+                                        egui::Button::new(
+                                            egui::RichText::new(label).size(12.0).color(
+                                                if active { palette.text } else { palette.muted },
+                                            ),
+                                        )
+                                        .fill(if active {
+                                            palette.selected
+                                        } else {
+                                            Color32::TRANSPARENT
+                                        })
+                                        .corner_radius(CornerRadius::same(5)),
+                                    )
+                                    .clicked()
+                                {
+                                    commands.push(Command::SetFontStyle(style));
+                                }
+                            }
+                        });
+                        ui.add_space(4.0);
+                        if toggle_button(ui, "Small text", view.small_text, palette).clicked() {
+                            commands.push(Command::ToggleSmallText);
+                        }
+                        if toggle_button(ui, "Full width", view.full_width, palette).clicked() {
+                            commands.push(Command::ToggleFullWidth);
+                        }
+                        if toggle_button(ui, "Available offline", view.available_offline, palette)
+                            .clicked()
+                        {
+                            commands.push(Command::ToggleAvailableOffline);
+                        }
+                        if toggle_button(ui, "Lock page", view.lock_page, palette).clicked() {
+                            commands.push(Command::ToggleLockPage);
+                        }
+                        ui.add_space(8.0);
+                        ui.separator();
+                        ui.add_space(6.0);
+
+                        // Last edited footer.
+                        let words = ws
+                            .page(&view.current_page)
+                            .map(|p| p.plain_text().split_whitespace().count())
+                            .unwrap_or(0);
+                        ui.label(
+                            egui::RichText::new("Last edited")
+                                .size(11.0)
+                                .color(palette.muted),
+                        );
+                        ui.add_space(2.0);
+                        ui.label(
+                            egui::RichText::new("Local workspace · just now")
+                                .size(11.0)
                                 .color(palette.text),
                         );
-                    });
-            } else if let Some(error) = &view.ai_error {
-                ui.label(
-                    egui::RichText::new(error)
-                        .size(11.5)
-                        .color(Color32::from_rgb(224, 108, 108)),
-                );
-            } else {
-                ui.label(
-                    egui::RichText::new(&view.ai_status)
-                        .size(11.0)
-                        .color(palette.muted),
-                );
-            }
-            ui.add_space(8.0);
-            switcher_footer(ui, palette);
+                        ui.label(
+                            egui::RichText::new(format!("{words} words"))
+                                .size(10.5)
+                                .color(palette.muted),
+                        );
+                    }
+                });
         });
 }
 
@@ -1443,6 +1294,54 @@ pub(super) fn render_inbox(
         });
 }
 
+/// One entry of the block menu: a label and the kind it turns the block into.
+/// Entries without a kind are display-only placeholders for features that are
+/// deliberately out of scope (media, embeds, databases).
+fn slash_item(
+    ui: &mut egui::Ui,
+    label: &str,
+    hint: &str,
+    palette: &Palette,
+) -> egui::Response {
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), 28.0), Sense::click());
+    if response.hovered() {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(5), palette.hover);
+    }
+    ui.painter().text(
+        rect.min + Vec2::new(8.0, 14.0),
+        Align2::LEFT_CENTER,
+        label,
+        FontId::proportional(13.0),
+        palette.text,
+    );
+    if !hint.is_empty() {
+        ui.painter().text(
+            rect.max + Vec2::new(-8.0, -14.0),
+            Align2::RIGHT_CENTER,
+            hint,
+            FontId::proportional(11.0),
+            palette.muted,
+        );
+    }
+    response
+}
+
+fn slash_group(ui: &mut egui::Ui, title: &str, palette: &Palette) {
+    ui.add_space(6.0);
+    ui.label(
+        egui::RichText::new(title)
+            .size(10.5)
+            .color(palette.muted),
+    );
+    ui.add_space(2.0);
+}
+
+/// The block menu opened by the "+", the six-dot handle or typing "/".
+/// It mirrors the categorized menu in the attachments (Suggested, Basic
+/// blocks, Media, Database, Advanced blocks, Inline, Embeds).
+#[allow(clippy::too_many_lines)]
 pub(super) fn render_slash(
     ctx: &egui::Context,
     block: &str,
@@ -1450,46 +1349,89 @@ pub(super) fn render_slash(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    use crate::model::BlockKind;
     egui::Window::new("slash_menu")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
         .fixed_pos(view.slash_pos)
-        .default_width(220.0)
+        .default_width(260.0)
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
-            ui.label(
-                egui::RichText::new("Turn into")
-                    .size(11.0)
-                    .color(palette.muted),
-            );
-            ui.add_space(4.0);
-            for (kind, label) in block_menu_options() {
-                if ui
-                    .add(
-                        egui::Button::new(
-                            egui::RichText::new(label).color(palette.text),
-                        )
-                        .frame(false),
-                    )
-                    .clicked()
-                {
-                    commands.push(Command::SetBlockKind(block.to_string(), kind));
-                    commands.push(Command::CloseSlash);
-                }
-            }
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .max_height(330.0)
+                .show(ui, |ui| {
+                    let apply = |commands: &mut Vec<Command>, kind: BlockKind| {
+                        commands.push(Command::SetBlockKind(block.to_string(), kind));
+                    };
+                    slash_group(ui, "Suggested", palette);
+                    for label in ["AI Meeting Notes", "HTML · Embeds", "AI Image"] {
+                        slash_item(ui, label, "", palette);
+                    }
+                    slash_group(ui, "Basic blocks", palette);
+                    for (label, hint, kind) in [
+                        ("Text", "", BlockKind::Paragraph),
+                        ("Heading 1", "#", BlockKind::Heading1),
+                        ("Heading 2", "##", BlockKind::Heading2),
+                        ("Heading 3", "###", BlockKind::Heading3),
+                        ("Bulleted list", "-", BlockKind::Bulleted),
+                        ("Numbered list", "1.", BlockKind::Numbered),
+                        ("To-do list", "[]", BlockKind::Todo),
+                        ("Quote", "\"", BlockKind::Quote),
+                        ("Callout", "", BlockKind::Callout),
+                        ("Code", "", BlockKind::Code),
+                        ("Divider", "---", BlockKind::Divider),
+                    ] {
+                        if slash_item(ui, label, hint, palette).clicked() {
+                            apply(commands, kind);
+                        }
+                    }
+                    slash_group(ui, "Media", palette);
+                    for label in ["Image", "Video", "Audio", "File", "Web bookmark"] {
+                        slash_item(ui, label, "", palette);
+                    }
+                    slash_group(ui, "Database", palette);
+                    for label in ["Table view", "Board view", "Gallery view", "List view"] {
+                        slash_item(ui, label, "", palette);
+                    }
+                    slash_group(ui, "Advanced blocks", palette);
+                    for label in [
+                        "Table of contents", "Block equation", "Button", "Breadcrumb",
+                        "Tabs", "Synced block",
+                    ] {
+                        slash_item(ui, label, "", palette);
+                    }
+                    slash_group(ui, "Inline", palette);
+                    for label in ["Mention a person", "Mention a page", "Date or reminder", "Emoji"] {
+                        slash_item(ui, label, "", palette);
+                    }
+                    slash_group(ui, "Embeds", palette);
+                    for label in ["Embed", "Google Drive", "Tweet"] {
+                        slash_item(ui, label, "", palette);
+                    }
+                });
+            ui.add_space(6.0);
             ui.separator();
-            if ui
-                .add(
-                    egui::Button::new(
-                        egui::RichText::new("Delete block").color(palette.text),
-                    )
-                    .frame(false),
-                )
-                .clicked()
-            {
+            ui.add_space(4.0);
+            if slash_item(ui, "Delete block", "", palette).clicked() {
                 commands.push(Command::DeleteBlock(block.to_string()));
                 commands.push(Command::CloseSlash);
             }
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new("Type to filter…")
+                        .size(11.0)
+                        .color(palette.muted),
+                );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(
+                        egui::RichText::new("Close menu  esc")
+                            .size(10.5)
+                            .color(palette.muted),
+                    );
+                });
+            });
         });
 }
+

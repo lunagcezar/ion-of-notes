@@ -103,14 +103,18 @@ src/
   shortcuts.rs     pure keyboard-shortcut table (Combo -> Action) + docs table
   screenshot.rs    ColorImage -> RGBA -> PNG
   cli.rs           argument parsing
-  ui.rs            module root: declarations + public re-exports
+  ui.rs            module root: declarations + public re-exports (facade)
   ui/
     palette.rs     colors, fonts, tab-title helper, theming (NFR-06)
-    icons.rs       original shape artwork (chrome, sidebar, book, controls)
+    icons.rs       original shape artwork (chrome, sidebar, book, controls,
+                   page icon)
     app.rs         state, Command handling, eframe::App, preview hook
     render.rs      tab strip, sidebar, breadcrumbs, page, blocks, Library,
                    inline database and floating controls
-    dialogs.rs     quick search, Settings, Share, Inbox, slash-command menu
+    dialogs.rs     Settings, Share, Inbox, shortcut sheet, page actions,
+                   block menu
+    switcher.rs    one shared search / new-tab window (DRY)
+    page_icon.rs   page-icon feature: catalog, picker and one renderer
 tests/
   common/mod.rs    shared test helpers (DRY; not a test target)
   model.rs         one integration-test crate per module (named after it)
@@ -351,6 +355,32 @@ by file count.
 | Tests | unit tests in the domain, integration tests at the adapters |
 | Crates | split only with a real need for independence |
 
+### Answer to the "long src files / DDD / subfiles" question (2026-11-06)
+
+The `tcg-matchmaker` worker tree (`auth/`, `events/`, `stores/`, … each with
+`index/repository/router/service`) is **feature-first modularization**
+(vertical slices), not DDD: there is no `domain/`, no aggregates and no
+bounded-context language. It is a good *code-modularization* alternative for a
+many-feature backend and is kept as the growth path. Full decision, all
+alternatives and references: `docs/adr-004-modularization-decision.md`.
+
+- **Do not adopt DDD as a file-splitting strategy.** DDD is chosen by domain
+  complexity (real invariants, several bounded contexts), not by file length;
+  this crate has one bounded context. Do not create empty
+  `domain/ application/ infrastructure/` folders or a repository per noun.
+- **Do not split by a line-count threshold or one-struct-per-file.** A
+  cohesive 500-line file is better than five artificially separated files.
+  Rust Book ch. 7: modules control visibility and encapsulation; group related
+  functionality and expose a small `pub use` facade.
+- **Split a file when it holds more than one coherent responsibility.** This
+  session extracted `ui/switcher.rs` (one shared search/new-tab window) and
+  `ui/page_icon.rs` (page-icon feature) instead of a layer scaffold;
+  `ui.rs` stays the facade.
+- **Defer multiple crates / a Cargo workspace** until there is a real need for
+  independent versioning (Rust Book ch. 14). When a second bounded context
+  appears, migrate one feature at a time into `src/modules/<feature>/`
+  following the `tcg-matchmaker` shape, keeping only the layers it needs.
+
 ### API contract (server)
 
 | Method   | Path                    | Purpose                              |
@@ -407,11 +437,20 @@ unversioned routes today; the full production contract (`/api/v1`, sessions,
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust
 tab strip is the only window frame and doubles as a drag handle.
-`NOT_NOTION_SHOW=library|share|inbox|settings|search|tasks|newtab|ai|shortcuts`
+`NOT_NOTION_SHOW=library|share|inbox|settings|search|tasks|newtab|ai|shortcuts|iconpicker|pageactions`
 is a harmless preview hook: it opens one pictured state on startup so it can be
 captured with `--screenshot`. Normal runs (and the rebuild check) never set it.
 
 Do not start long-running watchers or dev servers during a build session.
+
+### Commits (automation rule)
+
+**Always commit after completing a spec.** Finishing a spec means: build green,
+`cargo test` green, a fresh `--screenshot` compared with the 29 reference
+pictures, and the docs above updated (`CHANGELOG.md`, the relevant spec,
+`AGENTS.md` when foundations change, and any ADR). Then stage the whole
+`app/` tree and create one git commit whose message names the spec. This is
+registered here so the step is automated rather than remembered.
 
 ## Docs Maintenance
 
@@ -436,6 +475,10 @@ Do not start long-running watchers or dev servers during a build session.
   selective DDD, feature-based growth path, visibility rules, bootstrap layer):
   recorded in `docs/adr-002-architecture-guidelines.md` and
   `spec/spec-010-architecture-guidelines.md`.
+- 2026-11-06 modularization decision (the `tcg-matchmaker` worker tree is
+  feature-first, not DDD; split by responsibility, not line count; Rust Book
+  ch. 7 / ch. 14, Rust API Guidelines): `docs/adr-004-modularization-decision.md`
+  and `spec/spec-013-interaction-polish-and-modularity.md`.
 - Spec Driven Development: https://www.ibm.com/think/topics/spec-driven-development
 - Self-hosted collaborative API decision (accounts, sync, sharing, real-time,
   and the workspace export tree): `docs/adr-003-self-hosted-collaborative-api.md`

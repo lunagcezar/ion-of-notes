@@ -3,7 +3,7 @@
 //! Bindings are taken from the app menu (reference/picture-6..11) and
 //! <https://www.notion.com/help/keyboard-shortcuts>.
 
-use not_notion::shortcuts::{lookup, Action, Combo, SHORTCUT_TABLE};
+use not_notion::shortcuts::{lookup, shortcut_context_ok, Action, Combo, SHORTCUT_TABLE};
 
 fn combo(ctrl: bool, shift: bool, alt: bool, key: &'static str) -> Combo {
     Combo::new(ctrl, shift, alt, key)
@@ -115,6 +115,27 @@ fn modifier_matching_is_exact() {
     assert_eq!(lookup(combo(true, false, false, "v")), None);
     assert_eq!(lookup(combo(true, false, false, "a")), None);
     assert_eq!(lookup(combo(false, false, false, "q")), None);
+}
+
+#[test]
+fn shortcuts_require_a_present_pointer_and_window_focus() {
+    // The reported bug: key events arriving after the pointer left the
+    // window must not fire global commands ("keyboard hijacking").
+    assert!(!shortcut_context_ok(true, false, (true, false, false), (true, false, false)));
+    assert!(!shortcut_context_ok(false, true, (false, false, false), (false, false, false)));
+    assert!(shortcut_context_ok(true, true, (false, false, false), (false, false, false)));
+}
+
+#[test]
+fn stale_modifiers_are_rejected_but_real_shortcuts_are_allowed() {
+    // A key event claiming Ctrl while no Ctrl is held (focus was lost while
+    // the modifier was down) would otherwise turn typing into shortcuts.
+    assert!(!shortcut_context_ok(true, true, (true, false, false), (false, false, false)));
+    assert!(!shortcut_context_ok(true, true, (false, true, false), (false, false, false)));
+    assert!(!shortcut_context_ok(true, true, (false, false, true), (false, false, false)));
+    // A genuine Ctrl+K and a plain key are both fine.
+    assert!(shortcut_context_ok(true, true, (true, false, false), (true, false, false)));
+    assert!(shortcut_context_ok(true, true, (true, true, false), (true, true, false)));
 }
 
 #[test]

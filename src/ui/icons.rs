@@ -5,14 +5,16 @@ use egui::{Color32, CornerRadius, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::palette::Palette;
 
-/// A small clickable icon drawn with simple shapes (no copied assets).
-pub(super) fn icon_button(
+/// Paint a small icon button with the requested interaction sense. Shared by
+/// the clickable and the draggable variants (DRY).
+fn icon_button_with_sense(
     ui: &mut egui::Ui,
     size: f32,
     palette: &Palette,
+    sense: Sense,
     draw: impl FnOnce(&egui::Painter, Rect, Color32),
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(Vec2::splat(size), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(size), sense);
     if response.hovered() {
         ui.painter()
             .rect_filled(rect, CornerRadius::same(4), palette.hover);
@@ -24,6 +26,26 @@ pub(super) fn icon_button(
     };
     draw(ui.painter(), rect, color);
     response
+}
+
+/// A small clickable icon drawn with simple shapes (no copied assets).
+pub(super) fn icon_button(
+    ui: &mut egui::Ui,
+    size: f32,
+    palette: &Palette,
+    draw: impl FnOnce(&egui::Painter, Rect, Color32),
+) -> egui::Response {
+    icon_button_with_sense(ui, size, palette, Sense::click(), draw)
+}
+
+/// A small icon that is both clickable and draggable (the block reorder grip).
+pub(super) fn drag_icon_button(
+    ui: &mut egui::Ui,
+    size: f32,
+    palette: &Palette,
+    draw: impl FnOnce(&egui::Painter, Rect, Color32),
+) -> egui::Response {
+    icon_button_with_sense(ui, size, palette, Sense::click_and_drag(), draw)
 }
 
 /// A glyph-only clickable area, used by the tab strip and breadcrumb bar.
@@ -422,4 +444,47 @@ pub(super) fn draw_book(painter: &egui::Painter, rect: Rect) {
 /// A small colored dot used as a neutral stand-in for inline emoji.
 pub(super) fn draw_bullet_dot(painter: &egui::Painter, rect: Rect, color: Color32) {
     painter.circle_filled(rect.center(), 3.0, color);
+}
+
+/// Draw the icon that identifies a page (spec-013).
+///
+/// An empty icon (or the literal `"book"`) is the default: the original
+/// open-book artwork for the large page header, or the small page glyph in
+/// lists. A custom icon — an emoji/symbol chosen in the picker or an uploaded
+/// image reference — is drawn as a centered glyph on a soft rounded well, so
+/// the same choice is recognizable in the header, sidebar, breadcrumbs and
+/// tab strip (DRY: one renderer for every place a page icon appears).
+pub(super) fn draw_page_icon(
+    painter: &egui::Painter,
+    rect: Rect,
+    icon: &str,
+    palette: &Palette,
+    large: bool,
+) {
+    if icon.is_empty() || icon == "book" {
+        if large {
+            draw_book(painter, rect);
+        } else {
+            draw_page(painter, rect, palette.muted);
+        }
+        return;
+    }
+    if large {
+        painter.rect_filled(rect, CornerRadius::same(12), palette.icon_bg);
+    }
+    let label = if let Some(reference) = icon.strip_prefix("path:") {
+        // An uploaded image is represented by a small picture placeholder;
+        // the reference itself is kept on the page for persistence.
+        let _ = reference;
+        "▧"
+    } else {
+        icon
+    };
+    painter.text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        label,
+        egui::FontId::proportional(rect.height() * if large { 0.60 } else { 0.72 }),
+        palette.text,
+    );
 }

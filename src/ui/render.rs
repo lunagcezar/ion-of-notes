@@ -3,27 +3,28 @@
 //! mutate state directly.
 
 use crate::model::{Block, BlockKind, Page, Workspace};
-use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
+use egui::{
+    Align2, Color32, CornerRadius, FontFamily, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2,
+};
 
-use super::app::{Command, ViewState};
+use super::app::{Command, FontStyle, ViewState};
 use super::icons::{
-    draw_arrow_left, draw_arrow_right, draw_book, draw_bullet_dot, draw_chevron, draw_close,
+    draw_arrow_left, draw_arrow_right, draw_bullet_dot, draw_chevron, draw_close,
     draw_dots, draw_ellipsis, draw_grid, draw_help, draw_inbox, draw_library, draw_lines,
-    draw_link, draw_minus, draw_note, draw_page, draw_panel, draw_pen, draw_person, draw_plus,
-    draw_search, draw_settings, draw_share, draw_sliders, draw_square, draw_star, glyph_button,
-    icon_button,
+    draw_link, draw_minus, draw_note, draw_page, draw_page_icon, draw_panel, draw_pen,
+    draw_person, draw_plus, draw_search, draw_settings, draw_share, draw_sliders, draw_square,
+    draw_star, drag_icon_button, glyph_button, icon_button,
 };
 use super::palette::{status_color, strong_font, tab_title, Palette};
 
-/// A full-width sidebar row with an icon and a label.
-fn nav_row(
+/// Allocate a sidebar row and paint its hover / selection background.
+/// Shared by the labelled rows and the page-icon rows (DRY).
+fn nav_row_rect(
     ui: &mut egui::Ui,
     width: f32,
-    label: &str,
     selected: bool,
     palette: &Palette,
-    draw: impl FnOnce(&egui::Painter, Rect, Color32),
-) -> egui::Response {
+) -> (Rect, egui::Response) {
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 30.0), Sense::click());
     let fill = if selected {
         palette.selected
@@ -36,6 +37,19 @@ fn nav_row(
         ui.painter()
             .rect_filled(rect, CornerRadius::same(6), fill);
     }
+    (rect, response)
+}
+
+/// A full-width sidebar row with an icon and a label.
+fn nav_row(
+    ui: &mut egui::Ui,
+    width: f32,
+    label: &str,
+    selected: bool,
+    palette: &Palette,
+    draw: impl FnOnce(&egui::Painter, Rect, Color32),
+) -> egui::Response {
+    let (rect, response) = nav_row_rect(ui, width, selected, palette);
     let icon_rect = Rect::from_min_size(rect.min + Vec2::new(10.0, 7.0), Vec2::splat(16.0));
     draw(ui.painter(), icon_rect, palette.muted);
     ui.painter().text(
@@ -61,6 +75,10 @@ fn section_label(ui: &mut egui::Ui, text: &str, palette: &Palette) {
 
 // ---- Custom window chrome -------------------------------------------------
 
+/// Height of the compact, Notion-like tab strip (spec-013). The breadcrumb row
+/// sits directly below it, so the whole top chrome stays small.
+pub(super) const TITLE_BAR_HEIGHT: f32 = 36.0;
+
 pub(super) fn render_title_bar(
     ui: &mut egui::Ui,
     ws: &Workspace,
@@ -68,17 +86,21 @@ pub(super) fn render_title_bar(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    let h = TITLE_BAR_HEIGHT;
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 3.0;
         ui.add_space(8.0);
 
-        if glyph_button(ui, Vec2::new(30.0, 40.0), palette, draw_panel).clicked() {
+        // Show / hide sidebar (also Ctrl+\\).
+        let panel = glyph_button(ui, Vec2::new(30.0, h), palette, draw_panel)
+            .on_hover_text("Show / hide sidebar");
+        if panel.clicked() {
             commands.push(Command::ToggleSidebar);
         }
-        if glyph_button(ui, Vec2::new(30.0, 40.0), palette, |p, r, c| {
+        if glyph_button(ui, Vec2::new(30.0, h), palette, |p, r, c| {
             draw_note(p, r, c);
             p.circle_filled(
-                r.min + Vec2::new(23.0, 12.0),
+                r.min + Vec2::new(23.0, 10.0),
                 3.5,
                 Color32::from_rgb(214, 69, 69),
             );
@@ -88,21 +110,18 @@ pub(super) fn render_title_bar(
             commands.push(Command::NewPage(None));
         }
 
-        ui.add_space(148.0);
-        if glyph_button(ui, Vec2::new(26.0, 40.0), palette, draw_person).clicked() {
-            commands.push(Command::OpenSettings);
-        }
-        ui.add_space(38.0);
-        if glyph_button(ui, Vec2::new(26.0, 40.0), palette, draw_arrow_left).clicked() {
+        // A compact strip: no person/settings control (the reference top bar
+        // has none — Settings lives in the sidebar), just back/forward, the
+        // tab(s), the "+" and the window controls.
+        ui.add_space(186.0);
+        if glyph_button(ui, Vec2::new(26.0, h), palette, draw_arrow_left).clicked() {
             commands.push(Command::GoBack);
         }
-        if glyph_button(ui, Vec2::new(26.0, 40.0), palette, draw_arrow_right).clicked() {
+        if glyph_button(ui, Vec2::new(26.0, h), palette, draw_arrow_right).clicked() {
             commands.push(Command::GoForward);
         }
         ui.add_space(12.0);
 
-        // One tab per opened page. With a single tab (the default screenshot)
-        // this draws exactly the same 190 px strip as before.
         for (i, tab_id) in view.tabs.iter().enumerate() {
             let active = i == view.active_tab;
             let label = if view.library_open && active {
@@ -112,17 +131,22 @@ pub(super) fn render_title_bar(
                     .map(|p| tab_title(&p.title))
                     .unwrap_or_else(|| "Untitled".to_string())
             };
+            let icon = if view.library_open && active {
+                String::new()
+            } else {
+                ws.page(tab_id).map(|p| p.icon.clone()).unwrap_or_default()
+            };
             let (tab_rect, response) =
-                ui.allocate_exact_size(Vec2::new(190.0, 30.0), Sense::click());
+                ui.allocate_exact_size(Vec2::new(190.0, h - 8.0), Sense::click());
             if active || response.hovered() {
                 ui.painter()
                     .rect_filled(tab_rect, CornerRadius::same(6), palette.hover);
             }
             let icon_rect =
-                Rect::from_min_size(tab_rect.min + Vec2::new(10.0, 7.0), Vec2::splat(16.0));
-            draw_page(ui.painter(), icon_rect, palette.muted);
+                Rect::from_min_size(tab_rect.min + Vec2::new(10.0, 6.0), Vec2::splat(16.0));
+            draw_page_icon(ui.painter(), icon_rect, &icon, palette, false);
             ui.painter().text(
-                tab_rect.min + Vec2::new(34.0, 15.0),
+                tab_rect.min + Vec2::new(34.0, (h - 8.0) / 2.0),
                 Align2::LEFT_CENTER,
                 &label,
                 FontId::proportional(13.0),
@@ -134,20 +158,23 @@ pub(super) fn render_title_bar(
             ui.add_space(6.0);
         }
         // The "+" opens the "Open in new tab…" switcher, not a blank page.
-        if glyph_button(ui, Vec2::new(26.0, 40.0), palette, draw_plus).clicked() {
+        if glyph_button(ui, Vec2::new(26.0, h), palette, draw_plus)
+            .on_hover_text("Open in new tab")
+            .clicked()
+        {
             commands.push(Command::OpenNewTab);
         }
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             ui.add_space(6.0);
-            if glyph_button(ui, Vec2::new(38.0, 40.0), palette, draw_close).clicked() {
+            if glyph_button(ui, Vec2::new(38.0, h), palette, draw_close).clicked() {
                 commands.push(Command::WindowClose);
             }
-            if glyph_button(ui, Vec2::new(38.0, 40.0), palette, draw_square).clicked() {
+            if glyph_button(ui, Vec2::new(38.0, h), palette, draw_square).clicked() {
                 commands.push(Command::WindowMaximize);
             }
-            if glyph_button(ui, Vec2::new(38.0, 40.0), palette, draw_minus).clicked() {
+            if glyph_button(ui, Vec2::new(38.0, h), palette, draw_minus).clicked() {
                 commands.push(Command::WindowMinimize);
             }
         });
@@ -200,44 +227,64 @@ pub(super) fn render_sidebar(
     }
 
     ui.add_space(16.0);
-    if nav_row(ui, width, "Library", view.library_open, palette, draw_library).clicked() {
-        commands.push(Command::OpenLibrary);
-    }
-    if nav_row(ui, width, "Settings", false, palette, draw_settings).clicked() {
-        commands.push(Command::OpenSettings);
-    }
-    if nav_row(ui, width, "Inbox", false, palette, draw_inbox).clicked() {
-        commands.push(Command::OpenInbox);
-    }
 
-    ui.add_space(18.0);
-    section_label(ui, "Favorites", palette);
-    let favorites = ws.favorites();
-    if favorites.is_empty() {
-        section_label(ui, "No favorites yet", palette);
-    } else {
-        for page in favorites {
-            if nav_row(
-                ui,
-                width,
-                &page.title,
-                view.current_page == page.id && !view.library_open,
-                palette,
-                draw_star,
-            )
-            .clicked()
+    // The page list scrolls when it grows beyond the space left above the
+    // fixed bottom group (spec-013: sidebar overflow).
+    let bottom_reserve = 176.0;
+    let scroll_height = (ui.available_height() - bottom_reserve).max(120.0);
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        .max_height(scroll_height)
+        .show(ui, |ui| {
+            ui.set_width(width);
+            if nav_row(ui, width, "Library", view.library_open, palette, draw_library)
+                .clicked()
             {
-                commands.push(Command::SelectPage(page.id.clone()));
+                commands.push(Command::OpenLibrary);
             }
-        }
-    }
+            if nav_row(ui, width, "Settings", false, palette, draw_settings).clicked() {
+                commands.push(Command::OpenSettings);
+            }
+            if nav_row(ui, width, "Inbox", false, palette, draw_inbox).clicked() {
+                commands.push(Command::OpenInbox);
+            }
 
-    ui.add_space(18.0);
-    section_label(ui, "Private", palette);
-    render_tree(ui, ws, None, 0, width, view, palette, commands);
-    if nav_row(ui, width, "New page", false, palette, draw_plus).clicked() {
-        commands.push(Command::NewPage(None));
-    }
+            ui.add_space(18.0);
+            section_label(ui, "Favorites", palette);
+            let favorites = ws.favorites();
+            if favorites.is_empty() {
+                section_label(ui, "No favorites yet", palette);
+            } else {
+                for page in favorites {
+                    let selected = view.current_page == page.id && !view.library_open;
+                    let (rect, response) = nav_row_rect(ui, width, selected, palette);
+                    draw_page_icon(
+                        ui.painter(),
+                        Rect::from_min_size(rect.min + Vec2::new(10.0, 7.0), Vec2::splat(16.0)),
+                        &page.icon,
+                        palette,
+                        false,
+                    );
+                    ui.painter().text(
+                        rect.min + Vec2::new(36.0, 15.0),
+                        Align2::LEFT_CENTER,
+                        &page.title,
+                        FontId::proportional(13.5),
+                        palette.text,
+                    );
+                    if response.clicked() {
+                        commands.push(Command::SelectPage(page.id.clone()));
+                    }
+                }
+            }
+
+            ui.add_space(18.0);
+            section_label(ui, "Private", palette);
+            render_tree(ui, ws, None, 0, width, view, palette, commands);
+            if nav_row(ui, width, "New page", false, palette, draw_plus).clicked() {
+                commands.push(Command::NewPage(None));
+            }
+        });
 
     // Bottom group: anchored to the bottom of the sidebar.
     ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -367,7 +414,7 @@ fn render_tree(
         if has_children {
             draw_chevron(ui.painter(), glyph_rect, open, palette.muted);
         } else {
-            draw_page(ui.painter(), glyph_rect, palette.muted);
+            draw_page_icon(ui.painter(), glyph_rect, &page.icon, palette, false);
         }
         ui.painter().text(
             rect.min + Vec2::new(indent + 24.0, 14.0),
@@ -411,9 +458,9 @@ pub(super) fn render_content(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    // Breadcrumb bar.
+    // Compact breadcrumb bar (spec-013).
     ui.vertical(|ui| {
-        ui.add_space(9.0);
+        ui.add_space(6.0);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 6.0;
             ui.add_space(16.0);
@@ -422,27 +469,30 @@ pub(super) fn render_content(
                     commands.push(Command::ToggleSidebar);
                 }
             }
-            let mut parts = ws.breadcrumbs(&view.current_page);
-            if parts.is_empty() {
-                parts.push("Workspace".to_string());
+            let mut crumbs = crumb_chain(ws, &view.current_page);
+            if crumbs.is_empty() {
+                crumbs.push((String::new(), "Workspace".to_string()));
             }
-            if parts.len() == 1 {
-                parts.insert(0, ws.name.clone());
+            if crumbs.len() == 1 {
+                crumbs.insert(0, (String::new(), ws.name.clone()));
             }
             if view.library_open {
-                parts = vec!["Library".to_string()];
+                crumbs = vec![(String::new(), "Library".to_string())];
             }
-            for (i, part) in parts.iter().enumerate() {
+            for (i, (icon, title)) in crumbs.iter().enumerate() {
                 if i > 0 {
                     ui.label(egui::RichText::new("›").color(palette.muted));
                 }
-                crumb(ui, part, palette);
+                crumb(ui, icon, title, palette);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.spacing_mut().item_spacing.x = 4.0;
                 ui.add_space(14.0);
-                if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_ellipsis).clicked() {
-                    commands.push(Command::OpenSettings);
+                if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_ellipsis)
+                    .on_hover_text("Page settings and actions")
+                    .clicked()
+                {
+                    commands.push(Command::OpenPageActions);
                 }
                 if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_star).clicked() {
                     commands.push(Command::ToggleFavorite(view.current_page.clone()));
@@ -464,7 +514,7 @@ pub(super) fn render_content(
                 }
             });
         });
-        ui.add_space(9.0);
+        ui.add_space(6.0);
     });
     ui.separator();
 
@@ -472,7 +522,11 @@ pub(super) fn render_content(
     if view.library_open {
         render_library(ui, ws, palette, commands);
     } else {
-        let column_width = (full_width - 96.0).clamp(360.0, 708.0);
+        let column_width = if view.full_width {
+            (full_width - 96.0).max(360.0)
+        } else {
+            (full_width - 96.0).clamp(360.0, 708.0)
+        };
         let gutter = 48.0;
         let pad = ((full_width - column_width) / 2.0 - gutter).max(0.0);
         egui::ScrollArea::vertical()
@@ -510,17 +564,57 @@ pub(super) fn render_content(
     );
 }
 
-fn crumb(ui: &mut egui::Ui, text: &str, palette: &Palette) -> egui::Response {
+/// Titles and icons from the root page down to the current page. Keeping the
+/// icons here means breadcrumbs show the same customization as the sidebar.
+fn crumb_chain(ws: &Workspace, id: &str) -> Vec<(String, String)> {
+    let mut chain = Vec::new();
+    let mut cursor = Some(id.to_string());
+    let mut guard = 0;
+    while let Some(current) = cursor {
+        guard += 1;
+        if guard > 32 {
+            break;
+        }
+        match ws.page(&current) {
+            Some(page) => {
+                chain.push((page.icon.clone(), page.title.clone()));
+                cursor = page.parent.clone();
+            }
+            None => break,
+        }
+    }
+    chain.reverse();
+    chain
+}
+
+/// Body font for a block, honouring the Appearance & layout choices (spec-013).
+fn body_font(view: &ViewState, size: f32) -> FontId {
+    let size = if view.small_text { size * 0.85 } else { size };
+    match view.font_style {
+        FontStyle::Default => FontId::proportional(size),
+        FontStyle::Serif => FontId::new(size, FontFamily::Name("Serif".into())),
+        FontStyle::Mono => FontId::monospace(size),
+    }
+}
+
+fn crumb(
+    ui: &mut egui::Ui,
+    icon: &str,
+    text: &str,
+    palette: &Palette,
+) -> egui::Response {
     let width = 16.0 + 8.0 + text.chars().count() as f32 * 7.0 + 10.0;
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 20.0), Sense::click());
     if response.hovered() {
         ui.painter()
             .rect_filled(rect, CornerRadius::same(4), palette.hover);
     }
-    draw_page(
+    draw_page_icon(
         ui.painter(),
         Rect::from_min_size(rect.min + Vec2::new(2.0, 2.0), Vec2::splat(16.0)),
-        palette.muted,
+        icon,
+        palette,
+        false,
     );
     ui.painter().text(
         rect.min + Vec2::new(24.0, 10.0),
@@ -552,14 +646,30 @@ fn render_page(
         return;
     };
 
-    // Big book icon and the very large bold title, aligned with the body text.
+    // Big page icon and the very large bold title, aligned with the body text.
+    // Clicking the icon opens the emoji / icon / upload picker (spec-013).
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
         ui.add_space(gutter);
         ui.vertical(|ui| {
             ui.set_width(width);
-            let (icon_rect, _) = ui.allocate_exact_size(Vec2::splat(72.0), Sense::hover());
-            draw_book(ui.painter(), icon_rect);
+            let (icon_rect, icon_response) =
+                ui.allocate_exact_size(Vec2::splat(72.0), Sense::click());
+            draw_page_icon(ui.painter(), icon_rect, &page.icon, palette, true);
+            if icon_response.hovered() {
+                ui.painter().rect_stroke(
+                    icon_rect,
+                    CornerRadius::same(10),
+                    Stroke::new(1.0, palette.border),
+                    egui::StrokeKind::Inside,
+                );
+            }
+            if icon_response
+                .on_hover_text("Change icon")
+                .clicked()
+            {
+                commands.push(Command::OpenIconPicker);
+            }
             ui.add_space(30.0);
             let _ = ui.add(
                 egui::TextEdit::singleline(&mut page.title)
@@ -586,6 +696,7 @@ fn render_page(
             &mut numbered,
             width,
             gutter,
+            view,
             palette,
             commands,
         );
@@ -619,6 +730,7 @@ fn render_block(
     numbered: &mut usize,
     width: f32,
     gutter: f32,
+    view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
@@ -628,19 +740,49 @@ fn render_block(
         .input(|i| i.pointer.hover_pos())
         .map(|p| row_rect.contains(p))
         .unwrap_or(false);
+    let menu_pos = Pos2::new(row_rect.min.x + 60.0, row_rect.min.y);
+
+    // While the six-dot handle is being dragged, the block under the pointer
+    // becomes the reorder target; draw an insertion marker at its lower edge.
+    if view.drag_from.is_some()
+        && let Some(p) = ui.ctx().pointer_interact_pos()
+        && row_rect.contains(p)
+    {
+        commands.push(Command::HoverBlockDrag(block.id.clone()));
+    }
+    if view.drag_to.as_deref() == Some(block.id.as_str()) {
+        ui.painter().hline(
+            row_rect.x_range(),
+            row_rect.max.y,
+            Stroke::new(2.0, palette.accent),
+        );
+    }
 
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
         if hover {
-            let plus = icon_button(ui, 22.0, palette, draw_plus);
-            let handle = icon_button(ui, 22.0, palette, draw_dots);
+            let plus = icon_button(ui, 22.0, palette, draw_plus)
+                .on_hover_text("Click to add a block below · Alt-click to add above");
+            let handle = drag_icon_button(ui, 22.0, palette, draw_dots)
+                .on_hover_text("Drag to move · Click or Ctrl+/ to open menu");
             if plus.clicked() {
-                commands.push(Command::InsertBlockAfter(block.id.clone()));
+                let above = ui.input(|i| i.modifiers.alt);
+                commands.push(Command::AddBlock {
+                    block: block.id.clone(),
+                    above,
+                    pos: menu_pos,
+                });
+            }
+            if handle.drag_started() {
+                commands.push(Command::StartBlockDrag(block.id.clone()));
+            }
+            if handle.drag_stopped() {
+                commands.push(Command::DropBlock);
             }
             if handle.clicked() {
                 commands.push(Command::OpenSlash {
                     block: block.id.clone(),
-                    pos: Pos2::new(ui.max_rect().min.x + 60.0, ui.max_rect().min.y),
+                    pos: menu_pos,
                 });
             }
             ui.add_space(4.0);
@@ -700,12 +842,12 @@ fn render_block(
                     commands.push(Command::ToggleTodo(block.id.clone()));
                 }
                 ui.add_space(6.0);
-                edit(ui, &mut block.text, FontId::proportional(15.0), width - 26.0);
+                edit(ui, &mut block.text, body_font(view, 15.0), width - 26.0);
             }
             BlockKind::Bulleted => {
                 let (rect, _) = ui.allocate_exact_size(Vec2::new(20.0, 22.0), Sense::hover());
                 draw_bullet_dot(ui.painter(), rect, palette.accent);
-                edit(ui, &mut block.text, FontId::proportional(15.0), width - 22.0);
+                edit(ui, &mut block.text, body_font(view, 15.0), width - 22.0);
             }
             BlockKind::Numbered => {
                 *numbered += 1;
@@ -718,7 +860,7 @@ fn render_block(
                     FontId::proportional(14.0),
                     palette.text,
                 );
-                edit(ui, &mut block.text, FontId::proportional(15.0), width - 22.0);
+                edit(ui, &mut block.text, body_font(view, 15.0), width - 22.0);
             }
             BlockKind::Quote => {
                 let (rect, _) = ui.allocate_exact_size(Vec2::new(6.0, 22.0), Sense::hover());
@@ -728,7 +870,7 @@ fn render_block(
                     Stroke::new(3.0, palette.text),
                 );
                 ui.add_space(8.0);
-                edit(ui, &mut block.text, FontId::proportional(16.0), width - 16.0);
+                edit(ui, &mut block.text, body_font(view, 16.0), width - 16.0);
             }
             BlockKind::Callout => {
                 egui::Frame::NONE
@@ -747,7 +889,7 @@ fn render_block(
                             edit(
                                 ui,
                                 &mut block.text,
-                                FontId::proportional(15.0),
+                                body_font(view, 15.0),
                                 width - 70.0,
                             );
                         });
@@ -767,7 +909,7 @@ fn render_block(
                 let font = if block.kind.is_heading() {
                     strong_font(block.kind.font_size())
                 } else {
-                    FontId::proportional(15.0)
+                    body_font(view, 15.0)
                 };
                 edit(ui, &mut block.text, font, width);
             }

@@ -122,7 +122,12 @@ pub fn install_fonts(ctx: &egui::Context) {
     }
     let regular = std::fs::read(r"C:\Windows\Fonts\segoeui.ttf").ok();
     let bold = std::fs::read(r"C:\Windows\Fonts\segoeuib.ttf").ok();
-    if regular.is_none() && bold.is_none() {
+    // Segoe UI Symbol supplies outline glyphs for the monochrome symbols used
+    // as customizable page icons (spec-013). It is appended as a fallback so
+    // missing glyphs in the UI faces still resolve to a real, drawable shape.
+    let symbol = std::fs::read(r"C:\Windows\Fonts\seguisym.ttf").ok();
+    let serif = std::fs::read(r"C:\Windows\Fonts\times.ttf").ok();
+    if regular.is_none() && bold.is_none() && symbol.is_none() && serif.is_none() {
         return;
     }
 
@@ -156,6 +161,36 @@ pub fn install_fonts(ctx: &egui::Context) {
             strong.push(name);
         }
         STRONG_FONT.store(true, Ordering::SeqCst);
+    }
+    if let Some(bytes) = symbol {
+        defs.font_data.insert(
+            "ui-symbol".to_owned(),
+            Arc::new(FontData::from_owned(bytes)),
+        );
+        defs.families
+            .entry(FontFamily::Proportional)
+            .or_default()
+            .push("ui-symbol".to_owned());
+    }
+    if let Some(bytes) = serif {
+        defs.font_data.insert(
+            "ui-serif".to_owned(),
+            Arc::new(FontData::from_owned(bytes)),
+        );
+        // Fall back to the installed UI face for glyphs Times lacks.
+        let fallback = defs
+            .families
+            .get(&FontFamily::Proportional)
+            .and_then(|v| v.first())
+            .cloned();
+        let serif_family = defs
+            .families
+            .entry(FontFamily::Name("Serif".into()))
+            .or_default();
+        serif_family.push("ui-serif".to_owned());
+        if let Some(name) = fallback {
+            serif_family.push(name);
+        }
     }
     ctx.set_fonts(defs);
 }

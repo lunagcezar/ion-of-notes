@@ -23,11 +23,28 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use super::dialogs::{
-    render_inbox, render_new_tab, render_search, render_settings, render_share,
-    render_shortcuts, render_slash,
+    render_inbox, render_new_tab, render_page_actions, render_search, render_settings,
+    render_share, render_shortcuts, render_slash,
 };
+use super::page_icon::render_icon_picker;
 use super::palette::{apply_theme, Palette};
-use super::render::{render_content, render_sidebar, render_title_bar};
+use super::render::{render_content, render_sidebar, render_title_bar, TITLE_BAR_HEIGHT};
+
+/// Tabs of the page-icon picker (spec-013).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum IconTab {
+    Emoji,
+    Icons,
+    Upload,
+}
+
+/// Page body font style chosen from Appearance & layout (spec-013).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum FontStyle {
+    Default,
+    Serif,
+    Mono,
+}
 
 /// One entry in the "Open in new tab…" switcher opened by the tab-strip `+`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,6 +115,17 @@ pub(super) enum Command {
     },
     InsertBlockAfter(String),
     AppendBlock,
+    /// Insert a block above (`above`) or below the given block, then open the
+    /// block menu for the new block. Alt+click adds above (spec-013).
+    AddBlock {
+        block: String,
+        above: bool,
+        pos: Pos2,
+    },
+    /// Drag-to-reorder state for the six-dot block handle.
+    StartBlockDrag(String),
+    HoverBlockDrag(String),
+    DropBlock,
     DeleteBlock(String),
     ToggleTodo(String),
     CycleStatus(String),
@@ -111,6 +139,7 @@ pub(super) enum Command {
     MoveNewTabSelection(i32),
     ActivateNewTab(NewTabChoice),
     ActivateSelectedNewTab,
+    SetSearchSelected(usize),
     SelectTab(usize),
     CloseTab(usize),
     PreviousTab,
@@ -140,6 +169,23 @@ pub(super) enum Command {
     CopyLink,
     CopyPageName,
     CloseAll,
+    // Page icon customization (spec-013).
+    OpenIconPicker,
+    CloseIconPicker,
+    SetIconTab(IconTab),
+    SetIconQuery(String),
+    SetPageIcon(String),
+    // Page actions / settings from the "..." menu (spec-013).
+    OpenPageActions,
+    ClosePageActions,
+    ToggleFullWidth,
+    ToggleSmallText,
+    SetFontStyle(FontStyle),
+    ToggleAvailableOffline,
+    ToggleLockPage,
+    // Search / new-tab window panes (spec-013).
+    ToggleHighlightPane,
+    ToggleFilters,
     NoOp,
 }
 
@@ -151,6 +197,7 @@ pub(super) struct ViewState {
     pub(super) sidebar_open: bool,
     pub(super) expanded: HashSet<String>,
     pub(super) search_open: bool,
+    pub(super) search_query: String,
     pub(super) search_results: Vec<SearchResult>,
     pub(super) settings_open: bool,
     pub(super) settings_page: String,
@@ -174,6 +221,20 @@ pub(super) struct ViewState {
     pub(super) ai_model: String,
     pub(super) ai_prefer_cli: bool,
     pub(super) shortcuts_open: bool,
+    pub(super) search_selected: usize,
+    pub(super) highlight_pane: bool,
+    pub(super) filters: bool,
+    pub(super) icon_picker_open: bool,
+    pub(super) icon_picker_tab: IconTab,
+    pub(super) icon_picker_query: String,
+    pub(super) page_actions_open: bool,
+    pub(super) font_style: FontStyle,
+    pub(super) full_width: bool,
+    pub(super) small_text: bool,
+    pub(super) available_offline: bool,
+    pub(super) lock_page: bool,
+    pub(super) drag_from: Option<String>,
+    pub(super) drag_to: Option<String>,
 }
 
 pub struct NotionApp {
@@ -225,6 +286,20 @@ pub struct NotionApp {
     fullscreen: bool,
     undo_stack: Vec<Workspace>,
     redo_stack: Vec<Workspace>,
+    search_selected: usize,
+    highlight_pane: bool,
+    filters: bool,
+    icon_picker_open: bool,
+    icon_picker_tab: IconTab,
+    icon_picker_query: String,
+    page_actions_open: bool,
+    font_style: FontStyle,
+    full_width: bool,
+    small_text: bool,
+    available_offline: bool,
+    lock_page: bool,
+    drag_from: Option<String>,
+    drag_to: Option<String>,
 }
 
 impl NotionApp {
@@ -303,6 +378,20 @@ impl NotionApp {
             fullscreen: false,
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
+            search_selected: 0,
+            highlight_pane: true,
+            filters: false,
+            icon_picker_open: demo == "iconpicker",
+            icon_picker_tab: IconTab::Emoji,
+            icon_picker_query: String::new(),
+            page_actions_open: demo == "pageactions",
+            font_style: FontStyle::Default,
+            full_width: false,
+            small_text: false,
+            available_offline: false,
+            lock_page: false,
+            drag_from: None,
+            drag_to: None,
         }
     }
 
@@ -314,6 +403,7 @@ impl NotionApp {
             sidebar_open: self.sidebar_open,
             expanded: self.expanded.clone(),
             search_open: self.search_open,
+            search_query: self.search_query.clone(),
             search_results: self.search_results.clone(),
             settings_open: self.settings_open,
             settings_page: self.settings_page.clone(),
@@ -337,6 +427,20 @@ impl NotionApp {
             ai_model: self.ai_config.model.clone(),
             ai_prefer_cli: self.ai_config.prefer_cli,
             shortcuts_open: self.shortcuts_open,
+            search_selected: self.search_selected,
+            highlight_pane: self.highlight_pane,
+            filters: self.filters,
+            icon_picker_open: self.icon_picker_open,
+            icon_picker_tab: self.icon_picker_tab,
+            icon_picker_query: self.icon_picker_query.clone(),
+            page_actions_open: self.page_actions_open,
+            font_style: self.font_style,
+            full_width: self.full_width,
+            small_text: self.small_text,
+            available_offline: self.available_offline,
+            lock_page: self.lock_page,
+            drag_from: self.drag_from.clone(),
+            drag_to: self.drag_to.clone(),
         }
     }
 
@@ -361,6 +465,10 @@ impl NotionApp {
         self.slash_for = None;
         self.new_tab_open = false;
         self.shortcuts_open = false;
+        self.icon_picker_open = false;
+        self.page_actions_open = false;
+        self.drag_from = None;
+        self.drag_to = None;
     }
 
     /// Add `id` as a new active tab (the "+" / Ctrl+T / Ctrl+Enter behaviour).
@@ -614,6 +722,53 @@ impl NotionApp {
                         ));
                     }
                 }
+                Command::AddBlock { block, above, pos } => {
+                    // The "+" beside a block adds a new block below (or above
+                    // with Alt) and immediately opens the block menu for it.
+                    let new_id = Uuid::new_v4().to_string();
+                    if let Some(page) = self.current_page_mut()
+                        && let Some(index) = page.blocks.iter().position(|b| b.id == block)
+                    {
+                        let at = if above { index } else { index + 1 };
+                        page.blocks.insert(
+                            at,
+                            Block::new(new_id.clone(), BlockKind::Paragraph, ""),
+                        );
+                        self.slash_for = Some(new_id);
+                        self.slash_pos = pos;
+                    }
+                }
+                Command::StartBlockDrag(id) => {
+                    self.drag_from = Some(id);
+                    self.drag_to = None;
+                }
+                Command::HoverBlockDrag(id) => {
+                    // Only track a target while a drag is actually in progress;
+                    // this also prevents a late hover command (pushed later in
+                    // the same frame as the drop) from leaving stale state.
+                    if self.drag_from.is_some()
+                        && self.drag_from.as_deref() != Some(id.as_str())
+                    {
+                        self.drag_to = Some(id);
+                    }
+                }
+                Command::DropBlock => {
+                    let from = self.drag_from.take();
+                    let to = self.drag_to.take();
+                    if let (Some(from), Some(to)) = (from, to)
+                        && from != to
+                        && let Some(page) = self.current_page_mut()
+                        && let Some(from_idx) = page.blocks.iter().position(|b| b.id == from)
+                    {
+                        let block = page.blocks.remove(from_idx);
+                        let target = page
+                            .blocks
+                            .iter()
+                            .position(|b| b.id == to)
+                            .map_or(page.blocks.len(), |i| i + 1);
+                        page.blocks.insert(target.min(page.blocks.len()), block);
+                    }
+                }
                 Command::DeleteBlock(block_id) => {
                     if let Some(page) = self.current_page_mut() {
                         page.blocks.retain(|b| b.id != block_id);
@@ -680,7 +835,7 @@ impl NotionApp {
                             commands.push(Command::ActivateNewTab(choice));
                         }
                     } else if self.search_open {
-                        if let Some(result) = self.search_results.first() {
+                        if let Some(result) = self.search_results.get(self.search_selected) {
                             let id = result.page_id.clone();
                             self.open_in_tab(id);
                             self.close_overlays();
@@ -859,6 +1014,40 @@ impl NotionApp {
                     self.close_overlays();
                     self.library_open = false;
                 }
+                // ---- Page icon customization (spec-013) ---------------------
+                Command::OpenIconPicker => {
+                    self.close_overlays();
+                    self.icon_picker_open = true;
+                    self.icon_picker_query.clear();
+                    self.icon_picker_tab = IconTab::Emoji;
+                }
+                Command::CloseIconPicker => self.icon_picker_open = false,
+                Command::SetIconTab(tab) => self.icon_picker_tab = tab,
+                Command::SetIconQuery(query) => self.icon_picker_query = query,
+                Command::SetPageIcon(icon) => {
+                    if let Some(page) = self.current_page_mut() {
+                        page.icon = icon;
+                    }
+                    self.icon_picker_open = false;
+                    self.icon_picker_query.clear();
+                }
+                // ---- Page actions / appearance (spec-013) -------------------
+                Command::OpenPageActions => {
+                    self.close_overlays();
+                    self.page_actions_open = true;
+                }
+                Command::ClosePageActions => self.page_actions_open = false,
+                Command::ToggleFullWidth => self.full_width = !self.full_width,
+                Command::ToggleSmallText => self.small_text = !self.small_text,
+                Command::SetFontStyle(style) => self.font_style = style,
+                Command::ToggleAvailableOffline => {
+                    self.available_offline = !self.available_offline;
+                }
+                Command::ToggleLockPage => self.lock_page = !self.lock_page,
+                // ---- Search / new-tab panes (spec-013) ----------------------
+                Command::SetSearchSelected(index) => self.search_selected = index,
+                Command::ToggleHighlightPane => self.highlight_pane = !self.highlight_pane,
+                Command::ToggleFilters => self.filters = !self.filters,
                 Command::NoOp => {}
             }
             index += 1;
@@ -933,8 +1122,15 @@ fn collect_shortcuts(
     ctx: &egui::Context,
     popup_open: bool,
 ) -> (Vec<Action>, Vec<(egui::Key, egui::Modifiers)>) {
-    let events: Vec<(egui::Key, egui::Modifiers)> = ctx.input(|i| {
-        i.events
+    // Read the frame's trusted input context together with the events. A key
+    // is only allowed to become a shortcut when the pointer is over the
+    // window, the window owns the keyboard focus, and the event's modifiers
+    // agree with the held modifiers (spec-013). This stops key events that
+    // arrive after the pointer leaves the window — or with a stale Ctrl/Alt
+    // left over from a focus change — from hijacking ordinary typing.
+    let (events, context) = ctx.input(|i| {
+        let events: Vec<(egui::Key, egui::Modifiers)> = i
+            .events
             .iter()
             .filter_map(|event| match event {
                 egui::Event::Key {
@@ -946,11 +1142,29 @@ fn collect_shortcuts(
                 } => Some((*key, *modifiers)),
                 _ => None,
             })
-            .collect()
+            .collect();
+        (
+            events,
+            (
+                i.focused,
+                i.pointer.has_pointer(),
+                (i.modifiers.ctrl, i.modifiers.shift, i.modifiers.alt),
+            ),
+        )
     });
+    let (window_focused, pointer_over_window, frame_mods) = context;
     let mut actions = Vec::new();
     let mut consumed = Vec::new();
     for (key, modifiers) in events {
+        let event_mods = (modifiers.ctrl, modifiers.shift, modifiers.alt);
+        if !shortcuts::shortcut_context_ok(
+            window_focused,
+            pointer_over_window,
+            event_mods,
+            frame_mods,
+        ) {
+            continue;
+        }
         let name = key_name(key);
         // Enter / arrow keys are navigation only while a popover is open;
         // otherwise they must remain available to text editors.
@@ -987,7 +1201,13 @@ impl eframe::App for NotionApp {
         // this is the state an Undo would restore.
         let frame_before = self.workspace.clone();
 
-        let (actions, consumed) = collect_shortcuts(&ctx, self.new_tab_open);
+        let popup_open = self.new_tab_open
+            || self.search_open
+            || self.icon_picker_open
+            || self.page_actions_open
+            || self.shortcuts_open
+            || self.slash_for.is_some();
+        let (actions, consumed) = collect_shortcuts(&ctx, popup_open);
         if !consumed.is_empty() {
             ctx.input_mut(|i| {
                 i.events.retain(|event| match event {
@@ -1029,7 +1249,7 @@ impl eframe::App for NotionApp {
         // Full-width custom window chrome (tabs + window controls). The OS
         // decorations are off, so the whole strip is a drag handle.
         egui::Panel::top("title_bar")
-            .exact_size(40.0)
+            .exact_size(TITLE_BAR_HEIGHT)
             .resizable(false)
             .show_separator_line(false)
             .frame(egui::Frame::NONE.fill(palette.chrome))
@@ -1067,7 +1287,7 @@ impl eframe::App for NotionApp {
         }
 
         if view.search_open {
-            render_search(&ctx, &view, &palette, &mut commands);
+            render_search(&ctx, &self.workspace, &view, &palette, &mut commands);
         }
         if view.settings_open {
             render_settings(&ctx, &view, &palette, &mut commands);
@@ -1086,6 +1306,12 @@ impl eframe::App for NotionApp {
         }
         if let Some(block) = view.slash_for.as_ref() {
             render_slash(&ctx, block, &view, &palette, &mut commands);
+        }
+        if view.icon_picker_open {
+            render_icon_picker(&ctx, &view, &palette, &mut commands);
+        }
+        if view.page_actions_open {
+            render_page_actions(&ctx, &self.workspace, &view, &palette, &mut commands);
         }
 
         self.apply_commands(commands, &ctx, frame_before);

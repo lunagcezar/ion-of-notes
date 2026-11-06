@@ -149,6 +149,36 @@
   theme (Ctrl+Shift+L), back/forward (Ctrl+[ / Ctrl+]) and reload (Ctrl+R) are
   reachable from the keyboard.
 
+### 1.10 Interaction polish, bugs and modularity (spec-013)
+
+- FR-52: Keyboard shortcuts are only trusted while the window has keyboard
+  focus, the pointer is over the window, and the event's modifiers agree with
+  the frame's held modifiers; plain keystrokes are never stolen from a focused
+  text editor (pure, tested guard in `shortcuts.rs`).
+- FR-53: The sidebar page list scrolls when it overflows; the search box and
+  the bottom account / invite / customize group stay fixed.
+- FR-54: The top bar is compact (36 px) and has no person/settings control;
+  Settings is reached from the sidebar.
+- FR-55: The search window and the "+" new-tab window share one layout
+  (hint field, Today / Past week groups, preview pane, footer hints), with
+  working show/hide highlight-pane and show/hide filters toggles (DRY,
+  `ui/switcher.rs`).
+- FR-56: The sidebar can be shown/hidden from the tab strip (and Ctrl+\).
+- FR-57: The "..." control opens a searchable page-actions menu with
+  Appearance & layout (Default / Serif / Mono, Small text, Full width),
+  Available offline / Lock page toggles and a Last edited footer.
+- FR-58: The block "+" inserts a block below (Alt-click: above) and opens the
+  block menu; the six-dot grip reorders blocks by drag and opens a
+  categorized block menu on click.
+- FR-59: The page icon is customizable (Emoji / Icons / Upload picker with a
+  filter and Remove) and the choice is replicated into the sidebar,
+  breadcrumbs, tab strip and switcher preview.
+- FR-60: Code is divided by coherent responsibility, not by line count or DDD
+  scaffolding (ADR-004): `ui/switcher.rs` and `ui/page_icon.rs` are separate
+  cohesive modules behind the `ui.rs` facade.
+- NFR-10: Every completed spec is committed to git in the same session
+  (`AGENTS.md` → Commits).
+
 ## 2. Non-functional requirements
 
 - NFR-01: `cargo build` succeeds on stable Rust with no manual steps.
@@ -186,6 +216,7 @@
 | R-05, NFR-02, NFR-08, NFR-09  | `spec-008-modular-architecture.md`    |
 | FR-37..FR-42, NFR-03, NFR-06  | `spec-009-visual-fidelity.md`         |
 | FR-44..FR-51                  | `spec-012-interaction-polish.md`      |
+| FR-52..FR-60, NFR-10          | `spec-013-interaction-polish-and-modularity.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 
