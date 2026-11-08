@@ -1,0 +1,146 @@
+# API Observations — not-notion
+
+## Purpose
+
+This is the clean-room behavioral inventory for the server side. It records
+what the product UI and public behavior imply, and what our own decided
+contract (ADR-003) specifies. It deliberately contains **no captured traffic,
+no proprietary payloads, and no original source or assets**.
+
+This file is a living document. Every entry is marked with its evidence level
+so an inference is never mistaken for a fact about the original service.
+
+## Method and scope
+
+- **B1 decision (2026-11-07): public behavior only — strict clean room.**
+- **Allowed sources:** the 29 reference pictures, behavior visible in the
+  product UI, public help/documentation pages, exports the person already
+  owns, and the project's own decided contract in ADR-003.
+- **Not allowed:** HAR or packet capture, `mitmproxy`/Charles/Wireshark,
+  browser source maps or bundled code, decompilation, or bypassing any
+  authentication, certificate pinning, rate limit or terms.
+- **No original server response has been observed.** The inventory is built
+  from UI implications and the decided contract, not from captured traffic.
+
+### Evidence levels
+
+| Level | Meaning |
+| ----- | ------- |
+| **UI-observed** | Visible in the reference pictures or normal product behavior. |
+| **Inferred** | A reasonable server implication of the UI, not confirmed by public documentation. |
+| **Decided** | Our own contract in ADR-003. This is a design decision, **not** a claim about the original. |
+| **Unknown** | Needs public documentation or a future authorized source. |
+
+## Evidence used in this first inventory
+
+- `reference/picture-1.png` … `reference/picture-29.png`: sidebar, page,
+  breadcrumb, Share, Inbox, Library, Settings, People, export/offline surfaces.
+- `docs/requirements.md`: FR-01..FR-71, especially the workspace, search,
+  sharing, sync and export requirements.
+- `docs/adr-003-self-hosted-collaborative-api.md`: decided REST/JSON and
+  WebSocket contract.
+- `docs/data-model.md`: `Workspace`, `Page`, `Block`, `TableRow`, `Member`,
+  `Share`, `Change`, `PageVersion`, `ExportFile`.
+- `spec/spec-011-collaborative-server.md` and
+  `spec/spec-015-hardening-and-performance.md`: implemented in-process slice.
+
+## Inventory
+
+| Operation | UI / public evidence | Inferred behavior | Status | Confidence | Open questions |
+| --------- | -------------------- | ----------------- | ------ | ---------- | -------------- |
+| Load workspace | The window opens with the sidebar tree, favorites and the current page. | A full workspace or page-tree snapshot is loaded at startup. | **Decided:** `GET /api/workspace` | High for our contract; unknown for the original | Does the original send a snapshot, a delta, or separate page-tree and page calls? |
+| List pages / tree | Sidebar shows Favorites and a nested Private tree. | A page-summary list with `id`, `title`, `icon`, `parent`, `favorite`. | **Decided:** `GET /api/pages` | High for our contract | Are children embedded, paginated, or fetched lazily? |
+| Read one page | Opening a page shows its blocks and inline database. | A page resource containing blocks and rows. | **Decided:** `GET /api/pages/{id}` | High for our contract | Does the original load blocks separately from page metadata? |
+| Create page | "New page" in the sidebar and the tab switcher. | Create from a title/icon/parent draft, return the new page. | **Decided:** `POST /api/pages` with `PageDraft` | High for our contract | Does the original create a default empty block, and what is its id strategy? |
+| Update page / title | Inline title editing. | Update one page resource. | **Decided:** `PATCH /api/pages/{id}` | High for our contract | Does the original send a full page, a JSON patch, or a block-level operation? |
+| Update block text | Clicking a block edits it in place; changes save automatically. | Per-block or per-page update. | **Inferred:** page/block update | Medium | Is persistence debounced? Is there a block-level endpoint? |
+| Delete page / Move to Trash | Page actions list "Move to Trash". | Delete the page and its descendants, or mark them trashed. | **Decided:** `DELETE /api/pages/{id}` (subtree removal) | Medium | Does the original use a trash flag, a separate trash resource, or hard delete? |
+| Search | "Search or ask" box and `Ctrl+K`; results are ranked. | Case-insensitive title/body search with ranking. | **Decided:** `GET /api/search?q=` | High for our contract | Does the original search titles, blocks, databases, comments, or all of them? Is it server-side or local? |
+| People / members | People section in Settings; Share popover lists people. | A member directory with roles. | **Decided:** `GET /api/members`, `POST /api/members` | High for our contract | What are the exact roles and invitation states? |
+| Sharing / permissions | Share popover with full/edit/view/no-access choices. | Grants keyed by page and subject. | **Decided:** `GET /api/shares?page=`, `PUT /api/shares` | High for our contract | Does the original support workspace-wide, teamspace, page, block and database permissions? |
+| Sync | The app describes a self-hosted server syncing changes across devices. | A versioned change log with a cursor. | **Decided:** `GET /api/sync?since=` | Medium | Is the original cursor numeric, timestamped, opaque, or per-document? |
+| Export | Export tree described in `docs/data-model.md`; People folder with CSV. | Markdown pages, folder pages, People files. | **Decided:** `GET /api/export` | High for our export shape; unknown for the original | Which exact filenames, metadata and CSV columns does the original use? |
+| Real-time collaboration | Requirements and Settings describe live co-editing. | A WebSocket channel with presence/edit/awareness/sync events. | **Decided:** `GET /api/realtime`; `WS /ws/workspace/{id}` | Medium | What is the actual frame format, auth handshake and conflict model? |
+| Version history | Page actions menu includes "Version history"; snapshots are listed and restorable. | Per-page version snapshots. | **Decided/implemented:** `GET /api/pages/{id}/versions` | High for our contract | Does the original store diffs, snapshots, or CRDT history? |
+| Auth / sessions | Accounts and a self-hosted server are the decided direction. | Sign-in/session before workspace access. | **Decided in ADR-003, not implemented** | Medium | What are the original login, token refresh and session shapes? |
+| Health / liveness | No UI evidence; needed by our loopback server. | A simple health probe. | **Decided/internal:** `GET /health` | High for our server | Not expected to match the original. |
+| Errors | The UI shows no raw server errors. | JSON envelope with `data` and `error`. | **Decided:** `{ "data": …, "error": null \| "message" }` | High for our contract | What are the original status codes, error codes and retry semantics? |
+| Pagination / cursors | Large workspaces are not represented in the pictures. | Likely needed for pages, search, members and sync. | **Unknown** | Low | Does the original paginate? With what parameter names and cursor shape? |
+
+## What the UI tells us directly
+
+- A workspace has a name and a page tree; pages have titles, icons, parents,
+  favorites, blocks and optional table rows.
+- Pages can be created, opened, renamed, favorited, duplicated, trashed,
+  locked and marked available offline.
+- Search is reachable from the sidebar and `Ctrl+K`; results open pages.
+- Sharing is reachable from the breadcrumb bar and the invite card.
+- Settings exposes People, workspace, offline and AI-assistant surfaces.
+- The export tree described in `docs/data-model.md` is part of the expected
+  product behavior (markdown pages, folder pages, People CSV).
+
+These are **UI-observed**. They do not prove the original server's routes,
+payloads or status codes.
+
+## What ADR-003 decides
+
+ADR-003 is our contract, not a description of the original server:
+
+- REST/JSON under `/api/v1` in production; loopback unversioned equivalents
+  today.
+- JSON envelopes with `data` and `error`.
+- Accounts/sessions, members/roles, sharing/permissions.
+- A versioned sync log with a cursor.
+- A WebSocket CRDT channel for real-time editing.
+- A Notion-style export tree.
+
+## What remains unknown
+
+The following cannot be answered from the UI alone and are not answered by
+strict clean-room public behavior:
+
+1. Exact original route paths, method names and status codes.
+2. Exact authentication/session flow and token lifetimes.
+3. Pagination and cursor formats.
+4. Sync semantics: what a change contains, how conflicts are resolved, and
+   whether the original is CRDT-based.
+5. Block-level vs page-level update granularity.
+6. Trash semantics (flag vs hard delete vs retention window).
+7. Permission inheritance and teamspace/workspace scopes.
+8. Export filenames, metadata and CSV columns.
+9. Real-time frame format and presence/awareness payloads.
+10. Rate limits, retry guidance and error-code taxonomy.
+
+Under the strict scope these remain **Unknown** until public documentation
+answers them. They must not be filled in from traffic captures without a new
+B1 decision.
+
+## Compatibility strategy
+
+1. Implement and test the **decided** contract (ADR-003) behind the existing
+   `WorkspaceApi` seam.
+2. Keep every DTO in `src/collab.rs` and every route in `src/server.rs`.
+3. Build a mock server and `tests/contract.rs` from the decided contract.
+4. Mark any behavior that is only inferred; do not present it as original
+   behavior.
+5. If a public document later confirms or contradicts an entry, update this
+   file and the relevant ADR/spec before changing code.
+
+## Public sources to review next
+
+These are public documentation pages, not captures:
+
+- Notion Help Center: <https://www.notion.com/help>
+- Notion API reference: <https://developers.notion.com/reference/intro>
+- Notion API guides: <https://developers.notion.com/docs>
+- Export your content: <https://www.notion.com/help/export-your-content>
+- Sharing and permissions: <https://www.notion.com/help/sharing-and-permissions>
+- Offline mode: <https://www.notion.com/help/offline-mode>
+- Version history: <https://www.notion.com/help/version-history>
+- Keyboard shortcuts: <https://www.notion.com/help/keyboard-shortcuts>
+
+## Change log for this document
+
+| Date | Change |
+| ---- | ------ |
+| 2026-11-07 | First inventory under the strict public-behavior-only scope (B1/B2). No captures used. |

@@ -17,6 +17,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   own-account HAR captures, exports and a derived mock contract are the primary
   discovery sources; Wireshark/mitmproxy are only for traffic we control, with
   redaction and a clean-room log. This is a plan, not an implementation yet.
+- **B1/B2 done under the strict scope:** the person chose **public behavior
+  only** (no HAR/proxy/Wireshark). `docs/api-observations.md` now holds the
+  first inventory, marked UI-observed / inferred / decided / unknown, and
+  `docs/reverse-engineering-log.md` records the decision. B3 is intentionally
+  blocked unless the scope changes.
 
 ### Added / Changed — spec-015-hardening-and-performance
 

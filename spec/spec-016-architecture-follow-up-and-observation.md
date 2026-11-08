@@ -284,9 +284,13 @@ spec defines the operational steps.
 
 ### Phase B — clean-room observation
 
-- [ ] B1 record the permission/scope gate.
-- [ ] B2 write `docs/api-observations.md` from public behavior.
+- [x] B1 record the permission/scope gate: **public behavior only, strict clean
+  room**. No capture, proxy, Wireshark, source maps or decompilation.
+- [x] B2 write `docs/api-observations.md` from public behavior; first
+  inventory completed and marked UI-observed / inferred / decided / unknown.
 - [ ] B3 capture own-account HAR, redact, store under `fixtures/har/`.
+  **Blocked by the B1 decision:** intentionally not executed under the strict
+  scope; it can only resume after a new scope decision.
 - [ ] B4 derive/update the contract and ADR if needed.
 - [ ] B5 implement the mock server and `tests/contract.rs`.
 - [ ] B6 record the tooling choice and TLS handling.
