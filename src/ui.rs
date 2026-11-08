@@ -16,6 +16,7 @@ mod edit_queue;
 mod icons;
 mod input;
 mod invite;
+mod library_filter;
 mod page_icon;
 mod palette;
 mod render;
@@ -28,6 +29,7 @@ mod widgets;
 pub use app::NotionApp;
 pub use edit_queue::{CommitPlan, PendingEdits, execute_plan, plan_for};
 pub use invite::{is_valid_email, member_name_from_email, parse_invite_emails};
+pub use library_filter::pages_for_view;
 pub use palette::{
     Palette, block_menu_options, install_fonts, status_color, strong_font, tab_title,
 };

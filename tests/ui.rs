@@ -5,9 +5,10 @@ use not_notion::model::{BlockKind, Page, PageDiff, Workspace};
 use not_notion::server::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi};
 use not_notion::ui::{
     CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan,
-    is_valid_email, member_name_from_email, parse_invite_emails, plan_for, settings_matches,
-    status_color,
+    is_valid_email, member_name_from_email, pages_for_view, parse_invite_emails, plan_for,
+    settings_matches, status_color,
 };
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 #[test]
@@ -76,6 +77,28 @@ fn commit_plan_uses_patch_for_changed_pages_and_replace_for_structure() {
         ..PageDiff::default()
     };
     assert_eq!(plan_for(&reordered), CommitPlan::Replace);
+}
+
+#[test]
+fn library_views_filter_pages() {
+    let mut favorite = Page::new("fav", "Favorite", "F");
+    favorite.favorite = true;
+    let shared_page = Page::new("shared", "Shared", "S");
+    let private = Page::new("private", "Private", "P");
+    let pages = vec![favorite, shared_page, private];
+    let shared = HashSet::from(["shared".to_string()]);
+
+    let favorites = pages_for_view(&pages, "Favorites", &shared);
+    assert_eq!(favorites.len(), 1);
+    assert_eq!(favorites[0].id, "fav");
+
+    let shared_pages = pages_for_view(&pages, "Shared", &shared);
+    assert_eq!(shared_pages.len(), 1);
+    assert_eq!(shared_pages[0].id, "shared");
+
+    assert_eq!(pages_for_view(&pages, "Private", &shared).len(), 2);
+    assert_eq!(pages_for_view(&pages, "Recents", &shared).len(), 3);
+    assert!(pages_for_view(&pages, "Agents", &shared).is_empty());
 }
 
 #[test]

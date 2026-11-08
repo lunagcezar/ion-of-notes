@@ -5,10 +5,11 @@
 //! Splitting it from the struct/eframe shell keeps `ui::app` small (SRP,
 //! spec-017).
 
-use crate::collab::{MemberDraft, Share, general_access};
+use crate::collab::{MemberDraft, Role, Share, general_access};
 use crate::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
 use crate::ollama;
 use crate::shortcuts::Action;
+use std::collections::HashSet;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -43,6 +44,8 @@ impl NotionApp {
             table_view: self.table_view,
             library_open: self.library_open,
             library_tab: self.library_tab.clone(),
+            library_shared: Arc::clone(&self.library_shared),
+            library_owner: self.library_owner.clone(),
             share_open: self.share_open,
             share_members: Arc::clone(&self.share_members),
             invite_input: self.invite_input.clone(),
@@ -201,6 +204,23 @@ impl NotionApp {
             .list_shares(Some(&self.current_page))
             .unwrap_or_default();
         self.share_general_access = general_access(&shares, &self.current_page);
+    }
+
+    /// Refresh the Library filters and owner label (spec-024).
+    fn refresh_library(&mut self) {
+        let shares = self.client.list_shares(None).unwrap_or_default();
+        let shared: HashSet<String> = shares
+            .iter()
+            .filter(|share| share.page_id != "*")
+            .map(|share| share.page_id.clone())
+            .collect();
+        self.library_shared = Arc::new(shared);
+        let members = self.client.list_members().unwrap_or_default();
+        self.library_owner = members
+            .iter()
+            .find(|member| member.role == Role::Owner)
+            .map(|member| member.name.clone())
+            .unwrap_or_else(|| "Local workspace".to_string());
     }
 
     /// Persist the difference between the last committed state and the
@@ -374,6 +394,7 @@ impl NotionApp {
                 Command::OpenLibrary => {
                     self.close_overlays();
                     self.library_open = true;
+                    self.refresh_library();
                 }
                 Command::CloseLibrary => self.library_open = false,
                 Command::SetLibraryTab(tab) => self.library_tab = tab,

@@ -2,11 +2,12 @@
 
 //! Library table: tabs, page rows and the empty state.
 
-use crate::model::{Page, Workspace};
+use crate::model::Workspace;
 use egui::{Align2, Color32, CornerRadius, FontId, Rect, Sense, Stroke, Vec2};
 
 use super::super::commands::Command;
 use super::super::icons::draw_page;
+use super::super::library_filter::pages_for_view;
 use super::super::palette::{Palette, strong_font};
 use super::super::view::ViewState;
 use super::database::header_cell;
@@ -56,7 +57,7 @@ pub(super) fn render_library(
             ui.add_space(22.0);
 
             ui.horizontal(|ui| {
-                for tab in ["Recents", "Favorites", "Shared", "Private", "More"] {
+                for tab in ["Recents", "Favorites", "Shared", "Private"] {
                     let active = view.library_tab == tab;
                     let btn = ui.add(
                         egui::Button::new(egui::RichText::new(tab).size(13.0).color(if active {
@@ -75,6 +76,17 @@ pub(super) fn render_library(
                         commands.push(Command::SetLibraryTab(tab.to_string()));
                     }
                 }
+                ui.menu_button(
+                    egui::RichText::new("More").size(13.0).color(palette.muted),
+                    |ui| {
+                        for tab in ["AI Meeting Notes", "Agents", "Templates", "Trash"] {
+                            if ui.button(tab).clicked() {
+                                commands.push(Command::SetLibraryTab(tab.to_string()));
+                                ui.close();
+                            }
+                        }
+                    },
+                );
             });
             ui.add_space(18.0);
 
@@ -85,16 +97,19 @@ pub(super) fn render_library(
                 header_cell(ui, name_w, "Page name", palette);
                 header_cell(ui, created_w, "Created by", palette);
                 header_cell(ui, source_w, "Source", palette);
-                header_cell(ui, 100.0, "Last edited", palette);
+                header_cell(ui, 120.0, "Last edited time", palette);
             });
             ui.separator();
 
-            let pages: Vec<&Page> = match view.library_tab.as_str() {
-                "Favorites" => ws.pages.iter().filter(|p| p.favorite).collect(),
-                "Private" => ws.pages.iter().filter(|p| p.parent.is_none()).collect(),
-                "Shared" => ws.pages.iter().collect(),
-                _ => ws.pages.iter().collect(),
-            };
+            let pages = pages_for_view(&ws.pages, &view.library_tab, &view.library_shared);
+            if pages.is_empty() {
+                ui.add_space(20.0);
+                ui.label(
+                    egui::RichText::new("No pages in this view yet.")
+                        .size(13.0)
+                        .color(palette.muted),
+                );
+            }
             for page in pages {
                 let (rect, response) =
                     ui.allocate_exact_size(Vec2::new(full - 192.0, 34.0), Sense::click());
@@ -117,7 +132,7 @@ pub(super) fn render_library(
                 ui.painter().text(
                     rect.min + Vec2::new(name_w + 12.0, 17.0),
                     Align2::LEFT_CENTER,
-                    "You",
+                    &view.library_owner,
                     FontId::proportional(12.0),
                     palette.muted,
                 );
@@ -131,7 +146,7 @@ pub(super) fn render_library(
                 ui.painter().text(
                     rect.min + Vec2::new(name_w + created_w + source_w + 12.0, 17.0),
                     Align2::LEFT_CENTER,
-                    "6d ago",
+                    &page.updated_at,
                     FontId::proportional(12.0),
                     palette.muted,
                 );

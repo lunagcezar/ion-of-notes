@@ -216,6 +216,12 @@
   access through Full/Can edit/Can view/No access, and copies the page link
   (implemented in `spec-023`). The optional invite message is UI-only until
   `MemberDraft` carries a note field.
+
+### 1.13 Library views (spec-024)
+
+- FR-73: The Library tabs are functional (Recents / Favorites / Shared /
+  Private), the More menu offers placeholder views, and rows show the owner,
+  workspace source and real last-edited time (implemented in `spec-024`).
 - NFR-10: Every completed spec is committed to git in the same session
   (`AGENTS.md` → Commits).
 - NFR-11: Search results are cached by query and workspace version; an
@@ -278,6 +284,7 @@
 | FR-69, FR-70 (implemented)    | `spec-021-quality-and-concurrency-baseline.md` |
 | FR-65, FR-66 (implemented)    | `spec-022-workspace-index-and-version-retention.md` |
 | FR-72 (implemented)           | `spec-023-add-members-sharing-dialog.md` |
+| FR-73 (implemented)           | `spec-024-library-views.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

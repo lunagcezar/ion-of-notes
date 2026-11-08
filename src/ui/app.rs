@@ -58,6 +58,8 @@ pub struct NotionApp {
     pub(super) table_view: bool,
     pub(super) library_open: bool,
     pub(super) library_tab: String,
+    pub(super) library_shared: Arc<HashSet<String>>,
+    pub(super) library_owner: String,
     pub(super) share_open: bool,
     pub(super) share_members: Arc<Vec<Member>>,
     pub(super) invite_input: String,
@@ -139,18 +141,41 @@ impl NotionApp {
         } else {
             current_page.clone()
         };
-        let (share_members, share_general_access) = if demo == "share" {
-            let members = client.list_members().unwrap_or_default();
-            let shares = client
-                .list_shares(Some(&demo_current_page))
-                .unwrap_or_default();
-            (
-                Arc::new(members),
-                general_access(&shares, &demo_current_page),
-            )
-        } else {
-            (Arc::new(Vec::new()), Access::None)
-        };
+        let (share_members, share_general_access, library_shared, library_owner) =
+            if demo == "share" || demo == "library" {
+                let members = client.list_members().unwrap_or_default();
+                let shares = client
+                    .list_shares(Some(&demo_current_page))
+                    .unwrap_or_default();
+                let all_shares = if demo == "library" {
+                    client.list_shares(None).unwrap_or_default()
+                } else {
+                    shares.clone()
+                };
+                let shared: HashSet<String> = all_shares
+                    .iter()
+                    .filter(|share| share.page_id != "*")
+                    .map(|share| share.page_id.clone())
+                    .collect();
+                let owner = members
+                    .iter()
+                    .find(|member| member.role == Role::Owner)
+                    .map(|member| member.name.clone())
+                    .unwrap_or_else(|| "Local workspace".to_string());
+                (
+                    Arc::new(members),
+                    general_access(&shares, &demo_current_page),
+                    Arc::new(shared),
+                    owner,
+                )
+            } else {
+                (
+                    Arc::new(Vec::new()),
+                    Access::None,
+                    Arc::new(HashSet::new()),
+                    "Local workspace".to_string(),
+                )
+            };
         let nav_history = vec![demo_current_page.clone()];
         let ai_config = OllamaConfig::from_env();
         let ai_status = ollama::detect(&ai_config);
@@ -182,6 +207,8 @@ impl NotionApp {
             table_view: true,
             library_open: demo == "library",
             library_tab: "Recents".to_string(),
+            library_shared,
+            library_owner,
             share_open: demo == "share",
             share_members,
             invite_input: String::new(),

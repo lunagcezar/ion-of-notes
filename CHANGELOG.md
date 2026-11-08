@@ -6,6 +6,22 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — spec-024-library-views
+
+- Library tabs are functional: Favorites filters favorite pages, Shared shows
+  pages with a page-specific share, Private shows pages without one, and
+  Recents shows the workspace order. The general `"*"` share does not mark
+  every page as shared.
+- Replaced the `More` tab with a menu offering AI Meeting Notes, Agents,
+  Templates and Trash placeholder views.
+- Library rows now show the owner from the member directory, the workspace
+  name as Source, and the page's real `updated_at` as Last edited time.
+- `OpenLibrary` refreshes shares/members; `NOT_NOTION_SHOW=library` populates
+  the preview.
+- Added pure `ui/library_filter.rs` and its tests.
+- Docs: added `spec/spec-024-library-views.md`; updated requirements, README
+  and `AGENTS.md`.
+
 ### Added — spec-023-add-members-sharing-dialog
 
 - The Share popover is functional: it loads the member directory and general
