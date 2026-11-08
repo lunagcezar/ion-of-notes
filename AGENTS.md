@@ -94,11 +94,19 @@ src/
   main.rs          CLI wiring only (desktop, --screenshot, --serve)
   app.rs           composition root (bootstrap): wires adapters to ports
   lib.rs           crate root and public re-exports
-  model.rs         Workspace, Page, Block, BlockKind, TableRow, search, tree
+  model.rs         Workspace, Page, Block, BlockKind, TableRow, tree helpers
+  model/
+    seed.rs        neutral demo workspace used on first start
+    search.rs      ranked search + excerpt helper
   store.rs         WorkspaceStore port + JsonStore / NoStore adapters + JSON I/O + data_path
-  server.rs        WorkspaceServer, WorkspaceApi trait, HTTP router, listener
+  server.rs        WorkspaceServer, WorkspaceApi trait, routes
+  server/
+    http.rs        loopback HTTP/1.1 adapter (parse/format/serve)
+    url.rs         percent-encoding/decoding shared by client and server
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
-  collab.rs        accounts/roles, sharing, sync log, realtime DTOs, export tree
+  collab.rs        accounts/roles, sharing, sync log, realtime DTOs, CollabState
+  collab/
+    export.rs      Notion-style markdown/CSV export tree
   ollama.rs        AI assistant adapter: Ollama CLI in PATH or service at host:port
   shortcuts.rs     pure keyboard-shortcut table (Combo -> Action) + docs table
   screenshot.rs    ColorImage -> RGBA -> PNG

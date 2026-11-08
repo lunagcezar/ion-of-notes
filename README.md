@@ -18,6 +18,11 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
   `dialogs/` (settings, sharing, page actions, menus, help, search window),
   `widgets`, `switcher`, `page_icon`, `search_cache` and `settings_search` —
   each with one responsibility.
+- `model.rs` keeps the entities and tree behavior; `model/seed.rs` holds the
+  demo workspace and `model/search.rs` the ranked search. `collab.rs` keeps
+  the collaboration DTOs/state and `collab/export.rs` the export tree.
+  `server.rs` keeps the API routes; `server/http.rs` is the loopback HTTP
+  adapter and `server/url.rs` the shared URL encoding.
 - `WorkspaceApi` is the transport port and `WorkspaceStore` the persistence
   port. `JsonStore` and `NoStore` are adapters; a different backend can be
   injected with `WorkspaceServer::with_store` without editing the core.

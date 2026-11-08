@@ -4,17 +4,19 @@
 //! `WorkspaceApi` seam. `serve_once` / `serve_forever` expose the very same
 //! contract over loopback HTTP/1.1 for the optional `--serve` mode.
 
-use crate::collab::{
-    export_tree, realtime_contract, ChangeOp, CollabState, MemberDraft, Share,
-};
+use crate::collab::{ChangeOp, CollabState, MemberDraft, Share, export_tree, realtime_contract};
 use crate::model::{Page, PageDraft, PageSummary, SearchResult, Workspace};
 use crate::store::{JsonStore, NoStore, WorkspaceStore};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+
+mod http;
+mod url;
+
+pub use http::{format_http_response, parse_http_request, serve_forever, serve_once};
 use std::path::PathBuf;
-use std::time::Duration;
+use url::url_decode;
+pub use url::url_encode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Method {
@@ -192,36 +194,6 @@ fn query_value(query: &str, key: &str) -> String {
     String::new()
 }
 
-/// Minimal percent-decoding for the `?q=` search parameter.
-fn url_decode(value: &str) -> String {
-    let bytes = value.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        match bytes[i] {
-            b'+' => {
-                out.push(b' ');
-                i += 1;
-            }
-            b'%' if i + 2 < bytes.len() => {
-                let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("");
-                if let Ok(byte) = u8::from_str_radix(hex, 16) {
-                    out.push(byte);
-                    i += 3;
-                } else {
-                    out.push(bytes[i]);
-                    i += 1;
-                }
-            }
-            other => {
-                out.push(other);
-                i += 1;
-            }
-        }
-    }
-    String::from_utf8_lossy(&out).into_owned()
-}
-
 impl WorkspaceApi for WorkspaceServer {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
         let (path, query) = match request.path.split_once('?') {
@@ -232,9 +204,7 @@ impl WorkspaceApi for WorkspaceServer {
         match (request.method, path) {
             (Method::Get, "/health") => json(200, Envelope::ok("ok".to_string())),
 
-            (Method::Get, "/api/workspace") => {
-                json(200, Envelope::ok(self.workspace.clone()))
-            }
+            (Method::Get, "/api/workspace") => json(200, Envelope::ok(self.workspace.clone())),
             (Method::Put, "/api/workspace") => match parse_body::<Workspace>(request) {
                 Ok(workspace) => {
                     let actor = self.collab.owner_id();
@@ -319,7 +289,7 @@ impl WorkspaceApi for WorkspaceServer {
                     self.collab.shares_for(&page)
                 };
                 json(200, Envelope::ok(shares))
-            },
+            }
             (Method::Put, "/api/shares") => match parse_body::<Share>(request) {
                 Ok(share) => {
                     self.collab.set_access(share.clone());
@@ -330,13 +300,13 @@ impl WorkspaceApi for WorkspaceServer {
             (Method::Get, "/api/sync") => {
                 let since = query_value(query, "since").parse::<u64>().unwrap_or(0);
                 json(200, Envelope::ok(self.collab.changes_since(since)))
-            },
-            (Method::Get, "/api/export") => {
-                json(200, Envelope::ok(export_tree(&self.workspace, &self.collab.members)))
-            },
+            }
+            (Method::Get, "/api/export") => json(
+                200,
+                Envelope::ok(export_tree(&self.workspace, &self.collab.members)),
+            ),
             (Method::Get, "/api/realtime") => json(200, Envelope::ok(realtime_contract())),
             // ---------------------------------------------------------------
-
             (method, page_path) if page_path.starts_with("/api/pages/") => {
                 let rest = &page_path["/api/pages/".len()..];
                 if rest.is_empty() {
@@ -391,128 +361,4 @@ impl WorkspaceApi for WorkspaceServer {
             _ => not_found("unknown route"),
         }
     }
-}
-
-/// Parse one HTTP/1.1 request into an `ApiRequest`.
-pub fn parse_http_request(bytes: &[u8]) -> Option<ApiRequest> {
-    let text = String::from_utf8_lossy(bytes);
-    let (head, body_bytes) = match text.split_once("\r\n\r\n") {
-        Some((h, b)) => (h, b),
-        None => (text.as_ref(), ""),
-    };
-    let mut lines = head.split("\r\n");
-    let mut words = lines.next().unwrap_or("").split_whitespace();
-    let method = Method::parse(words.next().unwrap_or(""))?;
-    let path = words.next().unwrap_or("").to_string();
-    if path.is_empty() {
-        return None;
-    }
-    let mut content_length = 0usize;
-    for line in lines {
-        if let Some((key, value)) = line.split_once(':')
-            && key.trim().eq_ignore_ascii_case("content-length")
-        {
-            content_length = value.trim().parse().unwrap_or(0);
-        }
-    }
-    let body = if content_length > 0 {
-        let raw = body_bytes.as_bytes();
-        let end = content_length.min(raw.len());
-        Some(String::from_utf8_lossy(&raw[..end]).into_owned())
-    } else {
-        None
-    };
-    Some(ApiRequest {
-        method,
-        path,
-        body,
-    })
-}
-
-/// Serialize an `ApiResponse` as an HTTP/1.1 response.
-pub fn format_http_response(response: &ApiResponse) -> Vec<u8> {
-    let reason = match response.status {
-        200 => "OK",
-        201 => "Created",
-        400 => "Bad Request",
-        404 => "Not Found",
-        500 => "Internal Server Error",
-        _ => "OK",
-    };
-    format!(
-        "HTTP/1.1 {} {}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n{}",
-        response.status,
-        reason,
-        response.body.len(),
-        response.body
-    )
-    .into_bytes()
-}
-
-fn request_complete(buffer: &[u8]) -> bool {
-    let Some(index) = buffer.windows(4).position(|w| w == b"\r\n\r\n") else {
-        return false;
-    };
-    let head = String::from_utf8_lossy(&buffer[..index]);
-    let mut length = 0usize;
-    for line in head.split("\r\n").skip(1) {
-        if let Some((key, value)) = line.split_once(':')
-            && key.trim().eq_ignore_ascii_case("content-length")
-        {
-            length = value.trim().parse().unwrap_or(0);
-        }
-    }
-    buffer.len() >= index + 4 + length
-}
-
-/// Handle one connection and write one response.
-pub fn serve_once<A: WorkspaceApi>(api: &mut A, stream: &mut TcpStream) -> std::io::Result<()> {
-    stream.set_read_timeout(Some(Duration::from_secs(2)))?;
-    let mut buffer = Vec::new();
-    let mut chunk = [0u8; 4096];
-    for _ in 0..32 {
-        if request_complete(&buffer) {
-            break;
-        }
-        match stream.read(&mut chunk) {
-            Ok(0) => break,
-            Ok(n) => buffer.extend_from_slice(&chunk[..n]),
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
-            Err(e) if e.kind() == std::io::ErrorKind::TimedOut => break,
-            Err(e) => return Err(e),
-        }
-    }
-    let request = parse_http_request(&buffer)
-        .unwrap_or_else(|| ApiRequest::new(Method::Get, "/health", None));
-    let response = api.handle(&request);
-    stream.write_all(&format_http_response(&response))?;
-    stream.flush()
-}
-
-/// Blocking loopback API server. Only used by `--serve`.
-pub fn serve_forever(addr: &str, mut server: WorkspaceServer) -> std::io::Result<()> {
-    let listener = TcpListener::bind(addr)?;
-    println!("not-notion API listening on http://{addr}");
-    for incoming in listener.incoming() {
-        match incoming {
-            Ok(mut stream) => {
-                let _ = serve_once(&mut server, &mut stream);
-            }
-            Err(e) => eprintln!("connection error: {e}"),
-        }
-    }
-    Ok(())
-}
-
-/// Percent-encode a string for use in a query parameter.
-pub fn url_encode(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for byte in value.bytes() {
-        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
-            out.push(byte as char);
-        } else {
-            out.push_str(&format!("%{byte:02X}"));
-        }
-    }
-    out
 }

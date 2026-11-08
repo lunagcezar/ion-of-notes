@@ -6,6 +6,24 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — spec-018-domain-and-infrastructure-modularization
+
+- Pure refactor of the three remaining multi-responsibility non-UI files,
+  split by responsibility (ADR-004), with no behavior or API change:
+  - `model.rs` 532 → 356 lines: entities and tree behavior stay; the demo
+    workspace moves to `model/seed.rs` (133) and ranked search to
+    `model/search.rs` (66).
+  - `collab.rs` 532 → 381 lines: DTOs and `CollabState` stay; the markdown/CSV
+    export tree moves to `collab/export.rs` (149).
+  - `server.rs` 518 → 364 lines: routes and `WorkspaceServer` stay; the
+    loopback HTTP adapter moves to `server/http.rs` (114) and URL encoding to
+    `server/url.rs` (44).
+- `lib.rs` and the test imports keep working through the module facades.
+- `AGENTS.md` and `README.md` document the new tree.
+- `cargo build`, `cargo test --all-targets` (85 tests), clippy, rustfmt and the
+  default screenshot are unchanged and green.
+- Added `spec/spec-018-domain-and-infrastructure-modularization.md`.
+
 ### Changed — spec-017-ui-modularization
 
 - Pure refactor of the three multi-responsibility UI files, split by
