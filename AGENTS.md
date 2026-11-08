@@ -499,6 +499,8 @@ stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo test --all-targets`               | Run all integration test crates (159)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
+| `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |
+| `pwsh -File scripts/check-docs.ps1`      | Links, Mermaid fences and table columns  |
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
 | `cargo run -- --serve 127.0.0.1:8787`   | Run the loopback API server              |
 

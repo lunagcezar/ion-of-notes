@@ -6,6 +6,15 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Tooling — reusable check scripts
+
+- Added `scripts/check-links.ps1`, `check-mermaid.ps1`, `check-tables.ps1`,
+  `check-docs.ps1`, `check-tests.ps1` and `quality.ps1`.
+- `quality.ps1` runs `cargo fmt --check`, clippy, tests and the Markdown checks
+  in one command, which makes command approval short and repeatable.
+- Added `scripts/README.md`; updated `AGENTS.md`, `README.md`,
+  `docs/testing.md` and `docs/contributor-guide.md`.
+
 ### Added — spec-032-rich-text-and-blocks
 
 - Added rich text objects (`text`, `mention`, `equation`) with annotations,

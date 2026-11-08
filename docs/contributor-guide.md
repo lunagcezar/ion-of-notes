@@ -21,6 +21,9 @@ cargo fmt --check
 cargo run                       # desktop window
 cargo run -- --serve 127.0.0.1:8787
 cargo run -- --screenshot shots/now.png
+
+# One command for fmt + clippy + tests + Markdown checks:
+pwsh -File scripts/quality.ps1
 ```
 
 CI runs formatting, clippy, tests and a release build on Windows.

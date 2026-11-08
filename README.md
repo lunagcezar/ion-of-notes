@@ -100,6 +100,12 @@ cargo test --all-targets
 cargo run
 ```
 
+For the full gate (formatting, clippy, tests and Markdown checks):
+
+```sh
+pwsh -File scripts/quality.ps1
+```
+
 CI (`.github/workflows/ci.yml`) runs formatting, clippy, tests and a release
 build on Windows.
 

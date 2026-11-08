@@ -86,6 +86,7 @@ flowchart TD
 | `docs/visual-reference-inventory.md` | UI contributors | What the 72 `screenshots/` pictures show and their gaps |
 | `docs/unknowns.md` | everyone | Open reconstruction questions and their status |
 | `docs/adr-001…006` | maintainers | Accepted architecture, API, modularization, clean-room and public-API-alignment decisions |
+| `scripts/README.md` | contributors, agents | Reusable link/Mermaid/table/test/quality checks |
 | `spec/README.md` | everyone | Spec index, status, and the SDD lifecycle |
 | `CHANGELOG.md` | everyone | What changed, in what spec, with verification notes |
 

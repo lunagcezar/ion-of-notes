@@ -73,6 +73,9 @@ Run everything with:
 cargo test --all-targets
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
+
+# Or run the full gate, including the Markdown checks:
+pwsh -File scripts/quality.ps1
 ```
 
 ## 4. What each layer tests
