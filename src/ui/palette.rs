@@ -3,8 +3,8 @@
 
 use crate::model::BlockKind;
 use egui::{Color32, FontData, FontDefinitions, FontFamily, FontId};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// True once a strong display face has been registered with egui.
 static STRONG_FONT: AtomicBool = AtomicBool::new(false);
@@ -71,11 +71,7 @@ impl Palette {
     }
 
     pub fn for_theme(dark: bool) -> Self {
-        if dark {
-            Self::dark()
-        } else {
-            Self::light()
-        }
+        if dark { Self::dark() } else { Self::light() }
     }
 }
 
@@ -126,11 +122,7 @@ pub fn install_fonts(ctx: &egui::Context) {
     let symbol = std::fs::read(r"C:\Windows\Fonts\seguisym.ttf").ok();
     let emoji = std::fs::read(r"C:\Windows\Fonts\seguiemj.ttf").ok();
     let serif = std::fs::read(r"C:\Windows\Fonts\times.ttf").ok();
-    if regular.is_none()
-        && bold.is_none()
-        && symbol.is_none()
-        && emoji.is_none()
-        && serif.is_none()
+    if regular.is_none() && bold.is_none() && symbol.is_none() && emoji.is_none() && serif.is_none()
     {
         return;
     }
@@ -167,10 +159,8 @@ pub fn install_fonts(ctx: &egui::Context) {
         STRONG_FONT.store(true, Ordering::SeqCst);
     }
     if let Some(bytes) = emoji {
-        defs.font_data.insert(
-            "ui-emoji".to_owned(),
-            Arc::new(FontData::from_owned(bytes)),
-        );
+        defs.font_data
+            .insert("ui-emoji".to_owned(), Arc::new(FontData::from_owned(bytes)));
         defs.families
             .entry(FontFamily::Proportional)
             .or_default()
@@ -187,10 +177,8 @@ pub fn install_fonts(ctx: &egui::Context) {
             .push("ui-symbol".to_owned());
     }
     if let Some(bytes) = serif {
-        defs.font_data.insert(
-            "ui-serif".to_owned(),
-            Arc::new(FontData::from_owned(bytes)),
-        );
+        defs.font_data
+            .insert("ui-serif".to_owned(), Arc::new(FontData::from_owned(bytes)));
         // Fall back to the installed UI face for glyphs Times lacks.
         let fallback = defs
             .families

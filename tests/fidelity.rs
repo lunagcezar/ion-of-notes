@@ -4,7 +4,7 @@
 //! Red -> Green -> Refactor discipline.
 
 use not_notion::model::{BlockKind, Workspace};
-use not_notion::ui::{strong_font, tab_title, Palette};
+use not_notion::ui::{Palette, strong_font, tab_title};
 
 #[test]
 fn chrome_color_is_theme_specific_and_distinct_from_content() {
@@ -37,11 +37,15 @@ fn tab_title_keeps_short_titles_and_truncates_long_ones() {
 fn seeded_home_page_opens_with_a_callout_and_section_headings() {
     let ws = Workspace::seed("not-notion");
     let home = ws.page("p-home").expect("home page");
-    assert_eq!(home.blocks.first().map(|b| b.kind), Some(BlockKind::Callout));
-    assert!(home
-        .blocks
-        .iter()
-        .any(|b| b.kind == BlockKind::Heading1 || b.kind == BlockKind::Heading2));
+    assert_eq!(
+        home.blocks.first().map(|b| b.kind),
+        Some(BlockKind::Callout)
+    );
+    assert!(
+        home.blocks
+            .iter()
+            .any(|b| b.kind == BlockKind::Heading1 || b.kind == BlockKind::Heading2)
+    );
     assert!(home.blocks.iter().any(|b| b.kind == BlockKind::Bulleted));
 }
 

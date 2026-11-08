@@ -4,9 +4,9 @@
 //! and endpoint logic are exercised here.
 
 use not_notion::ollama::{
-    build_generate_body, decode_body, decode_chunked, default_endpoint, generate,
-    normalize_endpoint, parse_endpoint, parse_generate_response, parse_tags_response,
-    OllamaConfig, OllamaStatus, DEFAULT_MODEL, DEFAULT_PORT,
+    DEFAULT_MODEL, DEFAULT_PORT, OllamaConfig, OllamaStatus, build_generate_body, decode_body,
+    decode_chunked, default_endpoint, generate, normalize_endpoint, parse_endpoint,
+    parse_generate_response, parse_tags_response,
 };
 
 #[test]
@@ -76,7 +76,8 @@ fn chunked_and_plain_http_bodies_are_decoded() {
     let chunked = b"3\r\nabc\r\n4\r\ndefg\r\n0\r\n\r\n";
     assert_eq!(decode_chunked(chunked).unwrap(), b"abcdefg");
 
-    let plain = b"HTTP/1.1 200 OK\r\nContent-Length: 18\r\nConnection: close\r\n\r\n{\"response\":\"ok\"}";
+    let plain =
+        b"HTTP/1.1 200 OK\r\nContent-Length: 18\r\nConnection: close\r\n\r\n{\"response\":\"ok\"}";
     assert_eq!(decode_body(plain).unwrap(), r#"{"response":"ok"}"#);
 
     let chunked_response = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n5\r\nhello\r\n0\r\n\r\n";
@@ -91,8 +92,18 @@ fn chunked_and_plain_http_bodies_are_decoded() {
 fn status_labels_describe_both_transports() {
     assert!(OllamaStatus::Unavailable.label().contains("PATH"));
     assert!(!OllamaStatus::Unavailable.connected());
-    assert!(OllamaStatus::Cli { version: "0.5.0".into() }.connected());
-    assert!(OllamaStatus::Service { endpoint: default_endpoint() }.connected());
+    assert!(
+        OllamaStatus::Cli {
+            version: "0.5.0".into()
+        }
+        .connected()
+    );
+    assert!(
+        OllamaStatus::Service {
+            endpoint: default_endpoint()
+        }
+        .connected()
+    );
 }
 
 #[test]

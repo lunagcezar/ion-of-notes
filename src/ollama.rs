@@ -12,7 +12,7 @@
 //! a running Ollama, which keeps this adapter behind the same seam as the
 //! workspace server.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::process::Command;
@@ -65,7 +65,11 @@ impl OllamaConfig {
             .unwrap_or_else(|| {
                 default_model_for(&endpoint).unwrap_or_else(|| DEFAULT_MODEL.to_string())
             });
-        Self { endpoint, model, prefer_cli: true }
+        Self {
+            endpoint,
+            model,
+            prefer_cli: true,
+        }
     }
 }
 
@@ -88,10 +92,7 @@ pub fn parse_endpoint(endpoint: &str) -> Result<(String, u16), String> {
             break;
         }
     }
-    let authority = s
-        .split(['/', '?', '#'])
-        .next()
-        .unwrap_or("");
+    let authority = s.split(['/', '?', '#']).next().unwrap_or("");
     if authority.is_empty() {
         return Err("missing host in Ollama endpoint".into());
     }
@@ -171,10 +172,14 @@ pub fn detect(config: &OllamaConfig) -> OllamaStatus {
     if config.prefer_cli
         && let Some(version) = &cli
     {
-        return OllamaStatus::Cli { version: version.clone() };
+        return OllamaStatus::Cli {
+            version: version.clone(),
+        };
     }
     if service_reachable(&config.endpoint) {
-        return OllamaStatus::Service { endpoint: config.endpoint.clone() };
+        return OllamaStatus::Service {
+            endpoint: config.endpoint.clone(),
+        };
     }
     match cli {
         Some(version) => OllamaStatus::Cli { version },
@@ -189,8 +194,8 @@ pub fn build_generate_body(model: &str, prompt: &str) -> String {
 
 /// Extract the generated text from a `/api/generate` JSON reply.
 pub fn parse_generate_response(body: &str) -> Result<String, String> {
-    let value: Value = serde_json::from_str(body)
-        .map_err(|e| format!("invalid Ollama reply: {e}"))?;
+    let value: Value =
+        serde_json::from_str(body).map_err(|e| format!("invalid Ollama reply: {e}"))?;
     if let Some(err) = value.get("error").and_then(Value::as_str) {
         return Err(err.to_string());
     }
@@ -203,8 +208,8 @@ pub fn parse_generate_response(body: &str) -> Result<String, String> {
 
 /// Model names from a `/api/tags` reply.
 pub fn parse_tags_response(body: &str) -> Result<Vec<String>, String> {
-    let value: Value = serde_json::from_str(body)
-        .map_err(|e| format!("invalid Ollama tags reply: {e}"))?;
+    let value: Value =
+        serde_json::from_str(body).map_err(|e| format!("invalid Ollama tags reply: {e}"))?;
     let models = value
         .get("models")
         .and_then(Value::as_array)
@@ -225,8 +230,8 @@ pub fn decode_chunked(bytes: &[u8]) -> Result<Vec<u8>, String> {
     let mut i = 0usize;
     loop {
         let nl = find_crlf(&bytes[i..]).ok_or("truncated chunk header")?;
-        let line = std::str::from_utf8(&bytes[i..i + nl])
-            .map_err(|e| format!("bad chunk size: {e}"))?;
+        let line =
+            std::str::from_utf8(&bytes[i..i + nl]).map_err(|e| format!("bad chunk size: {e}"))?;
         let size = usize::from_str_radix(line.split(';').next().unwrap_or("").trim(), 16)
             .map_err(|e| format!("bad chunk size: {e}"))?;
         i += nl + 2;
@@ -254,7 +259,9 @@ pub fn decode_body(raw: &[u8]) -> Result<String, String> {
     if !status.contains(" 200 ") && !status.ends_with(" 200") {
         return Err(format!("Ollama returned {status}"));
     }
-    let chunked = head.to_ascii_lowercase().contains("transfer-encoding: chunked");
+    let chunked = head
+        .to_ascii_lowercase()
+        .contains("transfer-encoding: chunked");
     let body = if chunked {
         String::from_utf8_lossy(&decode_chunked(&raw[split..])?).into_owned()
     } else {

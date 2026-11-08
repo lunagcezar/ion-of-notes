@@ -196,7 +196,12 @@ pub(super) fn draw_settings(painter: &egui::Painter, rect: Rect, color: Color32)
 pub(super) fn draw_panel(painter: &egui::Painter, rect: Rect, color: Color32) {
     let stroke = Stroke::new(1.2, color);
     let box_rect = rect.shrink(4.0);
-    painter.rect_stroke(box_rect, CornerRadius::same(2), stroke, egui::StrokeKind::Inside);
+    painter.rect_stroke(
+        box_rect,
+        CornerRadius::same(2),
+        stroke,
+        egui::StrokeKind::Inside,
+    );
     painter.vline(
         box_rect.min.x + box_rect.width() * 0.38,
         box_rect.y_range(),
@@ -243,7 +248,11 @@ pub(super) fn draw_arrow_left(painter: &egui::Painter, rect: Rect, color: Color3
     let c = rect.center();
     let s = Stroke::new(1.4, color);
     painter.line(
-        vec![c + Vec2::new(2.5, -5.0), c + Vec2::new(-2.5, 0.0), c + Vec2::new(2.5, 5.0)],
+        vec![
+            c + Vec2::new(2.5, -5.0),
+            c + Vec2::new(-2.5, 0.0),
+            c + Vec2::new(2.5, 5.0),
+        ],
         s,
     );
 }
@@ -252,7 +261,11 @@ pub(super) fn draw_arrow_right(painter: &egui::Painter, rect: Rect, color: Color
     let c = rect.center();
     let s = Stroke::new(1.4, color);
     painter.line(
-        vec![c + Vec2::new(-2.5, -5.0), c + Vec2::new(2.5, 0.0), c + Vec2::new(-2.5, 5.0)],
+        vec![
+            c + Vec2::new(-2.5, -5.0),
+            c + Vec2::new(2.5, 0.0),
+            c + Vec2::new(-2.5, 5.0),
+        ],
         s,
     );
 }
@@ -312,10 +325,7 @@ pub(super) fn draw_sliders(painter: &egui::Painter, rect: Rect, color: Color32) 
     let c = rect.center();
     let s = Stroke::new(1.2, color);
     for (dy, dx) in [(-3.0, 2.5), (3.0, -2.5)] {
-        painter.line(
-            vec![c + Vec2::new(-6.0, dy), c + Vec2::new(6.0, dy)],
-            s,
-        );
+        painter.line(vec![c + Vec2::new(-6.0, dy), c + Vec2::new(6.0, dy)], s);
         painter.circle_filled(c + Vec2::new(dx, dy), 2.0, color);
     }
 }
@@ -362,12 +372,13 @@ pub(super) fn draw_share(painter: &egui::Painter, rect: Rect, color: Color32) {
         s,
         egui::StrokeKind::Inside,
     );
+    painter.line(vec![c + Vec2::new(0.0, 4.0), c + Vec2::new(6.0, -3.0)], s);
     painter.line(
-        vec![c + Vec2::new(0.0, 4.0), c + Vec2::new(6.0, -3.0)],
-        s,
-    );
-    painter.line(
-        vec![c + Vec2::new(2.0, -3.0), c + Vec2::new(6.0, -3.0), c + Vec2::new(6.0, 1.0)],
+        vec![
+            c + Vec2::new(2.0, -3.0),
+            c + Vec2::new(6.0, -3.0),
+            c + Vec2::new(6.0, 1.0),
+        ],
         s,
     );
 }
@@ -377,10 +388,7 @@ pub(super) fn draw_lines(painter: &egui::Painter, rect: Rect, color: Color32) {
     let c = rect.center();
     let s = Stroke::new(1.3, color);
     for (dy, half) in [(-5.0, 6.0), (0.0, 5.0), (5.0, 4.0)] {
-        painter.line(
-            vec![c + Vec2::new(-half, dy), c + Vec2::new(half, dy)],
-            s,
-        );
+        painter.line(vec![c + Vec2::new(-half, dy), c + Vec2::new(half, dy)], s);
     }
 }
 
@@ -389,10 +397,7 @@ pub(super) fn draw_menu(painter: &egui::Painter, rect: Rect, color: Color32) {
     let c = rect.center();
     let s = Stroke::new(1.4, color);
     for dy in [-4.5, 0.0, 4.5] {
-        painter.line(
-            vec![c + Vec2::new(-6.0, dy), c + Vec2::new(6.0, dy)],
-            s,
-        );
+        painter.line(vec![c + Vec2::new(-6.0, dy), c + Vec2::new(6.0, dy)], s);
     }
 }
 
@@ -444,11 +449,17 @@ pub(super) fn draw_book(painter: &egui::Painter, rect: Rect) {
     for i in 0..4 {
         let y = left.min.y + 8.0 + i as f32 * (h * 0.11);
         painter.line(
-            vec![Pos2::new(left.min.x + 5.0, y), Pos2::new(left.max.x - 4.0, y)],
+            vec![
+                Pos2::new(left.min.x + 5.0, y),
+                Pos2::new(left.max.x - 4.0, y),
+            ],
             s,
         );
         painter.line(
-            vec![Pos2::new(right.min.x + 4.0, y), Pos2::new(right.max.x - 5.0, y)],
+            vec![
+                Pos2::new(right.min.x + 4.0, y),
+                Pos2::new(right.max.x - 5.0, y),
+            ],
             s,
         );
     }

@@ -36,10 +36,5 @@ fn cli_parses_serve_flag() {
 #[test]
 fn cli_defaults_to_plain_desktop() {
     let args = Args::parse(vec!["not-notion".to_string()]);
-    assert_eq!(
-        args.mode,
-        Mode::Desktop {
-            screenshot: None
-        }
-    );
+    assert_eq!(args.mode, Mode::Desktop { screenshot: None });
 }

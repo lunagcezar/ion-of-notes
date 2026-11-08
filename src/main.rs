@@ -25,13 +25,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .with_decorations(false),
                 ..Default::default()
             };
-            let creator: eframe::AppCreator<'_> = Box::new(
-                move |cc: &eframe::CreationContext<'_>| {
-                    let app: Box<dyn eframe::App> =
-                        Box::new(NotionApp::new(cc, screenshot));
+            let creator: eframe::AppCreator<'_> =
+                Box::new(move |cc: &eframe::CreationContext<'_>| {
+                    let app: Box<dyn eframe::App> = Box::new(NotionApp::new(cc, screenshot));
                     Ok(app)
-                },
-            );
+                });
             eframe::run_native("not-notion", options, creator)?;
             Ok(())
         }

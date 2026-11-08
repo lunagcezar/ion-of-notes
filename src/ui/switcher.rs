@@ -7,13 +7,11 @@
 //! renderer serves both.
 
 use crate::model::Workspace;
-use egui::{
-    Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2,
-};
+use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::app::{Command, NewTabChoice};
 use super::icons::{draw_help, draw_page_icon, draw_search, draw_sliders};
-use super::palette::{strong_font, Palette};
+use super::palette::{Palette, strong_font};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum SwitcherMode {
@@ -234,9 +232,7 @@ pub(super) fn render_switcher(
                     ui.spacing_mut().item_spacing.x = 18.0;
                     ui.add_space(24.0);
                     for text in ["Aa  Title only", "Created by ⌄", "In ⌄", "+ Filter"] {
-                        ui.label(
-                            egui::RichText::new(text).size(12.0).color(palette.muted),
-                        );
+                        ui.label(egui::RichText::new(text).size(12.0).color(palette.muted));
                     }
                 });
                 ui.add_space(8.0);
@@ -306,9 +302,8 @@ pub(super) fn render_switcher(
                                     palette.text,
                                 );
                                 if !row.detail.is_empty() {
-                                    let x = rect.min.x
-                                        + 40.0
-                                        + row.label.chars().count() as f32 * 7.2;
+                                    let x =
+                                        rect.min.x + 40.0 + row.label.chars().count() as f32 * 7.2;
                                     ui.painter().text(
                                         Pos2::new(x, rect.min.y + 17.0),
                                         Align2::LEFT_CENTER,
@@ -328,10 +323,12 @@ pub(super) fn render_switcher(
                                 }
                                 if response.hovered() && !selected {
                                     match spec.mode {
-                                        SwitcherMode::NewTab => commands
-                                            .push(Command::SetNewTabSelected(index)),
-                                        SwitcherMode::Search => commands
-                                            .push(Command::SetSearchSelected(index)),
+                                        SwitcherMode::NewTab => {
+                                            commands.push(Command::SetNewTabSelected(index))
+                                        }
+                                        SwitcherMode::Search => {
+                                            commands.push(Command::SetSearchSelected(index))
+                                        }
                                     }
                                 }
                                 if response.clicked() {
@@ -368,9 +365,7 @@ pub(super) fn render_switcher(
                                         )
                                         .clicked()
                                     {
-                                        commands.push(Command::AskAi(
-                                            spec.ai_query.to_string(),
-                                        ));
+                                        commands.push(Command::AskAi(spec.ai_query.to_string()));
                                     }
                                 },
                             );
@@ -413,11 +408,8 @@ pub(super) fn render_switcher(
                             Vec2::new(preview_width, body_height),
                             Sense::hover(),
                         );
-                        ui.painter().rect_filled(
-                            card,
-                            CornerRadius::same(8),
-                            palette.callout,
-                        );
+                        ui.painter()
+                            .rect_filled(card, CornerRadius::same(8), palette.callout);
                         ui.painter().rect_stroke(
                             card,
                             CornerRadius::same(8),

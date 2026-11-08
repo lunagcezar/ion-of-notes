@@ -4,12 +4,8 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Mode {
-    Desktop {
-        screenshot: Option<PathBuf>,
-    },
-    Serve {
-        addr: String,
-    },
+    Desktop { screenshot: Option<PathBuf> },
+    Serve { addr: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

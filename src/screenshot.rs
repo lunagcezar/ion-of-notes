@@ -27,7 +27,5 @@ pub fn write_png(path: &Path, image: &ColorImage) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    buffer
-        .save(path)
-        .map_err(io::Error::other)
+    buffer.save(path).map_err(io::Error::other)
 }

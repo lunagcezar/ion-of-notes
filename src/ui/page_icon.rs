@@ -14,19 +14,18 @@ use super::palette::Palette;
 /// Emoji choices for the page icon picker (rendered via system emoji font when
 /// available, with symbol fallbacks).
 pub(super) const EMOJI: &[&str] = &[
-    "😀", "😃", "😄", "😁", "😊", "🙂", "😉", "😍", "🤔", "😎", "🥳", "🤖",
-    "📄", "📘", "📚", "📓", "📝", "📌", "📎", "🗂", "📁", "📂", "🗃", "🗒",
-    "✅", "☑", "⭐", "🌟", "🔥", "💡", "🎯", "🚀", "🛠", "⚙", "🔒", "🔓",
-    "🏠", "🏢", "🌍", "🌐", "💬", "📣", "📅", "⏰", "📈", "📊", "🧩", "🎨",
+    "😀", "😃", "😄", "😁", "😊", "🙂", "😉", "😍", "🤔", "😎", "🥳", "🤖", "📄", "📘", "📚", "📓",
+    "📝", "📌", "📎", "🗂", "📁", "📂", "🗃", "🗒", "✅", "☑", "⭐", "🌟", "🔥", "💡", "🎯", "🚀",
+    "🛠", "⚙", "🔒", "🔓", "🏠", "🏢", "🌍", "🌐", "💬", "📣", "📅", "⏰", "📈", "📊", "🧩", "🎨",
     "🧪", "🔬", "📦", "🧭", "🗺", "❤️", "💙", "💚", "💛", "🟣", "🔵", "🟢",
 ];
 
 /// Monochrome icon/symbol glyphs for the "Icons" tab.
 pub(super) const ICONS: &[&str] = &[
-    "★", "☆", "☀", "☁", "☂", "☕", "☎", "✉", "✎", "✏", "✂", "✦", "✔", "✖", "⚑", "⚙",
-    "←", "→", "↑", "↓", "↔", "↕", "⟲", "⟳", "■", "□", "▲", "▼", "◀", "▶", "◆", "◇",
-    "●", "○", "◎", "◐", "◑", "▢", "▣", "▤", "▥", "⊞", "⊟", "∞", "§", "¶", "•",
-    "▪", "▫", "◊", "⌂", "⌛", "♫", "♪", "❖", "➤", "✚", "⚓", "⚡", "❄", "✿",
+    "★", "☆", "☀", "☁", "☂", "☕", "☎", "✉", "✎", "✏", "✂", "✦", "✔", "✖", "⚑", "⚙", "←", "→", "↑",
+    "↓", "↔", "↕", "⟲", "⟳", "■", "□", "▲", "▼", "◀", "▶", "◆", "◇", "●", "○", "◎", "◐", "◑", "▢",
+    "▣", "▤", "▥", "⊞", "⊟", "∞", "§", "¶", "•", "▪", "▫", "◊", "⌂", "⌛", "♫", "♪", "❖", "➤", "✚",
+    "⚓", "⚡", "❄", "✿",
 ];
 
 fn catalog(tab: IconTab) -> &'static [&'static str] {
@@ -38,12 +37,7 @@ fn catalog(tab: IconTab) -> &'static [&'static str] {
 }
 
 /// One selectable glyph in the grid.
-fn glyph_button(
-    ui: &mut egui::Ui,
-    glyph: &str,
-    palette: &Palette,
-    commands: &mut Vec<Command>,
-) {
+fn glyph_button(ui: &mut egui::Ui, glyph: &str, palette: &Palette, commands: &mut Vec<Command>) {
     let (rect, response) = ui.allocate_exact_size(Vec2::new(34.0, 30.0), Sense::click());
     if response.hovered() {
         ui.painter()
@@ -115,7 +109,9 @@ pub(super) fn render_icon_picker(
                     if ui
                         .add(
                             egui::Button::new(
-                                egui::RichText::new("Remove").size(12.0).color(palette.muted),
+                                egui::RichText::new("Remove")
+                                    .size(12.0)
+                                    .color(palette.muted),
                             )
                             .frame(false),
                         )
@@ -129,8 +125,10 @@ pub(super) fn render_icon_picker(
 
             // Filter field + shuffle.
             ui.horizontal(|ui| {
-                let (rect, _) =
-                    ui.allocate_exact_size(Vec2::new(ui.available_width() - 34.0, 30.0), Sense::hover());
+                let (rect, _) = ui.allocate_exact_size(
+                    Vec2::new(ui.available_width() - 34.0, 30.0),
+                    Sense::hover(),
+                );
                 ui.painter()
                     .rect_filled(rect, CornerRadius::same(6), palette.hover);
                 let mut query = view.icon_picker_query.clone();
@@ -148,10 +146,8 @@ pub(super) fn render_icon_picker(
                 if ui
                     .add_sized(
                         Vec2::new(30.0, 30.0),
-                        egui::Button::new(
-                            egui::RichText::new("⤨").size(15.0).color(palette.muted),
-                        )
-                        .frame(false),
+                        egui::Button::new(egui::RichText::new("⤨").size(15.0).color(palette.muted))
+                            .frame(false),
                     )
                     .clicked()
                 {
@@ -174,8 +170,7 @@ pub(super) fn render_icon_picker(
                     );
                     ui.add_space(6.0);
                     let id = egui::Id::unique("icon_upload_reference");
-                    let mut reference: String =
-                        ctx.data(|d| d.get_temp(id).unwrap_or_default());
+                    let mut reference: String = ctx.data(|d| d.get_temp(id).unwrap_or_default());
                     let field = ui.add(
                         egui::TextEdit::singleline(&mut reference)
                             .desired_width(f32::INFINITY)
@@ -197,7 +192,9 @@ pub(super) fn render_icon_picker(
                     if ui
                         .add(
                             egui::Button::new(
-                                egui::RichText::new("Use image").size(12.0).color(Color32::WHITE),
+                                egui::RichText::new("Use image")
+                                    .size(12.0)
+                                    .color(Color32::WHITE),
                             )
                             .fill(palette.accent)
                             .corner_radius(CornerRadius::same(6)),
@@ -259,7 +256,11 @@ pub(super) fn render_icon_picker(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| {
+            i.pointer
+                .interact_pos()
+                .is_some_and(|p| !inner.response.rect.contains(p))
+        })
     {
         commands.push(Command::CloseIconPicker);
     }

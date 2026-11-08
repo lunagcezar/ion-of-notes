@@ -3,8 +3,8 @@
 
 use not_notion::client::Client;
 use not_notion::collab::{
-    export_tree, page_markdown, people_csv, people_markdown, realtime_contract, Access, ChangeOp,
-    CollabState, MemberDraft, Role, Share,
+    Access, ChangeOp, CollabState, MemberDraft, Role, Share, export_tree, page_markdown,
+    people_csv, people_markdown, realtime_contract,
 };
 use not_notion::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
 use not_notion::server::WorkspaceServer;
@@ -136,9 +136,11 @@ fn export_tree_has_folder_pages_child_links_and_a_people_folder() {
         .find(|f| f.path == "demo/Projects p-projects.md")
         .expect("Projects folder page");
     assert!(projects.content.contains("[Tasks]"));
-    assert!(files
-        .iter()
-        .any(|f| f.path == "demo/Projects/Tasks p-tasks.md"));
+    assert!(
+        files
+            .iter()
+            .any(|f| f.path == "demo/Projects/Tasks p-tasks.md")
+    );
 
     // People folder: folder markdown, companion CSV, and one file per member.
     assert!(files.iter().any(|f| f.path == "People.md"));
@@ -183,9 +185,11 @@ fn collaborative_api_roundtrip_through_the_client() {
     };
     client.set_share(&share).unwrap();
     let shares = client.list_shares(Some("p-home")).unwrap();
-    assert!(shares
-        .iter()
-        .any(|s| s.subject == invited.id && s.access == Access::View));
+    assert!(
+        shares
+            .iter()
+            .any(|s| s.subject == invited.id && s.access == Access::View)
+    );
 
     // An edit is reflected in the versioned sync log, and the cursor catches up.
     let page = client
@@ -204,11 +208,13 @@ fn collaborative_api_roundtrip_through_the_client() {
     assert!(files.iter().any(|f| f.path == "People.md"));
     assert!(files.iter().any(|f| f.path.ends_with("_all.csv")));
 
-    assert!(client
-        .realtime_contract()
-        .unwrap()
-        .transport
-        .contains("WebSocket"));
+    assert!(
+        client
+            .realtime_contract()
+            .unwrap()
+            .transport
+            .contains("WebSocket")
+    );
 }
 
 #[test]
@@ -218,9 +224,7 @@ fn empty_member_draft_is_rejected_by_the_server() {
     let response = server.handle(&ApiRequest::new(
         Method::Post,
         "/api/members",
-        Some(
-            "{\"name\":\"\",\"email\":\"\",\"role\":\"Guest\"}".to_string(),
-        ),
+        Some("{\"name\":\"\",\"email\":\"\",\"role\":\"Guest\"}".to_string()),
     ));
     assert_eq!(response.status, 400);
 }

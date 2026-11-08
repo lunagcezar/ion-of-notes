@@ -9,7 +9,7 @@ mod common;
 use common::{page_draft_json, remove, temp_path};
 use not_notion::model::Workspace;
 use not_notion::server::{ApiRequest, Method, WorkspaceApi, WorkspaceServer};
-use not_notion::store::{load, JsonStore, NoStore, WorkspaceStore};
+use not_notion::store::{JsonStore, NoStore, WorkspaceStore, load};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Default)]

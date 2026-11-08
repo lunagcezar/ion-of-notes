@@ -18,7 +18,12 @@ pub struct Combo {
 
 impl Combo {
     pub const fn new(ctrl: bool, shift: bool, alt: bool, key: &'static str) -> Self {
-        Self { ctrl, shift, alt, key }
+        Self {
+            ctrl,
+            shift,
+            alt,
+            key,
+        }
     }
 }
 
@@ -82,7 +87,12 @@ pub enum Action {
 /// triggers the `Ctrl+K` binding. Most-specific entries are checked first.
 pub fn lookup(combo: Combo) -> Option<Action> {
     use Action::*;
-    let Combo { ctrl, shift, alt, key } = combo;
+    let Combo {
+        ctrl,
+        shift,
+        alt,
+        key,
+    } = combo;
 
     // Ctrl+Shift+<key> (checked before the plain Ctrl variants).
     if ctrl && shift && !alt {
@@ -188,36 +198,164 @@ pub struct ShortcutDoc {
 }
 
 pub const SHORTCUT_TABLE: &[ShortcutDoc] = &[
-    ShortcutDoc { label: "New tab", keys: "Ctrl+T", source: "app menu · File" },
-    ShortcutDoc { label: "New window", keys: "Ctrl+Shift+N", source: "app menu · File / help site" },
-    ShortcutDoc { label: "Reopen last closed tab", keys: "Ctrl+Shift+T", source: "app menu · File" },
-    ShortcutDoc { label: "Close tab", keys: "Ctrl+W", source: "app menu · File" },
-    ShortcutDoc { label: "Exit without saving tabs", keys: "Ctrl+Shift+Q", source: "app menu · File" },
-    ShortcutDoc { label: "New page", keys: "Ctrl+N", source: "help site · Desktop" },
-    ShortcutDoc { label: "Quick search / jump to page", keys: "Ctrl+K or Ctrl+P", source: "help site · Most popular" },
-    ShortcutDoc { label: "Search inside a page", keys: "Ctrl+F", source: "help site · Most popular" },
-    ShortcutDoc { label: "Command Search", keys: "Shift+Ctrl+K", source: "help site / settings / attachments" },
-    ShortcutDoc { label: "Open highlighted result in a new tab", keys: "Ctrl+↵", source: "attachments footer" },
-    ShortcutDoc { label: "Copy link to current page", keys: "Ctrl+L", source: "app menu · Edit / help site" },
-    ShortcutDoc { label: "Copy name of current page", keys: "Alt+Ctrl+L", source: "app menu · Edit" },
-    ShortcutDoc { label: "Undo / Redo", keys: "Ctrl+Z / Ctrl+Shift+Z", source: "app menu · Edit" },
-    ShortcutDoc { label: "Cut / Copy / Paste / Select all", keys: "Ctrl+X / C / V / A", source: "app menu · Edit (native editor)" },
-    ShortcutDoc { label: "Reload / Force reload", keys: "Ctrl+R / Ctrl+Shift+R", source: "app menu · View" },
-    ShortcutDoc { label: "Toggle developer tools", keys: "Ctrl+Shift+I", source: "app menu · View (runtime)" },
-    ShortcutDoc { label: "Show / hide sidebar", keys: "Ctrl+\\", source: "app menu · View" },
-    ShortcutDoc { label: "Zoom in / out / actual size", keys: "Ctrl++ / Ctrl+- / Ctrl+0", source: "app menu · View / help site" },
-    ShortcutDoc { label: "Toggle full screen", keys: "F11", source: "app menu · View" },
-    ShortcutDoc { label: "Back / Forward", keys: "Ctrl+[ / Ctrl+]", source: "app menu · History / help site" },
-    ShortcutDoc { label: "Minimize", keys: "Ctrl+M", source: "app menu · Window" },
-    ShortcutDoc { label: "Previous / next tab", keys: "Ctrl+Shift+Tab / Ctrl+Tab", source: "app menu · Window" },
-    ShortcutDoc { label: "Toggle dark / light mode", keys: "Ctrl+Shift+L", source: "help site · Most popular" },
-    ShortcutDoc { label: "Open Notion AI", keys: "Shift+Ctrl+J", source: "settings · Desktop app / help site" },
-    ShortcutDoc { label: "Duplicate", keys: "Ctrl+D", source: "help site · Edit blocks" },
-    ShortcutDoc { label: "Move to", keys: "Ctrl+Shift+P", source: "page actions menu" },
-    ShortcutDoc { label: "Go up one level", keys: "Ctrl+Shift+U", source: "help site · Create and style" },
-    ShortcutDoc { label: "Preferences", keys: "Ctrl+,", source: "desktop convention" },
-    ShortcutDoc { label: "Close / dismiss", keys: "Esc", source: "app / help site" },
-    ShortcutDoc { label: "Keyboard shortcut sheet", keys: "F1", source: "in-app help" },
-    ShortcutDoc { label: "Markdown: H1 / H2 / H3", keys: "# / ## / ### + space", source: "help site · Markdown style" },
-    ShortcutDoc { label: "Markdown: bullet / to-do / quote", keys: "* , [] , > + space", source: "help site · Markdown style" },
+    ShortcutDoc {
+        label: "New tab",
+        keys: "Ctrl+T",
+        source: "app menu · File",
+    },
+    ShortcutDoc {
+        label: "New window",
+        keys: "Ctrl+Shift+N",
+        source: "app menu · File / help site",
+    },
+    ShortcutDoc {
+        label: "Reopen last closed tab",
+        keys: "Ctrl+Shift+T",
+        source: "app menu · File",
+    },
+    ShortcutDoc {
+        label: "Close tab",
+        keys: "Ctrl+W",
+        source: "app menu · File",
+    },
+    ShortcutDoc {
+        label: "Exit without saving tabs",
+        keys: "Ctrl+Shift+Q",
+        source: "app menu · File",
+    },
+    ShortcutDoc {
+        label: "New page",
+        keys: "Ctrl+N",
+        source: "help site · Desktop",
+    },
+    ShortcutDoc {
+        label: "Quick search / jump to page",
+        keys: "Ctrl+K or Ctrl+P",
+        source: "help site · Most popular",
+    },
+    ShortcutDoc {
+        label: "Search inside a page",
+        keys: "Ctrl+F",
+        source: "help site · Most popular",
+    },
+    ShortcutDoc {
+        label: "Command Search",
+        keys: "Shift+Ctrl+K",
+        source: "help site / settings / attachments",
+    },
+    ShortcutDoc {
+        label: "Open highlighted result in a new tab",
+        keys: "Ctrl+↵",
+        source: "attachments footer",
+    },
+    ShortcutDoc {
+        label: "Copy link to current page",
+        keys: "Ctrl+L",
+        source: "app menu · Edit / help site",
+    },
+    ShortcutDoc {
+        label: "Copy name of current page",
+        keys: "Alt+Ctrl+L",
+        source: "app menu · Edit",
+    },
+    ShortcutDoc {
+        label: "Undo / Redo",
+        keys: "Ctrl+Z / Ctrl+Shift+Z",
+        source: "app menu · Edit",
+    },
+    ShortcutDoc {
+        label: "Cut / Copy / Paste / Select all",
+        keys: "Ctrl+X / C / V / A",
+        source: "app menu · Edit (native editor)",
+    },
+    ShortcutDoc {
+        label: "Reload / Force reload",
+        keys: "Ctrl+R / Ctrl+Shift+R",
+        source: "app menu · View",
+    },
+    ShortcutDoc {
+        label: "Toggle developer tools",
+        keys: "Ctrl+Shift+I",
+        source: "app menu · View (runtime)",
+    },
+    ShortcutDoc {
+        label: "Show / hide sidebar",
+        keys: "Ctrl+\\",
+        source: "app menu · View",
+    },
+    ShortcutDoc {
+        label: "Zoom in / out / actual size",
+        keys: "Ctrl++ / Ctrl+- / Ctrl+0",
+        source: "app menu · View / help site",
+    },
+    ShortcutDoc {
+        label: "Toggle full screen",
+        keys: "F11",
+        source: "app menu · View",
+    },
+    ShortcutDoc {
+        label: "Back / Forward",
+        keys: "Ctrl+[ / Ctrl+]",
+        source: "app menu · History / help site",
+    },
+    ShortcutDoc {
+        label: "Minimize",
+        keys: "Ctrl+M",
+        source: "app menu · Window",
+    },
+    ShortcutDoc {
+        label: "Previous / next tab",
+        keys: "Ctrl+Shift+Tab / Ctrl+Tab",
+        source: "app menu · Window",
+    },
+    ShortcutDoc {
+        label: "Toggle dark / light mode",
+        keys: "Ctrl+Shift+L",
+        source: "help site · Most popular",
+    },
+    ShortcutDoc {
+        label: "Open Notion AI",
+        keys: "Shift+Ctrl+J",
+        source: "settings · Desktop app / help site",
+    },
+    ShortcutDoc {
+        label: "Duplicate",
+        keys: "Ctrl+D",
+        source: "help site · Edit blocks",
+    },
+    ShortcutDoc {
+        label: "Move to",
+        keys: "Ctrl+Shift+P",
+        source: "page actions menu",
+    },
+    ShortcutDoc {
+        label: "Go up one level",
+        keys: "Ctrl+Shift+U",
+        source: "help site · Create and style",
+    },
+    ShortcutDoc {
+        label: "Preferences",
+        keys: "Ctrl+,",
+        source: "desktop convention",
+    },
+    ShortcutDoc {
+        label: "Close / dismiss",
+        keys: "Esc",
+        source: "app / help site",
+    },
+    ShortcutDoc {
+        label: "Keyboard shortcut sheet",
+        keys: "F1",
+        source: "in-app help",
+    },
+    ShortcutDoc {
+        label: "Markdown: H1 / H2 / H3",
+        keys: "# / ## / ### + space",
+        source: "help site · Markdown style",
+    },
+    ShortcutDoc {
+        label: "Markdown: bullet / to-do / quote",
+        keys: "* , [] , > + space",
+        source: "help site · Markdown style",
+    },
 ];

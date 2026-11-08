@@ -31,26 +31,22 @@ pub use app::{
     build_desktop, build_desktop_at, build_desktop_at_paths, build_server, build_server_at,
     build_server_at_paths,
 };
-pub use ollama::{
-    build_generate_body, cli_version, decode_body, decode_chunked, default_endpoint,
-    default_model_for, detect, generate, models, normalize_endpoint, parse_endpoint,
-    parse_generate_response, parse_tags_response, service_reachable, OllamaConfig, OllamaStatus,
-    DEFAULT_HOST, DEFAULT_MODEL, DEFAULT_PORT,
-};
-pub use shortcuts::{
-    lookup, Action, Combo, ShortcutDoc, SHORTCUT_TABLE,
-};
 pub use client::{Client, ClientError};
 pub use collab::{
-    export_tree, page_markdown, people_csv, people_markdown, realtime_contract, Access, Change,
-    ChangeOp, CollabState, ExportFile, Member, MemberDraft, PageVersion, RealtimeContract,
-    RealtimeEvent, RealtimeKind, Role, Share, SyncBatch,
+    Access, Change, ChangeOp, CollabState, ExportFile, Member, MemberDraft, PageVersion,
+    RealtimeContract, RealtimeEvent, RealtimeKind, Role, Share, SyncBatch, export_tree,
+    page_markdown, people_csv, people_markdown, realtime_contract,
 };
 pub use model::{
-    Block, BlockKind, Page, PageDraft, PageDiff, PageSummary, SearchResult, TableRow, Workspace,
+    Block, BlockKind, Page, PageDiff, PageDraft, PageSummary, SearchResult, TableRow, Workspace,
     WorkspaceError,
 };
-pub use server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
-pub use store::{
-    CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore,
+pub use ollama::{
+    DEFAULT_HOST, DEFAULT_MODEL, DEFAULT_PORT, OllamaConfig, OllamaStatus, build_generate_body,
+    cli_version, decode_body, decode_chunked, default_endpoint, default_model_for, detect,
+    generate, models, normalize_endpoint, parse_endpoint, parse_generate_response,
+    parse_tags_response, service_reachable,
 };
+pub use server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
+pub use shortcuts::{Action, Combo, SHORTCUT_TABLE, ShortcutDoc, lookup};
+pub use store::{CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore};
