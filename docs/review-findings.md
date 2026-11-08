@@ -111,7 +111,7 @@ listed in §5; they are planned in specs 030–037.
 ### RF-D06 — Unknowns ledger reported "65 tests" and stale U-06 progress
 
 - **Severity:** medium
-- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 147.
+- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 159.
   U-06 still said version history was only planned, while spec-015 implemented
   it and spec-026 added archive/discussions.
 - **Impact:** a reader could not tell which page actions are real.
@@ -280,8 +280,9 @@ not documentation bugs; each has a spec.
 | RF-P12 | Legacy `Block.text`/`TableRow` need migration | A v2 model could lose v1 data | 032/033 |
 
 **Status (2026-11-08):** RF-P01 is implemented by spec-030 (`/api/v2`,
-`ApiError`, capabilities, request IDs) and RF-P02 by spec-031 (`ListResponse`,
-opaque cursors). RF-P03–RF-P12 remain planned in specs 032–037.
+`ApiError`, capabilities, request IDs), RF-P02 by spec-031 (`ListResponse`,
+opaque cursors) and RF-P03 by spec-032 (rich text, block metadata/children,
+block endpoints). RF-P04–RF-P12 remain planned in specs 033–037.
 
 ## 6. What the review confirmed is healthy
 
@@ -297,7 +298,7 @@ opaque cursors). RF-P03–RF-P12 remain planned in specs 032–037.
   or settings changes.
 - **Version retention:** 50 newest snapshots per page, restore records a new
   version.
-- **Test discipline:** 147 integration tests, no `#[cfg(test)]` in `src/`,
+- **Test discipline:** 159 integration tests, no `#[cfg(test)]` in `src/`,
   shared helpers in `tests/common/mod.rs`.
 - **Quality gates:** `cargo test --all-targets`, clippy and `cargo fmt --check`
   are clean at the time of this review.
@@ -327,7 +328,7 @@ opaque cursors). RF-P03–RF-P12 remain planned in specs 032–037.
 | -------- | ---- | -------------- |
 | Done | v2 foundation (versioning, errors, capabilities) | `spec-030` |
 | Done | Cursor pagination | `spec-031` |
-| Next | Add rich text and block metadata/children | `spec-032` |
+| Done | Rich text and block metadata/children | `spec-032` |
 | Next | Add page properties and data sources | `spec-033` |
 | Next | Add views | `spec-034` |
 | Next | Add comments, users and files | `spec-035` |

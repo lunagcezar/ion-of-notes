@@ -99,7 +99,8 @@ src/
   main.rs          CLI wiring only (desktop, --screenshot, --serve)
   app.rs           composition root (bootstrap): wires workspace + collaboration adapters to ports
   lib.rs           crate root and public re-exports
-  model.rs         Workspace, Page, Block, BlockKind, TableRow, tree helpers
+  model.rs         Workspace, Page, Block, BlockKind, RichText, block DTOs,
+                   TableRow, tree helpers
   model/
     seed.rs        neutral demo workspace used on first start
     search.rs      ranked search + excerpt helper
@@ -181,6 +182,7 @@ tests/
   templates.rs     starter template catalog and page builder
   contract.rs      v2 versioning, errors, capabilities, request IDs
   pagination.rs    v2 cursor pagination and list envelopes
+  blocks.rs        rich text, block metadata, children and block endpoints
   integration.rs   end-to-end client/server/store scenario
 ```
 
@@ -494,7 +496,7 @@ stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (147)    |
+| `cargo test --all-targets`               | Run all integration test crates (159)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |

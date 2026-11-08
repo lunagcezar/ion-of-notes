@@ -35,6 +35,7 @@ pub fn page_markdown(page: &Page) -> String {
             BlockKind::Heading1 => format!("# {}\n\n", block.text),
             BlockKind::Heading2 => format!("## {}\n\n", block.text),
             BlockKind::Heading3 => format!("### {}\n\n", block.text),
+            BlockKind::Heading4 => format!("#### {}\n\n", block.text),
             BlockKind::Bulleted => format!("- {}\n", block.text),
             BlockKind::Numbered => format!("1. {}\n", block.text),
             BlockKind::Todo => format!(
@@ -45,6 +46,13 @@ pub fn page_markdown(page: &Page) -> String {
             BlockKind::Quote => format!("> {}\n\n", block.text),
             BlockKind::Code => format!("```\n{}\n```\n\n", block.text),
             BlockKind::Divider => "---\n\n".to_string(),
+            BlockKind::Table
+            | BlockKind::TableRow
+            | BlockKind::Toggle
+            | BlockKind::ChildPage
+            | BlockKind::ColumnList
+            | BlockKind::Column
+            | BlockKind::Unsupported => format!("{}\n\n", block.plain_text()),
         };
         out.push_str(&line);
     }

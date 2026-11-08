@@ -179,14 +179,32 @@ flowchart TD
 
 ## Plan / tasks
 
-- [ ] Spec + failing tests (red).
-- [ ] `RichText`, `Annotations`, `Mention`, `Equation` types.
-- [ ] `Block` metadata, `BlockContent`, `Unsupported`, legacy migration.
-- [ ] Block endpoints and pagination.
-- [ ] Update the export and search helpers to use `plain_text`.
-- [ ] Update `docs/data-model.md`, `docs/api-contract.md`,
+- [x] Spec + failing tests (red).
+- [x] `RichText`, `Annotations`, `Mention`, `Equation` types.
+- [x] `Block` metadata, typed payload fields, `Unsupported`, legacy migration.
+- [x] Block endpoints and pagination.
+- [x] Update the export and search helpers to use `plain_text`.
+- [x] Update `docs/data-model.md`, `docs/api-contract.md`,
   `docs/requirements.md`, `docs/public-api-analysis.md`.
-- [ ] Build/test/clippy/fmt, commit.
+- [x] Build/test/clippy/fmt, commit.
+
+## Result
+
+- Added `RichText` (`text`/`mention`/`equation`), `Annotations`, `TextContent`,
+  `TextLink`, `Mention`, `Equation` in `src/model.rs`.
+- `Block` now carries `object`, parent-block metadata, timestamps, users,
+  `in_trash`, `children`, rich text, table metadata/cells, child-page title and
+  an explicit unsupported type. `BlockKind` gained Heading 4, Table, TableRow,
+  Toggle, ChildPage, ColumnList, Column and Unsupported.
+- Legacy `Block.text` is migrated to rich text on load; the egui editor keeps
+  using `text`, and v2 writes sync it from rich text.
+- Added `BlockDto`, `BlockInput`, `BlockChildrenRequest`, `ParentDto` and
+  `UserRef`.
+- `/api/v2/blocks/{id}`, `.../children` (GET/PATCH), `PATCH /blocks/{id}` and
+  `DELETE /blocks/{id}` are implemented; children use spec-031 pagination.
+- Client: `get_block_v2`, `list_block_children_v2`/`..._page_v2`,
+  `append_block_children_v2`, `update_block_v2`, `delete_block_v2`.
+- Tests: 12 in `tests/blocks.rs`; the suite is 159 tests.
 
 ## Requirement mapping
 

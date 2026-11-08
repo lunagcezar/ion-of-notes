@@ -187,6 +187,10 @@ Paged methods return one `ListResponse<T>`: `list_pages_page_v2`,
 `sync_page_v2` and `page_versions_page_v2`. The unsuffixed list helpers follow
 cursors to the end with a termination guard.
 
+Block methods: `get_block_v2`, `list_block_children_v2`,
+`list_block_children_page_v2`, `append_block_children_v2`, `update_block_v2`
+and `delete_block_v2`.
+
 ## 6. Loopback HTTP adapter
 
 - Transport: `std::net::TcpListener`, HTTP/1.1, one request per connection.
@@ -318,7 +322,7 @@ v1 routes stay stable.
 | Errors | `{data,error}` string | `object:"error"` + `status`/`code`/`message`/`request_id`/`additional_data` | 030 | **implemented** |
 | Capabilities | `Role` + `Access` | read/update/insert content, comments, user-info | 030 | **foundation implemented** |
 | Pagination | full arrays | `ListResponse<T>` with opaque cursors | 031 | **implemented** |
-| Blocks | flat text | rich text + metadata + children + block endpoints | 032 | planned |
+| Blocks | flat text | rich text + metadata + children + block endpoints | 032 | **implemented** |
 | Page | title/icon/parent/blocks/rows | properties, icon, cover, parent, in_trash, url | 032/033 | planned |
 | Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 | planned |
 | Database | inline rows | database container + data sources | 033 | planned |
@@ -337,6 +341,9 @@ Implemented v2 routes:
 | `GET` / `POST` | `/api/v2/pages` | read / insert content |
 | `GET` / `PATCH` / `DELETE` | `/api/v2/pages/{id}` | read / update content |
 | `GET` | `/api/v2/pages/{id}/versions` | read content |
+| `GET` | `/api/v2/blocks/{id}` | read content |
+| `GET` / `PATCH` | `/api/v2/blocks/{id}/children` | read / update content |
+| `PATCH` / `DELETE` | `/api/v2/blocks/{id}` | update content |
 | `GET` | `/api/v2/search` | read content |
 | `GET` / `POST` | `/api/v2/members` | read / insert content |
 | `GET` / `PUT` | `/api/v2/shares` | read / update content |
@@ -369,6 +376,24 @@ List routes return:
   `page_version`.
 - The client `*_page_v2` methods expose one page; `list_pages_v2` and the other
   unsuffixed helpers follow cursors with a termination guard.
+
+### 8.3 v2 block model (implemented)
+
+`BlockDto` carries `object`, `id`, `parent` (`page_id` or `block_id`),
+`created_time`, `created_by`, `last_edited_time`, `last_edited_by`,
+`in_trash`, `has_children`, `type` and type-specific payload fields
+(`rich_text`, `checked`, `collapsed`, `table_width`, `cells`, …). Rich text
+objects are `text`, `mention` or `equation` with `annotations`, `plain_text`
+and `href`.
+
+- `GET /api/v2/blocks/{id}` — retrieve one block.
+- `GET /api/v2/blocks/{id}/children` — paginated direct children (a page id is
+  accepted for top-level blocks).
+- `PATCH /api/v2/blocks/{id}/children` — append children.
+- `PATCH /api/v2/blocks/{id}` — update a block.
+- `DELETE /api/v2/blocks/{id}` — move a block to trash (`in_trash: true`).
+- Legacy `Block.text` is migrated to one rich text object; unsupported types
+  are preserved as `type: "<original>"` with `unsupported_type`.
 
 ```mermaid
 flowchart LR

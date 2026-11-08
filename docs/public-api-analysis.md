@@ -451,8 +451,9 @@ flowchart TD
 | `spec-037` | Rate/size/block limits, retries, error taxonomy | 030, 031 |
 
 **Status (2026-11-08):** spec-030 (`/api/v2`, versioning, structured errors,
-capabilities, request IDs) and spec-031 (`ListResponse`, opaque cursors) are
-implemented. Specs 032–037 remain planned.
+capabilities, request IDs), spec-031 (`ListResponse`, opaque cursors) and
+spec-032 (rich text, block metadata/children, block endpoints) are implemented.
+Specs 033–037 remain planned.
 
 ## 16. Risks and open questions
 

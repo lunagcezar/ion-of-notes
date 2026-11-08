@@ -6,6 +6,26 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-032-rich-text-and-blocks
+
+- Added rich text objects (`text`, `mention`, `equation`) with annotations,
+  `plain_text` and `href`, plus `TextContent`, `TextLink`, `Mention` and
+  `Equation`.
+- `Block` now carries `object`, parent-block metadata, timestamps, users,
+  `in_trash`, nested `children`, rich text, table metadata/cells, child-page
+  title and an explicit unsupported type.
+- Added `BlockKind::Heading4`, `Table`, `TableRow`, `Toggle`, `ChildPage`,
+  `ColumnList`, `Column` and `Unsupported`; the UI/export fall back safely.
+- Legacy `Block.text` is migrated to rich text on load; the egui editor keeps
+  using `text`, and v2 rich-text writes sync it.
+- Added `BlockDto`, `BlockInput`, `BlockChildrenRequest`, `ParentDto` and
+  `UserRef`.
+- Added `/api/v2/blocks/{id}`, `GET`/`PATCH /blocks/{id}/children`,
+  `PATCH /blocks/{id}` and `DELETE /blocks/{id}`; children use cursor
+  pagination.
+- Added client block methods for retrieve, list, append, update and trash.
+- Tests: 12 in `tests/blocks.rs`; the suite is 159 tests. Docs updated.
+
 ### Added — spec-031-pagination
 
 - Added `ListResponse<T>` (`object:"list"`, `type`, `results`, `has_more`,

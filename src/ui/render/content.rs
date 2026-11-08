@@ -268,6 +268,7 @@ fn render_page(
                     let indent = match kind {
                         BlockKind::Heading2 => 12.0,
                         BlockKind::Heading3 => 24.0,
+                        BlockKind::Heading4 => 36.0,
                         _ => 0.0,
                     };
                     ui.horizontal(|ui| {
@@ -633,7 +634,15 @@ fn render_block(
             BlockKind::Paragraph
             | BlockKind::Heading1
             | BlockKind::Heading2
-            | BlockKind::Heading3 => {
+            | BlockKind::Heading3
+            | BlockKind::Heading4
+            | BlockKind::Table
+            | BlockKind::TableRow
+            | BlockKind::Toggle
+            | BlockKind::ChildPage
+            | BlockKind::ColumnList
+            | BlockKind::Column
+            | BlockKind::Unsupported => {
                 let font = if block.kind.is_heading() {
                     strong_font(block.kind.font_size())
                 } else {

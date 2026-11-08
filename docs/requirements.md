@@ -280,10 +280,10 @@ capabilities) is implemented; the rest are planned.
   (1–100), `results`, `has_more` and an opaque `next_cursor` (implemented in
   `spec-031`).
 - FR-81: Blocks use rich text objects (`text`, `mention`, `equation`) with
-  annotations, `plain_text` and `href` (spec-032).
+  annotations, `plain_text` and `href` (implemented in `spec-032`).
 - FR-82: Blocks carry `object`, `id`, `parent`, timestamps, users, `in_trash`,
   `has_children` and a typed payload; block children are read/appended through
-  dedicated endpoints (spec-032).
+  dedicated endpoints (implemented in `spec-032`).
 - FR-83: Pages in a data source carry typed property values; property items
   paginate large relation/people/rich-text values (spec-033).
 - FR-84: A database is a container of data sources; each data source owns its
@@ -305,11 +305,14 @@ capabilities) is implemented; the rest are planned.
   opaque (versioning and v1 stability in `spec-030`; cursor opacity in
   `spec-031`).
 - FR-92: Unsupported block or view types are represented explicitly instead of
-  being silently dropped (spec-032/034).
+  being silently dropped (block side implemented in `spec-032`; view side in
+  spec-034).
 - FR-93: Page and callout icons use an icon object (`emoji`, `custom_emoji`,
-  `icon`, `external`, `file`) rather than a bare glyph string (spec-032/035).
-- FR-94: Parent objects distinguish page, database, data source, workspace,
-  block and agent parents (spec-030/032).
+  `icon`, `external`, `file`) rather than a bare glyph string (planned in
+  spec-035).
+- FR-94: Parent objects distinguish page, block, database, data source,
+  workspace and agent parents (page/block implemented in `spec-032`; the rest
+  planned in specs 033/035).
 
 ## 2. Non-functional requirements
 

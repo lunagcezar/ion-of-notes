@@ -143,6 +143,8 @@ definition.
 | **ListResponse** | `{ object:"list", type, results, has_more, next_cursor }`. | spec-031 |
 | **RichText** | Text, mention or equation with annotations, `plain_text` and `href`. | spec-032 |
 | **Block metadata** | `object`, `id`, `parent`, timestamps, users, `in_trash`, `has_children`. | spec-032 |
+| **BlockDto / BlockInput** | Read/write block payloads for the v2 block endpoints. | spec-032 |
+| **ParentDto** | Page/block/workspace parent object in the v2 block API. | spec-032 |
 | **Property** | A data source schema entry: id, name, type and type-specific settings. | spec-033 |
 | **PropertyValue** | A typed page value for a property. | spec-033 |
 | **PropertyItem** | A single value or a paginated item of a property. | spec-033 |

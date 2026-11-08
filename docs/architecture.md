@@ -60,7 +60,7 @@ src/
   main.rs            CLI wiring only
   app.rs             composition root
   lib.rs             crate facade and re-exports
-  model.rs           entities + workspace tree behavior
+  model.rs           entities, rich text, block DTOs + tree behavior
   model/
     seed.rs          demo workspace
     search.rs        ranked search
@@ -309,10 +309,11 @@ new stores and delivery workers.
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
-- The v2 **foundation and pagination** exist (specs 030–031): `/api/v2`,
-  version/auth/capability checks, structured errors, request IDs, cursor list
-  envelopes and client cursor helpers. Rich text, properties, views, webhooks
-  and limits are still planned (specs 032–037).
+- The v2 **foundation, pagination and rich text/blocks** exist (specs 030–032):
+  `/api/v2`, version/auth/capability checks, structured errors, request IDs,
+  cursor list envelopes, rich text, block metadata/children and block
+  endpoints. Properties, views, webhooks and limits are still planned
+  (specs 033–037).
 
 ## 12. Further reading
 

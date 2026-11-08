@@ -39,8 +39,9 @@ pub use collab::{
     export_tree, page_markdown, people_csv, people_markdown, realtime_contract,
 };
 pub use model::{
-    Block, BlockKind, Comment, Page, PageDiff, PageDraft, PageSummary, SearchResult, TableRow,
-    Workspace, WorkspaceError,
+    Annotations, Block, BlockChildrenRequest, BlockDto, BlockInput, BlockKind, Comment, Equation,
+    Mention, Page, PageDiff, PageDraft, PageSummary, ParentDto, RichText, SearchResult, TableRow,
+    TextContent, TextLink, UserRef, Workspace, WorkspaceError,
 };
 pub use ollama::{
     DEFAULT_HOST, DEFAULT_MODEL, DEFAULT_PORT, OllamaConfig, OllamaStatus, build_generate_body,
