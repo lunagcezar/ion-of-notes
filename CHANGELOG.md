@@ -18,6 +18,10 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   worker. `serve_forever` delegates to it.
 - Red: `tests/client.rs` encode-failure and `tests/server.rs` two-connection
   concurrency tests were written first and observed failing.
+- `cargo fmt --check` is now clean; the formatting-only change is committed
+  separately.
+- Added `.github/workflows/ci.yml` for Windows: formatting, clippy, tests and a
+  release build.
 - Docs: added `spec/spec-021-quality-and-concurrency-baseline.md`; updated
   requirements and `AGENTS.md`.
 

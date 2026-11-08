@@ -74,6 +74,6 @@ Out of scope:
 - [x] Spec + failing tests (red)
 - [x] `ClientError::Encode` + checked encoder
 - [x] `serve_on` + concurrent connection handling
-- [ ] `cargo fmt` baseline (separate commit)
-- [ ] CI workflow
-- [ ] Docs, changelog, build/test/clippy/screenshot, commit
+- [x] `cargo fmt` baseline (separate commit)
+- [x] CI workflow
+- [x] Docs, changelog, build/test/clippy/screenshot, commit

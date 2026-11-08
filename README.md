@@ -72,6 +72,9 @@ cargo test
 cargo run
 ```
 
+CI (`.github/workflows/ci.yml`) runs formatting, clippy, tests and a release
+build on Windows.
+
 ## Other modes
 
 ```sh
