@@ -105,7 +105,11 @@ pub(super) fn render_library(
                             "Trash",
                         ] {
                             if ui.button(tab_label(tab)).clicked() {
-                                commands.push(Command::SetLibraryTab(tab.to_string()));
+                                if tab == "Templates" {
+                                    commands.push(Command::OpenTemplates);
+                                } else {
+                                    commands.push(Command::SetLibraryTab(tab.to_string()));
+                                }
                                 ui.close();
                             }
                         }

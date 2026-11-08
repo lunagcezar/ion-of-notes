@@ -21,9 +21,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::dialogs::{
-    render_app_menu, render_grid_menu, render_inbox, render_new_tab, render_page_actions,
-    render_search, render_settings, render_share, render_shortcuts, render_slash,
-    render_version_history, render_workspace_menu,
+    render_app_menu, render_grid_menu, render_inbox, render_new_tab, render_onboarding,
+    render_page_actions, render_search, render_settings, render_share, render_shortcuts,
+    render_slash, render_templates, render_version_history, render_workspace_menu,
 };
 use super::edit_queue::PendingEdits;
 use super::page_icon::render_icon_picker;
@@ -51,6 +51,8 @@ pub struct NotionApp {
     pub(super) search_results: Arc<Vec<SearchResult>>,
     pub(super) search_cache: SearchCache,
     pub(super) settings_open: bool,
+    pub(super) onboarding_open: bool,
+    pub(super) templates_open: bool,
     pub(super) settings_page: String,
     pub(super) settings_query: String,
     pub(super) settings_status: Option<String>,
@@ -199,6 +201,9 @@ impl NotionApp {
         let nav_history = vec![demo_current_page.clone()];
         let ai_config = OllamaConfig::from_env();
         let ai_status = ollama::detect(&ai_config);
+        let onboarding_open = demo == "onboarding"
+            || (workspace.pages.is_empty() && !workspace.settings.onboarding_completed);
+        let templates_open = demo == "templates";
         Self {
             client,
             last_committed: workspace.clone(),
@@ -223,6 +228,8 @@ impl NotionApp {
                     | "settings-people"
                     | "settings-offline"
             ),
+            onboarding_open,
+            templates_open,
             settings_page: match demo.as_str() {
                 "ai" => "AI assistant".to_string(),
                 "settings-general" => "General".to_string(),
@@ -419,6 +426,12 @@ impl eframe::App for NotionApp {
         }
         if view.settings_open {
             render_settings(&ctx, &mut self.workspace, &view, &palette, &mut commands);
+        }
+        if view.onboarding_open {
+            render_onboarding(&ctx, &view, &palette, &mut commands);
+        }
+        if view.templates_open {
+            render_templates(&ctx, &view, &palette, &mut commands);
         }
         if view.share_open {
             render_share(&ctx, &view, &palette, &mut commands);

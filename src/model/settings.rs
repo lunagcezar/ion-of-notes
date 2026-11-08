@@ -25,6 +25,10 @@ pub struct WorkspaceSettings {
     pub landing_page: Option<String>,
     #[serde(default)]
     pub allowed_domains: Vec<String>,
+    #[serde(default)]
+    pub onboarding_completed: bool,
+    #[serde(default)]
+    pub workspace_purpose: Option<String>,
     #[serde(default = "default_true")]
     pub sidebar_library: bool,
     #[serde(default = "default_true")]
@@ -60,6 +64,8 @@ impl Default for WorkspaceSettings {
             icon: default_icon(),
             landing_page: None,
             allowed_domains: Vec::new(),
+            onboarding_completed: false,
+            workspace_purpose: None,
             sidebar_library: true,
             sidebar_settings: true,
             sidebar_inbox: true,

@@ -309,6 +309,11 @@ pub(super) fn render_workspace_settings(
         ws.settings.allowed_domains.remove(index);
     }
 
+    ui.add_space(12.0);
+    if ui.button(i18n::t("get_started")).clicked() {
+        commands.push(Command::OpenOnboarding);
+    }
+
     ui.add_space(18.0);
     ui.label(
         egui::RichText::new(i18n::t("members_access"))

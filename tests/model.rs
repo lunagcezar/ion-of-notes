@@ -238,6 +238,8 @@ fn workspace_settings_roundtrip_through_json() {
     ws.settings.allowed_domains.push("example.com".to_string());
     ws.settings.landing_page = Some("p1".to_string());
     ws.settings.sidebar_library = false;
+    ws.settings.onboarding_completed = true;
+    ws.settings.workspace_purpose = Some("work".to_string());
 
     let json = serde_json::to_string(&ws).unwrap();
     let back: Workspace = serde_json::from_str(&json).unwrap();

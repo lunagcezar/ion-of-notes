@@ -7,15 +7,19 @@
 
 mod help;
 mod menus;
+mod onboarding;
 mod page_actions;
 mod search_window;
 mod settings;
 mod settings_pages;
 mod sharing;
+mod templates;
 
 pub(super) use help::render_shortcuts;
 pub(super) use menus::{render_app_menu, render_grid_menu, render_slash, render_workspace_menu};
+pub(super) use onboarding::render_onboarding;
 pub(super) use page_actions::{render_page_actions, render_version_history};
 pub(super) use search_window::{render_new_tab, render_search};
 pub(super) use settings::render_settings;
 pub(super) use sharing::{render_inbox, render_share};
+pub(super) use templates::render_templates;

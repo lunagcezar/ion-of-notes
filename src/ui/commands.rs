@@ -139,6 +139,13 @@ pub(super) enum Command {
     SetAiModel(String),
     ToggleAiCli,
     RefreshAiStatus,
+    // Onboarding and templates (spec-027).
+    OpenOnboarding,
+    CloseOnboarding,
+    CompleteOnboarding(String),
+    OpenTemplates,
+    CloseTemplates,
+    ApplyTemplate(String),
     // Settings, help and window zoom.
     SetSettingsPage(String),
     SetSettingsQuery(String),

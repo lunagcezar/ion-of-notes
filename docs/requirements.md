@@ -247,6 +247,14 @@
   Portuguese (Brazil) and Esperanto translations; key completeness and locale
   fallback are tested (implemented in `spec-028`). Long-form demo copy and
   remaining strings continue to be migrated incrementally.
+
+### 1.17 Onboarding and templates (spec-027)
+
+- FR-77: An empty, not-yet-onboarded workspace shows “What is this space for?”
+  with For work / For personal life / For school; the choice persists and
+  applies a starter template. A template library offers work, personal,
+  course, meeting and blank templates that create real pages (implemented in
+  `spec-027`). Custom templates and template search remain follow-ups.
 - NFR-10: Every completed spec is committed to git in the same session
   (`AGENTS.md` → Commits).
 - NFR-11: Search results are cached by query and workspace version; an
@@ -313,6 +321,7 @@
 | FR-74 (implemented)           | `spec-025-settings-pages.md` |
 | FR-75 (implemented)           | `spec-026-page-actions-and-comments.md` |
 | FR-76 (implemented)           | `spec-028-i18n-coverage.md` |
+| FR-77 (implemented)           | `spec-027-onboarding-and-templates.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

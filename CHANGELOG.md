@@ -6,6 +6,22 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-027-onboarding-and-templates
+
+- Added `WorkspaceSettings.onboarding_completed` and `workspace_purpose`.
+- Added a pure starter-template catalog (`work-project`, `personal-notes`,
+  `school-course`, `meeting-notes`, `blank`) with block/table-row blueprints.
+- Added the “What is this space for?” onboarding modal with For work /
+  For personal life / For school and Skip for now; choosing a purpose applies
+  the matching template and persists the choice.
+- Added the Template library window, reachable from Library → More → Templates
+  and Settings → General → Get started.
+- Added `NOT_NOTION_SHOW=onboarding|templates` previews.
+- Red: template catalog/page-builder and onboarding-purpose tests were written
+  first.
+- Docs: added `spec/spec-027-onboarding-and-templates.md`; updated
+  requirements, data model, README and `AGENTS.md`.
+
 ### Changed — spec-028-i18n-coverage
 
 - Added `i18n::t(key)` for dynamic translation keys and expanded the `en`,

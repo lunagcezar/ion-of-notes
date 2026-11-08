@@ -10,6 +10,7 @@ use crate::i18n;
 use crate::model::{Block, BlockKind, Comment, Page, PageDraft, TableRow, Workspace, now_label};
 use crate::ollama;
 use crate::shortcuts::Action;
+use crate::templates;
 use std::collections::HashSet;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -38,6 +39,8 @@ impl NotionApp {
             search_query: self.search_query.clone(),
             search_results: Arc::clone(&self.search_results),
             settings_open: self.settings_open,
+            onboarding_open: self.onboarding_open,
+            templates_open: self.templates_open,
             settings_page: self.settings_page.clone(),
             settings_query: self.settings_query.clone(),
             settings_status: self.settings_status.clone(),
@@ -121,6 +124,8 @@ impl NotionApp {
         self.icon_picker_open = false;
         self.page_actions_open = false;
         self.version_history_open = false;
+        self.onboarding_open = false;
+        self.templates_open = false;
         self.drag_from = None;
         self.drag_to = None;
     }
@@ -210,6 +215,25 @@ impl NotionApp {
             .list_shares(Some(&self.current_page))
             .unwrap_or_default();
         self.share_general_access = general_access(&shares, &self.current_page);
+    }
+
+    /// Create a page from a starter template and open it in the active tab.
+    fn apply_template(&mut self, template_id: &str) {
+        let Some(template) = templates::find(template_id) else {
+            return;
+        };
+        let id = Uuid::new_v4().to_string();
+        let page = template.to_page(id.clone());
+        if self.workspace.add_page(page).is_ok() {
+            self.current_page = id.clone();
+            if let Some(tab) = self.tabs.get_mut(self.active_tab) {
+                *tab = id.clone();
+            }
+            self.library_open = false;
+            self.onboarding_open = false;
+            self.templates_open = false;
+            self.push_history(id);
+        }
     }
 
     /// Refresh the member directory used by Share and Settings → People.
@@ -401,6 +425,28 @@ impl NotionApp {
                     }
                 }
                 Command::CloseSettings => self.settings_open = false,
+                Command::OpenOnboarding => {
+                    self.close_overlays();
+                    self.onboarding_open = true;
+                }
+                Command::CloseOnboarding => {
+                    self.onboarding_open = false;
+                    self.workspace.settings.onboarding_completed = true;
+                }
+                Command::CompleteOnboarding(purpose) => {
+                    self.workspace.settings.onboarding_completed = true;
+                    self.workspace.settings.workspace_purpose = Some(purpose.clone());
+                    self.onboarding_open = false;
+                    if let Some(template) = templates::template_for_purpose(&purpose) {
+                        self.apply_template(template.id);
+                    }
+                }
+                Command::OpenTemplates => {
+                    self.close_overlays();
+                    self.templates_open = true;
+                }
+                Command::CloseTemplates => self.templates_open = false,
+                Command::ApplyTemplate(id) => self.apply_template(&id),
                 Command::ToggleTheme => {
                     self.dark = !self.dark;
                     self.theme_dirty = true;

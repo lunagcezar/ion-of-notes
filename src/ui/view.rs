@@ -22,6 +22,8 @@ pub(super) struct ViewState {
     pub(super) search_query: String,
     pub(super) search_results: Arc<Vec<SearchResult>>,
     pub(super) settings_open: bool,
+    pub(super) onboarding_open: bool,
+    pub(super) templates_open: bool,
     pub(super) settings_page: String,
     pub(super) settings_query: String,
     pub(super) settings_status: Option<String>,

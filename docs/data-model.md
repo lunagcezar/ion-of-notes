@@ -25,6 +25,8 @@ deserialization and after add/remove, and ignored by equality (spec-022).
 | `icon` | `String` | Workspace icon glyph |
 | `landing_page` | `Option<String>` | Page opened on first landing |
 | `allowed_domains` | `Vec<String>` | Domains allowed to join |
+| `onboarding_completed` | `bool` | First-run onboarding was completed/dismissed |
+| `workspace_purpose` | `Option<String>` | `work`, `personal` or `school` |
 | `sidebar_*` | `bool` | Visibility toggles for sidebar sections |
 | `show_other_apps` | `bool` | Show other apps in the sidebar |
 | `analytics` | `bool` | Save/display page-view analytics |

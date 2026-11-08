@@ -53,6 +53,9 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
 - Core navigation, Share, Library, page-action, comment and Settings copy is
   translated into English, Portuguese (Brazil) and Esperanto through one key
   table; long-form demo copy remains English for now.
+- An empty workspace offers “What is this space for?” onboarding, and a
+  template library provides work, personal, course, meeting and blank starter
+  pages.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

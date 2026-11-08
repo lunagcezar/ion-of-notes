@@ -25,6 +25,7 @@ pub mod screenshot;
 pub mod server;
 pub mod shortcuts;
 pub mod store;
+pub mod templates;
 pub mod ui;
 
 pub use app::{
@@ -50,3 +51,4 @@ pub use ollama::{
 pub use server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
 pub use shortcuts::{Action, Combo, SHORTCUT_TABLE, ShortcutDoc, lookup};
 pub use store::{CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore};
+pub use templates::{Template, catalog, find, template_for_purpose};
