@@ -229,7 +229,26 @@ The hook is inert in normal runs and in the rebuild check.
 - The original product's server behavior (unknown and out of clean-room scope).
 - Production auth, PostgreSQL and WebSocket transports (decided, not built).
 
-## 10. Definition of done for a spec
+## 10. Planned v2 contract tests
+
+The public-API alignment roadmap (specs 030–037) adds new test areas:
+
+| Area | Planned test crate |
+| ---- | ------------------ |
+| v2 versioning, errors, capabilities | `tests/contract.rs` |
+| pagination and list envelopes | `tests/server.rs`, `tests/client.rs` |
+| rich text, block metadata, block children | `tests/model.rs`, `tests/server.rs` |
+| page properties, data sources, property items | `tests/model.rs`, `tests/server.rs` |
+| views, filters, sorts, queries | `tests/model.rs`, `tests/server.rs` |
+| comments, users, files, uploads | `tests/model.rs`, `tests/server.rs` |
+| webhook verification, signatures, retries | `tests/webhooks.rs` |
+| rate/size/block limits | `tests/limits.rs` |
+
+These are written before implementation, following the same red → green rule.
+Contract tests drive the real `Client` against the v2 mock, not against the
+public Notion service.
+
+## 11. Definition of done for a spec
 
 - [ ] Tests were written first and observed red.
 - [ ] `cargo test --all-targets` is green.

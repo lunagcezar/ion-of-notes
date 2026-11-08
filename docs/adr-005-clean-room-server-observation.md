@@ -1,6 +1,6 @@
 # ADR-005 — Clean-room server observation
 
-- **Status:** Accepted; B1/B2 complete, B3 blocked, B4/B5 pending
+- **Status:** Accepted; B1/B2 complete, B3 blocked, B4 reviewed, B5 pending
 - **Date:** 2026-11-07
 - **Last review:** 2026-11-08 (spec-029)
 - **Supersedes:** none
@@ -76,7 +76,7 @@ behavior to make the client and a self-hosted server compatible.
 | **B1** permission/scope gate | **Done:** public behavior only, strict clean room |
 | **B2** behavioral inventory | **Done:** `docs/api-observations.md` + `docs/visual-reference-inventory.md` |
 | **B3** own-account HAR | **Blocked** by the B1 decision; needs a new explicit scope decision |
-| **B4** contract derivation | **Pending:** review the Notion public API links first |
+| **B4** contract derivation | **In progress:** public Notion developer docs reviewed 2026-11-08; specs 030–037 drafted |
 | **B5** mock server + contract tests | **Pending:** follows B4 |
 | **B6** tooling policy | **Recorded** in this ADR |
 | **B7** clean-room log | **Ongoing:** `docs/reverse-engineering-log.md` |

@@ -127,7 +127,7 @@ of broken claims) and the verification is structural plus the existing suite.
 | `docs/adr-002` | Link to the architecture guide; later split note |
 | `docs/adr-003` | Implementation status; `CollabStore` and export ownership corrected |
 | `docs/adr-004` | Current module count; later refactors |
-| `docs/adr-005` | B1/B2 done, B3 blocked, B4/B5 pending |
+| `docs/adr-005` | B1/B2 done, B3 blocked; B4 reviewed later on 2026-11-08 |
 | `spec-002` | Historical note: tests now in `tests/model.rs` |
 | `spec-008` | Current test map pointer |
 | `spec-011` | `CollabStore` closed by spec-019 |
@@ -182,5 +182,7 @@ of broken claims) and the verification is structural plus the existing suite.
 
 - No production code changed. The only code-adjacent change is documentation;
   the existing 115-test suite is the regression guard.
-- The review deliberately did **not** start B4/B5: the person will provide the
-  Notion public API links first. The clean-room guide records that next step.
+- The review deliberately did **not** start B4/B5 at the time: the person would
+  provide the Notion public API links first. **Update:** the links were provided
+  and B4 was reviewed on 2026-11-08 (`docs/public-api-analysis.md`, ADR-006,
+  specs 030–037); B5 follows the first v2 slice.

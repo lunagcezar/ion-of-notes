@@ -13,6 +13,8 @@ so an inference is never mistaken for a fact about the original service.
 ## Method and scope
 
 - **B1 decision (2026-11-07): public behavior only — strict clean room.**
+- **B4 review (2026-11-08): public Notion developer docs reviewed.** Public
+  documentation is allowed; no capture or private source was used.
 - **Allowed sources:** the 98 `reference/` pictures, the 72 local
   `screenshots/` pictures, behavior visible in the product UI, public
   help/documentation pages, exports the person already owns, and the project's
@@ -28,8 +30,9 @@ so an inference is never mistaken for a fact about the original service.
 | Level | Meaning |
 | ----- | ------- |
 | **UI-observed** | Visible in the reference pictures or normal product behavior. |
+| **Observed (public docs)** | Stated by a public Notion developer page. This is public contract evidence, not private behavior. |
 | **Inferred** | A reasonable server implication of the UI, not confirmed by public documentation. |
-| **Decided** | Our own contract in ADR-003. This is a design decision, **not** a claim about the original. |
+| **Decided** | Our own contract in ADR-003 / ADR-006. This is a design decision, **not** a claim about the original. |
 | **Unknown** | Needs public documentation or a future authorized source. |
 
 ## Evidence used in this first inventory
@@ -101,6 +104,41 @@ ADR-003 is our contract, not a description of the original server:
 - A WebSocket CRDT channel for real-time editing.
 - A Notion-style export tree.
 
+## Public API documentation review (B4, 2026-11-08)
+
+The public Notion developer pages were reviewed with `webfetch`. They are an
+allowed clean-room source because they are published for developers. The full
+analysis is `docs/public-api-analysis.md`; this is the evidence summary.
+
+### Observed (public docs)
+
+| Area | Public fact | Implication for us |
+| ---- | ----------- | ------------------ |
+| Conventions | HTTPS `api.notion.com`, Bearer token, required `Notion-Version`, `object` discriminator, snake_case, ISO 8601 | Add a version header and structured objects |
+| Errors | `object: "error"` with `status`, `code`, `message`, `request_id`, `additional_data` | Replace the string-only error envelope |
+| Pagination | `start_cursor`, `page_size` 1–100, `results`, `has_more`, `next_cursor`, opaque cursors | Paginate every list endpoint |
+| Capabilities | read/update/insert content, read/insert comments, user-info levels | Replace coarse `Access` with capability checks |
+| Blocks | metadata + type object + children; 30+ types; rich text | Add rich text, metadata, nesting, block endpoints |
+| Page | properties, icon, cover, parent, in_trash, url, public_url | Add page properties and a parent object |
+| Properties | 25+ types; write/clear rules; property-item pagination | Replace `TableRow` with a property schema |
+| Database | container of one or more data sources | Add database/data-source split |
+| Views | table/board/calendar/timeline/gallery/list/form/chart/map/dashboard; filter/sorts/config | Add a `View` DTO |
+| Comments | page/block parent, discussion, rich text, up to 3 attachments, display name | Expand comments beyond page plain text |
+| Users | person/bot, name/avatar/email, bot workspace limits | Add a `User` object |
+| Files | file/file_upload/external; temporary URLs; upload lifecycle | Add file objects and uploads |
+| Parent | page/database/data_source/workspace/block/agent | Replace the single page-parent field |
+| Icons | emoji/custom_emoji/icon/external/file/file_upload | Replace the glyph string |
+| Webhooks | subscriptions, verification token, HMAC-SHA256, event types, retries | Add webhook delivery |
+| Limits | rate, size, block and schema limits; 429/529/503 guidance | Add explicit limits and retry policy |
+| Versioning | required header, additive changes, opaque cursors, ignore unknown fields | Version our own v2 contract |
+| Unfurl | link previews need `title` + `dev`; custom connections closed | Deliberately out of scope |
+
+### Decision
+
+ADR-006 decides to adopt the **patterns** behind our own `/api/v2` contract,
+not to clone the public API. The implementation roadmap is specs 030–037.
+No private endpoint, capture or proprietary payload was used.
+
 ## Current implementation status (2026-11-08)
 
 This is the status of **our** contract, not a claim about the original:
@@ -117,7 +155,7 @@ This is the status of **our** contract, not a claim about the original:
 | WebSocket/CRDT server | Decided, **not implemented** |
 | `/api/v1` prefix | Decided, **not served** |
 | Pagination/sorting | Not implemented; lists are full snapshots |
-| Public API documentation review | **B4/B5 pending**; B3 blocked |
+| Public API documentation review | **B4 reviewed 2026-11-08**; B5 pending the first v2 slice; B3 blocked |
 
 ## What remains unknown
 
@@ -140,6 +178,13 @@ Under the strict scope these remain **Unknown** until public documentation
 answers them. They must not be filled in from traffic captures without a new
 B1 decision.
 
+> **B4 update (2026-11-08):** the public Notion API docs answer several of these
+> at the **integration** level — pagination cursors, error codes, versioning,
+> block/property/comment/file shapes and webhook delivery. They do **not** prove
+> the original product's private routes or payloads. The public facts are
+> recorded in `docs/public-api-analysis.md`; the private behavior remains
+> Unknown.
+
 ## Compatibility strategy
 
 1. Implement and test the **decided** contract (ADR-003) behind the existing
@@ -151,9 +196,10 @@ B1 decision.
 5. If a public document later confirms or contradicts an entry, update this
    file and the relevant ADR/spec before changing code.
 
-## Public sources to review next
+## Public sources reviewed in B4 (2026-11-08)
 
-These are public documentation pages, not captures:
+These are public documentation pages, not captures. The full review is
+`docs/public-api-analysis.md`.
 
 - Notion Help Center: <https://www.notion.com/help>
 - Notion API reference: <https://developers.notion.com/reference/intro>
@@ -170,3 +216,4 @@ These are public documentation pages, not captures:
 | ---- | ------ |
 | 2026-11-07 | First inventory under the strict public-behavior-only scope (B1/B2). No captures used. |
 | 2026-11-08 | Documentation review (spec-029): requirement range updated to FR-01..FR-77, current implementation status added, B3/B4/B5 status clarified. No new source was observed. |
+| 2026-11-08 | **B4 public API review:** reviewed the public Notion developer pages, added the **Observed (public docs)** level, and recorded the evidence summary. No capture, proxy, source map or decompilation. Full analysis: `docs/public-api-analysis.md`; decision: ADR-006; roadmap: specs 030–037. |

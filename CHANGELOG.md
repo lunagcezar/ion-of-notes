@@ -6,6 +6,30 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Docs — public Notion API analysis and v2 roadmap (B4)
+
+- Reviewed the public Notion developer documentation (intro, pagination,
+  capabilities, webhooks, delivery, request/workspace limits, status codes,
+  versioning, changes-by-version, block, rich text, page, page properties,
+  property items, database, data source, property object, view, comments,
+  attachments, display name, file object/upload, user, parent, emoji/icon,
+  unfurl). No capture or private source was used.
+- Added `docs/public-api-analysis.md`: conventions, errors, pagination,
+  capabilities, blocks/rich text, pages/properties, data sources/views,
+  comments/users/files, webhooks, limits, comparison, decisions and roadmap.
+- Added `docs/adr-006-public-api-alignment.md`: adopt compatible patterns
+  behind our own `/api/v2`; keep v1 stable; do not clone Notion.
+- Added specs 030–037: v2 foundation, pagination, rich text/blocks, page
+  properties/data sources, views, comments/users/files, webhooks, limits.
+- Updated `docs/api-observations.md` with the **Observed (public docs)**
+  evidence level and the B4 summary; updated `docs/api-contract.md`,
+  `docs/requirements.md`, `docs/data-model.md`, `docs/architecture.md`,
+  `docs/glossary.md`, `docs/testing.md`, `docs/clean-room.md`,
+  `docs/reverse-engineering-log.md`, `docs/index.md`, `docs/review-findings.md`,
+  `AGENTS.md` and `spec/README.md`.
+- No production code changed. Verification: 115 tests green, clippy and
+  `cargo fmt --check` clean.
+
 ### Docs — spec-029-documentation-and-contributor-guide
 
 - Added the documentation hub (`docs/index.md`) with reading order, a document

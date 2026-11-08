@@ -127,7 +127,37 @@ definition.
 | **Wireshark** | Packet analyzer; not the primary discovery tool. | ADR-005 |
 | **Stop condition** | A source or action that would cross the clean-room line; stop and ask. | `docs/clean-room.md` |
 
-## 8. Naming rules
+## 8. Public API alignment (planned v2)
+
+| Term | Meaning | Where |
+| ---- | ------- | ----- |
+| **B4** | The public-documentation review phase; public developer docs are allowed. | `docs/clean-room.md` |
+| **Observed (public docs)** | A fact stated by a public Notion developer page. | `docs/api-observations.md` |
+| **Not-Notion-Version** | Our own required version header for `/api/v2`; not `Notion-Version`. | spec-030 |
+| **ApiError** | Structured error object with `status`, `code`, `message`, `request_id`, `additional_data`. | spec-030 |
+| **Capability** | A connection right: content read/update/insert, comment read/insert, user-info level. | spec-030 |
+| **Connection** | A token + member + workspace + capability set. | spec-030 |
+| **Cursor / start_cursor / next_cursor** | Opaque pagination tokens; pass back unchanged. | spec-031 |
+| **ListResponse** | `{ object:"list", type, results, has_more, next_cursor }`. | spec-031 |
+| **RichText** | Text, mention or equation with annotations, `plain_text` and `href`. | spec-032 |
+| **Block metadata** | `object`, `id`, `parent`, timestamps, users, `in_trash`, `has_children`. | spec-032 |
+| **Property** | A data source schema entry: id, name, type and type-specific settings. | spec-033 |
+| **PropertyValue** | A typed page value for a property. | spec-033 |
+| **PropertyItem** | A single value or a paginated item of a property. | spec-033 |
+| **Data source** | A table under a database, owning its schema and rows. | spec-033 |
+| **Database** | A container of one or more data sources. | spec-033 |
+| **View** | A saved table/board/calendar/list layout with filter, sorts and config. | spec-034 |
+| **CommentAttachment** | A file attached to a comment; max 3 per comment. | spec-035 |
+| **CommentDisplayName** | `connection`, `user` or `custom` author label. | spec-035 |
+| **FileObject** | `file` (hosted), `file_upload` (API upload) or `external` URL. | spec-035 |
+| **FileUpload** | Upload lifecycle: pending → uploaded, or expired/failed. | spec-035 |
+| **WebhookSubscription** | A verified HTTPS endpoint with selected event types. | spec-036 |
+| **HMAC-SHA256 signature** | `X-Not-Notion-Signature` over the raw webhook body. | spec-036 |
+| **Aggregated event** | A batched event such as `page.content_updated`. | spec-036 |
+| **Block limit** | Free multi-member workspace lifetime block limit (1000). | spec-037 |
+| **Retry-After** | Seconds to wait after a 429/529 before retrying. | spec-037 |
+
+## 9. Naming rules
 
 - Specs: `spec-NNN-kebab-case-title.md`, numbered sequentially.
 - ADRs: `adr-NNN-kebab-case-title.md`, numbered sequentially.

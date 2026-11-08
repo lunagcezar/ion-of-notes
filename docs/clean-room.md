@@ -56,8 +56,8 @@ The four evidence levels are used consistently in
    shape, not as source code.
 6. **Our own decided contract** in ADR-003 and the tests that exercise it.
 
-Public documentation is the preferred source. The public API reference is the
-next input to review (B4/B5); it is a public contract, not a capture.
+Public documentation is the preferred source. The public API reference was
+reviewed in B4 on 2026-11-08; it is a public contract, not a capture.
 
 ## 3. Forbidden sources and actions
 
@@ -116,7 +116,7 @@ flowchart TD
 | **B1** | Permission and scope gate | **Done:** public behavior only, strict clean room |
 | **B2** | Behavioral inventory | **Done:** `docs/api-observations.md` + visual inventory |
 | **B3** | Own-account HAR capture | **Blocked** by B1 |
-| **B4** | Contract derivation | **Pending:** public API links review |
+| **B4** | Contract derivation | **In progress:** public developer docs reviewed 2026-11-08 (`docs/public-api-analysis.md`); specs 030–037 drafted |
 | **B5** | Mock server and contract tests | **Pending:** follows B4 |
 | **B6** | Tooling policy | **Recorded:** DevTools first; interception only on our traffic |
 | **B7** | Clean-room log | **Ongoing:** every session appends an entry |
@@ -170,19 +170,23 @@ Stop immediately and ask the person when:
 Falling back is always allowed: public documentation, UI observation, exports,
 or a deliberately compatible **decided** contract.
 
-## 8. Reviewing the public API links (next step)
+## 8. Reviewing the public API links (B4, started 2026-11-08)
 
-When the person provides the Notion public API links:
+The person provided the public Notion developer links. They are allowed public
+documentation, and they were reviewed with `webfetch` on 2026-11-08.
 
 1. Read only the public documentation.
 2. For each resource, record what the public contract states in
    `docs/api-observations.md` as **Observed (public docs)**.
-3. Compare it with ADR-003 and `docs/api-contract.md`.
-4. Where they differ, update the observation, then ADR-003, then the contract
+3. Compare it with ADR-003/ADR-006 and `docs/api-contract.md`.
+4. Where they differ, update the observation, then the ADR, then the contract
    doc — before changing code.
-5. Derive the B4 contract and build the B5 mock + `tests/contract.rs`.
+5. The full analysis is `docs/public-api-analysis.md`; the derived roadmap is
+   specs 030–037. B5 (mock server + `tests/contract.rs`) follows the first
+   implemented v2 slice.
 6. Do **not** infer private endpoints, payloads or auth flows that the public
-   docs do not state.
+   docs do not state. The public API is an integration contract, not the
+   original product's private server.
 
 ## 9. Clean-room checklist for a pull request
 

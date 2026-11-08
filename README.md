@@ -31,6 +31,12 @@ documentation map.
   surfaces, and en/pt-BR/eo translations for core UI copy.
 - **Decided, not built:** `/api/v1`, sessions/password hashing/Bearer auth, the
   WebSocket + Yrs CRDT channel, and PostgreSQL/SQLx storage.
+- **Public API alignment (B4):** the public Notion developer docs were reviewed
+  and turned into a v2 roadmap — specs 030–037 cover versioning/errors/
+  capabilities, pagination, rich text/blocks, properties/data sources, views,
+  comments/users/files, webhooks and limits. v1 stays stable. See
+  [`docs/public-api-analysis.md`](docs/public-api-analysis.md) and
+  [`docs/adr-006-public-api-alignment.md`](docs/adr-006-public-api-alignment.md).
 - **Clean room:** strict public-behavior-only observation. No capture, proxy,
   Wireshark, source maps or decompilation. See
   [`docs/clean-room.md`](docs/clean-room.md).
@@ -76,7 +82,8 @@ egui, eframe, JSON files or sockets.
 | [`docs/contributor-guide.md`](docs/contributor-guide.md) | SDD/TDD workflow and where code belongs |
 | [`docs/testing.md`](docs/testing.md) | Test strategy, 17 test crates, fakes |
 | [`docs/glossary.md`](docs/glossary.md) | Shared vocabulary |
-| [`docs/api-contract.md`](docs/api-contract.md) | Implemented loopback API vs decided `/api/v1` |
+| [`docs/api-contract.md`](docs/api-contract.md) | Implemented loopback API vs decided `/api/v1`/v2 |
+| [`docs/public-api-analysis.md`](docs/public-api-analysis.md) | B4 public Notion API analysis and v2 roadmap |
 | [`docs/clean-room.md`](docs/clean-room.md) | Allowed sources, evidence levels, stop conditions |
 | [`docs/review-findings.md`](docs/review-findings.md) | Review findings and follow-ups |
 | [`spec/README.md`](spec/README.md) | Spec index and status |

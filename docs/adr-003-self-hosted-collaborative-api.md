@@ -4,6 +4,7 @@
 adapters staged across specs)
 **Date:** 2026-11-05
 **Last implementation review:** 2026-11-08 (spec-029)
+**Public API alignment:** refined by `docs/adr-006-public-api-alignment.md`
 **Supersedes / refines:** the "defer" verdicts in `docs/adr-001-stack-evaluation.md`
 (accounts, database, WebSocket, CRDT, auth) — those are now **chosen as the
 product direction**, still introduced behind the existing trait seams.
@@ -187,3 +188,8 @@ The exact implemented routes, DTOs and status codes are documented in
   in-process server and, later, a remote HTTP/WS transport.
 - This ADR is the "decide the API" answer; `spec/spec-011` scopes the first
   implemented slice and records the Given/When/Then acceptance criteria.
+- **Public API refinement (2026-11-08):** ADR-006 compares this contract with
+  the public Notion API and schedules a `/api/v2` alignment (versioning,
+  structured errors, capabilities, pagination, rich text, properties, data
+  sources, views, comments, files, webhooks, limits). v1 remains stable; the
+  decisions here are not replaced.

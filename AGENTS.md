@@ -459,6 +459,14 @@ contract (`/api/v1`, sessions, `WS /ws/workspace/{id}`) is **decided** in
 `spec/spec-011-collaborative-server.md`. The DTOs live in `src/collab.rs`.
 The complete implemented-vs-decided reference is `docs/api-contract.md`.
 
+**Public API alignment (B4, 2026-11-08):** the public Notion developer docs were
+reviewed and compared with our contract. ADR-006 decides to adopt compatible
+patterns behind our own `/api/v2`, not to clone Notion. The roadmap is
+`spec-030` (versioning/errors/capabilities), `031` (pagination), `032` (rich
+text/blocks), `033` (properties/data sources), `034` (views), `035`
+(comments/users/files), `036` (webhooks) and `037` (limits). v1 routes stay
+stable. Full analysis: `docs/public-api-analysis.md`.
+
 ## Code Conventions
 
 - Rust idioms: `Result` over panics in library code, no `unwrap()` on user input.
@@ -525,6 +533,9 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
 - Clean-room observation → update `docs/api-observations.md` and append a dated
   entry to `docs/reverse-engineering-log.md`; never add a capture under the
   current B1 scope.
+- Public API review → update `docs/public-api-analysis.md`,
+  `docs/api-observations.md` (mark **Observed (public docs)**), the relevant
+  ADR, and the specs; do not claim wire compatibility with Notion.
 - Keep `docs/unknowns.md` in sync with open questions about the reconstruction.
 - Keep `docs/review-findings.md` current when a review finds drift; resolve it
   in a spec rather than silently editing history.
@@ -571,5 +582,13 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
   `docs/testing.md`, `docs/glossary.md`, `docs/review-findings.md`,
   `docs/api-contract.md`, `docs/clean-room.md` (spec-029).
 - Clean-room evidence levels and phases: `docs/api-observations.md`,
-  `docs/reverse-engineering-log.md`, `docs/unknowns.md`; public API review is
-  the next B4/B5 input.
+  `docs/reverse-engineering-log.md`, `docs/unknowns.md`.
+- Public Notion API alignment (B4): `docs/public-api-analysis.md`,
+  `docs/adr-006-public-api-alignment.md`, and specs 030–037. The public
+  developer docs are allowed evidence; captures are not.
+- Public API reference: <https://developers.notion.com/reference/intro>,
+  <https://developers.notion.com/reference/pagination>,
+  <https://developers.notion.com/reference/capabilities>,
+  <https://developers.notion.com/reference/webhooks>,
+  <https://developers.notion.com/reference/request-limits>,
+  <https://developers.notion.com/reference/versioning>.

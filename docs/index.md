@@ -9,15 +9,16 @@ in what order, and which document is the source of truth for each concern.
 | -------- | ------------------ |
 | New contributor | `README.md` → `docs/architecture.md` → `docs/contributor-guide.md` → `docs/testing.md` → `docs/glossary.md` |
 | Agent starting a task | `AGENTS.md` → `spec/README.md` → `docs/architecture.md` → the relevant spec → `docs/review-findings.md` |
-| Working on the server/API | `docs/api-contract.md` → `docs/api-observations.md` → `docs/clean-room.md` → `docs/adr-003-self-hosted-collaborative-api.md` |
+| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006 |
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
 ## Current status (2026-11-08)
 
 - **Specs:** `spec-001` … `spec-028` implemented; `spec-007` retired;
-  `spec-016` is a plan with A9/B4/B5 still open; `spec-029` is this
-  documentation overhaul.
+  `spec-016` is a plan with A9 still open; `spec-029` is the documentation
+  overhaul; `spec-030` … `spec-037` are the planned public-API alignment
+  roadmap.
 - **Tests:** 115 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
 - **v1 runtime:** in-process server + optional loopback HTTP adapter. There is
@@ -26,8 +27,9 @@ in what order, and which document is the source of truth for each concern.
   `collab.json`; real-time CRDT transport is a decided contract, not a running
   server.
 - **Clean room:** strict public-behavior-only observation. No capture, proxy,
-  Wireshark, source maps or decompilation. B3 is blocked; B4/B5 are next after
-  the public API links are reviewed.
+  Wireshark, source maps or decompilation. B3 is blocked; **B4 public docs were
+  reviewed on 2026-11-08** (`docs/public-api-analysis.md`); B5 follows the first
+  implemented v2 slice.
 - **Localization:** core navigation, Share, Library, page actions, comments and
   Settings are translated into `en`, `pt-BR` and `eo`; remaining strings are
   migrated incrementally.
@@ -46,6 +48,8 @@ flowchart TD
     INDEX --> GLOSS[docs/glossary.md]
     INDEX --> REVIEW[docs/review-findings.md]
     INDEX --> API[docs/api-contract.md]
+    INDEX --> PUBLIC[docs/public-api-analysis.md]
+    API --> PUBLIC
     INDEX --> CLEAN[docs/clean-room.md]
     INDEX --> REQ[docs/requirements.md]
     INDEX --> DATA[docs/data-model.md]
@@ -74,11 +78,12 @@ flowchart TD
 | `docs/data-model.md` | contributors, agents | Entities, fields, relationships, invariants, persistence shape |
 | `docs/api-contract.md` | client/server contributors | Current loopback API, decided `/api/v1` target, DTOs, status codes |
 | `docs/api-observations.md` | clean-room researchers | UI/public evidence inventory and unknown server behavior |
+| `docs/public-api-analysis.md` | architects, API contributors | B4 public Notion API analysis, comparison and roadmap |
 | `docs/clean-room.md` | everyone | Allowed sources, observation levels, stop conditions, Wireshark guidance |
 | `docs/reverse-engineering-log.md` | reviewers, agents | Auditable clean-room log of observations vs inferences |
 | `docs/visual-reference-inventory.md` | UI contributors | What the 72 `screenshots/` pictures show and their gaps |
 | `docs/unknowns.md` | everyone | Open reconstruction questions and their status |
-| `docs/adr-001…005` | maintainers | Accepted architecture, API, modularization and clean-room decisions |
+| `docs/adr-001…006` | maintainers | Accepted architecture, API, modularization, clean-room and public-API-alignment decisions |
 | `spec/README.md` | everyone | Spec index, status, and the SDD lifecycle |
 | `CHANGELOG.md` | everyone | What changed, in what spec, with verification notes |
 
@@ -97,6 +102,9 @@ flowchart TD
    `docs/visual-reference-inventory.md` summarizes them.
 6. **Clean-room evidence** is `docs/api-observations.md` and
    `docs/reverse-engineering-log.md`; no capture is authorized under B1.
+7. **Public API evidence** is `docs/public-api-analysis.md` plus the
+   **Observed (public docs)** rows in `docs/api-observations.md`. It describes
+   the public integration contract, not the original private server.
 
 ## Keeping docs current
 

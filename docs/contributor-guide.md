@@ -149,7 +149,18 @@ flowchart LR
    translate only the display label.
 4. Run `cargo test --test i18n` to check key completeness.
 
-### 6.5 Starter template
+### 6.5 Public API v2 work
+
+1. Read `docs/public-api-analysis.md` and the relevant spec (030–037).
+2. Add v2 DTOs behind the existing ports; do not change v1 routes.
+3. Put pure logic in a new `src/model/*` or `src/server/*` module, not in a
+   render function.
+4. Add contract tests before implementation; v2 errors use stable codes.
+5. Keep the clean-room rule: public docs only, no captures.
+6. Update `docs/api-contract.md`, `docs/data-model.md` and the ADR if a
+   decision changes.
+
+### 6.6 Starter template
 
 1. Add a `Template` entry in `src/templates.rs` with blocks/rows.
 2. Add or update a test in `tests/templates.rs`.

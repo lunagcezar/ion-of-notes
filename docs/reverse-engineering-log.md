@@ -77,11 +77,35 @@ does not contain captured traffic, secrets or proprietary artifacts.
   used.
 - **Rejected:** nothing was rejected; no new source was proposed.
 - **Redaction:** not applicable (no capture).
-- **Phase status:** B1 done, B2 done, B3 **blocked**, B4/B5 **pending** on the
-  public API links, B6 recorded, B7 ongoing, B8 reviewed.
+- **Phase status:** B1 done, B2 done, B3 **blocked**, B4/B5 **pending at that
+  point** (B4 was completed later the same day; see the next entry), B6
+  recorded, B7 ongoing, B8 reviewed.
 - **Documentation changes:** added `docs/index.md`, `docs/architecture.md`,
   `docs/contributor-guide.md`, `docs/testing.md`, `docs/glossary.md`,
   `docs/review-findings.md`, `docs/api-contract.md`, `docs/clean-room.md`,
   `spec/README.md` and `spec/spec-029-*`; corrected stale statuses in the
   requirements, ADRs, specs, unknowns, visual inventory and this log.
 - **Verification:** 115 tests green; clippy and `cargo fmt --check` clean.
+
+## 2026-11-08 — B4 public Notion API documentation review
+
+- **Source:** the public Notion developer pages listed in
+  `docs/public-api-analysis.md` §1, fetched with `webfetch`. This is public
+  documentation, not a capture.
+- **Observed:** conventions (Bearer token, required version header, `object`
+  discriminator, snake_case, ISO 8601); structured errors and status codes;
+  cursor pagination; capabilities; rich text; blocks; pages and properties;
+  databases and data sources; views; comments, users and files; webhooks and
+  delivery; request/workspace limits; versioning and changes-by-version.
+- **Inferred:** the public API is an integration contract, not the original
+  product's private server. We adopt patterns, not byte-for-byte behavior.
+- **Rejected:** copying the public API exactly; claiming Notion wire
+  compatibility; link previews/unfurl (custom connections are closed to new
+  developers); agent/SCIM/SSO scope.
+- **Redaction:** not applicable (no capture).
+- **Decision:** ADR-006 accepts public API alignment behind our own `/api/v2`
+  contract; v1 stays stable.
+- **Output:** `docs/public-api-analysis.md`, the **Observed (public docs)**
+  evidence level, and specs 030–037.
+- **Phase status:** B4 in progress (docs reviewed, specs drafted); B5 pending
+  the first implemented v2 slice; B3 still blocked by B1.

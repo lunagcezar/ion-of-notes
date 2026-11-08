@@ -263,6 +263,51 @@
   course, meeting and blank templates that create real pages (implemented in
   `spec-027`). Custom templates and template search remain follow-ups.
 
+### 1.18 Public API alignment (planned, specs 030–037)
+
+These requirements come from the B4 public-documentation review
+(`docs/public-api-analysis.md`, ADR-006). They are **planned**, not implemented
+in v1.
+
+- FR-78: `/api/v2` requires a `Not-Notion-Version` header and returns a
+  structured error object with `status`, `code`, `message`, `request_id` and
+  optional `additional_data` (spec-030).
+- FR-79: Connections have capabilities for content read/update/insert, comment
+  read/insert and user-info visibility; permission failures return `401`/`403`
+  with stable codes (spec-030).
+- FR-80: List endpoints are cursor-paginated with `start_cursor`, `page_size`
+  (1–100), `results`, `has_more` and an opaque `next_cursor` (spec-031).
+- FR-81: Blocks use rich text objects (`text`, `mention`, `equation`) with
+  annotations, `plain_text` and `href` (spec-032).
+- FR-82: Blocks carry `object`, `id`, `parent`, timestamps, users, `in_trash`,
+  `has_children` and a typed payload; block children are read/appended through
+  dedicated endpoints (spec-032).
+- FR-83: Pages in a data source carry typed property values; property items
+  paginate large relation/people/rich-text values (spec-033).
+- FR-84: A database is a container of data sources; each data source owns its
+  property schema and rows (spec-033).
+- FR-85: Views define table/board/calendar/list layouts with filters, sorts and
+  configuration (spec-034).
+- FR-86: Comments attach to pages or blocks, carry rich text, a discussion id,
+  up to three attachments and an optional display name (spec-035).
+- FR-87: Users distinguish people and bots, expose optional profile fields and
+  respect user-info capabilities (spec-035).
+- FR-88: Files are `file`, `file_upload` or `external`; uploads have a
+  pending/uploaded/expired/failed lifecycle and temporary URLs (spec-035).
+- FR-89: Webhook subscriptions verify an endpoint, sign payloads with
+  HMAC-SHA256 and retry failed deliveries (spec-036).
+- FR-90: The server enforces rate, request-size and workspace block limits and
+  returns `429`/`529`/`503` with retry guidance (spec-037).
+- FR-91: v1 routes stay stable; v2 changes are additive unless a version bump
+  is declared; clients ignore unknown response fields and treat cursors as
+  opaque (spec-030/031).
+- FR-92: Unsupported block or view types are represented explicitly instead of
+  being silently dropped (spec-032/034).
+- FR-93: Page and callout icons use an icon object (`emoji`, `custom_emoji`,
+  `icon`, `external`, `file`) rather than a bare glyph string (spec-032/035).
+- FR-94: Parent objects distinguish page, database, data source, workspace,
+  block and agent parents (spec-030/032).
+
 ## 2. Non-functional requirements
 
 - NFR-01: `cargo build` succeeds on stable Rust with no manual steps.
@@ -307,6 +352,15 @@
 - NFR-16: Documentation stays current and navigable: `docs/index.md` is the
   entry point, each concern has one owner document, and a behavior/route/
   entity/module change updates that document in the same spec (spec-029).
+- NFR-17: Public API alignment is evidence-based: only public documentation,
+  UI observation or our own decision is used; no private endpoint, capture or
+  decompiled behavior is claimed as fact (ADR-006, `docs/public-api-analysis.md`).
+- NFR-18: v2 limits are explicit and testable: request size, rate, block and
+  schema limits return stable codes and retry guidance (spec-037).
+- NFR-19: v2 is additive and backward-compatible with v1; clients ignore
+  unknown fields and treat cursors as opaque (spec-030/031).
+- NFR-20: Legacy data (`Block.text`, `Page.rows`) migrates to the richer v2
+  model without loss (spec-032/033).
 
 ## 3. Requirement → spec map
 
@@ -328,6 +382,14 @@
 | FR-68 (implemented)           | `spec-028-i18n-coverage.md` |
 | FR-71 (open)                  | `spec-016-architecture-follow-up-and-observation.md` A9 |
 | NFR-16 (documentation)        | `spec-029-documentation-and-contributor-guide.md` |
+| FR-78, FR-79, FR-91, FR-94, NFR-17, NFR-19 | `spec-030-api-v2-foundation.md` |
+| FR-80, NFR-19                 | `spec-031-pagination.md` |
+| FR-81, FR-82, FR-92, FR-93, FR-94, NFR-20 | `spec-032-rich-text-and-blocks.md` |
+| FR-83, FR-84, NFR-20          | `spec-033-page-properties-and-data-sources.md` |
+| FR-85, FR-92                  | `spec-034-views-and-database-layouts.md` |
+| FR-86..FR-88, FR-93           | `spec-035-comments-users-and-files.md` |
+| FR-89                         | `spec-036-webhooks-and-event-delivery.md` |
+| FR-90, NFR-18                 | `spec-037-limits-and-operations.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |
@@ -354,3 +416,6 @@
   no longer reproduced).
 - `spec-007` is **retired**: its "non-profit, free for all, no accounts"
   framing is superseded by the self-hosted accounts decision in ADR-003.
+- **Public API alignment (planned):** FR-78..FR-94 and NFR-17..NFR-20 come from
+  the B4 public-documentation review and ADR-006. They are scheduled in
+  specs 030–037 and are not part of the current v1 behavior.

@@ -261,7 +261,42 @@ Adapters implement the ports; the composition root wires them.
 | New starter template | `src/templates.rs` + `tests/templates.rs` |
 | New visual state | `NOT_NOTION_SHOW` preview hook + `--screenshot` |
 
-## 10. Known constraints
+## 10. Public API alignment roadmap
+
+The B4 review (`docs/public-api-analysis.md`, ADR-006) compares our v1 contract
+with the public Notion API and schedules the gaps as specs 030–037. The
+architecture stays the same: new adapters and DTOs sit behind the existing
+ports; v1 routes remain stable.
+
+```mermaid
+flowchart TD
+    V1[v1 loopback] --> V2[v2 contract]
+    V2 --> F[030 versioning, errors, capabilities]
+    V2 --> P[031 pagination]
+    V2 --> B[032 rich text, blocks]
+    B --> D[033 properties, data sources]
+    D --> W[034 views]
+    V2 --> C[035 comments, users, files]
+    V2 --> H[036 webhooks]
+    V2 --> L[037 limits]
+```
+
+| New concern | Module / port | Notes |
+| ----------- | ------------- | ----- |
+| Version/errors/capabilities | `server/contract.rs`, `collab.rs` | `ApiError`, `Capability`, `Connection`; no domain dependency |
+| Pagination | `server/pagination.rs` | pure cursor codec; opaque to clients |
+| Rich text/blocks | `model/richtext.rs`, `model/block.rs` | `Block.text` migration; block endpoints |
+| Properties/data sources | `model/property.rs`, `model/database.rs` | `TableRow` migration; `DataSource` schema |
+| Views | `model/view.rs` | filter/sort/config; query pagination |
+| Comments/users/files | `model/comment.rs`, `model/file.rs`, `model/user.rs` | attachments; `FileStore` port |
+| Webhooks | `webhooks.rs`, `server/webhooks.rs` | `WebhookStore` port; delivery worker |
+| Limits | `server/limits.rs`, `server/rate_limit.rs` | policy, not domain rules |
+
+The v2 work must not break the dependency direction: DTOs stay free of egui and
+sockets; the domain does not know HTTP or files; the composition root wires
+new stores and delivery workers.
+
+## 11. Known constraints
 
 - The workspace is still small enough for full snapshots on structural
   changes; per-page writes and debounce reduce the common case.
@@ -272,8 +307,11 @@ Adapters implement the ports; the composition root wires them.
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
+- The public-API alignment roadmap (specs 030–037) is **planned**, not built;
+  v2 DTOs, pagination, rich text, properties, views, webhooks and limits do not
+  exist in the running server yet.
 
-## 11. Further reading
+## 12. Further reading
 
 - `docs/contributor-guide.md` — how to make a change.
 - `docs/testing.md` — test strategy.

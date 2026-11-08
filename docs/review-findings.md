@@ -41,7 +41,8 @@ flowchart LR
 | Code follow-up | 10 | Real gaps in the product that are out of scope for a documentation pass. |
 
 All high/medium/low documentation findings below were **resolved in spec-029**
-unless marked otherwise.
+unless marked otherwise. The public-API gaps found in B4 are separate and are
+listed in §5; they are planned in specs 030–037.
 
 ## 3. Documentation findings
 
@@ -257,7 +258,28 @@ documentation pass; each needs its own spec.
 | RF-C09 | The full `PUT /api/workspace` fallback records versions for every changed page. | A structural change can create many snapshots. | Accept for now; revisit with diff-based versions. |
 | RF-C10 | The selected language is not persisted across restarts. | A user must reselect it each run. | Persist locale in `WorkspaceSettings` or local config. |
 
-## 5. What the review confirmed is healthy
+## 5. Public API gap analysis (B4)
+
+The public Notion API review (`docs/public-api-analysis.md`, ADR-006) found
+gaps between our v1 contract and a mature workspace API. These are **planned**,
+not documentation bugs; each has a spec.
+
+| # | Gap | Impact | Spec |
+| - | --- | ------ | ---- |
+| RF-P01 | No version header, structured errors, request IDs or capabilities | Weak compatibility and observability; coarse permissions | 030 |
+| RF-P02 | List endpoints return full arrays | No scale or stable traversal | 031 |
+| RF-P03 | Blocks are flat plain text with no metadata or children | Cannot represent real workspace content | 032 |
+| RF-P04 | `TableRow` has four strings and no property schema | No typed databases, relations or rollups | 033 |
+| RF-P05 | No database/data-source split or view objects | No multi-source databases or saved views | 033/034 |
+| RF-P06 | Comments are page-only plain text | No block comments, discussions or attachments | 035 |
+| RF-P07 | No user object beyond `Member` | No person/bot distinction, avatar or capability-filtered profile | 035 |
+| RF-P08 | No file object or upload lifecycle | No attachments, covers or media | 035 |
+| RF-P09 | No webhooks or event delivery | External systems cannot react to changes | 036 |
+| RF-P10 | No rate, size or block limits | A large request or tight loop can exhaust the server | 037 |
+| RF-P11 | No explicit unsupported-type representation | New block/view types could be silently lost | 032/034 |
+| RF-P12 | Legacy `Block.text`/`TableRow` need migration | A v2 model could lose v1 data | 032/033 |
+
+## 6. What the review confirmed is healthy
 
 - **Layer direction:** `model`/`collab` have no egui, socket or file types;
   `ui → client → server → model` holds.
@@ -278,7 +300,7 @@ documentation pass; each needs its own spec.
 - **Clean room:** no capture, proxy, source map or decompilation artifact is in
   the repository; the strict B1 scope is recorded consistently.
 
-## 6. Documentation rules adopted by this review
+## 7. Documentation rules adopted by this review
 
 1. Every document states its **status** and **date** when it is a decision or a
    snapshot.
@@ -295,13 +317,20 @@ documentation pass; each needs its own spec.
 7. Mermaid diagrams are preferred for flows and relationships, but the prose
    must stand alone if the diagram fails to render.
 
-## 7. Follow-up queue
+## 8. Follow-up queue
 
 | Priority | Item | Owner document |
 | -------- | ---- | -------------- |
-| Next | Review the Notion public API links and derive B4/B5 | `docs/api-observations.md`, spec-016 |
+| Next | Implement the v2 foundation (versioning, errors, capabilities) | `spec-030` |
+| Next | Add cursor pagination | `spec-031` |
+| Next | Add rich text and block metadata/children | `spec-032` |
+| Next | Add page properties and data sources | `spec-033` |
+| Next | Add views | `spec-034` |
+| Next | Add comments, users and files | `spec-035` |
+| Next | Add webhooks | `spec-036` |
+| Next | Add limits and retry policy | `spec-037` |
 | Next | Implement A9 settings row filtering | spec-016 |
 | Later | Persist the selected language | spec-028 follow-up |
 | Later | Send or remove the invite message | spec-023 follow-up |
-| Later | Block-anchored inline comments | spec-026 follow-up |
+| Later | Block-anchored inline comments | spec-035 |
 | Later | Production auth + WebSocket/CRDT adapters | ADR-003 |

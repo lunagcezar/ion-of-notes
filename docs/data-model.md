@@ -242,6 +242,65 @@ flowchart TD
     P2 --> CSV[Page B_all.csv]
 ```
 
+## Target data model (v2, planned)
+
+The B4 public API review (`docs/public-api-analysis.md`, ADR-006) adds a richer
+target model. It is **planned** in specs 030–037; the v1 entities above remain
+the implemented shape until each spec lands.
+
+```mermaid
+erDiagram
+    WORKSPACE ||--o{ PAGE : contains
+    WORKSPACE ||--o{ DATABASE : contains
+    DATABASE ||--o{ DATA_SOURCE : contains
+    DATA_SOURCE ||--o{ PAGE : rows
+    DATA_SOURCE ||--o{ PROPERTY : schema
+    PAGE ||--o{ BLOCK : content
+    PAGE ||--o{ PROPERTY_VALUE : values
+    PAGE ||--o{ COMMENT : comments
+    BLOCK ||--o{ COMMENT : comments
+    PAGE ||--o{ VIEW : views
+    DATABASE ||--o{ VIEW : views
+    PAGE ||--o{ FILE : files
+    WORKSPACE ||--o{ WEBHOOK_SUBSCRIPTION : webhooks
+    WEBHOOK_SUBSCRIPTION ||--o{ WEBHOOK_EVENT : delivers
+```
+
+| Entity | Key fields | Spec |
+| ------ | ---------- | ---- |
+| `RichText` | `type`, text/mention/equation, `annotations`, `plain_text`, `href` | 032 |
+| `Block` | `object`, `id`, `parent`, timestamps, users, `in_trash`, `has_children`, typed payload | 032 |
+| `Property` | `id`, `name`, `type`, type-specific config | 033 |
+| `PropertyValue` | typed value (title, rich_text, number, select, status, date, relation, formula, …) | 033 |
+| `DataSource` | `id`, `title`, `properties`, `parent`, `database_parent` | 033 |
+| `Database` | `id`, `title`, `data_sources`, `parent`, `is_inline` | 033 |
+| `View` | `id`, `data_source_id`, `name`, `type`, `filter`, `sorts`, `configuration` | 034 |
+| `Comment` | `id`, `parent`, `discussion_id`, `rich_text`, `attachments`, `display_name` | 035 |
+| `User` | `id`, `type` (person/bot), `name`, `avatar_url`, profile/bot fields | 035 |
+| `FileObject` | `type` (file/file_upload/external), URL or upload id | 035 |
+| `FileUpload` | `id`, `status`, `filename`, `content_type`, `content_length`, URLs | 035 |
+| `WebhookSubscription` | `id`, `url`, `events`, `verification_token`, `status` | 036 |
+| `WebhookEvent` | `id`, `timestamp`, `type`, `entity`, `data`, `attempt_number` | 036 |
+| `ListResponse<T>` | `object:"list"`, `type`, `results`, `has_more`, `next_cursor` | 031 |
+| `ApiError` | `object:"error"`, `status`, `code`, `message`, `request_id`, `additional_data` | 030 |
+
+### Migration rules
+
+- `Block.text` remains readable and is exposed as one `RichText` object; saving
+  writes `rich_text` and does not lose text.
+- `Page.rows` becomes a default data source with `name`, `status`, `assignee`
+  and `due` properties; the old shape is a read-only projection until the UI
+  migrates.
+- `Page.parent` becomes a `Parent` object; a page-only parent is the
+  compatibility case.
+- `Comment` keeps `author`/`text` as a compatibility projection of
+  `created_by`/`rich_text`.
+- `Member` keeps `name`/`email`/`role`; the v2 `User` adds `type`, avatar and
+  bot fields.
+- `workspace.json` and `collab.json` remain the v1 documents; v2 may add
+  `data_sources.json`/`webhooks.json` or store them behind the existing
+  `CollabStore` port. A migration spec must decide before code.
+
 ## Templates and onboarding
 
 The starter template catalog (`src/templates.rs`) is pure data: each

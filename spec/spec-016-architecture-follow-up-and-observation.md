@@ -308,10 +308,11 @@ spec defines the operational steps.
 - [ ] B3 capture own-account HAR, redact, store under `fixtures/har/`.
   **Blocked by the B1 decision:** intentionally not executed under the strict
   scope; it can only resume after a new scope decision.
-- [ ] B4 derive/update the contract and ADR if needed. **Pending:** review the
-  public API links first; see `docs/clean-room.md` §8.
+- [x] B4 derive/update the contract and ADR if needed. **Reviewed 2026-11-08:**
+  public developer docs analyzed in `docs/public-api-analysis.md`; ADR-006
+  decides the v2 alignment; specs 030–037 drafted.
 - [ ] B5 implement the mock server and `tests/contract.rs`. **Pending:** follows
-  B4.
+  the first implemented v2 slice (spec-030).
 - [x] B6 record the tooling choice and TLS handling (ADR-005).
 - [x] B7 maintain `docs/reverse-engineering-log.md` (ongoing; the 2026-11-08
   entry records the documentation review and phase status).

@@ -76,7 +76,9 @@ or, on failure:
 
 `401` and `403` are part of the decided production contract (missing/invalid
 session, insufficient permission) but are **not** produced by the current
-loopback server because it has no auth middleware.
+loopback server because it has no auth middleware. The planned v2 contract adds
+`409 conflict_error`, `429 rate_limited`, `503 service_unavailable` and
+`529 service_overload`; see `docs/public-api-analysis.md` §3 and spec-037.
 
 ## 3. Implemented routes
 
@@ -266,7 +268,49 @@ sequenceDiagram
 | PostgreSQL/SQLx store | Decided, not implemented |
 | Pagination/sorting | Not implemented; full snapshots |
 
-## 8. Compatibility strategy
+## 8. Public API alignment (v2 target, planned)
+
+The B4 review of the public Notion API (`docs/public-api-analysis.md`,
+ADR-006) found patterns we should adopt without cloning the service. They are
+planned in `/api/v2`; the current `/api/...` v1 routes stay stable.
+
+| Concern | v1 today | v2 target | Spec |
+| ------- | -------- | --------- | ---- |
+| Versioning | none | required `Not-Notion-Version` header | 030 |
+| Errors | `{data,error}` string | `object:"error"` + `status`/`code`/`message`/`request_id`/`additional_data` | 030 |
+| Capabilities | `Role` + `Access` | read/update/insert content, comments, user-info | 030 |
+| Pagination | full arrays | `ListResponse<T>` with opaque cursors | 031 |
+| Blocks | flat text | rich text + metadata + children + block endpoints | 032 |
+| Page | title/icon/parent/blocks/rows | properties, icon, cover, parent, in_trash, url | 032/033 |
+| Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 |
+| Database | inline rows | database container + data sources | 033 |
+| Views | table/board | view object + filters/sorts/configuration | 034 |
+| Comments | page plain text | page/block, rich text, discussions, attachments | 035 |
+| Users | `Member` | person/bot, profile, workspace limits | 035 |
+| Files | none | file/file_upload/external + lifecycle | 035 |
+| Webhooks | none | subscriptions, verification, HMAC, retries | 036 |
+| Limits | none | rate/size/block limits, 429/529/503 guidance | 037 |
+
+```mermaid
+flowchart LR
+    V1[Current /api v1] --> KEEP[Keep stable]
+    V1 --> V2[/api/v2 planned/]
+    V2 --> F[030 versioning + errors + capabilities]
+    V2 --> P[031 pagination]
+    V2 --> B[032 rich text + blocks]
+    B --> D[033 properties + data sources]
+    D --> W[034 views]
+    V2 --> C[035 comments + users + files]
+    V2 --> H[036 webhooks]
+    V2 --> L[037 limits]
+```
+
+The v2 contract is **not** a claim of Notion wire compatibility. We use our
+own header name and route prefix; the public API informs the shape, not our
+identity. The detailed acceptance criteria and test scenarios are in
+`spec/spec-030` … `spec/spec-037`.
+
+## 9. Compatibility strategy
 
 1. Keep the DTOs in `src/collab.rs` and the routes in `src/server.rs`.
 2. Add production adapters behind `WorkspaceApi`, `WorkspaceStore` and
@@ -278,7 +322,7 @@ sequenceDiagram
 5. Contract tests (`tests/contract.rs`) will drive the real `Client` against a
    mock built from the derived contract (B5).
 
-## 9. Examples
+## 10. Examples
 
 Create a page:
 

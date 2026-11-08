@@ -53,7 +53,7 @@ Status vocabulary:
 | [013](spec-013-interaction-polish-and-modularity.md) | Interaction polish, bugs, modularity | implemented | ADR-004, `switcher`, `page_icon` |
 | [014](spec-014-bug-fixes-and-improvements.md) | Bug fixes and improvements | implemented | Batch of editor/settings/UI fixes |
 | [015](spec-015-hardening-and-performance.md) | Hardening, missing surfaces, performance | implemented | Settings filter, versions, cache, atomic save |
-| [016](spec-016-architecture-follow-up-and-observation.md) | Architecture follow-up and clean-room observation | **plan** | A9 open; B1/B2 done; B3 blocked; B4/B5 pending |
+| [016](spec-016-architecture-follow-up-and-observation.md) | Architecture follow-up and clean-room observation | **plan** | A9 open; B1/B2/B4 done; B3 blocked; B5 pending |
 | [017](spec-017-ui-modularization.md) | UI modularization refactor | implemented | `ui/commands`, `view`, `input`, `apply`, `render/*`, `dialogs/*` |
 | [018](spec-018-domain-and-infrastructure-modularization.md) | Domain and infrastructure modularization | implemented | `model/*`, `collab/export.rs`, `server/http.rs` |
 | [019](spec-019-collaboration-persistence.md) | Collaboration persistence | implemented | `CollabStore`, `collab.json` |
@@ -66,16 +66,32 @@ Status vocabulary:
 | [026](spec-026-page-actions-and-comments.md) | Page actions and comments | implemented | TOC, discussions, archive, copy contents |
 | [027](spec-027-onboarding-and-templates.md) | Onboarding and templates | implemented | Purpose modal, starter catalog |
 | [028](spec-028-i18n-coverage.md) | Internationalization coverage | implemented | en / pt-BR / eo key tables |
-| [029](spec-029-documentation-and-contributor-guide.md) | Documentation and contributor guide | **in progress** | This documentation pass |
+| [029](spec-029-documentation-and-contributor-guide.md) | Documentation and contributor guide | implemented | Documentation hub and review |
+| [030](spec-030-api-v2-foundation.md) | API v2 foundation: versioning, errors, capabilities | **planned** | Public API alignment (B4) |
+| [031](spec-031-pagination.md) | Cursor pagination and list responses | **planned** | Depends on 030 |
+| [032](spec-032-rich-text-and-blocks.md) | Rich text and the block model | **planned** | Depends on 030 |
+| [033](spec-033-page-properties-and-data-sources.md) | Page properties and data sources | **planned** | Depends on 032 |
+| [034](spec-034-views-and-database-layouts.md) | Views and database layouts | **planned** | Depends on 033 |
+| [035](spec-035-comments-users-and-files.md) | Comments, users and files | **planned** | Depends on 030/032 |
+| [036](spec-036-webhooks-and-event-delivery.md) | Webhooks and event delivery | **planned** | Depends on 030 |
+| [037](spec-037-limits-and-operations.md) | Limits, rate limiting and operations | **planned** | Depends on 030/031 |
 
 ## 3. Current open work
 
 | Item | Where | Next step |
 | ---- | ----- | --------- |
 | A9 — settings row filtering inside the open section | spec-016 | Small implementation spec |
-| B4 — derive the contract from public API docs | spec-016 | Review the public API links the person will provide |
-| B5 — mock server + `tests/contract.rs` | spec-016 | After B4 |
+| B4 — derive the contract from public API docs | spec-016 / ADR-006 | **Reviewed 2026-11-08**; specs 030–037 drafted |
+| B5 — mock server + `tests/contract.rs` | spec-016 | After the first v2 slice |
 | B3 — own-account HAR | spec-016 | **Blocked** by the strict B1 scope; needs a new decision |
+| v2 foundation | spec-030 | Versioning, errors, capabilities |
+| v2 pagination | spec-031 | Cursor lists |
+| v2 rich text/blocks | spec-032 | Rich text, metadata, children |
+| v2 properties/data sources | spec-033 | Typed schema and values |
+| v2 views | spec-034 | Table/board/calendar/list |
+| v2 comments/users/files | spec-035 | Comments, users, uploads |
+| v2 webhooks | spec-036 | Subscriptions, signatures, retries |
+| v2 limits | spec-037 | Rate/size/block limits |
 | Persist the selected language | spec-028 follow-up | Add to `WorkspaceSettings` or local config |
 | Send or remove the invite message | spec-023 follow-up | Add `message` to `MemberDraft` or drop the UI field |
 | Block-anchored inline comments | spec-026 follow-up | Model + tests |
