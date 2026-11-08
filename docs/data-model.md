@@ -1,7 +1,9 @@
 # Data Model — not-notion
 
-All entities are plain Rust structs deriving `Serialize`/`Deserialize`, so the
-whole workspace is one JSON document on disk. No egui types appear here.
+All entities are plain Rust structs deriving `Serialize`/`Deserialize`. The
+workspace is one JSON document (`workspace.json`); collaboration state is a
+second document (`collab.json`) so a corrupt collaboration file cannot destroy
+pages (spec-019). No egui types appear here.
 
 ## Entity: Workspace
 
@@ -102,7 +104,9 @@ types. They are the DTOs of the decided API.
 
 `CollabState` methods: `invite`, `set_access`, `shares_for`, `access_for`
 (most-specific-first resolution), `can_write`, `record`, `changes_since`,
-`record_version`, `versions_for`. The version snapshots are read by
+`record_version`, `versions_for`. It is persisted through the `CollabStore`
+port (`JsonCollabStore` writes `collab.json`) and restored on startup. The
+version snapshots are read by
 `Client::page_versions` and shown in the page-actions version-history window
 (spec-015); restoring one writes it back through `Client::update_page`.
 

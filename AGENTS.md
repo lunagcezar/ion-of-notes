@@ -92,14 +92,14 @@ touches the window records what was observed in them.
 ```
 src/
   main.rs          CLI wiring only (desktop, --screenshot, --serve)
-  app.rs           composition root (bootstrap): wires adapters to ports
+  app.rs           composition root (bootstrap): wires workspace + collaboration adapters to ports
   lib.rs           crate root and public re-exports
   model.rs         Workspace, Page, Block, BlockKind, TableRow, tree helpers
   model/
     seed.rs        neutral demo workspace used on first start
     search.rs      ranked search + excerpt helper
-  store.rs         WorkspaceStore port + JsonStore / NoStore adapters + JSON I/O + data_path
-  server.rs        WorkspaceServer, WorkspaceApi trait, routes
+  store.rs         WorkspaceStore + CollabStore ports, JSON/null adapters, data_path/collab_path
+  server.rs        WorkspaceServer (workspace + collaboration state), WorkspaceApi trait, routes
   server/
     http.rs        loopback HTTP/1.1 adapter (parse/format/serve)
     url.rs         percent-encoding/decoding shared by client and server

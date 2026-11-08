@@ -23,9 +23,13 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
   the collaboration DTOs/state and `collab/export.rs` the export tree.
   `server.rs` keeps the API routes; `server/http.rs` is the loopback HTTP
   adapter and `server/url.rs` the shared URL encoding.
-- `WorkspaceApi` is the transport port and `WorkspaceStore` the persistence
-  port. `JsonStore` and `NoStore` are adapters; a different backend can be
-  injected with `WorkspaceServer::with_store` without editing the core.
+- `WorkspaceApi` is the transport port; `WorkspaceStore` and `CollabStore` are
+  the persistence ports. `JsonStore`/`JsonCollabStore` and
+  `NoStore`/`NoCollabStore` are adapters; different backends can be injected
+  with `WorkspaceServer::with_stores` without editing the core.
+- `workspace.json` and `collab.json` are separate documents. A corrupt
+  collaboration file cannot destroy pages, and a failed collaboration write
+  is reported as an API `500`.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

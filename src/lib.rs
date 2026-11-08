@@ -27,7 +27,10 @@ pub mod shortcuts;
 pub mod store;
 pub mod ui;
 
-pub use app::{build_desktop, build_desktop_at, build_server, build_server_at};
+pub use app::{
+    build_desktop, build_desktop_at, build_desktop_at_paths, build_server, build_server_at,
+    build_server_at_paths,
+};
 pub use ollama::{
     build_generate_body, cli_version, decode_body, decode_chunked, default_endpoint,
     default_model_for, detect, generate, models, normalize_endpoint, parse_endpoint,
@@ -48,4 +51,6 @@ pub use model::{
     WorkspaceError,
 };
 pub use server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
-pub use store::{JsonStore, NoStore, WorkspaceStore};
+pub use store::{
+    CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore,
+};

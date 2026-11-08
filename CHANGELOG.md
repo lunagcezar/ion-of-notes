@@ -6,6 +6,27 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-019-collaboration-persistence
+
+- Collaboration state is now durable. Added a `CollabStore` port with
+  `JsonCollabStore` and `NoCollabStore` adapters, plus `collab_path`,
+  `save_collab`, `load_collab` and `load_collab_or_seed` in `src/store.rs`.
+- `workspace.json` and `collab.json` are separate documents, so a corrupt
+  collaboration file cannot destroy pages. Missing/corrupt collaboration files
+  fall back to the documented seed.
+- `WorkspaceServer` now owns a collaboration store. `with_stores` injects both
+  adapters and `with_paths` persists both documents; `new` and `with_path`
+  keep their workspace-only behavior.
+- `POST /api/members` and `PUT /api/shares` persist collaboration state and
+  return `500` when the collaboration store fails.
+- The composition root loads/seeds both documents and exposes
+  `build_server_at_paths` / `build_desktop_at_paths`.
+- Red: six tests in `tests/collab_store.rs` were written first and observed
+  failing (missing `CollabStore`, `JsonCollabStore`, `NoCollabStore`,
+  `save_collab`, `load_collab`, `load_collab_or_seed`, `with_paths`).
+- Docs: added `spec/spec-019-collaboration-persistence.md`; updated
+  requirements, data model, README and `AGENTS.md`.
+
 ### Changed — spec-018-domain-and-infrastructure-modularization
 
 - Pure refactor of the three remaining multi-responsibility non-UI files,

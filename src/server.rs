@@ -6,7 +6,9 @@
 
 use crate::collab::{ChangeOp, CollabState, MemberDraft, Share, export_tree, realtime_contract};
 use crate::model::{Page, PageDraft, PageSummary, SearchResult, Workspace};
-use crate::store::{JsonStore, NoStore, WorkspaceStore};
+use crate::store::{
+    CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore,
+};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -102,32 +104,67 @@ pub trait WorkspaceApi {
 }
 
 /// Owns all workspace state. Persistence is injected through the
-/// `WorkspaceStore` port, so the core never depends on a concrete backend.
-/// Collaboration state (accounts, permissions, sync log) is kept beside the
-/// workspace and exposed through the decided API.
+/// `WorkspaceStore` and `CollabStore` ports, so the core never depends on a
+/// concrete backend. Collaboration state (accounts, permissions, sync log,
+/// versions) is kept beside the workspace and exposed through the decided API.
 pub struct WorkspaceServer {
     pub workspace: Workspace,
     pub collab: CollabState,
     store: Box<dyn WorkspaceStore>,
+    collab_store: Box<dyn CollabStore>,
 }
 
 impl WorkspaceServer {
-    /// An in-memory server with no persistence (the null-object adapter).
+    /// An in-memory server with no persistence (the null-object adapters).
     pub fn new(workspace: Workspace) -> Self {
-        Self::with_store(workspace, NoStore)
+        Self::with_stores(workspace, CollabState::new(), NoStore, NoCollabStore)
     }
 
-    /// A server that persists every mutation to a JSON file.
+    /// A server that persists workspace mutations to a JSON file.
+    ///
+    /// Collaboration state stays in memory; use [`Self::with_paths`] when both
+    /// documents should be durable.
     pub fn with_path(workspace: Workspace, path: PathBuf) -> Self {
-        Self::with_store(workspace, JsonStore::new(path))
+        Self::with_stores(
+            workspace,
+            CollabState::new(),
+            JsonStore::new(path),
+            NoCollabStore,
+        )
     }
 
-    /// Inject any persistence adapter without changing server logic (DIP/OCP).
+    /// A server that persists both the workspace and collaboration state.
+    pub fn with_paths(workspace: Workspace, workspace_path: PathBuf, collab_path: PathBuf) -> Self {
+        let collab = crate::store::load_collab_or_seed(&collab_path);
+        Self::with_stores(
+            workspace,
+            collab,
+            JsonStore::new(workspace_path),
+            JsonCollabStore::new(collab_path),
+        )
+    }
+
+    /// Inject a workspace persistence adapter (DIP/OCP).
     pub fn with_store<S: WorkspaceStore + 'static>(workspace: Workspace, store: S) -> Self {
+        Self::with_stores(workspace, CollabState::new(), store, NoCollabStore)
+    }
+
+    /// Inject both persistence adapters without changing server logic.
+    pub fn with_stores<S, C>(
+        workspace: Workspace,
+        collab: CollabState,
+        store: S,
+        collab_store: C,
+    ) -> Self
+    where
+        S: WorkspaceStore + 'static,
+        C: CollabStore + 'static,
+    {
         Self {
             workspace,
-            collab: CollabState::new(),
+            collab,
             store: Box::new(store),
+            collab_store: Box::new(collab_store),
         }
     }
 
@@ -140,13 +177,20 @@ impl WorkspaceServer {
         &self.collab
     }
 
+    /// Persist both documents.
     pub fn persist(&self) -> std::io::Result<()> {
-        self.store.persist(&self.workspace)
+        self.store.persist(&self.workspace)?;
+        self.collab_store.persist(&self.collab)
+    }
+
+    /// Persist only the collaboration document.
+    pub fn persist_collab(&self) -> std::io::Result<()> {
+        self.collab_store.persist(&self.collab)
     }
 
     /// Single write path (DRY): bump the version, append one sync-log entry,
-    /// and persist. Every mutation goes through here and reports a storage
-    /// failure to the caller instead of hiding it (spec-015).
+    /// and persist both documents. Every mutation goes through here and reports
+    /// a storage failure to the caller instead of hiding it (spec-015).
     fn write(&mut self, op: ChangeOp, page_id: &str) -> std::io::Result<()> {
         self.workspace.bump_version();
         let actor = self.collab.owner_id();
@@ -277,7 +321,11 @@ impl WorkspaceApi for WorkspaceServer {
                     if draft.name.trim().is_empty() || draft.email.trim().is_empty() {
                         return bad("member name and email must not be empty");
                     }
-                    json(201, Envelope::ok(self.collab.invite(draft)))
+                    let member = self.collab.invite(draft);
+                    if let Err(error) = self.persist_collab() {
+                        return server_error(&error.to_string());
+                    }
+                    json(201, Envelope::ok(member))
                 }
                 Err(message) => bad(&message),
             },
@@ -293,6 +341,9 @@ impl WorkspaceApi for WorkspaceServer {
             (Method::Put, "/api/shares") => match parse_body::<Share>(request) {
                 Ok(share) => {
                     self.collab.set_access(share.clone());
+                    if let Err(error) = self.persist_collab() {
+                        return server_error(&error.to_string());
+                    }
                     json(200, Envelope::ok(share))
                 }
                 Err(message) => bad(&message),

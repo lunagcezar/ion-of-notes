@@ -187,7 +187,7 @@
 
 - FR-63: Collaboration state (members, shares, sync log, page versions) is
   persisted through a `CollabStore` port and restored on restart; a failing
-  collaboration store returns an API `500` (planned, spec-016 A1).
+  collaboration store returns an API `500` (implemented in `spec-019`).
 - FR-64: A single-page edit is sent with `PATCH /api/pages/{id}` and persisted
   with debounce; full-workspace replacement is reserved for multi-page
   operations (planned, spec-016 A2).
@@ -264,6 +264,7 @@
 | FR-61, FR-62, NFR-11, NFR-12  | `spec-015-hardening-and-performance.md` |
 | FR-63..FR-71, NFR-13..NFR-15  | `spec-016-architecture-follow-up-and-observation.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
+| FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

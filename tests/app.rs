@@ -13,19 +13,25 @@ use not_notion::server::{ApiRequest, Method, WorkspaceApi};
 #[test]
 fn build_desktop_at_seeds_and_serves_the_workspace() {
     let path = temp_path("bootstrap-desktop", "json");
+    let collab = path.with_extension("collab.json");
     remove(&path);
+    remove(&collab);
     let (mut client, workspace) = build_desktop_at(path.clone());
     assert!(!workspace.pages.is_empty(), "the demo workspace is seeded");
     assert_eq!(client.workspace().unwrap(), workspace);
     remove(&path);
+    remove(&collab);
 }
 
 #[test]
 fn build_server_at_answers_health() {
     let path = temp_path("bootstrap-server", "json");
+    let collab = path.with_extension("collab.json");
     remove(&path);
+    remove(&collab);
     let mut server = build_server_at(path.clone());
     let response = server.handle(&ApiRequest::new(Method::Get, "/health", None));
     assert_eq!(response.status, 200);
     remove(&path);
+    remove(&collab);
 }
