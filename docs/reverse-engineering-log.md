@@ -29,10 +29,17 @@ does not contain captured traffic, secrets or proprietary artifacts.
 
 ### B2 — behavioral inventory
 
-- **Output:** `docs/api-observations.md`.
-- **Sources used:** reference pictures, `docs/requirements.md`,
+- **Output:** `docs/api-observations.md` and
+  `docs/visual-reference-inventory.md`.
+- **Sources used:** the 29 `reference/` pictures, the 72 `screenshots/`
+  pictures, `docs/requirements.md`,
   `docs/adr-003-self-hosted-collaborative-api.md`, `docs/data-model.md`,
   `spec-011` and `spec-015`.
+- **Visual note:** the `screenshots/` set shows a later product build with the
+  new-tab switcher, Add members, richer page actions, Library tabs, onboarding,
+  Settings General/Sidebar/People/Language/Offline, AI/agent surfaces and
+  slash/icon pickers. It is recorded as UI-observed only; no Portuguese text,
+  branding or assets were copied.
 - **Result:** every operation is marked **UI-observed**, **Inferred**,
   **Decided** or **Unknown**. No original server response was observed, and no
   entry is presented as a fact about the original implementation.

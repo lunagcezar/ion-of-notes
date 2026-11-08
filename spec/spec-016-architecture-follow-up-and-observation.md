@@ -183,10 +183,14 @@ spec defines the operational steps.
 
 ### B2. Behavioral inventory
 
-- **Given** the product UI and public help pages, **when** the inventory is
+- **Given** the product UI, the 29 `reference/` pictures, the 72
+  `screenshots/` pictures and public help pages, **when** the inventory is
   written, **then** `docs/api-observations.md` lists each observed operation
   (page list, page read, create, update, delete, search, members, shares,
   sync, export, realtime) with its source.
+- **Given** the visual evidence, **when** a surface is recorded, **then**
+  `docs/visual-reference-inventory.md` summarizes it and the clean-room log
+  marks it **UI-observed**, not as a server fact.
 - Every entry is marked **observed** or **inferred**.
 
 ### B3. Own-account HAR capture

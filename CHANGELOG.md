@@ -22,6 +22,13 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   first inventory, marked UI-observed / inferred / decided / unknown, and
   `docs/reverse-engineering-log.md` records the decision. B3 is intentionally
   blocked unless the scope changes.
+- **Visual reference inventory:** reviewed the 72 pictures in `screenshots/`
+  (a later UI build) and recorded their surfaces in
+  `docs/visual-reference-inventory.md`: new-tab switcher, Add members, page
+  actions, Library tabs, onboarding, Settings General/Sidebar/People/Language/
+  Offline, template library, AI/agent surfaces and slash/icon pickers. The
+  inventory is UI-observed evidence only; no Portuguese text, branding or
+  assets were copied.
 
 ### Added / Changed — spec-015-hardening-and-performance
 

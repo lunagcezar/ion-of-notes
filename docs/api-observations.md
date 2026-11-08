@@ -35,6 +35,11 @@ so an inference is never mistaken for a fact about the original service.
 
 - `reference/picture-1.png` … `reference/picture-29.png`: sidebar, page,
   breadcrumb, Share, Inbox, Library, Settings, People, export/offline surfaces.
+- `screenshots/picture-1.png` … `screenshots/picture-72.png`: a later UI build
+  with the new-tab switcher, Add members, page actions, Settings (General,
+  Sidebar, People, Language & time, Offline), Library tabs, onboarding,
+  template library, AI/agent surfaces and slash/icon pickers. Summarized in
+  `docs/visual-reference-inventory.md`.
 - `docs/requirements.md`: FR-01..FR-71, especially the workspace, search,
   sharing, sync and export requirements.
 - `docs/adr-003-self-hosted-collaborative-api.md`: decided REST/JSON and
