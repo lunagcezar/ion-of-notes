@@ -6,12 +6,12 @@
 //! server and, later, a remote transport.
 
 use crate::collab::{
-    ExportFile, Member, MemberDraft, PageVersion, RealtimeContract, Share, SyncBatch,
+    Change, ExportFile, Member, MemberDraft, PageVersion, RealtimeContract, Share, SyncBatch,
 };
 use crate::model::{Page, PageDraft, PageSummary, SearchResult, Workspace};
 use crate::server::{
-    API_VERSION, AUTH_HEADER, ApiError, ApiRequest, Envelope, Method, VERSION_HEADER, WorkspaceApi,
-    url_encode,
+    API_VERSION, AUTH_HEADER, ApiError, ApiRequest, Envelope, ListResponse, Method, VERSION_HEADER,
+    WorkspaceApi, url_encode,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -118,6 +118,57 @@ impl<A: WorkspaceApi> Client<A> {
             (None, Some(message)) => Err(ClientError::Http(response.status, message)),
             (None, None) => Err(ClientError::Decode("response has no data".to_string())),
         }
+    }
+
+    fn paged_path(path: &str, page_size: u16, cursor: Option<&str>) -> String {
+        let separator = if path.contains('?') { '&' } else { '?' };
+        let mut result = format!("{path}{separator}page_size={page_size}");
+        if let Some(cursor) = cursor {
+            result.push_str("&start_cursor=");
+            result.push_str(&url_encode(cursor));
+        }
+        result
+    }
+
+    fn list_page_v2<T: DeserializeOwned>(
+        &mut self,
+        path: &str,
+        page_size: u16,
+        cursor: Option<&str>,
+    ) -> Result<ListResponse<T>, ClientError> {
+        let request =
+            self.v2_request(Method::Get, Self::paged_path(path, page_size, cursor), None)?;
+        self.call_v2(request)
+    }
+
+    fn collect_all_v2<T: DeserializeOwned>(
+        &mut self,
+        path: &str,
+        page_size: u16,
+    ) -> Result<Vec<T>, ClientError> {
+        let mut results = Vec::new();
+        let mut cursor: Option<String> = None;
+        let mut pages = 0usize;
+        loop {
+            let page: ListResponse<T> = self.list_page_v2(path, page_size, cursor.as_deref())?;
+            results.extend(page.results);
+            if !page.has_more {
+                break;
+            }
+            cursor = page.next_cursor;
+            if cursor.is_none() {
+                return Err(ClientError::Decode(
+                    "list said has_more but returned no cursor".to_string(),
+                ));
+            }
+            pages += 1;
+            if pages > 1000 {
+                return Err(ClientError::Decode(
+                    "pagination did not terminate".to_string(),
+                ));
+            }
+        }
+        Ok(results)
     }
 
     pub fn workspace(&mut self) -> Result<Workspace, ClientError> {
@@ -236,8 +287,15 @@ impl<A: WorkspaceApi> Client<A> {
     }
 
     pub fn list_pages_v2(&mut self) -> Result<Vec<PageSummary>, ClientError> {
-        let request = self.v2_request(Method::Get, "/api/v2/pages", None)?;
-        self.call_v2(request)
+        self.collect_all_v2("/api/v2/pages", 100)
+    }
+
+    pub fn list_pages_page_v2(
+        &mut self,
+        page_size: u16,
+        cursor: Option<&str>,
+    ) -> Result<ListResponse<PageSummary>, ClientError> {
+        self.list_page_v2("/api/v2/pages", page_size, cursor)
     }
 
     pub fn get_page_v2(&mut self, id: &str) -> Result<Page, ClientError> {
@@ -267,19 +325,45 @@ impl<A: WorkspaceApi> Client<A> {
     }
 
     pub fn page_versions_v2(&mut self, id: &str) -> Result<Vec<PageVersion>, ClientError> {
-        let request = self.v2_request(Method::Get, format!("/api/v2/pages/{id}/versions"), None)?;
-        self.call_v2(request)
+        let path = format!("/api/v2/pages/{id}/versions");
+        self.collect_all_v2(&path, 100)
+    }
+
+    pub fn page_versions_page_v2(
+        &mut self,
+        id: &str,
+        page_size: u16,
+        cursor: Option<&str>,
+    ) -> Result<ListResponse<PageVersion>, ClientError> {
+        let path = format!("/api/v2/pages/{id}/versions");
+        self.list_page_v2(&path, page_size, cursor)
     }
 
     pub fn search_v2(&mut self, query: &str) -> Result<Vec<SearchResult>, ClientError> {
-        let encoded = url_encode(query);
-        let request = self.v2_request(Method::Get, format!("/api/v2/search?q={encoded}"), None)?;
-        self.call_v2(request)
+        let path = format!("/api/v2/search?q={}", url_encode(query));
+        self.collect_all_v2(&path, 100)
+    }
+
+    pub fn search_page_v2(
+        &mut self,
+        query: &str,
+        page_size: u16,
+        cursor: Option<&str>,
+    ) -> Result<ListResponse<SearchResult>, ClientError> {
+        let path = format!("/api/v2/search?q={}", url_encode(query));
+        self.list_page_v2(&path, page_size, cursor)
     }
 
     pub fn list_members_v2(&mut self) -> Result<Vec<Member>, ClientError> {
-        let request = self.v2_request(Method::Get, "/api/v2/members", None)?;
-        self.call_v2(request)
+        self.collect_all_v2("/api/v2/members", 100)
+    }
+
+    pub fn list_members_page_v2(
+        &mut self,
+        page_size: u16,
+        cursor: Option<&str>,
+    ) -> Result<ListResponse<Member>, ClientError> {
+        self.list_page_v2("/api/v2/members", page_size, cursor)
     }
 
     pub fn invite_member_v2(&mut self, draft: &MemberDraft) -> Result<Member, ClientError> {
@@ -293,8 +377,20 @@ impl<A: WorkspaceApi> Client<A> {
             Some(id) => format!("/api/v2/shares?page={}", url_encode(id)),
             None => "/api/v2/shares".to_string(),
         };
-        let request = self.v2_request(Method::Get, path, None)?;
-        self.call_v2(request)
+        self.collect_all_v2(&path, 100)
+    }
+
+    pub fn list_shares_page_v2(
+        &mut self,
+        page_id: Option<&str>,
+        page_size: u16,
+        cursor: Option<&str>,
+    ) -> Result<ListResponse<Share>, ClientError> {
+        let path = match page_id {
+            Some(id) => format!("/api/v2/shares?page={}", url_encode(id)),
+            None => "/api/v2/shares".to_string(),
+        };
+        self.list_page_v2(&path, page_size, cursor)
     }
 
     pub fn set_share_v2(&mut self, share: &Share) -> Result<Share, ClientError> {
@@ -303,9 +399,19 @@ impl<A: WorkspaceApi> Client<A> {
         self.call_v2(request)
     }
 
-    pub fn sync_v2(&mut self, since: u64) -> Result<SyncBatch, ClientError> {
-        let request = self.v2_request(Method::Get, format!("/api/v2/sync?since={since}"), None)?;
-        self.call_v2(request)
+    pub fn sync_v2(&mut self, since: u64) -> Result<Vec<Change>, ClientError> {
+        let path = format!("/api/v2/sync?since={since}");
+        self.collect_all_v2(&path, 100)
+    }
+
+    pub fn sync_page_v2(
+        &mut self,
+        since: u64,
+        page_size: u16,
+        cursor: Option<&str>,
+    ) -> Result<ListResponse<Change>, ClientError> {
+        let path = format!("/api/v2/sync?since={since}");
+        self.list_page_v2(&path, page_size, cursor)
     }
 
     pub fn export_tree_v2(&mut self) -> Result<Vec<ExportFile>, ClientError> {

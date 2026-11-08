@@ -1,6 +1,6 @@
 # ADR-006 — Public Notion API alignment
 
-- **Status:** Accepted (B4 review; spec-030 implemented, specs 031–037 staged)
+- **Status:** Accepted (B4 review; specs 030–031 implemented, specs 032–037 staged)
 - **Date:** 2026-11-08
 - **Supersedes:** none; refines ADR-003 (self-hosted collaborative API)
 - **Related:** `docs/public-api-analysis.md`, `docs/api-observations.md`,
@@ -85,7 +85,7 @@ flowchart TD
 | Spec | Status |
 | ---- | ------ |
 | 030 v2 foundation | **implemented** (`/api/v2`, versioning, `ApiError`, capabilities, request IDs) |
-| 031 pagination | planned |
+| 031 pagination | **implemented** (`ListResponse`, opaque cursors) |
 | 032 rich text/blocks | planned |
 | 033 properties/data sources | planned |
 | 034 views | planned |

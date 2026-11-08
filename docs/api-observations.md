@@ -151,11 +151,11 @@ This is the status of **our** contract, not a claim about the original:
 | Export tree | Implemented in memory (`src/collab/export.rs`) |
 | Realtime contract | Implemented as data (`GET /api/realtime`) |
 | Per-page writes and debounce | Implemented (`spec-020`) |
-| Auth/sessions | Decided in ADR-003, **not implemented** |
+| Auth/sessions | v2 foundation has bearer-token connections; production sessions **not implemented** |
 | WebSocket/CRDT server | Decided, **not implemented** |
 | `/api/v1` prefix | Decided, **not served** |
-| Pagination/sorting | Not implemented; lists are full snapshots |
-| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation implemented (spec-030); B5 pending the next v2 slice; B3 blocked |
+| Pagination/sorting | v2 lists use `ListResponse` + opaque cursors (`spec-031`); v1 lists are full snapshots |
+| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation (030) and pagination (031) implemented; B5 pending the next v2 slice; B3 blocked |
 
 ## What remains unknown
 

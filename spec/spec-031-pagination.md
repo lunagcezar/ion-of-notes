@@ -114,12 +114,25 @@ sequenceDiagram
 
 ## Plan / tasks
 
-- [ ] Spec + failing tests (red).
-- [ ] `ListResponse<T>` and `pagination` module.
-- [ ] v2 list routes for pages, search, members, shares, versions and sync.
-- [ ] Client pagination helpers.
-- [ ] Update `docs/api-contract.md`, `docs/requirements.md`, `docs/testing.md`.
-- [ ] Build/test/clippy/fmt, commit.
+- [x] Spec + failing tests (red).
+- [x] `ListResponse<T>` and `pagination` module.
+- [x] v2 list routes for pages, search, members, shares, versions and sync.
+- [x] Client pagination helpers.
+- [x] Update `docs/api-contract.md`, `docs/requirements.md`, `docs/testing.md`.
+- [x] Build/test/clippy/fmt, commit.
+
+## Result
+
+- `src/server/pagination.rs`: `PageRequest`, `PaginationError`, opaque
+  hex-encoded cursors bound to a sort key, and `paginate`.
+- `ListResponse<T>` in `src/server/contract.rs`: `object:"list"`, `type`,
+  `results`, `has_more`, `next_cursor`.
+- `/api/v2` list routes for pages, search, members, shares, versions and sync;
+  `page_size` 1–100 with default 100; invalid cursor returns `invalid_cursor`.
+- `Client` helpers: `*_page_v2` methods plus `list_pages_v2`/`search_v2`/
+  `list_members_v2`/`list_shares_v2`/`sync_v2`/`page_versions_v2` follow
+  cursors with a termination guard.
+- Tests: 11 in `tests/pagination.rs`; the suite is 147 tests.
 
 ## Requirement mapping
 

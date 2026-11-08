@@ -6,6 +6,18 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-031-pagination
+
+- Added `ListResponse<T>` (`object:"list"`, `type`, `results`, `has_more`,
+  `next_cursor`) and a pure `src/server/pagination.rs` cursor codec.
+- `/api/v2` list routes for pages, search, members, shares, versions and sync
+  now accept `page_size` (1–100, default 100) and `start_cursor`.
+- Cursors are opaque hex payloads bound to an endpoint/query sort key; a
+  malformed or wrong-list cursor returns `400 invalid_cursor`.
+- Added `Client` `*_page_v2` methods and cursor-following helpers for pages,
+  search, members, shares, sync and versions, with a termination guard.
+- Tests: 11 in `tests/pagination.rs`; the suite is 147 tests. Docs updated.
+
 ### Added — spec-030-api-v2-foundation
 
 - Added `/api/v2` with a required `Not-Notion-Version: 2026-11-08` header,

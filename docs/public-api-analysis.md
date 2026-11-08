@@ -450,8 +450,9 @@ flowchart TD
 | `spec-036` | Webhook subscriptions, verification, signatures and retries | 030 |
 | `spec-037` | Rate/size/block limits, retries, error taxonomy | 030, 031 |
 
-**Status (2026-11-08):** spec-030 is implemented (`/api/v2`, versioning,
-structured errors, capabilities, request IDs). Specs 031–037 remain planned.
+**Status (2026-11-08):** spec-030 (`/api/v2`, versioning, structured errors,
+capabilities, request IDs) and spec-031 (`ListResponse`, opaque cursors) are
+implemented. Specs 032–037 remain planned.
 
 ## 16. Risks and open questions
 

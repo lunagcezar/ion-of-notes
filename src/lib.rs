@@ -49,8 +49,8 @@ pub use ollama::{
     parse_tags_response, service_reachable,
 };
 pub use server::{
-    API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, Method,
-    RequestLogEntry, WorkspaceApi, WorkspaceServer,
+    API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, ListResponse, Method,
+    PageRequest, PaginationError, RequestLogEntry, WorkspaceApi, WorkspaceServer,
 };
 pub use shortcuts::{Action, Combo, SHORTCUT_TABLE, ShortcutDoc, lookup};
 pub use store::{CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore};

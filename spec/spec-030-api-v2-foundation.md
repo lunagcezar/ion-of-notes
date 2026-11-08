@@ -186,8 +186,8 @@ flowchart TD
   v1 use cases; errors are structured `ApiError` bodies.
 - `Client::with_token` and the `*_v2` methods decode structured errors as
   `ClientError::Api`.
-- Tests: 17 in `tests/contract.rs` plus 4 v2 client tests; the suite is 136
-  tests. v1 behavior is unchanged.
+- Tests: 17 in `tests/contract.rs` plus 4 v2 client tests; the suite was 136
+  tests at this spec (146 after spec-031). v1 behavior is unchanged.
 
 ## Requirement mapping
 

@@ -9,7 +9,9 @@
 #![allow(dead_code)]
 
 use not_notion::model::PageDraft;
-use not_notion::server::{ApiResponse, Envelope};
+use not_notion::server::{
+    API_VERSION, ApiRequest, ApiResponse, Envelope, ListResponse, Method, OWNER_TOKEN,
+};
 use serde::de::DeserializeOwned;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -44,4 +46,22 @@ pub fn page_draft_json(title: &str, parent: Option<&str>) -> String {
 pub fn data<T: DeserializeOwned>(response: &ApiResponse) -> T {
     let envelope: Envelope<T> = serde_json::from_str(&response.body).unwrap();
     envelope.data.expect("response envelope has no data")
+}
+
+/// Build a v2 request as the local owner.
+pub fn v2_request(method: Method, path: &str, body: Option<String>) -> ApiRequest {
+    v2_request_as(OWNER_TOKEN, method, path, body)
+}
+
+/// Build a v2 request as a specific connection token.
+pub fn v2_request_as(token: &str, method: Method, path: &str, body: Option<String>) -> ApiRequest {
+    ApiRequest::new(method, path, body)
+        .with_header("not-notion-version", API_VERSION)
+        .with_header("authorization", format!("Bearer {token}"))
+}
+
+/// Decode a v2 list envelope.
+pub fn list_data<T: DeserializeOwned>(response: &ApiResponse) -> ListResponse<T> {
+    let envelope: Envelope<ListResponse<T>> = serde_json::from_str(&response.body).unwrap();
+    envelope.data.expect("list envelope has no data")
 }

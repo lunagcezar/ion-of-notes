@@ -182,6 +182,11 @@ the v1 methods with a `_v2` suffix (`workspace_v2`, `create_page_v2`,
 `ClientError::Api(Box<ApiError>)`; a missing token is
 `ClientError::MissingToken`.
 
+Paged methods return one `ListResponse<T>`: `list_pages_page_v2`,
+`search_page_v2`, `list_members_page_v2`, `list_shares_page_v2`,
+`sync_page_v2` and `page_versions_page_v2`. The unsuffixed list helpers follow
+cursors to the end with a termination guard.
+
 ## 6. Loopback HTTP adapter
 
 - Transport: `std::net::TcpListener`, HTTP/1.1, one request per connection.
@@ -296,7 +301,10 @@ v1 routes stay stable.
   `X-Request-Id` HTTP header; the same ID is appended to the in-memory request
   log.
 - Errors are a structured `ApiError` body:
-  `{object:"error",status,code,message,request_id,additional_data?}`.
+  `{object:"error",status,code,message,request_id,additional_data?}`. Stable
+  codes include `missing_version`, `unsupported_version`, `invalid_json`,
+  `validation_error`, `invalid_cursor`, `unauthorized`,
+  `restricted_resource`, `object_not_found` and `internal_server_error`.
 - Capabilities: read/update/insert content, read/insert comments and user-info
   levels. The content routes enforce read/update/insert separately.
 - Success bodies still use the existing `{data,error}` envelope until the v2
@@ -309,7 +317,7 @@ v1 routes stay stable.
 | Versioning | none | required `Not-Notion-Version` header | 030 | **implemented** |
 | Errors | `{data,error}` string | `object:"error"` + `status`/`code`/`message`/`request_id`/`additional_data` | 030 | **implemented** |
 | Capabilities | `Role` + `Access` | read/update/insert content, comments, user-info | 030 | **foundation implemented** |
-| Pagination | full arrays | `ListResponse<T>` with opaque cursors | 031 | planned |
+| Pagination | full arrays | `ListResponse<T>` with opaque cursors | 031 | **implemented** |
 | Blocks | flat text | rich text + metadata + children + block endpoints | 032 | planned |
 | Page | title/icon/parent/blocks/rows | properties, icon, cover, parent, in_trash, url | 032/033 | planned |
 | Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 | planned |
@@ -335,6 +343,32 @@ Implemented v2 routes:
 | `GET` | `/api/v2/sync` | read content |
 | `GET` | `/api/v2/export` | read content |
 | `GET` | `/api/v2/realtime` | read content |
+
+### 8.2 v2 list envelope (implemented)
+
+List routes return:
+
+```json
+{
+  "data": {
+    "object": "list",
+    "type": "page",
+    "results": [],
+    "has_more": false,
+    "next_cursor": null
+  },
+  "error": null
+}
+```
+
+- `page_size`: 1–100, default 100.
+- `start_cursor`: omit on the first request; pass `next_cursor` back unchanged.
+- Cursors are opaque and bound to the endpoint/query; malformed or mismatched
+  cursors return `400 invalid_cursor`.
+- `type` values: `page`, `search_result`, `member`, `share`, `change`,
+  `page_version`.
+- The client `*_page_v2` methods expose one page; `list_pages_v2` and the other
+  unsuffixed helpers follow cursors with a termination guard.
 
 ```mermaid
 flowchart LR

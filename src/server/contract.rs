@@ -31,6 +31,7 @@ pub const CODE_VALIDATION_ERROR: &str = "validation_error";
 pub const CODE_UNAUTHORIZED: &str = "unauthorized";
 pub const CODE_RESTRICTED_RESOURCE: &str = "restricted_resource";
 pub const CODE_NOT_FOUND: &str = "object_not_found";
+pub const CODE_INVALID_CURSOR: &str = "invalid_cursor";
 pub const CODE_INTERNAL: &str = "internal_server_error";
 
 /// Structured error body for `/api/v2` responses.
@@ -65,6 +66,33 @@ impl ApiError {
     pub fn with_data(mut self, data: serde_json::Value) -> Self {
         self.additional_data = Some(data);
         self
+    }
+}
+
+/// Standard v2 list envelope (spec-031).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ListResponse<T> {
+    pub object: String,
+    pub r#type: String,
+    pub results: Vec<T>,
+    pub has_more: bool,
+    pub next_cursor: Option<String>,
+}
+
+impl<T> ListResponse<T> {
+    pub fn new(
+        type_name: impl Into<String>,
+        results: Vec<T>,
+        has_more: bool,
+        next_cursor: Option<String>,
+    ) -> Self {
+        Self {
+            object: "list".to_string(),
+            r#type: type_name.into(),
+            results,
+            has_more,
+            next_cursor,
+        }
     }
 }
 

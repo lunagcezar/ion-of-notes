@@ -76,6 +76,7 @@ src/
     http.rs          loopback HTTP/1.1 adapter
     url.rs           shared percent-encoding
     contract.rs      v2 versioning, ApiError, capabilities, request IDs
+    pagination.rs    v2 ListResponse, opaque cursors, page_size validation
   client.rs          typed client over WorkspaceApi
   templates.rs       starter template catalog
   ollama.rs          AI assistant adapter
@@ -308,9 +309,10 @@ new stores and delivery workers.
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
-- The v2 **foundation** exists (spec-030): `/api/v2`, version/auth/capability
-  checks, structured errors and request IDs. Pagination, rich text, properties,
-  views, webhooks and limits are still planned (specs 031–037).
+- The v2 **foundation and pagination** exist (specs 030–031): `/api/v2`,
+  version/auth/capability checks, structured errors, request IDs, cursor list
+  envelopes and client cursor helpers. Rich text, properties, views, webhooks
+  and limits are still planned (specs 032–037).
 
 ## 12. Further reading
 

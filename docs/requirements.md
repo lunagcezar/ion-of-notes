@@ -277,7 +277,8 @@ capabilities) is implemented; the rest are planned.
   with stable codes (foundation implemented in `spec-030`; comment/user-info
   routes arrive in spec-035).
 - FR-80: List endpoints are cursor-paginated with `start_cursor`, `page_size`
-  (1–100), `results`, `has_more` and an opaque `next_cursor` (spec-031).
+  (1–100), `results`, `has_more` and an opaque `next_cursor` (implemented in
+  `spec-031`).
 - FR-81: Blocks use rich text objects (`text`, `mention`, `equation`) with
   annotations, `plain_text` and `href` (spec-032).
 - FR-82: Blocks carry `object`, `id`, `parent`, timestamps, users, `in_trash`,
@@ -301,8 +302,8 @@ capabilities) is implemented; the rest are planned.
   returns `429`/`529`/`503` with retry guidance (spec-037).
 - FR-91: v1 routes stay stable; v2 changes are additive unless a version bump
   is declared; clients ignore unknown response fields and treat cursors as
-  opaque (versioning and v1 stability implemented in `spec-030`; cursor
-  opacity arrives with spec-031).
+  opaque (versioning and v1 stability in `spec-030`; cursor opacity in
+  `spec-031`).
 - FR-92: Unsupported block or view types are represented explicitly instead of
   being silently dropped (spec-032/034).
 - FR-93: Page and callout icons use an icon object (`emoji`, `custom_emoji`,

@@ -112,6 +112,7 @@ src/
     http.rs        loopback HTTP/1.1 adapter (parse/format/serve)
     url.rs         percent-encoding/decoding shared by client and server
     contract.rs    v2 versioning, ApiError, capabilities, request IDs
+    pagination.rs  v2 list envelope, opaque cursors, page_size validation
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
   collab.rs        accounts/roles, sharing, sync log, realtime DTOs, CollabState
                    (version history capped at 50 snapshots per page)
@@ -179,6 +180,7 @@ tests/
   i18n.rs          locale key completeness and fallback
   templates.rs     starter template catalog and page builder
   contract.rs      v2 versioning, errors, capabilities, request IDs
+  pagination.rs    v2 cursor pagination and list envelopes
   integration.rs   end-to-end client/server/store scenario
 ```
 
@@ -467,9 +469,10 @@ patterns behind our own `/api/v2`, not to clone Notion. The roadmap is
 `spec-030` (versioning/errors/capabilities), `031` (pagination), `032` (rich
 text/blocks), `033` (properties/data sources), `034` (views), `035`
 (comments/users/files), `036` (webhooks) and `037` (limits). The v2
-**foundation** (spec-030) is implemented: `/api/v2`, required
-`Not-Notion-Version`, Bearer auth, `ApiError`, capabilities and request IDs;
-v1 routes stay stable. Full analysis: `docs/public-api-analysis.md`.
+**foundation** (spec-030) and **pagination** (spec-031) are implemented:
+`/api/v2`, required `Not-Notion-Version`, Bearer auth, `ApiError`,
+capabilities, request IDs, `ListResponse` and opaque cursors; v1 routes stay
+stable. Full analysis: `docs/public-api-analysis.md`.
 
 ## Code Conventions
 
@@ -491,7 +494,7 @@ v1 routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (136)    |
+| `cargo test --all-targets`               | Run all integration test crates (147)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
