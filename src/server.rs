@@ -12,10 +12,18 @@ use crate::store::{
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+mod contract;
 mod http;
 mod url;
 
+pub use contract::{
+    API_VERSION, AUTH_HEADER, ApiError, CODE_INTERNAL, CODE_INVALID_JSON, CODE_MISSING_VERSION,
+    CODE_NOT_FOUND, CODE_RESTRICTED_RESOURCE, CODE_UNAUTHORIZED, CODE_UNSUPPORTED_VERSION,
+    CODE_VALIDATION_ERROR, Capability, Connection, OWNER_TOKEN, RequestLogEntry,
+    SUPPORTED_VERSIONS, VERSION_HEADER, new_request_id, parse_bearer, version_supported,
+};
 pub use http::{format_http_response, parse_http_request, serve_forever, serve_on, serve_once};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use url::url_decode;
 pub use url::url_encode;
@@ -57,6 +65,8 @@ pub struct ApiRequest {
     pub method: Method,
     pub path: String,
     pub body: Option<String>,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
 }
 
 impl ApiRequest {
@@ -65,7 +75,23 @@ impl ApiRequest {
             method,
             path: path.into(),
             body,
+            headers: BTreeMap::new(),
         }
+    }
+
+    /// Add one header, preserving the caller's spelling but looking it up
+    /// case-insensitively.
+    pub fn with_header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.headers.insert(name.into(), value.into());
+        self
+    }
+
+    /// Case-insensitive header lookup.
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.as_str())
     }
 }
 
@@ -73,6 +99,8 @@ impl ApiRequest {
 pub struct ApiResponse {
     pub status: u16,
     pub body: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
 }
 
 /// The JSON envelope used for every response.
@@ -112,6 +140,8 @@ pub struct WorkspaceServer {
     pub collab: CollabState,
     store: Box<dyn WorkspaceStore>,
     collab_store: Box<dyn CollabStore>,
+    connections: Vec<Connection>,
+    request_log: Vec<RequestLogEntry>,
 }
 
 impl WorkspaceServer {
@@ -160,16 +190,36 @@ impl WorkspaceServer {
         S: WorkspaceStore + 'static,
         C: CollabStore + 'static,
     {
+        let owner = collab.owner_id();
+        let workspace_id = workspace.settings.id.clone();
         Self {
             workspace,
             collab,
             store: Box::new(store),
             collab_store: Box::new(collab_store),
+            connections: vec![Connection::owner(owner, workspace_id)],
+            request_log: Vec::new(),
         }
     }
 
     pub fn snapshot(&self) -> &Workspace {
         &self.workspace
+    }
+
+    /// Register an additional connection (used by tests and, later, by the
+    /// self-hosted session layer).
+    pub fn register_connection(&mut self, connection: Connection) {
+        self.connections.push(connection);
+    }
+
+    pub fn connection_for_token(&self, token: &str) -> Option<&Connection> {
+        self.connections.iter().find(|c| c.token == token)
+    }
+
+    /// In-memory request log for `/api/v2`; the same IDs are written to the
+    /// HTTP response and (in a production adapter) to structured logs.
+    pub fn request_log(&self) -> &[RequestLogEntry] {
+        &self.request_log
     }
 
     /// Read-only access to accounts, permissions and the sync log.
@@ -204,6 +254,7 @@ fn json<T: Serialize>(status: u16, envelope: Envelope<T>) -> ApiResponse {
         status,
         body: serde_json::to_string(&envelope)
             .unwrap_or_else(|_| r#"{"data":null,"error":"serialize"}"#.to_string()),
+        request_id: None,
     }
 }
 
@@ -238,8 +289,176 @@ fn query_value(query: &str, key: &str) -> String {
     String::new()
 }
 
+fn v2_error(
+    status: u16,
+    code: &str,
+    message: impl Into<String>,
+    request_id: &str,
+    additional_data: Option<serde_json::Value>,
+) -> ApiResponse {
+    let mut error = ApiError::new(status, code, message, request_id);
+    if let Some(data) = additional_data {
+        error = error.with_data(data);
+    }
+    ApiResponse {
+        status,
+        body: serde_json::to_string(&error).unwrap_or_else(|_| {
+            r#"{"object":"error","status":500,"code":"internal_server_error"}"#.to_string()
+        }),
+        request_id: None,
+    }
+}
+
+fn map_v1_error(v1: ApiResponse, request_id: &str) -> ApiResponse {
+    let message = serde_json::from_str::<Envelope<serde_json::Value>>(&v1.body)
+        .ok()
+        .and_then(|envelope| envelope.error)
+        .unwrap_or_else(|| v1.body.clone());
+    let code = match v1.status {
+        404 => CODE_NOT_FOUND,
+        500 => CODE_INTERNAL,
+        _ if message.contains("invalid JSON") || message.contains("missing request body") => {
+            CODE_INVALID_JSON
+        }
+        _ => CODE_VALIDATION_ERROR,
+    };
+    v2_error(v1.status, code, message, request_id, None)
+}
+
+fn required_capability(method: Method, path: &str) -> Option<Capability> {
+    match (method, path) {
+        (Method::Get, "/api/v2/workspace") => Some(Capability::ReadContent),
+        (Method::Put, "/api/v2/workspace") => Some(Capability::UpdateContent),
+        (Method::Get, "/api/v2/pages") => Some(Capability::ReadContent),
+        (Method::Post, "/api/v2/pages") => Some(Capability::InsertContent),
+        (Method::Get, p) if p.starts_with("/api/v2/pages/") => Some(Capability::ReadContent),
+        (Method::Patch | Method::Delete, p) if p.starts_with("/api/v2/pages/") => {
+            Some(Capability::UpdateContent)
+        }
+        (Method::Get, "/api/v2/search") => Some(Capability::ReadContent),
+        (Method::Get, "/api/v2/members") => Some(Capability::ReadContent),
+        (Method::Post, "/api/v2/members") => Some(Capability::InsertContent),
+        (Method::Get, "/api/v2/shares") => Some(Capability::ReadContent),
+        (Method::Put, "/api/v2/shares") => Some(Capability::UpdateContent),
+        (Method::Get, "/api/v2/sync") => Some(Capability::ReadContent),
+        (Method::Get, "/api/v2/export") => Some(Capability::ReadContent),
+        (Method::Get, "/api/v2/realtime") => Some(Capability::ReadContent),
+        _ => None,
+    }
+}
+
+impl WorkspaceServer {
+    /// Dispatch a v2 request: version, auth, capability, then the shared v1
+    /// use case. The v2 layer changes the envelope/error shape and adds a
+    /// request id; it does not duplicate the business logic.
+    fn handle_v2(&mut self, request: &ApiRequest) -> ApiResponse {
+        let request_id = new_request_id();
+        let (path, _query) = match request.path.split_once('?') {
+            Some((p, q)) => (p, q),
+            None => (request.path.as_str(), ""),
+        };
+        let response = self.handle_v2_inner(request, path, &request_id);
+        let status = response.status;
+        let response = ApiResponse {
+            request_id: Some(request_id.clone()),
+            ..response
+        };
+        self.request_log.push(RequestLogEntry {
+            request_id,
+            method: request.method.as_str().to_string(),
+            path: request.path.clone(),
+            status,
+        });
+        response
+    }
+
+    fn handle_v2_inner(
+        &mut self,
+        request: &ApiRequest,
+        path: &str,
+        request_id: &str,
+    ) -> ApiResponse {
+        let Some(version) = request.header(VERSION_HEADER) else {
+            return v2_error(
+                400,
+                CODE_MISSING_VERSION,
+                format!("{VERSION_HEADER} header is required"),
+                request_id,
+                None,
+            );
+        };
+        if !version_supported(version) {
+            return v2_error(
+                400,
+                CODE_UNSUPPORTED_VERSION,
+                format!("unsupported version: {version}"),
+                request_id,
+                Some(serde_json::json!({ "supported_versions": SUPPORTED_VERSIONS })),
+            );
+        }
+
+        let Some(token) = request.header(AUTH_HEADER).and_then(parse_bearer) else {
+            return v2_error(
+                401,
+                CODE_UNAUTHORIZED,
+                "missing or malformed bearer token",
+                request_id,
+                None,
+            );
+        };
+        let Some(connection) = self.connection_for_token(token).cloned() else {
+            return v2_error(
+                401,
+                CODE_UNAUTHORIZED,
+                "invalid bearer token",
+                request_id,
+                None,
+            );
+        };
+
+        let Some(required) = required_capability(request.method, path) else {
+            return v2_error(404, CODE_NOT_FOUND, "unknown route", request_id, None);
+        };
+        if !connection.has(required) {
+            return v2_error(
+                403,
+                CODE_RESTRICTED_RESOURCE,
+                format!("missing capability: {}", required.as_str()),
+                request_id,
+                Some(serde_json::json!({ "required_capability": required.as_str() })),
+            );
+        }
+
+        let v1_request = ApiRequest {
+            method: request.method,
+            path: request.path.replacen("/api/v2", "/api", 1),
+            body: request.body.clone(),
+            headers: BTreeMap::new(),
+        };
+        let v1 = self.handle_v1(&v1_request);
+        if v1.status >= 400 {
+            return map_v1_error(v1, request_id);
+        }
+        ApiResponse {
+            status: v1.status,
+            body: v1.body,
+            request_id: None,
+        }
+    }
+}
+
 impl WorkspaceApi for WorkspaceServer {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
+        if request.path.starts_with("/api/v2") {
+            self.handle_v2(request)
+        } else {
+            self.handle_v1(request)
+        }
+    }
+}
+
+impl WorkspaceServer {
+    fn handle_v1(&mut self, request: &ApiRequest) -> ApiResponse {
         let (path, query) = match request.path.split_once('?') {
             Some((p, q)) => (p, q),
             None => (request.path.as_str(), ""),

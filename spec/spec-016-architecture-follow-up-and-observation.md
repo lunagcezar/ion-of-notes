@@ -310,9 +310,9 @@ spec defines the operational steps.
   scope; it can only resume after a new scope decision.
 - [x] B4 derive/update the contract and ADR if needed. **Reviewed 2026-11-08:**
   public developer docs analyzed in `docs/public-api-analysis.md`; ADR-006
-  decides the v2 alignment; specs 030–037 drafted.
-- [ ] B5 implement the mock server and `tests/contract.rs`. **Pending:** follows
-  the first implemented v2 slice (spec-030).
+  decides the v2 alignment; specs 030–037 drafted; spec-030 implemented.
+- [ ] B5 implement the broader mock server and contract suite. **Pending:**
+  follows the next v2 slices (spec-030 is implemented).
 - [x] B6 record the tooling choice and TLS handling (ADR-005).
 - [x] B7 maintain `docs/reverse-engineering-log.md` (ongoing; the 2026-11-08
   entry records the documentation review and phase status).

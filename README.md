@@ -21,9 +21,9 @@ documentation map.
 
 ## Status (2026-11-08)
 
-- **Specs:** 001–028 implemented; 007 retired; 016 is a plan with A9/B4/B5
-  open; 029 is this documentation pass.
-- **Tests:** 115 integration tests; clippy and `cargo fmt --check` are clean.
+- **Specs:** 001–030 implemented; 007 retired; 016 is a plan with A9/B5
+  open; 029 is the documentation pass; 031–037 are planned.
+- **Tests:** 136 integration tests; clippy and `cargo fmt --check` are clean.
 - **Implemented:** workspace/page CRUD, blocks, inline table, search, theme,
   screenshot mode, members/shares/sync log, version history (50/page), export
   tree, per-page writes with 250 ms debounce, collaboration persistence,
@@ -32,9 +32,11 @@ documentation map.
 - **Decided, not built:** `/api/v1`, sessions/password hashing/Bearer auth, the
   WebSocket + Yrs CRDT channel, and PostgreSQL/SQLx storage.
 - **Public API alignment (B4):** the public Notion developer docs were reviewed
-  and turned into a v2 roadmap — specs 030–037 cover versioning/errors/
-  capabilities, pagination, rich text/blocks, properties/data sources, views,
-  comments/users/files, webhooks and limits. v1 stays stable. See
+  and turned into a v2 roadmap. The **foundation is implemented** (spec-030):
+  `/api/v2`, `Not-Notion-Version`, Bearer auth, structured `ApiError`,
+  capabilities and request IDs. Specs 031–037 cover pagination, rich text/
+  blocks, properties/data sources, views, comments/users/files, webhooks and
+  limits. v1 stays stable. See
   [`docs/public-api-analysis.md`](docs/public-api-analysis.md) and
   [`docs/adr-006-public-api-alignment.md`](docs/adr-006-public-api-alignment.md).
 - **Clean room:** strict public-behavior-only observation. No capture, proxy,

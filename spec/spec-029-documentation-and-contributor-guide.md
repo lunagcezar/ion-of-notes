@@ -185,4 +185,4 @@ of broken claims) and the verification is structural plus the existing suite.
 - The review deliberately did **not** start B4/B5 at the time: the person would
   provide the Notion public API links first. **Update:** the links were provided
   and B4 was reviewed on 2026-11-08 (`docs/public-api-analysis.md`, ADR-006,
-  specs 030–037); B5 follows the first v2 slice.
+  specs 030-037); spec-030 is implemented; B5 follows the next v2 slices.

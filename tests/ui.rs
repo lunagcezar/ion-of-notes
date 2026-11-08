@@ -152,7 +152,11 @@ impl WorkspaceApi for RecordingApi {
             }
             _ => serde_json::to_string(&Envelope::ok(())).unwrap(),
         };
-        ApiResponse { status: 200, body }
+        ApiResponse {
+            status: 200,
+            body,
+            request_id: None,
+        }
     }
 }
 

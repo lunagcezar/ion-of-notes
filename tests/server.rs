@@ -200,6 +200,7 @@ fn format_http_response_has_valid_headers() {
     let bytes = format_http_response(&ApiResponse {
         status: 200,
         body: "{}".to_string(),
+        request_id: None,
     });
     let text = String::from_utf8(bytes).unwrap();
     assert!(text.starts_with("HTTP/1.1 200 OK\r\n"));

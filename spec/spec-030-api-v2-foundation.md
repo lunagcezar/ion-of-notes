@@ -167,14 +167,27 @@ flowchart TD
 
 ## Plan / tasks
 
-- [ ] Spec + failing tests (red).
-- [ ] Add `ApiError`, `request_id` and `headers` to the contract.
-- [ ] Add version validation and v2 dispatch.
-- [ ] Add `Capability`/`Connection` and permission checks.
-- [ ] Add typed client error decoding.
-- [ ] Update `docs/api-contract.md`, `docs/public-api-analysis.md`,
+- [x] Spec + failing tests (red).
+- [x] Add `ApiError`, `request_id` and `headers` to the contract.
+- [x] Add version validation and v2 dispatch.
+- [x] Add `Capability`/`Connection` and permission checks.
+- [x] Add typed client error decoding.
+- [x] Update `docs/api-contract.md`, `docs/public-api-analysis.md`,
   `docs/requirements.md`, `docs/data-model.md`, `AGENTS.md`.
-- [ ] Build/test/clippy/fmt, commit.
+- [x] Build/test/clippy/fmt, commit.
+
+## Result
+
+- New `src/server/contract.rs`: `API_VERSION`, `ApiError`, `Capability`,
+  `Connection`, `RequestLogEntry`, bearer parsing and request IDs.
+- `ApiRequest` carries case-insensitive headers; `ApiResponse` carries an
+  optional request ID; the HTTP adapter echoes `X-Request-Id`.
+- `/api/v2` validates the version, bearer token and capability, then reuses the
+  v1 use cases; errors are structured `ApiError` bodies.
+- `Client::with_token` and the `*_v2` methods decode structured errors as
+  `ClientError::Api`.
+- Tests: 17 in `tests/contract.rs` plus 4 v2 client tests; the suite is 136
+  tests. v1 behavior is unchanged.
 
 ## Requirement mapping
 

@@ -6,6 +6,26 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-030-api-v2-foundation
+
+- Added `/api/v2` with a required `Not-Notion-Version: 2026-11-08` header,
+  Bearer-token authentication and capability checks for content read, update
+  and insert.
+- Added `ApiError` with `object`, `status`, `code`, `message`, `request_id` and
+  optional `additional_data`; v2 errors use stable codes such as
+  `missing_version`, `unsupported_version`, `invalid_json`,
+  `validation_error`, `unauthorized` and `restricted_resource`.
+- Added request IDs to `ApiResponse`, the `X-Request-Id` HTTP header and an
+  in-memory request log.
+- Added `Capability`, `Connection`, `RequestLogEntry`, `API_VERSION` and
+  header parsing; the local demo owner token is `owner-token`.
+- Added `Client::with_token` and typed `*_v2` methods that decode structured
+  errors as `ClientError::Api`.
+- v1 routes and envelopes are unchanged.
+- Tests: 17 contract tests in `tests/contract.rs` plus 4 v2 client tests; the
+  suite is 136 tests. Docs updated (`api-contract`, requirements, architecture,
+  testing, glossary, review findings, index, AGENTS, README, spec index).
+
 ### Docs — public Notion API analysis and v2 roadmap (B4)
 
 - Reviewed the public Notion developer documentation (intro, pagination,

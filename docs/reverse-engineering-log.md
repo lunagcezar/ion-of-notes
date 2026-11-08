@@ -85,7 +85,8 @@ does not contain captured traffic, secrets or proprietary artifacts.
   `docs/review-findings.md`, `docs/api-contract.md`, `docs/clean-room.md`,
   `spec/README.md` and `spec/spec-029-*`; corrected stale statuses in the
   requirements, ADRs, specs, unknowns, visual inventory and this log.
-- **Verification:** 115 tests green; clippy and `cargo fmt --check` clean.
+- **Verification at that time:** 115 tests green; clippy and
+  `cargo fmt --check` clean.
 
 ## 2026-11-08 — B4 public Notion API documentation review
 
@@ -107,5 +108,5 @@ does not contain captured traffic, secrets or proprietary artifacts.
   contract; v1 stays stable.
 - **Output:** `docs/public-api-analysis.md`, the **Observed (public docs)**
   evidence level, and specs 030–037.
-- **Phase status:** B4 in progress (docs reviewed, specs drafted); B5 pending
-  the first implemented v2 slice; B3 still blocked by B1.
+- **Phase status:** B4 in progress (docs reviewed, specs drafted, spec-030
+  implemented); B5 pending the next v2 slices; B3 still blocked by B1.

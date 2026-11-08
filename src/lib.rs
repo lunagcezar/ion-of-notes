@@ -48,7 +48,10 @@ pub use ollama::{
     generate, models, normalize_endpoint, parse_endpoint, parse_generate_response,
     parse_tags_response, service_reachable,
 };
-pub use server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
+pub use server::{
+    API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, Method,
+    RequestLogEntry, WorkspaceApi, WorkspaceServer,
+};
 pub use shortcuts::{Action, Combo, SHORTCUT_TABLE, ShortcutDoc, lookup};
 pub use store::{CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore};
 pub use templates::{Template, catalog, find, template_for_purpose};

@@ -111,7 +111,7 @@ listed in §5; they are planned in specs 030–037.
 ### RF-D06 — Unknowns ledger reported "65 tests" and stale U-06 progress
 
 - **Severity:** medium
-- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 115.
+- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 136.
   U-06 still said version history was only planned, while spec-015 implemented
   it and spec-026 added archive/discussions.
 - **Impact:** a reader could not tell which page actions are real.
@@ -279,6 +279,10 @@ not documentation bugs; each has a spec.
 | RF-P11 | No explicit unsupported-type representation | New block/view types could be silently lost | 032/034 |
 | RF-P12 | Legacy `Block.text`/`TableRow` need migration | A v2 model could lose v1 data | 032/033 |
 
+**Status (2026-11-08):** RF-P01 is implemented by spec-030 (`/api/v2`,
+`ApiError`, capabilities, request IDs). RF-P02–RF-P12 remain planned in specs
+031–037.
+
 ## 6. What the review confirmed is healthy
 
 - **Layer direction:** `model`/`collab` have no egui, socket or file types;
@@ -293,7 +297,7 @@ not documentation bugs; each has a spec.
   or settings changes.
 - **Version retention:** 50 newest snapshots per page, restore records a new
   version.
-- **Test discipline:** 115 integration tests, no `#[cfg(test)]` in `src/`,
+- **Test discipline:** 136 integration tests, no `#[cfg(test)]` in `src/`,
   shared helpers in `tests/common/mod.rs`.
 - **Quality gates:** `cargo test --all-targets`, clippy and `cargo fmt --check`
   are clean at the time of this review.
@@ -321,7 +325,7 @@ not documentation bugs; each has a spec.
 
 | Priority | Item | Owner document |
 | -------- | ---- | -------------- |
-| Next | Implement the v2 foundation (versioning, errors, capabilities) | `spec-030` |
+| Done | v2 foundation (versioning, errors, capabilities) | `spec-030` |
 | Next | Add cursor pagination | `spec-031` |
 | Next | Add rich text and block metadata/children | `spec-032` |
 | Next | Add page properties and data sources | `spec-033` |

@@ -155,7 +155,7 @@ This is the status of **our** contract, not a claim about the original:
 | WebSocket/CRDT server | Decided, **not implemented** |
 | `/api/v1` prefix | Decided, **not served** |
 | Pagination/sorting | Not implemented; lists are full snapshots |
-| Public API documentation review | **B4 reviewed 2026-11-08**; B5 pending the first v2 slice; B3 blocked |
+| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation implemented (spec-030); B5 pending the next v2 slice; B3 blocked |
 
 ## What remains unknown
 

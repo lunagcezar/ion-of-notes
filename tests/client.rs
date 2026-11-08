@@ -15,6 +15,7 @@ impl WorkspaceApi for Stub {
         ApiResponse {
             status: self.status,
             body: self.body.clone(),
+            request_id: None,
         }
     }
 }
@@ -28,6 +29,59 @@ fn workspace_matches_server_state() {
     let expected = Workspace::seed("client-tests");
     let mut c = Client::new(server());
     assert_eq!(c.workspace().unwrap(), expected);
+}
+
+#[test]
+fn v2_client_requires_a_token() {
+    let mut c = Client::new(server());
+    assert_eq!(c.workspace_v2().unwrap_err(), ClientError::MissingToken);
+}
+
+#[test]
+fn v2_client_roundtrip() {
+    let mut c = Client::with_token(server(), "owner-token");
+    let before = c.workspace_v2().unwrap().pages.len();
+    let page = c
+        .create_page_v2(&PageDraft {
+            title: "V2".to_string(),
+            icon: "V".to_string(),
+            parent: None,
+        })
+        .unwrap();
+    assert_eq!(c.get_page_v2(&page.id).unwrap().title, "V2");
+    assert_eq!(c.workspace_v2().unwrap().pages.len(), before + 1);
+}
+
+#[test]
+fn v2_client_reports_structured_errors() {
+    let mut c = Client::with_token(server(), "owner-token");
+    let error = c
+        .create_page_v2(&PageDraft {
+            title: String::new(),
+            icon: "P".to_string(),
+            parent: None,
+        })
+        .unwrap_err();
+    match error {
+        ClientError::Api(error) => {
+            assert_eq!(error.status, 400);
+            assert_eq!(error.code, "validation_error");
+            assert!(!error.request_id.is_empty());
+        }
+        other => panic!("expected structured api error, got {other:?}"),
+    }
+}
+
+#[test]
+fn v2_client_reports_unauthorized() {
+    let mut c = Client::with_token(server(), "wrong-token");
+    match c.workspace_v2().unwrap_err() {
+        ClientError::Api(error) => {
+            assert_eq!(error.status, 401);
+            assert_eq!(error.code, "unauthorized");
+        }
+        other => panic!("expected structured api error, got {other:?}"),
+    }
 }
 
 #[test]

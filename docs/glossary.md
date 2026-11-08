@@ -137,6 +137,8 @@ definition.
 | **ApiError** | Structured error object with `status`, `code`, `message`, `request_id`, `additional_data`. | spec-030 |
 | **Capability** | A connection right: content read/update/insert, comment read/insert, user-info level. | spec-030 |
 | **Connection** | A token + member + workspace + capability set. | spec-030 |
+| **RequestLogEntry** | In-memory record of a v2 request ID, method, path and status. | spec-030 |
+| **owner-token** | Local demo owner bearer token; replaced by sessions in production. | spec-030 |
 | **Cursor / start_cursor / next_cursor** | Opaque pagination tokens; pass back unchanged. | spec-031 |
 | **ListResponse** | `{ object:"list", type, results, has_more, next_cursor }`. | spec-031 |
 | **RichText** | Text, mention or equation with annotations, `plain_text` and `href`. | spec-032 |

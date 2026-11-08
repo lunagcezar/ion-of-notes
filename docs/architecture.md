@@ -75,6 +75,7 @@ src/
   server/
     http.rs          loopback HTTP/1.1 adapter
     url.rs           shared percent-encoding
+    contract.rs      v2 versioning, ApiError, capabilities, request IDs
   client.rs          typed client over WorkspaceApi
   templates.rs       starter template catalog
   ollama.rs          AI assistant adapter
@@ -307,9 +308,9 @@ new stores and delivery workers.
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
-- The public-API alignment roadmap (specs 030–037) is **planned**, not built;
-  v2 DTOs, pagination, rich text, properties, views, webhooks and limits do not
-  exist in the running server yet.
+- The v2 **foundation** exists (spec-030): `/api/v2`, version/auth/capability
+  checks, structured errors and request IDs. Pagination, rich text, properties,
+  views, webhooks and limits are still planned (specs 031–037).
 
 ## 12. Further reading
 

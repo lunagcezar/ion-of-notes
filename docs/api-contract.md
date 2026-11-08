@@ -18,14 +18,16 @@ Every client request is a transport-neutral value:
 
 ```rust
 pub struct ApiRequest {
-    pub method: Method,      // Get, Post, Put, Patch, Delete
-    pub path: String,        // "/api/pages/p-home?x=1"
-    pub body: Option<String> // JSON text
+    pub method: Method,                    // Get, Post, Put, Patch, Delete
+    pub path: String,                      // "/api/pages/p-home?x=1"
+    pub body: Option<String>,              // JSON text
+    pub headers: BTreeMap<String, String>, // case-insensitive lookup
 }
 
 pub struct ApiResponse {
     pub status: u16,
-    pub body: String,        // JSON envelope
+    pub body: String,                      // JSON envelope or ApiError
+    pub request_id: Option<String>,        // v2 request id
 }
 ```
 
@@ -74,11 +76,11 @@ or, on failure:
 | `404` | Unknown route, unknown page, delete of a missing page |
 | `500` | Storage failure while persisting workspace or collaboration state |
 
-`401` and `403` are part of the decided production contract (missing/invalid
-session, insufficient permission) but are **not** produced by the current
-loopback server because it has no auth middleware. The planned v2 contract adds
-`409 conflict_error`, `429 rate_limited`, `503 service_unavailable` and
-`529 service_overload`; see `docs/public-api-analysis.md` §3 and spec-037.
+`401` and `403` are produced by the **v2 foundation** (missing/invalid token,
+missing capability); v1 has no auth middleware and does not produce them. The
+planned v2 limits add `409 conflict_error`, `429 rate_limited`,
+`503 service_unavailable` and `529 service_overload`; see
+`docs/public-api-analysis.md` §3 and spec-037.
 
 ## 3. Implemented routes
 
@@ -171,6 +173,14 @@ Errors are explicit:
 | `ClientError::Encode(String)` | Request body could not be serialized |
 
 No method uses `unwrap_or_default()` on a serialization result.
+
+`Client::with_token(api, token)` adds the v2 headers. The v2 surface mirrors
+the v1 methods with a `_v2` suffix (`workspace_v2`, `create_page_v2`,
+`get_page_v2`, `update_page_v2`, `delete_page_v2`, `list_members_v2`,
+`invite_member_v2`, `list_shares_v2`, `set_share_v2`, `sync_v2`,
+`export_tree_v2`, `realtime_contract_v2`). A v2 failure is
+`ClientError::Api(Box<ApiError>)`; a missing token is
+`ClientError::MissingToken`.
 
 ## 6. Loopback HTTP adapter
 
@@ -268,28 +278,63 @@ sequenceDiagram
 | PostgreSQL/SQLx store | Decided, not implemented |
 | Pagination/sorting | Not implemented; full snapshots |
 
-## 8. Public API alignment (v2 target, planned)
+## 8. Public API alignment (v2 foundation implemented)
 
 The B4 review of the public Notion API (`docs/public-api-analysis.md`,
-ADR-006) found patterns we should adopt without cloning the service. They are
-planned in `/api/v2`; the current `/api/...` v1 routes stay stable.
+ADR-006) found patterns we should adopt without cloning the service. The
+**foundation** is implemented in `/api/v2` (spec-030); the current `/api/...`
+v1 routes stay stable.
 
-| Concern | v1 today | v2 target | Spec |
-| ------- | -------- | --------- | ---- |
-| Versioning | none | required `Not-Notion-Version` header | 030 |
-| Errors | `{data,error}` string | `object:"error"` + `status`/`code`/`message`/`request_id`/`additional_data` | 030 |
-| Capabilities | `Role` + `Access` | read/update/insert content, comments, user-info | 030 |
-| Pagination | full arrays | `ListResponse<T>` with opaque cursors | 031 |
-| Blocks | flat text | rich text + metadata + children + block endpoints | 032 |
-| Page | title/icon/parent/blocks/rows | properties, icon, cover, parent, in_trash, url | 032/033 |
-| Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 |
-| Database | inline rows | database container + data sources | 033 |
-| Views | table/board | view object + filters/sorts/configuration | 034 |
-| Comments | page plain text | page/block, rich text, discussions, attachments | 035 |
-| Users | `Member` | person/bot, profile, workspace limits | 035 |
-| Files | none | file/file_upload/external + lifecycle | 035 |
-| Webhooks | none | subscriptions, verification, HMAC, retries | 036 |
-| Limits | none | rate/size/block limits, 429/529/503 guidance | 037 |
+### 8.1 v2 foundation (implemented)
+
+- Required header: `Not-Notion-Version: 2026-11-08`.
+- Auth: `Authorization: Bearer <token>`; the local demo owner token is
+  `owner-token`. Connections live in memory and the owner connection is
+  recreated on startup; a production deployment replaces this with self-hosted
+  sessions.
+- Every v2 response carries a request ID in `ApiResponse.request_id` and the
+  `X-Request-Id` HTTP header; the same ID is appended to the in-memory request
+  log.
+- Errors are a structured `ApiError` body:
+  `{object:"error",status,code,message,request_id,additional_data?}`.
+- Capabilities: read/update/insert content, read/insert comments and user-info
+  levels. The content routes enforce read/update/insert separately.
+- Success bodies still use the existing `{data,error}` envelope until the v2
+  list/rich-content DTOs arrive in specs 031–033.
+- The v2 routes mirror the v1 use cases for workspace, pages, versions, search,
+  members, shares, sync, export and realtime; v1 is unchanged.
+
+| Concern | v1 today | v2 target | Spec | Status |
+| ------- | -------- | --------- | ---- | ------ |
+| Versioning | none | required `Not-Notion-Version` header | 030 | **implemented** |
+| Errors | `{data,error}` string | `object:"error"` + `status`/`code`/`message`/`request_id`/`additional_data` | 030 | **implemented** |
+| Capabilities | `Role` + `Access` | read/update/insert content, comments, user-info | 030 | **foundation implemented** |
+| Pagination | full arrays | `ListResponse<T>` with opaque cursors | 031 | planned |
+| Blocks | flat text | rich text + metadata + children + block endpoints | 032 | planned |
+| Page | title/icon/parent/blocks/rows | properties, icon, cover, parent, in_trash, url | 032/033 | planned |
+| Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 | planned |
+| Database | inline rows | database container + data sources | 033 | planned |
+| Views | table/board | view object + filters/sorts/configuration | 034 | planned |
+| Comments | page plain text | page/block, rich text, discussions, attachments | 035 | planned |
+| Users | `Member` | person/bot, profile, workspace limits | 035 | planned |
+| Files | none | file/file_upload/external + lifecycle | 035 | planned |
+| Webhooks | none | subscriptions, verification, HMAC, retries | 036 | planned |
+| Limits | none | rate/size/block limits, 429/529/503 guidance | 037 | planned |
+
+Implemented v2 routes:
+
+| Method | Path | Required capability |
+| ------ | ---- | ------------------- |
+| `GET` / `PUT` | `/api/v2/workspace` | read / update content |
+| `GET` / `POST` | `/api/v2/pages` | read / insert content |
+| `GET` / `PATCH` / `DELETE` | `/api/v2/pages/{id}` | read / update content |
+| `GET` | `/api/v2/pages/{id}/versions` | read content |
+| `GET` | `/api/v2/search` | read content |
+| `GET` / `POST` | `/api/v2/members` | read / insert content |
+| `GET` / `PUT` | `/api/v2/shares` | read / update content |
+| `GET` | `/api/v2/sync` | read content |
+| `GET` | `/api/v2/export` | read content |
+| `GET` | `/api/v2/realtime` | read content |
 
 ```mermaid
 flowchart LR

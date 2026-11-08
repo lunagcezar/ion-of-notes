@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (115 tests, 2026-11-08)
+## 3. Test-crate map (136 tests, 2026-11-08)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -50,7 +50,8 @@ flowchart TD
 | `tests/server.rs` | 12 | routes, envelopes, status codes, HTTP parse/format, concurrent loopback |
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
 | `tests/ui.rs` | 11 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher, search cache |
-| `tests/client.rs` | 10 | typed client methods, error mapping, encode/decode failures |
+| `tests/client.rs` | 14 | typed client methods, v1/v2 error mapping, encode/decode failures |
+| `tests/contract.rs` | 17 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/shortcuts.rs` | 8 | shortcut table, exactness, focus/modifier guard |
 | `tests/ollama.rs` | 7 | endpoint parsing, request/response decoding, chunked bodies, status |
 | `tests/collab_store.rs` | 6 | collaboration JSON round-trip, seed/corrupt fallback, restart restore, failing store |
@@ -229,13 +230,14 @@ The hook is inert in normal runs and in the rebuild check.
 - The original product's server behavior (unknown and out of clean-room scope).
 - Production auth, PostgreSQL and WebSocket transports (decided, not built).
 
-## 10. Planned v2 contract tests
+## 10. v2 contract tests
 
-The public-API alignment roadmap (specs 030–037) adds new test areas:
+The public-API alignment roadmap (specs 030–037) adds new test areas. The
+spec-030 foundation is implemented; the rest are planned:
 
-| Area | Planned test crate |
-| ---- | ------------------ |
-| v2 versioning, errors, capabilities | `tests/contract.rs` |
+| Area | Test crate |
+| ---- | ---------- |
+| v2 versioning, errors, capabilities, request IDs | `tests/contract.rs` (implemented) |
 | pagination and list envelopes | `tests/server.rs`, `tests/client.rs` |
 | rich text, block metadata, block children | `tests/model.rs`, `tests/server.rs` |
 | page properties, data sources, property items | `tests/model.rs`, `tests/server.rs` |

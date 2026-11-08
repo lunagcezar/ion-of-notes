@@ -67,7 +67,7 @@ Status vocabulary:
 | [027](spec-027-onboarding-and-templates.md) | Onboarding and templates | implemented | Purpose modal, starter catalog |
 | [028](spec-028-i18n-coverage.md) | Internationalization coverage | implemented | en / pt-BR / eo key tables |
 | [029](spec-029-documentation-and-contributor-guide.md) | Documentation and contributor guide | implemented | Documentation hub and review |
-| [030](spec-030-api-v2-foundation.md) | API v2 foundation: versioning, errors, capabilities | **planned** | Public API alignment (B4) |
+| [030](spec-030-api-v2-foundation.md) | API v2 foundation: versioning, errors, capabilities | implemented | `/api/v2`, `ApiError`, capabilities, request IDs |
 | [031](spec-031-pagination.md) | Cursor pagination and list responses | **planned** | Depends on 030 |
 | [032](spec-032-rich-text-and-blocks.md) | Rich text and the block model | **planned** | Depends on 030 |
 | [033](spec-033-page-properties-and-data-sources.md) | Page properties and data sources | **planned** | Depends on 032 |
@@ -82,9 +82,9 @@ Status vocabulary:
 | ---- | ----- | --------- |
 | A9 — settings row filtering inside the open section | spec-016 | Small implementation spec |
 | B4 — derive the contract from public API docs | spec-016 / ADR-006 | **Reviewed 2026-11-08**; specs 030–037 drafted |
-| B5 — mock server + `tests/contract.rs` | spec-016 | After the first v2 slice |
-| B3 — own-account HAR | spec-016 | **Blocked** by the strict B1 scope; needs a new decision |
-| v2 foundation | spec-030 | Versioning, errors, capabilities |
+| B5 - broader mock server + contract suite | spec-016 | After the next v2 slices |
+| B3 - own-account HAR | spec-016 | **Blocked** by the strict B1 scope; needs a new decision |
+| v2 foundation | spec-030 | **Implemented:** versioning, errors, capabilities |
 | v2 pagination | spec-031 | Cursor lists |
 | v2 rich text/blocks | spec-032 | Rich text, metadata, children |
 | v2 properties/data sources | spec-033 | Typed schema and values |

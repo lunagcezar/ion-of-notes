@@ -22,11 +22,15 @@ pub fn parse_http_request(bytes: &[u8]) -> Option<ApiRequest> {
         return None;
     }
     let mut content_length = 0usize;
+    let mut headers = std::collections::BTreeMap::new();
     for line in lines {
-        if let Some((key, value)) = line.split_once(':')
-            && key.trim().eq_ignore_ascii_case("content-length")
-        {
-            content_length = value.trim().parse().unwrap_or(0);
+        if let Some((key, value)) = line.split_once(':') {
+            let key = key.trim().to_ascii_lowercase();
+            let value = value.trim().to_string();
+            if key == "content-length" {
+                content_length = value.parse().unwrap_or(0);
+            }
+            headers.insert(key, value);
         }
     }
     let body = if content_length > 0 {
@@ -36,7 +40,12 @@ pub fn parse_http_request(bytes: &[u8]) -> Option<ApiRequest> {
     } else {
         None
     };
-    Some(ApiRequest { method, path, body })
+    Some(ApiRequest {
+        method,
+        path,
+        body,
+        headers,
+    })
 }
 
 /// Serialize an `ApiResponse` as an HTTP/1.1 response.
@@ -45,12 +54,19 @@ pub fn format_http_response(response: &ApiResponse) -> Vec<u8> {
         200 => "OK",
         201 => "Created",
         400 => "Bad Request",
+        401 => "Unauthorized",
+        403 => "Forbidden",
         404 => "Not Found",
         500 => "Internal Server Error",
         _ => "OK",
     };
+    let request_id = response
+        .request_id
+        .as_deref()
+        .map(|id| format!("X-Request-Id: {id}\r\n"))
+        .unwrap_or_default();
     format!(
-        "HTTP/1.1 {} {}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n{}",
+        "HTTP/1.1 {} {}\r\n{request_id}Content-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n{}",
         response.status,
         reason,
         response.body.len(),

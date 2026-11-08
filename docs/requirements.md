@@ -263,18 +263,19 @@
   course, meeting and blank templates that create real pages (implemented in
   `spec-027`). Custom templates and template search remain follow-ups.
 
-### 1.18 Public API alignment (planned, specs 030–037)
+### 1.18 Public API alignment (specs 030–037; 030 implemented)
 
 These requirements come from the B4 public-documentation review
-(`docs/public-api-analysis.md`, ADR-006). They are **planned**, not implemented
-in v1.
+(`docs/public-api-analysis.md`, ADR-006). Spec-030 (versioning, errors,
+capabilities) is implemented; the rest are planned.
 
 - FR-78: `/api/v2` requires a `Not-Notion-Version` header and returns a
   structured error object with `status`, `code`, `message`, `request_id` and
-  optional `additional_data` (spec-030).
+  optional `additional_data` (implemented in `spec-030`).
 - FR-79: Connections have capabilities for content read/update/insert, comment
   read/insert and user-info visibility; permission failures return `401`/`403`
-  with stable codes (spec-030).
+  with stable codes (foundation implemented in `spec-030`; comment/user-info
+  routes arrive in spec-035).
 - FR-80: List endpoints are cursor-paginated with `start_cursor`, `page_size`
   (1–100), `results`, `has_more` and an opaque `next_cursor` (spec-031).
 - FR-81: Blocks use rich text objects (`text`, `mention`, `equation`) with
@@ -300,7 +301,8 @@ in v1.
   returns `429`/`529`/`503` with retry guidance (spec-037).
 - FR-91: v1 routes stay stable; v2 changes are additive unless a version bump
   is declared; clients ignore unknown response fields and treat cursors as
-  opaque (spec-030/031).
+  opaque (versioning and v1 stability implemented in `spec-030`; cursor
+  opacity arrives with spec-031).
 - FR-92: Unsupported block or view types are represented explicitly instead of
   being silently dropped (spec-032/034).
 - FR-93: Page and callout icons use an icon object (`emoji`, `custom_emoji`,
