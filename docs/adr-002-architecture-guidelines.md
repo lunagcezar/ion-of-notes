@@ -9,8 +9,8 @@ and asked that improved project guidelines always be added to `AGENTS.md`.
 The review discusses modular monoliths, Clean Architecture, pragmatic DDD,
 feature-based module organization, visibility rules, and the `app`/bootstrap
 layer. The app is a single-crate, clean-room, local-first desktop
-reconstruction whose dark layout already matches the 29 pictures in
-`reference/`.
+reconstruction whose dark layout already matched the 29 pictures in
+`reference/` at the time (the set has since grown to 98).
 
 ## Decision
 
@@ -61,6 +61,22 @@ in `AGENTS.md` under "Improved architecture guidelines". Concretely:
   visibility rules, file-creation heuristics, DDD invariants, desktop adapter
   flow, feature-based growth path, team conventions, and the new references.
 
+## Later application (2026-11-08)
+
+The guidelines were applied again without changing this decision:
+
+- `spec-017` split the three large UI files by responsibility
+  (`ui/commands`, `view`, `input`, `apply`, `render/*`, `dialogs/*`).
+- `spec-018` split `model`, `collab` and `server` (`model/*`,
+  `collab/export.rs`, `server/http.rs`).
+- `spec-019` added the `CollabStore` port and `JsonCollabStore` adapter.
+- `spec-020` added the pure `PageDiff` / `CommitPlan` / `PendingEdits` path.
+- `spec-022` added the derived `WorkspaceIndex` and version retention.
+
+The didactic companion is `docs/architecture.md`; the current module tree is in
+`AGENTS.md` and `docs/architecture.md` §3. No `src/modules/` scaffold and no new
+crate were created, as decided here.
+
 ## Consequences
 
 - Positive: the wiring lives once and is testable without a GUI; the
@@ -68,7 +84,8 @@ in `AGENTS.md` under "Improved architecture guidelines". Concretely:
   are explicit for future sessions.
 - Neutral: this is a pure refactor — no production behavior, API contract, or
   visual change. The existing test suite is the regression guard; a fresh
-  `--screenshot` is compared with `reference/` (all 29 pictures).
+  `--screenshot` is compared with `reference/` (98 pictures today; 29 at the
+  time of this ADR).
 - Deferred: extracting features into `src/modules/` or separate crates, and
   private-field domain value objects, until there is a real second bounded
   context or real domain behavior.

@@ -101,3 +101,10 @@ changed.
 - System menus (File / Edit / View / …) that belong to the operating system.
 - Real accounts, invitations, network calls, or any branding from the original.
 - Any content read from inside the original program (clean room is preserved).
+
+> **Historical paths (2026-11-08):** the plan above names `render.rs`,
+> `dialogs.rs`, `app.rs` and `model.rs` as they existed in this session.
+> `spec-017` later split the UI into `ui/render/*`, `ui/dialogs/*`,
+> `ui/app.rs` (state shell), `ui/apply.rs`, `ui/commands.rs`, `ui/view.rs` and
+> `ui/input.rs`; `spec-018` split `model.rs`. The behavior described here is
+> unchanged. See `docs/architecture.md` for the current map.

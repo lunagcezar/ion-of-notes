@@ -17,16 +17,26 @@ all state in a JSON file, optional loopback HTTP listener (`spec-007`,
 > for OAuth2 / own sessions is superseded: own-session **accounts are now
 > required** (ADR-003 §1). The "free & open for all / no accounts" framing that
 > motivated the original verdicts is retired.
+>
+> **Update (2026-11-08):** The verdicts in the table below are the **historical
+> 2026-11-05 evaluation**, not the current stack. The v1 build still uses
+> `std::net` + JSON (`JsonStore`, `JsonCollabStore`) and adds no Axum,
+> PostgreSQL, SQLx, WebSocket or Yrs dependency. The production adapters remain
+> decided but unimplemented behind `WorkspaceApi`, `WorkspaceStore` and
+> `CollabStore`. See `docs/api-contract.md` §7 for the implemented-vs-decided
+> split.
 
 ## Decision
 
 We agree with **Rust** and **Serde** (already in use). We **defer** the
 server/database/collaboration choices behind existing or new trait seams, and
-we **decline** the UI replacements and authentication for this scope. None of
-the libraries are added to `Cargo.toml` in this session: adding them now would
-break the offline, dependency-light, account-free, single-user design and
-would require replacing the renderer that already matches the 29 pictures in
-`reference/`.
+we **decline** the UI replacements and authentication **for the 2026-11-05
+scope**. None of the libraries are added to `Cargo.toml` in that session:
+adding them then would have broken the offline, dependency-light, single-user
+design and would have required replacing the renderer that already matched the
+29 pictures in `reference/` (the set has since grown to 98). The 2026-11-05 and
+2026-11-08 update notes above supersede the account and product-direction parts
+of this decision.
 
 | Suggested choice                    | Verdict | Rationale |
 | ----------------------------------- | ------- | --------- |

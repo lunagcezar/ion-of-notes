@@ -51,18 +51,22 @@ Clean Architecture, and update docs/changelog.
 
 ## Plan / tasks
 
-- [ ] Spec + tests (red where feasible)
-- [ ] Fix backspace-on-empty block deletion (render/app)
-- [ ] Fix hover layout shift stealing focus (stable block row layout/IDs)
-- [ ] Improve block drag reorder reliability
-- [ ] Settings search filtering
-- [ ] Lock page enforcement in UI
-- [ ] Click-outside-to-close for modals
-- [ ] Icon picker emoji catalog improvements
-- [ ] Sidebar padding, workspace dropdown
-- [ ] Title bar: compact toggle, app menu replacing pin icon
-- [ ] Library functional tabs
-- [ ] Four-point/grid menu
-- [ ] i18n groundwork (rust-i18n) + language setting wiring (best-effort)
-- [ ] Version history/offline/agent/customize-sidebar deeper features (scoped)
-- [ ] Docs + changelog + build + screenshot checks
+- [x] Spec + tests (red where feasible)
+- [x] Fix backspace-on-empty block deletion (render/app)
+- [x] Fix hover layout shift stealing focus (stable block row layout/IDs)
+- [x] Improve block drag reorder reliability
+- [x] Settings search filtering — the navigation rail filters (spec-015); the
+  row-level filter inside the open section is still **open** as spec-016 A9.
+- [x] Lock page enforcement in UI
+- [x] Click-outside-to-close for modals
+- [x] Icon picker emoji catalog improvements
+- [x] Sidebar padding, workspace dropdown
+- [x] Title bar: compact toggle, app menu replacing pin icon
+- [x] Library functional tabs (completed in `spec-024`)
+- [x] Four-point/grid menu
+- [x] i18n groundwork (rust-i18n) + language setting wiring; coverage expanded
+  in `spec-028`
+- [x] Version history/offline/agent/customize-sidebar deeper features: version
+  history and offline were completed in `spec-015`/`spec-026`; the remaining
+  AI/agent surfaces stay explicitly out of scope
+- [x] Docs + changelog + build + screenshot checks

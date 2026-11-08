@@ -19,8 +19,10 @@
 ### 1.1 Workspace and pages
 
 - FR-01: The workspace has a name and holds an ordered set of pages.
-- FR-02: A page has an id, title, icon glyph, optional parent, favorite flag,
-  an ordered list of blocks, optional table rows, and an updated timestamp.
+- FR-02: A page has an id, title, icon glyph, optional parent, favorite,
+  locked, offline, table-of-contents, discussions, inline-comments and archived
+  flags, a list of page comments, an ordered list of blocks, optional table
+  rows, and an updated timestamp.
 - FR-03: Pages form a tree through `parent`; a page may have child pages.
 - FR-04: The user can create a new page under any parent (or at the root).
 - FR-05: The user can rename a page and change its icon.
@@ -165,8 +167,9 @@
   `ui/switcher.rs`).
 - FR-56: The sidebar can be shown/hidden from the tab strip (and Ctrl+\).
 - FR-57: The "..." control opens a searchable page-actions menu with
-  Appearance & layout (Default / Serif / Mono, Small text, Full width),
-  Available offline / Lock page toggles and a Last edited footer.
+  Copy link, Copy page contents, Duplicate, Move to Trash, Appearance & layout
+  (Default / Serif / Mono, Small text, Full width), Available offline /
+  Lock page toggles, Archive, Version history and a Last edited footer.
 - FR-58: The block "+" inserts a block below (Alt-click: above) and opens the
   block menu; the six-dot grip reorders blocks by drag and opens a
   categorized block menu on click.
@@ -199,14 +202,18 @@
   `apply` modules behind the `ui.rs` facade; `ui/dialogs.rs` and
   `ui/render.rs` are facades over cohesive submodules (implemented in
   `spec-017`, planned in spec-016 A5).
-- FR-68: All user-visible strings are covered by the locale key table with an
-  English fallback, checked by a completeness test (planned, spec-016 A6).
+- FR-68: Core user-visible strings (sidebar, Share, Library, page actions,
+  comments and Settings) are covered by the locale key table with an English
+  fallback, checked by a completeness test; remaining long-form copy is
+  migrated incrementally (implemented in `spec-028`, originally planned in
+  spec-016 A6).
 - FR-69: Client serialization failures return an explicit `ClientError::Encode`
   instead of sending an empty body (implemented in `spec-021`).
 - FR-70: The optional loopback listener serves concurrent connections without
   blocking one client behind another (implemented in `spec-021`).
 - FR-71: Settings search filters the rows inside the open section, not only the
-  navigation rail (planned, spec-016 A9).
+  navigation rail (**open**: spec-016 A9; the rail filter is implemented, the
+  row filter is not).
 
 ### 1.12 Sharing dialog (spec-023)
 
@@ -255,21 +262,6 @@
   applies a starter template. A template library offers work, personal,
   course, meeting and blank templates that create real pages (implemented in
   `spec-027`). Custom templates and template search remain follow-ups.
-- NFR-10: Every completed spec is committed to git in the same session
-  (`AGENTS.md` → Commits).
-- NFR-11: Search results are cached by query and workspace version; an
-  unchanged frame must not call the server again (`ui/search_cache.rs`).
-- NFR-12: JSON saves are atomic (temporary file + move) and a storage failure
-  is reported as an API `500`, never as a silent success.
-- NFR-13: `cargo fmt --check` is clean; formatting-only changes are committed
-  separately from behavior changes (spec-016 A10).
-- NFR-14: Server behavior is learned through public documentation, own-account
-  HAR captures, exports and a mock contract. Interception tools are used only
-  on traffic we control; Wireshark is not the primary discovery tool and
-  protection mechanisms are never bypassed (ADR-005, spec-016 Track B).
-- NFR-15: An unchanged frame does not call the server, a single-page edit does
-  not send a whole-workspace payload, and the loopback listener does not
-  serialize independent clients (spec-016 A2/A3/A8).
 
 ## 2. Non-functional requirements
 
@@ -282,8 +274,9 @@
   offline with an in-process / loopback server; the self-hosted production
   server, accounts and network/auth concerns are adapters behind `WorkspaceApi`
   (ADR-003), never domain rules.
-- NFR-05: The UI stays responsive; the workspace is small enough that a full
-  snapshot per edit is cheap.
+- NFR-05: The UI stays responsive: a single-page edit is sent with `PATCH` and
+  a 250 ms debounce, and the full snapshot is reserved for structural or
+  settings changes (`spec-020`).
 - NFR-06: All colors, fonts, and spacing come from a single palette module.
 - NFR-07: The clean-room boundary is never crossed: no tool reads the original
   executable, its folder, its pages' code, or its assets.
@@ -291,8 +284,29 @@
   one integration-test crate per module; shared helpers are defined exactly once
   in `tests/common/mod.rs` (DRY).
 - NFR-09: Core modules depend on trait ports, not concrete adapters
-  (`WorkspaceApi`, `WorkspaceStore`), and each module has a single
-  responsibility (DRY + SOLID).
+  (`WorkspaceApi`, `WorkspaceStore`, `CollabStore`), and each module has a
+  single responsibility (DRY + SOLID).
+- NFR-10: Every completed spec is committed to git in the same session
+  (`AGENTS.md` → Commits).
+- NFR-11: Search results are cached by query and workspace version; an
+  unchanged frame must not call the server again (`ui/search_cache.rs`).
+- NFR-12: JSON saves are atomic (temporary file + move) and a storage failure
+  is reported as an API `500`, never as a silent success.
+- NFR-13: `cargo fmt --check` is clean; formatting-only changes are committed
+  separately from behavior changes (spec-016 A10).
+- NFR-14: Server behavior is learned through public documentation, public
+  behavior, exports the person already owns, and our own decided contract.
+  Own-account HAR capture is **not authorized** under the strict B1 scope; if
+  the scope changes, redaction and the ADR-005 checklist apply. Interception
+  tools are used only on traffic we control; Wireshark is not the primary
+  discovery tool and protection mechanisms are never bypassed (ADR-005,
+  spec-016 Track B).
+- NFR-15: An unchanged frame does not call the server, a single-page edit does
+  not send a whole-workspace payload, and the loopback listener does not
+  serialize independent clients (spec-016 A2/A3/A8).
+- NFR-16: Documentation stays current and navigable: `docs/index.md` is the
+  entry point, each concern has one owner document, and a behavior/route/
+  entity/module change updates that document in the same spec (spec-029).
 
 ## 3. Requirement → spec map
 
@@ -311,6 +325,9 @@
 | FR-52..FR-60, NFR-10          | `spec-013-interaction-polish-and-modularity.md` |
 | FR-61, FR-62, NFR-11, NFR-12  | `spec-015-hardening-and-performance.md` |
 | FR-63..FR-71, NFR-13..NFR-15  | `spec-016-architecture-follow-up-and-observation.md` |
+| FR-68 (implemented)           | `spec-028-i18n-coverage.md` |
+| FR-71 (open)                  | `spec-016-architecture-follow-up-and-observation.md` A9 |
+| NFR-16 (documentation)        | `spec-029-documentation-and-contributor-guide.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

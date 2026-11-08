@@ -85,11 +85,23 @@ References consulted:
 
 ## Consequences
 
-- `src/ui` now has seven cohesive modules instead of five; `render.rs` and
-  `dialogs.rs` are still the largest files, but each has one responsibility
-  (drawing the page/chrome, and the remaining floating windows).
+- At the time of this decision, `src/ui` had seven cohesive modules instead of
+  five. Later refactors applied the same rule: `spec-017` split the three large
+  UI files into `commands`, `view`, `input`, `apply`, `render/*` and
+  `dialogs/*`; `spec-018` split `model`, `collab` and `server`. The current
+  module map is in `AGENTS.md` and `docs/architecture.md` §3 — do not use the
+  count in this historical paragraph as a current fact.
 - No new dependency, no new crate, no behavior change to the API contract.
 - The `tcg-matchmaker` tree is treated as a **reference for the future
   feature-based layout**, not as a template to copy into a single-context
   desktop app today.
 - Visual fidelity work (spec-013) and this decision are committed together.
+
+## Follow-up (2026-11-08)
+
+The operative rule still holds: **split by responsibility, not by line count**.
+The largest cohesive files after the later refactors are `ui/apply.rs` (one
+command-application switch), `ui/dialogs/settings_pages.rs` (the settings
+pages) and `ui/render/content.rs` (the page column). They are left alone until
+a genuinely separate responsibility appears; see `docs/architecture.md` §10
+for the current constraints.

@@ -38,6 +38,13 @@ auth middleware, a running WebSocket server and a Yrs CRDT merge, and a
 `CollabStore` persistence adapter. The domain and the API **contract** for
 these are defined now so they can be added without rewriting the core.
 
+> **Status note (2026-11-08):** the `CollabStore` persistence adapter listed
+> above as out of scope was implemented by `spec-019` (`JsonCollabStore`,
+> `collab.json`, restart restore, failing-store `500`). Page version history
+> and retention were completed by `spec-015` and `spec-022`; per-page writes by
+> `spec-020`. Auth, the WebSocket/CRDT server and PostgreSQL remain deferred.
+> The export tree now lives in `src/collab/export.rs`.
+
 ## Evidence (what the reference pictures and the export show)
 
 - `reference/picture-1`: an **"Invite members / Collaborate with your team"**

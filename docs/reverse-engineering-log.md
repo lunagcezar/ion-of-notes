@@ -10,7 +10,8 @@ does not contain captured traffic, secrets or proprietary artifacts.
 
 - **Decision:** public behavior only — **strict clean room**.
 - **Authorized sources:**
-  - the 29 reference pictures in `reference/`;
+  - the 98 reference pictures in `reference/` (the original 29 plus the later
+    build) and the 72 local `screenshots/` pictures;
   - behavior visible in the product UI;
   - public help/documentation pages;
   - exports the person already owns;
@@ -31,7 +32,7 @@ does not contain captured traffic, secrets or proprietary artifacts.
 
 - **Output:** `docs/api-observations.md` and
   `docs/visual-reference-inventory.md`.
-- **Sources used:** the 29 `reference/` pictures, the 72 `screenshots/`
+- **Sources used:** the 98 `reference/` pictures, the 72 `screenshots/`
   pictures, `docs/requirements.md`,
   `docs/adr-003-self-hosted-collaborative-api.md`, `docs/data-model.md`,
   `spec-011` and `spec-015`.
@@ -65,3 +66,22 @@ does not contain captured traffic, secrets or proprietary artifacts.
   behavior.
 - B3 (own-account HAR) is intentionally **not executed** under the strict
   scope. It can only resume after a new B1 decision.
+
+## 2026-11-08 — documentation review and B-phase status
+
+- **Source:** the repository itself (code, tests, Markdown) plus the already
+  authorized 98 `reference/` pictures and 72 `screenshots/` pictures.
+- **Observed:** no new server behavior. The review checked documents against
+  the code and recorded drift in `docs/review-findings.md`.
+- **Inferred:** none added. No capture, proxy, source map or decompilation was
+  used.
+- **Rejected:** nothing was rejected; no new source was proposed.
+- **Redaction:** not applicable (no capture).
+- **Phase status:** B1 done, B2 done, B3 **blocked**, B4/B5 **pending** on the
+  public API links, B6 recorded, B7 ongoing, B8 reviewed.
+- **Documentation changes:** added `docs/index.md`, `docs/architecture.md`,
+  `docs/contributor-guide.md`, `docs/testing.md`, `docs/glossary.md`,
+  `docs/review-findings.md`, `docs/api-contract.md`, `docs/clean-room.md`,
+  `spec/README.md` and `spec/spec-029-*`; corrected stale statuses in the
+  requirements, ADRs, specs, unknowns, visual inventory and this log.
+- **Verification:** 115 tests green; clippy and `cargo fmt --check` clean.

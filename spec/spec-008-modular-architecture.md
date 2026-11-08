@@ -106,3 +106,7 @@ changing the API contract, or adding accounts/collaboration.
   are the regression suite. The red step is produced by the new port tests.
 - The evaluation of the suggested libraries is a decision record, not an
   implementation. See `docs/adr-001-stack-evaluation.md`.
+- **Historical note (2026-11-08):** the test list above is the layout at the
+  time of this spec. The suite now has 17 integration-test crates (115 tests);
+  `docs/testing.md` owns the current map. The UI split into five modules here
+  was extended by `spec-017` (UI) and `spec-018` (domain/infrastructure).

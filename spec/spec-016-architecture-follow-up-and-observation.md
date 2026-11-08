@@ -47,6 +47,12 @@ Out of scope:
   - `serve_forever` handles one connection at a time.
   - `cargo fmt --check` is not clean (pre-existing formatting drift).
 
+> **Historical note (2026-11-08):** this evidence describes the code **before**
+> Track A. A1–A8 and A10 were implemented by specs 019–022 and 028; A9 remains
+> open. The current state is 115 tests, clippy clean, `cargo fmt --check` clean,
+> `CollabStore` persisted, per-page writes, indexed lookups and version
+> retention. See `docs/review-findings.md` for the review that confirmed it.
+
 ## Track A — acceptance criteria
 
 ### A1. Collaboration state is persisted
@@ -183,7 +189,7 @@ spec defines the operational steps.
 
 ### B2. Behavioral inventory
 
-- **Given** the product UI, the 29 `reference/` pictures, the 72
+- **Given** the product UI, the 98 `reference/` pictures, the 72
   `screenshots/` pictures and public help pages, **when** the inventory is
   written, **then** `docs/api-observations.md` lists each observed operation
   (page list, page read, create, update, delete, search, members, shares,
@@ -269,24 +275,29 @@ spec defines the operational steps.
 
 ### Phase 0 — baseline
 
-- [ ] Run `cargo fmt` once as a formatting-only commit; keep behavior unchanged.
-- [ ] Confirm `cargo build`, `cargo test --all-targets`, and
-  `cargo clippy --all-targets -- -D warnings` are green.
+- [x] Run `cargo fmt` once as a formatting-only commit; keep behavior unchanged
+  (`spec-021`).
+- [x] Confirm `cargo build`, `cargo test --all-targets`, and
+  `cargo clippy --all-targets -- -D warnings` are green (`spec-021`).
 
 ### Phase A — architecture and performance
 
-- [ ] A1 `CollabStore` port + JSON adapter + composition-root wiring + tests.
-- [ ] A2 `PendingEdits`/debounce helper + per-page `PATCH` path + tests.
-- [ ] A3 private `WorkspaceIndex` + invariant tests.
-- [ ] A4 version retention constant + pruning + restore audit test.
+- [x] A1 `CollabStore` port + JSON adapter + composition-root wiring + tests
+  (`spec-019`).
+- [x] A2 `PendingEdits`/debounce helper + per-page `PATCH` path + tests
+  (`spec-020`).
+- [x] A3 private `WorkspaceIndex` + invariant tests (`spec-022`).
+- [x] A4 version retention constant + pruning + restore audit test
+  (`spec-022`).
 - [x] A5 split `ui/app.rs` into `ui/commands.rs`, `ui/view.rs`, `ui/input.rs`
   (completed in `spec-017`, which also split `ui/dialogs.rs` and
   `ui/render.rs`).
-- [ ] A6 expand locale keys and add `tests/i18n.rs`.
-- [ ] A7 `ClientError::Encode` and remove `unwrap_or_default` from `client.rs`.
-- [ ] A8 concurrent `--serve` listener + concurrency test.
-- [ ] A9 settings row filtering inside sections.
-- [ ] A10 keep `cargo fmt --check` green.
+- [x] A6 expand locale keys and add `tests/i18n.rs` (`spec-028`).
+- [x] A7 `ClientError::Encode` and remove `unwrap_or_default` from `client.rs`
+  (`spec-021`).
+- [x] A8 concurrent `--serve` listener + concurrency test (`spec-021`).
+- [ ] A9 settings row filtering inside sections. **Still open.**
+- [x] A10 keep `cargo fmt --check` green (`spec-021`).
 
 ### Phase B — clean-room observation
 
@@ -297,11 +308,15 @@ spec defines the operational steps.
 - [ ] B3 capture own-account HAR, redact, store under `fixtures/har/`.
   **Blocked by the B1 decision:** intentionally not executed under the strict
   scope; it can only resume after a new scope decision.
-- [ ] B4 derive/update the contract and ADR if needed.
-- [ ] B5 implement the mock server and `tests/contract.rs`.
-- [ ] B6 record the tooling choice and TLS handling.
-- [ ] B7 maintain `docs/reverse-engineering-log.md`.
-- [ ] B8 review stop conditions before every capture.
+- [ ] B4 derive/update the contract and ADR if needed. **Pending:** review the
+  public API links first; see `docs/clean-room.md` §8.
+- [ ] B5 implement the mock server and `tests/contract.rs`. **Pending:** follows
+  B4.
+- [x] B6 record the tooling choice and TLS handling (ADR-005).
+- [x] B7 maintain `docs/reverse-engineering-log.md` (ongoing; the 2026-11-08
+  entry records the documentation review and phase status).
+- [x] B8 review stop conditions before every capture (no capture has run; the
+  stop conditions are recorded in `docs/clean-room.md` §7).
 
 ## Risks and open questions
 

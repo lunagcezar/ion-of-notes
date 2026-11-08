@@ -101,3 +101,7 @@ contract or the seeded demo data.
 - `NOT_NOTION_SHOW` gained harmless preview values (`newtab`, `ai`,
   `shortcuts`) for capturing the new states; normal runs and the rebuild check
   never set it.
+- **Historical paths (2026-11-08):** the plan names `ui/app.rs`,
+  `ui/render.rs` and `ui/dialogs.rs`. `spec-017` later split them into the
+  current `ui/commands`, `view`, `input`, `apply`, `render/*` and `dialogs/*`
+  modules; the interaction behavior is unchanged.

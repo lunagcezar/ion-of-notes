@@ -109,3 +109,8 @@ Both were observed failing (`unresolved import`) before
 7. Add `+`/Alt-`+`, six-dot drag reorder, categorized block menu.
 8. Build, test, `--screenshot`, compare with the 29 reference pictures.
 9. Update ADR-004, `AGENTS.md`, `CHANGELOG.md`, requirements; commit.
+
+> **Historical paths (2026-11-08):** `spec-017` later split the remaining
+> `ui/app.rs`, `ui/render.rs` and `ui/dialogs.rs` by responsibility. The
+> `ui/switcher.rs` and `ui/page_icon.rs` modules created here still exist and
+> are unchanged in purpose.

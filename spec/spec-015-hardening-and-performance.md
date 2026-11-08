@@ -67,3 +67,9 @@ Scope:
 - [x] `Client::page_versions`; version-history window + restore command
 - [x] Atomic JSON save + surface persistence errors as `500`
 - [x] Docs, changelog, build/test/screenshot, commit
+
+> **Historical paths (2026-11-08):** the evidence above names
+> `src/ui/dialogs.rs` and `src/ui/app.rs` as they existed before `spec-017`.
+> The current modules are `ui/dialogs/*`, `ui/apply.rs` and `ui/app.rs` (state
+> shell); `ui/settings_search.rs` and `ui/search_cache.rs` still own the pure
+> helpers described here.

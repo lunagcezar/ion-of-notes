@@ -82,3 +82,7 @@ reference pictures remain the visual source of truth.
 - The review is adopted as *guidelines*, not a literal file tree: no empty
   `domain/application/infrastructure` folders, no premature abstractions, and
   no microservices for a single-user local desktop app.
+- **Direction update (2026-11-08):** the product direction later became a
+  self-hosted client/server with accounts (ADR-003). The architectural
+  guidelines in this spec still hold; only the "single-user local" phrase is
+  historical. The composition root remains the one place that wires adapters.

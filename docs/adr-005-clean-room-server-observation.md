@@ -1,10 +1,11 @@
 # ADR-005 — Clean-room server observation
 
-- **Status:** Accepted
+- **Status:** Accepted; B1/B2 complete, B3 blocked, B4/B5 pending
 - **Date:** 2026-11-07
+- **Last review:** 2026-11-08 (spec-029)
 - **Supersedes:** none
 - **Related:** `AGENTS.md` (clean-room boundary), `docs/adr-003-self-hosted-collaborative-api.md`,
-  `spec/spec-016-architecture-follow-up-and-observation.md`
+  `docs/clean-room.md`, `spec/spec-016-architecture-follow-up-and-observation.md`
 
 ## Context
 
@@ -67,6 +68,23 @@ behavior to make the client and a self-hosted server compatible.
    If a capture would require bypassing a protection, violating terms, or
    exposing proprietary source/artifacts, stop. Fall back to public behavior,
    documented APIs and a deliberately compatible mock contract.
+
+## Phase status (2026-11-08)
+
+| Phase | Status |
+| ----- | ------ |
+| **B1** permission/scope gate | **Done:** public behavior only, strict clean room |
+| **B2** behavioral inventory | **Done:** `docs/api-observations.md` + `docs/visual-reference-inventory.md` |
+| **B3** own-account HAR | **Blocked** by the B1 decision; needs a new explicit scope decision |
+| **B4** contract derivation | **Pending:** review the Notion public API links first |
+| **B5** mock server + contract tests | **Pending:** follows B4 |
+| **B6** tooling policy | **Recorded** in this ADR |
+| **B7** clean-room log | **Ongoing:** `docs/reverse-engineering-log.md` |
+| **B8** stop conditions | **Reviewed** before every source |
+
+The operating manual is `docs/clean-room.md`. No capture, proxy, source map or
+decompilation has been used; B3 is intentionally not executed under the
+current scope.
 
 ## Consequences
 

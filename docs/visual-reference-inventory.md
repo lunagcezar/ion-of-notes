@@ -1,13 +1,20 @@
-# Visual reference inventory — `screenshots/`
+# Visual reference inventory — `reference/` and `screenshots/`
 
 ## Purpose
 
-`app/screenshots/` contains 72 additional reference screenshots of the
-product UI. They are **visual and behavioral evidence**, not source material.
-They show a later build than the 29 pictures in `reference/` and include
-surfaces that the earlier set does not.
+There are **two visual evidence sets**, and both matter:
 
-Clean-room rule for this folder:
+| Folder | Count | What it is |
+| ------ | ----: | ---------- |
+| workspace `reference/` | **98** | The primary visual source. `picture-1` … `picture-29` are the original dark-build set; `picture-30` … `picture-98` are the later build. |
+| `app/screenshots/` | **72** | Local, git-ignored pictures of the later build. They overlap the later `reference/` set and add a few states. |
+
+They are **visual and behavioral evidence**, not source material. The later
+set includes surfaces that the original 29 do not. The count grew over time:
+older specs and changelog entries say "29" because that was the set at the
+time; current documentation refers to the full 98 + 72.
+
+Clean-room rule for these folders:
 
 - observe layout, affordances, states and workflows;
 - do **not** copy the Portuguese document text, brand names, logos, avatars,
@@ -15,7 +22,26 @@ Clean-room rule for this folder:
 - do not treat the screenshots as proof of the server contract. They are
   **UI-observed** evidence only.
 
-## What the set covers
+## The `reference/` set (98 pictures)
+
+| Range | Main subject |
+| ----- | ------------ |
+| `picture-1` | Default dark page: sidebar, breadcrumb bar, centered page column, callout and section headings. |
+| `picture-2` | Page with sidebar tree and section content. |
+| `picture-3` | Inbox panel with export-ready notifications. |
+| `picture-4` | Quick search overlay with grouped results and footer hints. |
+| `picture-5`–`picture-11` | Application menu (File / Edit / View / History / Window / Help) and submenus. |
+| `picture-12` | Share popover: invite field, owner, invited people, general access, Copy link. |
+| `picture-13` | Page actions menu: Copy link, Copy page contents, Duplicate, Move to, Version history, Updates & analytics, Appearance & layout, Use with AI, Suggest edits, Notify me, Available offline, Lock page, Archive, Move to Trash, More, Last edited, word count. |
+| `picture-14` | Library table (Recents, Favorites, Shared, Private, AI Meeting Notes, More) with owner/source/last-edited columns. |
+| `picture-15`–`picture-29` | Settings: Preferences (appearance, input, language & time, desktop app), General, People, Sidebar, Import and related panels. |
+| `picture-30`–`picture-98` | The later build: new-tab switcher, Add members, richer page actions, Library tabs, Settings General/Sidebar/People/Language/Offline, onboarding, template library, AI/agents, icon and slash pickers. |
+
+The original 29 are the visual source of truth for the base window. The later
+69 extend the evidence for the surfaces implemented in specs 023–028. Neither
+set is proof of the server contract; see the clean-room rules below.
+
+## What the `screenshots/` set covers (72 pictures)
 
 | Range | Main subject |
 | ----- | ------------ |
@@ -138,21 +164,37 @@ server contract and should not be inferred into it.
 **Server implication:** onboarding state may be local or server-side; unknown.
 It is not part of the current decided contract.
 
-## Gaps between these screenshots and the current implementation
+## Implemented since the first inventory
+
+These surfaces were gaps when this inventory was first written and are now
+implemented:
+
+| Surface | Spec |
+| ------- | ---- |
+| Multi-email Share dialog, roles, general access, copy link | `spec-023` |
+| Library tabs (Recents / Favorites / Shared / Private), More menu, real owner/source/last-edited columns | `spec-024` |
+| Settings General / Sidebar / People / Offline, persisted workspace settings, exports | `spec-025` |
+| Table of contents, page discussions with add/delete comments, inline-comments preference, archive/restore, copy page contents | `spec-026` |
+| Onboarding "What is this space for?" and the starter template library | `spec-027` |
+| Core UI copy in English, Portuguese (Brazil) and Esperanto | `spec-028` |
+
+## Remaining gaps
 
 These are observations for future specs, not commitments:
 
 - Settings rail differs: the screenshots show Mail & Calendar, Notion MCP,
   Workers, Verified pages, Public pages and Emoji; our app deliberately omits
   Mail & Calendar and uses a smaller AI/assistant surface.
-- Library tabs and columns are richer in the screenshots (AI Meeting Notes,
-  Agents, Created by, Source, Last edited time, card views).
-- Page actions include Table of contents, Page discussions, Inline comments and
-  AI submenus; our page actions cover the core commands and version history.
-- Sharing has a multi-email invitation dialog with roles and a message; our
-  Share surface is simpler.
-- Onboarding, template library, comments/discussions, archive and offline
-  management are not fully implemented.
+- Library AI Meeting Notes and Agents views are placeholders; the screenshots
+  show card views and richer columns.
+- Page actions still have presentation-only entries (Move to, Updates &
+  analytics, Suggest edits, Notify me, More). Table of contents, discussions,
+  inline-comments preference and archive are implemented.
+- Inline comments persist a preference but not block anchors.
+- The invite message is captured in the UI but not sent (`MemberDraft` has no
+  message field).
+- The selected language is not persisted across restarts.
+- Workspace deletion is disabled in this build.
 - The screenshots show a newer product build; they should not silently expand
   the original 29-picture scope. Each addition needs its own spec.
 

@@ -6,6 +6,30 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Docs — spec-029-documentation-and-contributor-guide
+
+- Added the documentation hub (`docs/index.md`) with reading order, a document
+  catalog and source-of-truth rules.
+- Added `docs/architecture.md` (system context, layers, module map, request and
+  persistence flows, design principles) and `docs/contributor-guide.md`
+  (SDD/TDD workflow, where code belongs, pitfalls, commit checklist), both with
+  Mermaid diagrams.
+- Added `docs/testing.md` (17 test crates, 115 tests, fakes, determinism,
+  visual checks), `docs/glossary.md`, `docs/review-findings.md`,
+  `docs/api-contract.md` (implemented loopback API vs decided `/api/v1`), and
+  `docs/clean-room.md` (allowed sources, evidence levels, B1–B8, stop
+  conditions).
+- Added `spec/README.md` (spec index, lifecycle, open work) and this spec.
+- Fixed documentation drift: NFR-10..15 moved to §2; FR-02/57/68/71 statuses
+  corrected; ADR-001..005 updated with current implementation status; spec-002,
+  008, 011, 014 and 016 annotated; unknowns, API observations and the reverse-
+  engineering log updated.
+- Corrected the visual evidence count: `reference/` now has **98** pictures
+  (original 29 + later build) and `screenshots/` has **72** local pictures.
+  `docs/visual-reference-inventory.md` now covers both sets.
+- No production code or behavior changed. Verification: 115 tests green,
+  clippy and `cargo fmt --check` clean.
+
 ### Added — spec-027-onboarding-and-templates
 
 - Added `WorkspaceSettings.onboarding_completed` and `workspace_purpose`.

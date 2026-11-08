@@ -7,11 +7,12 @@ pages (spec-019). No egui types appear here.
 
 ## Entity: Workspace
 
-| Field     | Type         | Description                                  |
-| --------- | ------------ | -------------------------------------------- |
-| `name`    | `String`     | Display name, default `not-notion`           |
-| `pages`   | `Vec<Page>`  | All pages, order is the sidebar order        |
-| `version` | `u64`        | Increments on every successful write         |
+| Field      | Type                | Description                                  |
+| ---------- | ------------------- | -------------------------------------------- |
+| `name`     | `String`            | Display name, default `not-notion`           |
+| `pages`    | `Vec<Page>`         | All pages, order is the sidebar order        |
+| `version`  | `u64`               | Increments on every successful write         |
+| `settings` | `WorkspaceSettings` | Persisted workspace preferences (spec-025)   |
 
 `Workspace` also holds a private `WorkspaceIndex` (id positions and parent →
 children) that is derived state: it is skipped by serde, rebuilt after
@@ -101,15 +102,37 @@ are supplied for older files (spec-025).
 
 ## Relationships
 
+```mermaid
+erDiagram
+    WORKSPACE ||--o{ PAGE : contains
+    WORKSPACE ||--|| WORKSPACE_SETTINGS : has
+    PAGE ||--o{ PAGE : parent_of
+    PAGE ||--o{ BLOCK : contains
+    PAGE ||--o{ TABLE_ROW : contains
+    PAGE ||--o{ COMMENT : contains
+    WORKSPACE ||--o{ MEMBER : directory
+    MEMBER ||--o{ SHARE : receives
+    PAGE ||--o{ SHARE : grants
+    PAGE ||--o{ PAGE_VERSION : snapshots
+    WORKSPACE ||--o{ CHANGE : sync_log
+```
+
 ```
 Workspace 1 --- * Page
 Page       0..1 --- * Page        (self-referencing parent tree)
 Page       1 --- * Block
 Page       1 --- * TableRow
+Page       1 --- * Comment
+Workspace 1 --- * Member
+Member     1 --- * Share
+Page       1 --- * Share
+Page       1 --- * PageVersion
+Workspace 1 --- * Change
 ```
 
 Deleting a page removes the whole subtree (all descendants), so no orphan
-pages can remain. Ids are never reused.
+pages can remain. Ids are never reused. Archived pages remain in the document
+but are hidden from normal views (spec-026).
 
 ## Invariants
 
@@ -151,6 +174,42 @@ version snapshots are read by
 `Client::page_versions` and shown in the page-actions version-history window
 (spec-015); restoring one writes it back through `Client::update_page`.
 
+## Access resolution
+
+`CollabState::access_for(page_id, subject)` resolves the most specific grant
+first:
+
+```mermaid
+flowchart TD
+    A[access_for page, subject] --> B{Specific share<br/>page + subject?}
+    B -->|yes| R1[Return its Access]
+    B -->|no| C{Page-general share<br/>page + everyone?}
+    C -->|yes| R2[Return its Access]
+    C -->|no| D{Workspace-general share<br/>* ?}
+    D -->|yes| R3[Return its Access]
+    D -->|no| R4[Access::None]
+    R1 --> W{Full or Edit?}
+    R2 --> W
+    R3 --> W
+    W -->|yes| CAN[can_write = true]
+    W -->|no| CANT[can_write = false]
+```
+
+## Version history lifecycle
+
+```mermaid
+flowchart LR
+    EDIT[Page mutation] --> REC[record_version]
+    REC --> SNAP[Append PageVersion snapshot]
+    SNAP --> PRUNE{More than 50<br/>for this page?}
+    PRUNE -->|yes| DROP[Remove oldest for this page]
+    PRUNE -->|no| KEEP[Keep]
+    DROP --> LIST[versions_for newest first]
+    KEEP --> LIST
+    LIST --> RESTORE[Restore through PATCH]
+    RESTORE --> EDIT
+```
+
 ## Export tree (takes the described workspace export into account)
 
 `export_tree(workspace, members) -> Vec<ExportFile>` reproduces the structure
@@ -168,3 +227,26 @@ the person supplied:
 
 The export is pure (no filesystem I/O); writing the ZIP/files is a future
 infrastructure adapter.
+
+```mermaid
+flowchart TD
+    ROOT[Workspace root folder page] --> P1[Page A.md]
+    ROOT --> P2[Page B.md]
+    P1 --> C1[Child.md]
+    P1 --> DIR[Page A directory]
+    DIR --> C1
+    ROOT --> PEOPLE[People folder]
+    PEOPLE --> PM[People.md]
+    PEOPLE --> PC[People_all.csv]
+    PEOPLE --> M1[Owner.md]
+    P2 --> CSV[Page B_all.csv]
+```
+
+## Templates and onboarding
+
+The starter template catalog (`src/templates.rs`) is pure data: each
+`Template` has an id, a title, block blueprints and optional table rows.
+`Template::to_page` builds a real `Page` with stable ids. The workspace stores
+only the result (a normal page) plus `onboarding_completed` and
+`workspace_purpose` in `WorkspaceSettings`; there is no separate template
+entity in the document.

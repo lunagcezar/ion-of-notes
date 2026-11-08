@@ -1,7 +1,9 @@
 # ADR-003 — Decided API for the self-hosted collaborative server
 
-**Status:** Accepted (API decision; implementation is staged across specs)
+**Status:** Accepted (API decision; loopback slice implemented, production
+adapters staged across specs)
 **Date:** 2026-11-05
+**Last implementation review:** 2026-11-08 (spec-029)
 **Supersedes / refines:** the "defer" verdicts in `docs/adr-001-stack-evaluation.md`
 (accounts, database, WebSocket, CRDT, auth) — those are now **chosen as the
 product direction**, still introduced behind the existing trait seams.
@@ -18,7 +20,8 @@ local-only reconstruction. It must become a **client/server system** with a
 - **real-time editing** like the reference product.
 
 The person explicitly asked: *"we need to decide the API we need to use"*. The
-29 reference pictures show the surfaces this API must feed: a Share popover
+reference pictures (29 at the time; 98 today) show the surfaces this API must
+feed: a Share popover
 (invite by email, "Full access", "People invited", "General access"), a People
 settings page ("Members", "Guests", "Workspace owner"), an Export settings
 page ("Workspace content", "Members ... as CSV"), and an "Invite members" card
@@ -133,31 +136,52 @@ dependency in the domain). The tree mirrors the example the person supplied:
 - a `People` folder holds the membership/access files and a `_all.csv`;
 - inline tables emit a companion `_all.csv`.
 
-See `CollabState::export_tree`, `page_markdown`, `people_markdown`,
-`people_csv` in `src/collab.rs`.
+See `export_tree`, `page_markdown`, `people_markdown` and `people_csv` in
+`src/collab/export.rs` (re-exported by `src/collab.rs`).
 
 ### 7. Server-side stack (deferred, behind the seams)
 
 | Concern | v1 (today) | Self-hosted production (later spec) |
 | ------- | ---------- | ----------------------------------- |
 | HTTP | `std::net::TcpListener` loopback | Axum implementing `WorkspaceApi` |
-| Store | `JsonStore` (`WorkspaceStore`) | `SqlxStore` / PostgreSQL (`WorkspaceStore`) + `CollabStore` for accounts/shares/log |
-| Real-time | not started (contract decided) | WebSocket + Yrs CRDT |
-| Auth | seeded demo identity | own sessions + password hashes, Bearer tokens |
+| Store | `JsonStore` (`WorkspaceStore`) + `JsonCollabStore` (`CollabStore`) | `SqlxStore` / PostgreSQL for both ports |
+| Real-time | contract exposed as data; no socket server | WebSocket + Yrs CRDT |
+| Auth | seeded demo identity; loopback only | own sessions + password hashes, Bearer tokens |
 | Deploy | `--serve 127.0.0.1:8787` | operator-run process behind TLS reverse proxy |
 
-No new dependency is added in this session; each production adapter replaces
-or adds an implementation of an existing port (Liskov Substitution,
+No production dependency is added by this ADR; each production adapter
+replaces or adds an implementation of an existing port (Liskov Substitution,
 Open/Closed).
+
+## Implementation status (2026-11-08)
+
+| Capability | Status |
+| ---------- | ------ |
+| Workspace/page CRUD, search, envelopes | Implemented (unversioned loopback routes) |
+| Members, shares, sync log | Implemented; persisted in `collab.json` (`spec-019`) |
+| Page versions and restore | Implemented (`GET /api/pages/{id}/versions`, 50/page, `spec-022`) |
+| Export tree | Implemented in `src/collab/export.rs` (pure, in memory) |
+| Realtime contract | Implemented as data at `GET /api/realtime` |
+| Per-page writes + debounce | Implemented (`spec-020`) |
+| `/api/v1` prefix | Decided; not served |
+| Sessions/password hashing/Bearer auth | Decided; not implemented |
+| WebSocket/CRDT server | Decided; not implemented |
+| PostgreSQL/SQLx | Decided; not implemented |
+| Pagination/sorting | Not implemented; full snapshots |
+
+The exact implemented routes, DTOs and status codes are documented in
+`docs/api-contract.md`.
 
 ## Consequences
 
 - The "free & open for all / no accounts" framing is retired: the app is
   **open source** (MIT) as a license fact, and **accounts are required** for a
   self-hosted multi-user server. The UI no longer advertises a free edition.
-- `WorkspaceServer` now owns a `CollabState`; a dedicated `CollabStore` port
-  is the next persistence step. The in-memory v1 state is honest about that
-  boundary.
+- `WorkspaceServer` owns a `CollabState`; `spec-019` added the dedicated
+  `CollabStore` port and `JsonCollabStore`, so members, shares, the sync log and
+  versions are durable in `collab.json`. The loopback server remains
+  unauthenticated and local-only; auth and the WebSocket/CRDT server are still
+  staged behind the same seams.
 - The domain (`model`, `collab`) still knows nothing about egui, sockets or
   files; adapters implement ports. `Client<A>` works unchanged with the
   in-process server and, later, a remote HTTP/WS transport.

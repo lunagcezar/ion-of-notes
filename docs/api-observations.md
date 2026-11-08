@@ -13,9 +13,10 @@ so an inference is never mistaken for a fact about the original service.
 ## Method and scope
 
 - **B1 decision (2026-11-07): public behavior only — strict clean room.**
-- **Allowed sources:** the 29 reference pictures, behavior visible in the
-  product UI, public help/documentation pages, exports the person already
-  owns, and the project's own decided contract in ADR-003.
+- **Allowed sources:** the 98 `reference/` pictures, the 72 local
+  `screenshots/` pictures, behavior visible in the product UI, public
+  help/documentation pages, exports the person already owns, and the project's
+  own decided contract in ADR-003.
 - **Not allowed:** HAR or packet capture, `mitmproxy`/Charles/Wireshark,
   browser source maps or bundled code, decompilation, or bypassing any
   authentication, certificate pinning, rate limit or terms.
@@ -33,14 +34,15 @@ so an inference is never mistaken for a fact about the original service.
 
 ## Evidence used in this first inventory
 
-- `reference/picture-1.png` … `reference/picture-29.png`: sidebar, page,
-  breadcrumb, Share, Inbox, Library, Settings, People, export/offline surfaces.
+- `reference/picture-1.png` … `reference/picture-98.png`: sidebar, page,
+  breadcrumb, Share, Inbox, quick search, Library, Settings, People,
+  export/offline and the later-build surfaces.
 - `screenshots/picture-1.png` … `screenshots/picture-72.png`: a later UI build
   with the new-tab switcher, Add members, page actions, Settings (General,
   Sidebar, People, Language & time, Offline), Library tabs, onboarding,
   template library, AI/agent surfaces and slash/icon pickers. Summarized in
   `docs/visual-reference-inventory.md`.
-- `docs/requirements.md`: FR-01..FR-71, especially the workspace, search,
+- `docs/requirements.md`: FR-01..FR-77, especially the workspace, search,
   sharing, sync and export requirements.
 - `docs/adr-003-self-hosted-collaborative-api.md`: decided REST/JSON and
   WebSocket contract.
@@ -99,6 +101,24 @@ ADR-003 is our contract, not a description of the original server:
 - A WebSocket CRDT channel for real-time editing.
 - A Notion-style export tree.
 
+## Current implementation status (2026-11-08)
+
+This is the status of **our** contract, not a claim about the original:
+
+| Area | Status |
+| ---- | ------ |
+| Workspace/page CRUD, search | Implemented in the loopback API and `Client` |
+| Members, shares, sync log | Implemented; persisted in `collab.json` (`spec-019`) |
+| Page version history | Implemented (`GET /api/pages/{id}/versions`, 50/page) |
+| Export tree | Implemented in memory (`src/collab/export.rs`) |
+| Realtime contract | Implemented as data (`GET /api/realtime`) |
+| Per-page writes and debounce | Implemented (`spec-020`) |
+| Auth/sessions | Decided in ADR-003, **not implemented** |
+| WebSocket/CRDT server | Decided, **not implemented** |
+| `/api/v1` prefix | Decided, **not served** |
+| Pagination/sorting | Not implemented; lists are full snapshots |
+| Public API documentation review | **B4/B5 pending**; B3 blocked |
+
 ## What remains unknown
 
 The following cannot be answered from the UI alone and are not answered by
@@ -149,3 +169,4 @@ These are public documentation pages, not captures:
 | Date | Change |
 | ---- | ------ |
 | 2026-11-07 | First inventory under the strict public-behavior-only scope (B1/B2). No captures used. |
+| 2026-11-08 | Documentation review (spec-029): requirement range updated to FR-01..FR-77, current implementation status added, B3/B4/B5 status clarified. No new source was observed. |

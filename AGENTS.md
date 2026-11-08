@@ -43,8 +43,9 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
-Dependencies are kept deliberately small. No web view, no browser engine, no
-network access at runtime except the optional local listener.
+Dependencies are kept deliberately small. No web view and no browser engine.
+The only runtime network access is the optional loopback API listener and the
+optional Ollama AI service (`OLLAMA_HOST`, default `127.0.0.1:11434`).
 
 ## Development Methodology
 
@@ -69,8 +70,12 @@ Every feature starts with a spec. The order of work is:
 Specs live in `spec/` and are numbered sequentially (`001`, `002`, ... `009`).
 A spec is the boundary of one working session: nothing outside its scope is
 built in that session. Reference example for this workflow: `tcg-matchmaker`.
-The 29 pictures in `reference/` are the visual source of truth; every spec that
-touches the window records what was observed in them.
+The visual evidence is the **98 pictures** in the workspace `reference/`
+folder (`picture-1`…`picture-29` are the original set; `30`…`98` are the later
+build) plus the **72 local `screenshots/` pictures**. `reference/` is the
+primary visual source of truth; every spec that touches the window records
+what was observed there. Historical specs may say "29" because that was the
+set at the time.
 
 ### Test-Driven Development (TDD)
 
@@ -144,6 +149,8 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
       menus.rs          app / workspace / grid / slash menus
       help.rs           keyboard shortcut sheet
       search_window.rs  shared search / new-tab windows
+      onboarding.rs     “What is this space for?” first-run modal
+      templates.rs      starter template library window
     widgets.rs     shared popover frame, menu row, toggle, section label
     edit_queue.rs  pure commit plan + debounce for per-page writes
     invite.rs      pure invite email parsing/validation/name derivation
@@ -167,6 +174,9 @@ tests/
   shortcuts.rs
   fidelity.rs
   store_port.rs
+  collab_store.rs  collaboration persistence and failing-store behavior
+  i18n.rs          locale key completeness and fallback
+  templates.rs     starter template catalog and page builder
   integration.rs   end-to-end client/server/store scenario
 ```
 
@@ -430,6 +440,7 @@ alternatives and references: `docs/adr-004-modularization-decision.md`.
 | `POST`   | `/api/pages`            | Create page from a draft             |
 | `PATCH`  | `/api/pages/{id}`       | Update one page                      |
 | `DELETE` | `/api/pages/{id}`       | Delete page and its descendants      |
+| `GET`    | `/api/pages/{id}/versions` | Version history (newest first)    |
 | `GET`    | `/api/search?q=`        | Ranked search results                |
 | `GET`    | `/api/members`          | People directory (accounts / roles)  |
 | `POST`   | `/api/members`          | Invite a member (`MemberDraft`)       |
@@ -441,11 +452,12 @@ alternatives and references: `docs/adr-004-modularization-decision.md`.
 
 Responses are `ApiResponse { status: u16, body: String }`. JSON bodies are
 enveloped as `{ "data": ..., "error": null | "message" }`. Status codes follow
-standard REST (`200`, `201`, `400`, `404`). The loopback server exposes these
-unversioned routes today; the full production contract (`/api/v1`, sessions,
-`WS /ws/workspace/{id}`) is **decided** in
+standard REST (`200`, `201`, `400`, `404`, `500` on a storage failure). The
+loopback server exposes these unversioned routes today; the full production
+contract (`/api/v1`, sessions, `WS /ws/workspace/{id}`) is **decided** in
 `docs/adr-003-self-hosted-collaborative-api.md` and scoped by
 `spec/spec-011-collaborative-server.md`. The DTOs live in `src/collab.rs`.
+The complete implemented-vs-decided reference is `docs/api-contract.md`.
 
 ## Code Conventions
 
@@ -467,7 +479,9 @@ unversioned routes today; the full production contract (`/api/v1`, sessions,
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test`                             | Run all integration test crates          |
+| `cargo test --all-targets`               | Run all integration test crates (115)    |
+| `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
+| `cargo fmt --check`                      | Formatting gate                          |
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
 | `cargo run -- --serve 127.0.0.1:8787`   | Run the loopback API server              |
 
@@ -483,23 +497,39 @@ Do not start long-running watchers or dev servers during a build session.
 ### Commits (automation rule)
 
 **Always commit after completing a spec.** Finishing a spec means: build green,
-`cargo test` green, a fresh `--screenshot` compared with the 29 reference
-pictures, and the docs above updated (`CHANGELOG.md`, the relevant spec,
+`cargo test` green, a fresh `--screenshot` compared with the 98 `reference/`
+pictures (and the 72 `screenshots/` pictures when relevant), and the docs above
+updated (`CHANGELOG.md`, the relevant spec,
 `AGENTS.md` when foundations change, and any ADR). Then stage the whole
 `app/` tree and create one git commit whose message names the spec. This is
 registered here so the step is automated rather than remembered.
 
 ## Docs Maintenance
 
+The documentation hub is `docs/index.md`; it owns the reading order and the
+source-of-truth rules. `spec/README.md` owns the spec index and status.
+
 - Behavior change → update `docs/requirements.md` and the relevant spec.
-- New entity → update `docs/data-model.md`.
-- Each implemented spec → add a `CHANGELOG.md` entry.
+- New entity/field → update `docs/data-model.md`.
+- New route/DTO/status → update `docs/api-contract.md`.
+- New module or dependency-direction change → update `AGENTS.md` and
+  `docs/architecture.md`.
+- New term → update `docs/glossary.md`.
+- Each implemented spec → add a `CHANGELOG.md` entry and update
+  `spec/README.md`.
 - Foundation change → update `AGENTS.md`.
 - Architecture review / improved guidelines → **always add the improved
   project guidelines in `AGENTS.md`** (this file) and record the decision as
   an ADR under `docs/adr-NNN-*.md`.
 - Stack/library decision → add an ADR under `docs/adr-NNN-*.md`.
+- Clean-room observation → update `docs/api-observations.md` and append a dated
+  entry to `docs/reverse-engineering-log.md`; never add a capture under the
+  current B1 scope.
 - Keep `docs/unknowns.md` in sync with open questions about the reconstruction.
+- Keep `docs/review-findings.md` current when a review finds drift; resolve it
+  in a spec rather than silently editing history.
+- Retired or historical specs keep a dated status note; do not rewrite them as
+  if the old decision had never happened.
 
 ## External References
 
@@ -533,5 +563,13 @@ registered here so the step is automated rather than remembered.
   `src/ollama.rs` and the Settings → AI assistant page.
 - The earlier free/paid feature references (`/product/features`, `/pricing`)
   informed the now-retired `spec-007` framing. The app no longer emphasizes a
-  free edition; visual scope is the 29 pictures in `reference/`. Mail &
-  Calendar (`reference/picture-22.png`) is deliberately not implemented.
+  free edition; visual scope is the 98 pictures in `reference/` plus the 72
+  `screenshots/` pictures. Mail & Calendar (`reference/picture-22.png`) is
+  deliberately not implemented.
+- Documentation hub, architecture, testing, glossary, review findings, API
+  contract and clean-room guide: `docs/index.md`, `docs/architecture.md`,
+  `docs/testing.md`, `docs/glossary.md`, `docs/review-findings.md`,
+  `docs/api-contract.md`, `docs/clean-room.md` (spec-029).
+- Clean-room evidence levels and phases: `docs/api-observations.md`,
+  `docs/reverse-engineering-log.md`, `docs/unknowns.md`; public API review is
+  the next B4/B5 input.

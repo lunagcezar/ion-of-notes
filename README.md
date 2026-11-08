@@ -1,102 +1,99 @@
 # not-notion
 
-A clean-room desktop workspace app: pages made of editable blocks, a page-tree
-sidebar, quick search, and an inline table database. Built in Rust with
-eframe/egui. The system has a client (window + API client) and a server
-(in-process workspace service + optional loopback HTTP listener).
+A clean-room desktop workspace application: pages made of editable blocks, a
+page-tree sidebar, quick search, an inline table database, and a self-hosted
+collaboration contract. Built in Rust with eframe/egui.
+
+The system has two sides:
+
+- **Client** — the desktop window and `Client<A: WorkspaceApi>`.
+- **Server** — `WorkspaceServer`, which owns all state and exposes the same
+  contract in-process and through an optional loopback HTTP listener.
+
+The target is a **self-hosted server with accounts, document sync, sharing and
+real-time editing**. The loopback slice is real and tested today; the
+production auth/WebSocket/PostgreSQL adapters are decided but not built
+(ADR-003). All state lives on the server; the client never mutates it directly.
 
 Everything is written in English and built spec-first (`spec/`) and test-first
-(`cargo test`). See `AGENTS.md` for the full workflow.
+(`cargo test`). Start with [`docs/index.md`](docs/index.md) for the full
+documentation map.
 
-## Architecture
+## Status (2026-11-08)
 
-The code follows ports-and-adapters with DRY and SOLID applied throughout:
+- **Specs:** 001–028 implemented; 007 retired; 016 is a plan with A9/B4/B5
+  open; 029 is this documentation pass.
+- **Tests:** 115 integration tests; clippy and `cargo fmt --check` are clean.
+- **Implemented:** workspace/page CRUD, blocks, inline table, search, theme,
+  screenshot mode, members/shares/sync log, version history (50/page), export
+  tree, per-page writes with 250 ms debounce, collaboration persistence,
+  functional Share/Library/Settings/page-action/comment/onboarding/template
+  surfaces, and en/pt-BR/eo translations for core UI copy.
+- **Decided, not built:** `/api/v1`, sessions/password hashing/Bearer auth, the
+  WebSocket + Yrs CRDT channel, and PostgreSQL/SQLx storage.
+- **Clean room:** strict public-behavior-only observation. No capture, proxy,
+  Wireshark, source maps or decompilation. See
+  [`docs/clean-room.md`](docs/clean-room.md).
 
-- `src/` holds implementation only. `ui/` splits the window into `palette`,
-  `icons`, `commands`, `view`, `input`, `app` (state shell), `apply` (command
-  application), `render/` (chrome, sidebar, content, Library, database),
-  `dialogs/` (settings, sharing, page actions, menus, help, search window),
-  `widgets`, `switcher`, `page_icon`, `search_cache` and `settings_search` —
-  each with one responsibility.
-- `model.rs` keeps the entities and tree behavior; `model/seed.rs` holds the
-  demo workspace and `model/search.rs` the ranked search. `collab.rs` keeps
-  the collaboration DTOs/state and `collab/export.rs` the export tree.
-  `server.rs` keeps the API routes; `server/http.rs` is the loopback HTTP
-  adapter and `server/url.rs` the shared URL encoding.
-- `WorkspaceApi` is the transport port; `WorkspaceStore` and `CollabStore` are
-  the persistence ports. `JsonStore`/`JsonCollabStore` and
-  `NoStore`/`NoCollabStore` are adapters; different backends can be injected
-  with `WorkspaceServer::with_stores` without editing the core.
-- `workspace.json` and `collab.json` are separate documents. A corrupt
-  collaboration file cannot destroy pages, and a failed collaboration write
-  is reported as an API `500`.
-- Single-page edits persist with `PATCH /api/pages/{id}` and a 250 ms debounce;
-  the full-workspace `PUT` is reserved for added, removed or reordered pages.
-- `--serve` reads each request on its connection thread and locks the server
-  state only for `handle`, so independent clients do not block each other's
-  I/O. Serialization failures surface as `ClientError::Encode`.
-- Page lookups, children and breadcrumbs use a private derived workspace index;
-  version history keeps the newest 50 snapshots per page.
-- The Share popover is functional: it loads members, invites comma-separated
-  emails with Guest/Member roles, cycles general access and copies the page
-  link. The optional invite message is UI-only for now.
-- Library tabs filter Recents / Favorites / Shared / Private, the More menu
-  offers placeholder views, and rows show the owner, workspace source and real
-  last-edited time.
-- Settings General / Sidebar / People / Offline are functional and persist
-  workspace settings (name, icon, landing page, domains, toggles, exports,
-  offline search and People options). Workspace deletion is disabled.
-- Page actions support Copy page contents, Table of contents, Page discussions
-  with add/delete comments, Inline comments preference, Archive/restore and
-  status feedback; archived pages are hidden from normal views and listed in
-  the Library Archive view.
-- Core navigation, Share, Library, page-action, comment and Settings copy is
-  translated into English, Portuguese (Brazil) and Esperanto through one key
-  table; long-form demo copy remains English for now.
-- An empty workspace offers “What is this space for?” onboarding, and a
-  template library provides work, personal, course, meeting and blank starter
-  pages.
-- Tests live in `tests/`, one integration-test crate per module, with shared
-  helpers in `tests/common/mod.rs`. No tests are mixed into source files.
-- `docs/adr-001-stack-evaluation.md` records the decision on a suggested
-  library list (Slint/Tauri/Axum/PostgreSQL/SQLx/WebSocket/Yrs/OAuth2).
-- `docs/adr-003-self-hosted-collaborative-api.md` decides the self-hosted
-  collaborative API (accounts, sync, sharing, real-time, export);
-  `src/collab.rs` holds the domain and its DTOs.
+## Architecture at a glance
 
-## Self-hosted client/server and open source
+```mermaid
+flowchart LR
+    User --> Window[egui desktop window]
+    Window --> Client[Client of WorkspaceApi]
+    Client --> API[WorkspaceApi]
+    API --> Server[WorkspaceServer]
+    Server --> W[(workspace.json)]
+    Server --> C[(collab.json)]
+    Server --> Export[Export tree]
+```
 
-`not-notion` is **open source** under the **MIT** license (see `LICENSE`).
-Being open source is a license fact, not a marketing feature: the window does
-not advertise a "free edition".
+- `model.rs` + `model/*` — entities, tree behavior, search, diff, index,
+  settings, seed.
+- `collab.rs` + `collab/export.rs` — accounts, roles, shares, sync log,
+  versions, realtime DTOs, export tree.
+- `server.rs` + `server/*` — routes, `WorkspaceApi`, loopback HTTP adapter,
+  URL encoding.
+- `client.rs` — the only data access the UI may use.
+- `store.rs` — `WorkspaceStore` and `CollabStore` ports with JSON/null
+  adapters.
+- `app.rs` — composition root; `main.rs` is CLI wiring only.
+- `ui.rs` + `ui/*` — commands, view state, input, apply, render, dialogs,
+  widgets, switcher, page icon, edit queue, filters, caches.
+- `templates.rs`, `ollama.rs`, `shortcuts.rs`, `screenshot.rs`, `cli.rs`,
+  `i18n.rs` — focused adapters/helpers.
 
-The product is a **client/server architecture** with a **self-hosted server**
-that provides **accounts**, **document synchronization** across devices,
-**sharing** with permissions, and **real-time collaborative editing**. The
-decided API (REST/JSON plus a WebSocket CRDT channel, with an `/api/v1`
-production shape) is recorded in
-`docs/adr-003-self-hosted-collaborative-api.md`; the loopback `--serve` adapter
-exposes the same contract today. Collaboration DTOs and the Notion-style
-export tree live in `src/collab.rs`.
+Dependency direction: `ui → client → server → model`, `server → store`, and
+`app` wires the concrete adapters. `model` and `collab` know nothing about
+egui, eframe, JSON files or sockets.
 
-- The window follows the 29 dark-theme reference pictures in `reference/`;
-  it can be toggled back to light in Settings.
-- The sidebar shows an "Invite members" card and Settings a "Workspace & sync"
-  section — matching the pictured accounts/sharing surfaces, without the
-  retired plan/feature-tier list.
+## Documentation
+
+| Read | Why |
+| ---- | --- |
+| [`docs/index.md`](docs/index.md) | Reading order and source-of-truth rules |
+| [`docs/architecture.md`](docs/architecture.md) | Layers, modules, request/persistence flows |
+| [`docs/contributor-guide.md`](docs/contributor-guide.md) | SDD/TDD workflow and where code belongs |
+| [`docs/testing.md`](docs/testing.md) | Test strategy, 17 test crates, fakes |
+| [`docs/glossary.md`](docs/glossary.md) | Shared vocabulary |
+| [`docs/api-contract.md`](docs/api-contract.md) | Implemented loopback API vs decided `/api/v1` |
+| [`docs/clean-room.md`](docs/clean-room.md) | Allowed sources, evidence levels, stop conditions |
+| [`docs/review-findings.md`](docs/review-findings.md) | Review findings and follow-ups |
+| [`spec/README.md`](spec/README.md) | Spec index and status |
+| [`AGENTS.md`](AGENTS.md) | Working rules for agents and contributors |
 
 ## Build and run
 
 ```sh
 cargo build
-cargo test
+cargo test --all-targets
 cargo run
 ```
 
 CI (`.github/workflows/ci.yml`) runs formatting, clippy, tests and a release
 build on Windows.
 
-## Other modes
+### Other modes
 
 ```sh
 # Save a picture of the window after ~120 frames and exit:
@@ -106,19 +103,40 @@ cargo run -- --screenshot shots/now.png
 cargo run -- --serve 127.0.0.1:8787
 ```
 
-The workspace is saved as JSON next to the app data on disk. On first start a
-small neutral demo workspace is created.
+The workspace is saved as JSON in the app data directory. On first start a
+small neutral demo workspace is created. `workspace.json` and `collab.json`
+are separate documents so a corrupt collaboration file cannot destroy pages.
 
-## Previewing the pictured states
+### Previewing the pictured states
 
-The window follows the 29 dark-theme reference pictures: a top tab strip, a
-sidebar, a breadcrumb bar, a centered page column, and the Library, Share,
-Inbox and Settings opened states. To capture one of those states with
-`--screenshot`, set `NOT_NOTION_SHOW` to `library`, `share`, `inbox`,
-`settings`, `search` or `tasks`:
+The window follows the dark-theme reference pictures in `reference/` (98
+pictures: the original 29 plus the later build) and the 72 local
+`screenshots/` pictures: a top tab strip, a sidebar, a breadcrumb bar, a
+centered page column, and the Library, Share, Inbox and Settings opened states.
+Set `NOT_NOTION_SHOW` to capture one state:
 
 ```sh
-NOT_NOTION_SHOW=settings cargo run -- --screenshot shots/settings.png
+NOT_NOTION_SHOW=settings-general cargo run -- --screenshot shots/settings.png
 ```
 
-Normal runs never set this variable, so the default window is unchanged.
+Accepted values: `library`, `share`, `inbox`, `settings`,
+`settings-general`, `settings-sidebar`, `settings-people`,
+`settings-offline`, `search`, `tasks`, `newtab`, `ai`, `shortcuts`,
+`iconpicker`, `pageactions`, `discussions`, `onboarding`, `templates`.
+Normal runs never set this variable.
+
+## Open source
+
+`not-notion` is open source under the **MIT** license (see `LICENSE`). That is
+a license fact, not a marketing feature: the window does not advertise a free
+edition and shows no plan/feature-tier list.
+
+## Clean room
+
+The project reconstructs public behavior only. The 98 `reference/` pictures
+(the original 29 plus the later build) are the primary visual source of truth;
+the 72 `screenshots/` pictures are local later-build evidence. No original
+program, file, asset, traffic capture, source map or decompiled code is read,
+run or copied. See
+[`docs/clean-room.md`](docs/clean-room.md) and
+[`docs/reverse-engineering-log.md`](docs/reverse-engineering-log.md).

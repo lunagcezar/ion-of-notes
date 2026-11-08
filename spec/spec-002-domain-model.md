@@ -55,7 +55,12 @@ No I/O and no UI in this module.
 
 ## 4. Plan & Tasks
 
-1. Write the ten tests above in `src/model.rs` (`#[cfg(test)]`) — **red**.
+1. Write the ten tests above — **red**.
 2. Add `BlockKind`, `Block`, `TableRow`, `Page`, `Workspace`, helpers.
 3. Run `cargo test` — **green**; refactor only after green.
 4. Update `CHANGELOG.md`.
+
+> **Historical note (2026-11-08):** step 1 originally said the tests lived in
+> `src/model.rs` as a `#[cfg(test)]` module. `spec-008` moved every test to
+> `tests/`; the current home of these scenarios is `tests/model.rs`. The source
+> must never contain test modules again (`AGENTS.md`, NFR-08).
