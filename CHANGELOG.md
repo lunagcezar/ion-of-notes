@@ -6,6 +6,19 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — spec-028-i18n-coverage
+
+- Added `i18n::t(key)` for dynamic translation keys and expanded the `en`,
+  `pt-BR` and `eo` key tables with matching key sets.
+- Translated the sidebar, Share dialog, Library, page actions, comments and
+  Settings labels/status messages; Library tab state stays keyed by stable
+  English names while the display label is translated.
+- Count-bearing status messages use `%{count}` placeholders.
+- Added `tests/i18n.rs`: key completeness across locales, locale switching and
+  unknown-locale fallback to English.
+- Docs: added `spec/spec-028-i18n-coverage.md`; updated requirements and
+  `AGENTS.md`.
+
 ### Added — spec-026-page-actions-and-comments
 
 - Page actions now include Copy page contents (markdown to clipboard), a

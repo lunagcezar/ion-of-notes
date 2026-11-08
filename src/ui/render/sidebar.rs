@@ -1,6 +1,7 @@
 //! Sidebar: search box, Library/Settings/Inbox rows, favorites, page tree and
 //! the fixed bottom account / invite / customize group.
 
+use crate::i18n;
 use crate::model::Workspace;
 use egui::{Align2, Color32, CornerRadius, FontId, Rect, Sense, Stroke, Vec2};
 
@@ -97,7 +98,7 @@ pub(crate) fn render_sidebar(
     ui.painter().text(
         rect.min + Vec2::new(34.0, 17.0),
         Align2::LEFT_CENTER,
-        "Search or ask",
+        i18n::t("search_or_ask"),
         FontId::proportional(13.0),
         palette.muted,
     );
@@ -126,7 +127,7 @@ pub(crate) fn render_sidebar(
             if nav_row(
                 ui,
                 width,
-                "Library",
+                &i18n::t("library"),
                 view.library_open,
                 palette,
                 draw_library,
@@ -135,18 +136,27 @@ pub(crate) fn render_sidebar(
             {
                 commands.push(Command::OpenLibrary);
             }
-            if nav_row(ui, width, "Settings", false, palette, draw_settings).clicked() {
+            if nav_row(
+                ui,
+                width,
+                &i18n::t("settings"),
+                false,
+                palette,
+                draw_settings,
+            )
+            .clicked()
+            {
                 commands.push(Command::OpenSettings);
             }
-            if nav_row(ui, width, "Inbox", false, palette, draw_inbox).clicked() {
+            if nav_row(ui, width, &i18n::t("inbox"), false, palette, draw_inbox).clicked() {
                 commands.push(Command::OpenInbox);
             }
 
             ui.add_space(18.0);
-            section_label(ui, "Favorites", palette);
+            section_label(ui, &i18n::t("favorites"), palette);
             let favorites = ws.favorites();
             if favorites.is_empty() {
-                section_label(ui, "No favorites yet", palette);
+                section_label(ui, &i18n::t("no_favorites"), palette);
             } else {
                 for page in favorites {
                     let selected = view.current_page == page.id && !view.library_open;
@@ -172,9 +182,9 @@ pub(crate) fn render_sidebar(
             }
 
             ui.add_space(18.0);
-            section_label(ui, "Private", palette);
+            section_label(ui, &i18n::t("private"), palette);
             render_tree(ui, ws, None, 0, width, view, palette, commands);
-            if nav_row(ui, width, "New page", false, palette, draw_plus).clicked() {
+            if nav_row(ui, width, &i18n::t("new_page"), false, palette, draw_plus).clicked() {
                 commands.push(Command::NewPage(None));
             }
         });
@@ -199,7 +209,7 @@ pub(crate) fn render_sidebar(
         ui.painter().text(
             row.min + Vec2::new(44.0, 20.0),
             Align2::LEFT_CENTER,
-            "Local workspace",
+            i18n::t("local_workspace"),
             FontId::proportional(13.0),
             palette.text,
         );
@@ -250,14 +260,14 @@ pub(crate) fn render_sidebar(
         ui.painter().text(
             card.min + Vec2::new(36.0, 20.0),
             Align2::LEFT_CENTER,
-            "Invite members",
+            i18n::t("invite_members"),
             FontId::proportional(13.0),
             palette.accent,
         );
         ui.painter().text(
             card.min + Vec2::new(12.0, 42.0),
             Align2::LEFT_CENTER,
-            "Collaborate with your team.",
+            i18n::t("collaborate_team"),
             FontId::proportional(11.0),
             palette.muted,
         );
@@ -280,7 +290,7 @@ pub(crate) fn render_sidebar(
         ui.painter().text(
             custom.min + Vec2::new(36.0, 14.0),
             Align2::LEFT_CENTER,
-            "Customize sidebar",
+            i18n::t("customize_sidebar"),
             FontId::proportional(12.5),
             palette.muted,
         );

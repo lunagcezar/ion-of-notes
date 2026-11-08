@@ -1,5 +1,6 @@
 //! Settings pages shown in the right-hand pane of the settings window.
 
+use crate::i18n;
 use crate::model::Workspace;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
 
@@ -82,14 +83,14 @@ pub(super) fn render_preferences(
     ui.painter().text(
         lang_rect.min + Vec2::new(0.0, 14.0),
         Align2::LEFT_CENTER,
-        rust_i18n::t!("language"),
+        i18n::t("language"),
         FontId::proportional(12.5),
         palette.text,
     );
     ui.painter().text(
         lang_rect.min + Vec2::new(0.0, 32.0),
         Align2::LEFT_CENTER,
-        rust_i18n::t!("language_description"),
+        i18n::t("language_description"),
         FontId::proportional(11.0),
         palette.muted,
     );
@@ -204,13 +205,13 @@ pub(super) fn render_workspace_settings(
 ) {
     ui.add_space(4.0);
     ui.label(
-        egui::RichText::new("Workspace settings")
+        egui::RichText::new(i18n::t("workspace_settings"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
     ui.add_space(6.0);
     ui.label(
-        egui::RichText::new("Workspace name")
+        egui::RichText::new(i18n::t("workspace_name"))
             .size(12.0)
             .color(palette.text),
     );
@@ -221,7 +222,11 @@ pub(super) fn render_workspace_settings(
     );
     ui.add_space(8.0);
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new("Icon").size(12.0).color(palette.text));
+        ui.label(
+            egui::RichText::new(i18n::t("icon"))
+                .size(12.0)
+                .color(palette.text),
+        );
         ui.add(
             egui::TextEdit::singleline(&mut ws.settings.icon)
                 .desired_width(48.0)
@@ -230,7 +235,7 @@ pub(super) fn render_workspace_settings(
     });
     ui.add_space(8.0);
     ui.label(
-        egui::RichText::new("Custom landing page")
+        egui::RichText::new(i18n::t("landing_page"))
             .size(12.0)
             .color(palette.text),
     );
@@ -239,6 +244,7 @@ pub(super) fn render_workspace_settings(
         .iter()
         .map(|page| (page.id.clone(), page.title.clone()))
         .collect();
+    let first_page = i18n::t("first_page");
     let selected = ws
         .settings
         .landing_page
@@ -249,11 +255,11 @@ pub(super) fn render_workspace_settings(
                 .find(|(page_id, _)| page_id == id)
                 .map(|(_, title)| title.as_str())
         })
-        .unwrap_or("First page");
+        .unwrap_or(&first_page);
     egui::ComboBox::from_id_salt("landing_page")
         .selected_text(selected)
         .show_ui(ui, |ui| {
-            ui.selectable_value(&mut ws.settings.landing_page, None, "First page");
+            ui.selectable_value(&mut ws.settings.landing_page, None, &first_page);
             for (id, title) in &pages {
                 ui.selectable_value(&mut ws.settings.landing_page, Some(id.clone()), title);
             }
@@ -261,7 +267,7 @@ pub(super) fn render_workspace_settings(
 
     ui.add_space(18.0);
     ui.label(
-        egui::RichText::new("Allowed email domains")
+        egui::RichText::new(i18n::t("allowed_domains"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
@@ -281,7 +287,7 @@ pub(super) fn render_workspace_settings(
             ui.ctx()
                 .data_mut(|data| data.insert_temp(input_id, domain.clone()));
         }
-        if ui.button("Add domain").clicked() {
+        if ui.button(i18n::t("add_domain")).clicked() {
             let value = domain.trim();
             if !value.is_empty() && !ws.settings.allowed_domains.iter().any(|item| item == value) {
                 ws.settings.allowed_domains.push(value.to_string());
@@ -294,7 +300,7 @@ pub(super) fn render_workspace_settings(
     for (index, value) in ws.settings.allowed_domains.iter().enumerate() {
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new(value).size(12.0).color(palette.text));
-            if ui.button("Remove").clicked() {
+            if ui.button(i18n::t("remove")).clicked() {
                 remove = Some(index);
             }
         });
@@ -305,32 +311,35 @@ pub(super) fn render_workspace_settings(
 
     ui.add_space(18.0);
     ui.label(
-        egui::RichText::new("Members & access")
+        egui::RichText::new(i18n::t("members_access"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
     ui.add_space(6.0);
-    if ui.add(egui::Button::new("Invite members")).clicked() {
+    if ui
+        .add(egui::Button::new(i18n::t("invite_members")))
+        .clicked()
+    {
         commands.push(Command::OpenShare);
     }
 
     ui.add_space(18.0);
     ui.label(
-        egui::RichText::new("Data & export")
+        egui::RichText::new(i18n::t("data_export"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
     ui.add_space(6.0);
     ui.label(
-        egui::RichText::new("Export includes pages, version history metadata, and People.")
+        egui::RichText::new(i18n::t("export_includes"))
             .size(12.0)
             .color(palette.muted),
     );
     ui.horizontal(|ui| {
-        if ui.button("Export workspace content").clicked() {
+        if ui.button(i18n::t("export_workspace")).clicked() {
             commands.push(Command::ExportWorkspace);
         }
-        if ui.button("Export members").clicked() {
+        if ui.button(i18n::t("export_members")).clicked() {
             commands.push(Command::ExportMembers);
         }
     });
@@ -348,25 +357,53 @@ pub(super) fn render_sidebar_settings(
 ) {
     ui.add_space(4.0);
     ui.label(
-        egui::RichText::new("Sidebar items")
+        egui::RichText::new(i18n::t("sidebar_items"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
     ui.add_space(6.0);
 
-    if toggle_button(ui, "Library", ws.settings.sidebar_library, palette).clicked() {
+    if toggle_button(
+        ui,
+        &i18n::t("library"),
+        ws.settings.sidebar_library,
+        palette,
+    )
+    .clicked()
+    {
         ws.settings.sidebar_library = !ws.settings.sidebar_library;
     }
-    if toggle_button(ui, "Settings", ws.settings.sidebar_settings, palette).clicked() {
+    if toggle_button(
+        ui,
+        &i18n::t("settings"),
+        ws.settings.sidebar_settings,
+        palette,
+    )
+    .clicked()
+    {
         ws.settings.sidebar_settings = !ws.settings.sidebar_settings;
     }
-    if toggle_button(ui, "Inbox", ws.settings.sidebar_inbox, palette).clicked() {
+    if toggle_button(ui, &i18n::t("inbox"), ws.settings.sidebar_inbox, palette).clicked() {
         ws.settings.sidebar_inbox = !ws.settings.sidebar_inbox;
     }
-    if toggle_button(ui, "Favorites", ws.settings.sidebar_favorites, palette).clicked() {
+    if toggle_button(
+        ui,
+        &i18n::t("favorites"),
+        ws.settings.sidebar_favorites,
+        palette,
+    )
+    .clicked()
+    {
         ws.settings.sidebar_favorites = !ws.settings.sidebar_favorites;
     }
-    if toggle_button(ui, "Private pages", ws.settings.sidebar_private, palette).clicked() {
+    if toggle_button(
+        ui,
+        &i18n::t("private"),
+        ws.settings.sidebar_private,
+        palette,
+    )
+    .clicked()
+    {
         ws.settings.sidebar_private = !ws.settings.sidebar_private;
     }
     if toggle_button(
@@ -402,16 +439,16 @@ pub(super) fn render_sidebar_settings(
 
     ui.add_space(18.0);
     ui.label(
-        egui::RichText::new("Export")
+        egui::RichText::new(i18n::t("export"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
     ui.add_space(6.0);
     ui.horizontal(|ui| {
-        if ui.button("Export workspace content").clicked() {
+        if ui.button(i18n::t("export_workspace")).clicked() {
             commands.push(Command::ExportWorkspace);
         }
-        if ui.button("Export members").clicked() {
+        if ui.button(i18n::t("export_members")).clicked() {
             commands.push(Command::ExportMembers);
         }
     });
@@ -421,13 +458,13 @@ pub(super) fn render_sidebar_settings(
 
     ui.add_space(18.0);
     ui.label(
-        egui::RichText::new("Analytics")
+        egui::RichText::new(i18n::t("analytics"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
     if toggle_button(
         ui,
-        "Save and display page view analytics",
+        &i18n::t("save_analytics"),
         ws.settings.analytics,
         palette,
     )
@@ -457,7 +494,7 @@ pub(super) fn render_offline_settings(
     }
     ui.add_space(14.0);
     ui.label(
-        egui::RichText::new("Offline pages")
+        egui::RichText::new(i18n::t("offline_pages"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
@@ -470,7 +507,7 @@ pub(super) fn render_offline_settings(
     let edit = ui.add(
         egui::TextEdit::singleline(&mut query)
             .desired_width(280.0)
-            .hint_text("Search offline pages")
+            .hint_text(i18n::t("search_offline"))
             .text_color(palette.text),
     );
     if edit.changed() {
@@ -498,7 +535,7 @@ pub(super) fn render_offline_settings(
     }
     if !found {
         ui.label(
-            egui::RichText::new("No offline pages yet. Use Page actions → Available offline.")
+            egui::RichText::new(i18n::t("no_offline"))
                 .size(12.0)
                 .color(palette.muted),
         );
@@ -534,20 +571,27 @@ pub(super) fn render_people_settings(
     {
         ws.settings.recent_activity = !ws.settings.recent_activity;
     }
-    if toggle_button(ui, "Hover cards", ws.settings.hover_cards, palette).clicked() {
+    if toggle_button(
+        ui,
+        &i18n::t("hover_cards"),
+        ws.settings.hover_cards,
+        palette,
+    )
+    .clicked()
+    {
         ws.settings.hover_cards = !ws.settings.hover_cards;
     }
 
     ui.add_space(18.0);
     ui.label(
-        egui::RichText::new("Members")
+        egui::RichText::new(i18n::t("members"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
     ui.add_space(6.0);
     if view.share_members.is_empty() {
         ui.label(
-            egui::RichText::new("No members loaded.")
+            egui::RichText::new(i18n::t("no_members"))
                 .size(12.0)
                 .color(palette.muted),
         );
@@ -571,13 +615,16 @@ pub(super) fn render_people_settings(
         });
         ui.add_space(4.0);
     }
-    if ui.add(egui::Button::new("Invite members")).clicked() {
+    if ui
+        .add(egui::Button::new(i18n::t("invite_members")))
+        .clicked()
+    {
         commands.push(Command::OpenShare);
     }
 
     ui.add_space(18.0);
     ui.label(
-        egui::RichText::new("Danger zone")
+        egui::RichText::new(i18n::t("danger_zone"))
             .font(strong_font(15.0))
             .color(palette.text),
     );
@@ -592,13 +639,12 @@ pub(super) fn render_people_settings(
         );
         if ui
             .add(egui::Button::new(
-                egui::RichText::new("Delete workspace").color(Color32::from_rgb(224, 108, 108)),
+                egui::RichText::new(i18n::t("delete_workspace"))
+                    .color(Color32::from_rgb(224, 108, 108)),
             ))
             .clicked()
         {
-            commands.push(Command::SetSettingsStatus(
-                "Workspace deletion is disabled in this build.".to_string(),
-            ));
+            commands.push(Command::SetSettingsStatus(i18n::t("delete_disabled")));
         }
     });
     if let Some(status) = &view.settings_status {
@@ -606,7 +652,7 @@ pub(super) fn render_people_settings(
     }
     ui.add_space(12.0);
     ui.label(
-        egui::RichText::new("Workspace ID")
+        egui::RichText::new(i18n::t("workspace_id"))
             .size(12.0)
             .color(palette.text),
     );

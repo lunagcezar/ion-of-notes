@@ -1,6 +1,7 @@
 //! Content area: breadcrumbs, page header, editable blocks and the floating
 //! controls.
 
+use crate::i18n;
 use crate::model::{Block, BlockKind, Workspace};
 use egui::{
     Align2, Color32, CornerRadius, FontFamily, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2,
@@ -64,8 +65,12 @@ pub(crate) fn render_content(
                     commands.push(Command::OpenShare);
                 }
                 let share = ui.add(
-                    egui::Button::new(egui::RichText::new("Share").size(13.0).color(palette.text))
-                        .frame(false),
+                    egui::Button::new(
+                        egui::RichText::new(i18n::t("share"))
+                            .size(13.0)
+                            .color(palette.text),
+                    )
+                    .frame(false),
                 );
                 if share.clicked() {
                     commands.push(Command::OpenShare);
@@ -247,7 +252,7 @@ fn render_page(
             ui.vertical(|ui| {
                 ui.set_width(width);
                 ui.label(
-                    egui::RichText::new("Table of contents")
+                    egui::RichText::new(i18n::t("table_of_contents"))
                         .size(12.0)
                         .strong()
                         .color(palette.muted),
@@ -317,14 +322,14 @@ fn render_page(
             ui.vertical(|ui| {
                 ui.set_width(width);
                 ui.label(
-                    egui::RichText::new("Page discussions")
+                    egui::RichText::new(i18n::t("page_discussions"))
                         .font(strong_font(18.0))
                         .color(palette.text),
                 );
                 ui.add_space(6.0);
                 if page.comments.is_empty() {
                     ui.label(
-                        egui::RichText::new("No comments yet.")
+                        egui::RichText::new(i18n::t("no_comments"))
                             .size(12.0)
                             .color(palette.muted),
                     );
@@ -342,7 +347,7 @@ fn render_page(
                                 .color(palette.muted),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.small_button("Delete").clicked() {
+                            if ui.small_button(i18n::t("delete")).clicked() {
                                 commands.push(Command::DeletePageComment(comment.id.clone()));
                             }
                         });
@@ -355,23 +360,21 @@ fn render_page(
                     egui::TextEdit::multiline(&mut input)
                         .desired_rows(2)
                         .desired_width(width)
-                        .hint_text("Add a comment...")
+                        .hint_text(i18n::t("add_comment"))
                         .text_color(palette.text),
                 );
                 if edit.changed() {
                     commands.push(Command::SetCommentInput(input));
                 }
-                if ui.button("Comment").clicked() {
+                if ui.button(i18n::t("comment")).clicked() {
                     commands.push(Command::AddPageComment);
                 }
                 if page.inline_comments {
                     ui.add_space(6.0);
                     ui.label(
-                        egui::RichText::new(
-                            "Inline comments are enabled; block-level anchors are not implemented yet.",
-                        )
-                        .size(11.0)
-                        .color(palette.muted),
+                        egui::RichText::new(i18n::t("inline_note"))
+                            .size(11.0)
+                            .color(palette.muted),
                     );
                 }
             });

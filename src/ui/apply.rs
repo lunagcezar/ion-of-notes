@@ -6,6 +6,7 @@
 //! spec-017).
 
 use crate::collab::{MemberDraft, Role, Share, general_access, page_markdown};
+use crate::i18n;
 use crate::model::{Block, BlockKind, Comment, Page, PageDraft, TableRow, Workspace, now_label};
 use crate::ollama;
 use crate::shortcuts::Action;
@@ -431,8 +432,7 @@ impl NotionApp {
                         .filter(|email| is_valid_email(email))
                         .collect();
                     if emails.is_empty() {
-                        self.invite_error =
-                            Some("Enter at least one valid email address.".to_string());
+                        self.invite_error = Some(i18n::t("invalid_email"));
                         self.invite_status = None;
                     } else {
                         let mut invited = 0;
@@ -450,7 +450,7 @@ impl NotionApp {
                         }
                         if invited > 0 {
                             self.invite_input.clear();
-                            self.invite_status = Some(format!("Invited {invited} member(s)."));
+                            self.invite_status = Some(i18n::t_count("invited_members", invited));
                         }
                         self.invite_error = if errors.is_empty() {
                             None
@@ -470,7 +470,7 @@ impl NotionApp {
                         Ok(_) => {
                             self.share_general_access = access;
                             self.invite_error = None;
-                            self.invite_status = Some("General access updated.".to_string());
+                            self.invite_status = Some(i18n::t("general_updated"));
                         }
                         Err(error) => self.invite_error = Some(error.to_string()),
                     }
@@ -808,7 +808,7 @@ impl NotionApp {
                 Command::SetSettingsStatus(message) => self.settings_status = Some(message),
                 Command::ExportWorkspace => match self.client.export_tree() {
                     Ok(files) => {
-                        self.settings_status = Some(format!("Exported {} files.", files.len()))
+                        self.settings_status = Some(i18n::t_count("exported_files", files.len()))
                     }
                     Err(error) => self.settings_status = Some(error.to_string()),
                 },
@@ -818,7 +818,7 @@ impl NotionApp {
                             .iter()
                             .filter(|file| file.path.starts_with("People"))
                             .count();
-                        self.settings_status = Some(format!("Exported {count} People files."));
+                        self.settings_status = Some(i18n::t_count("exported_people_files", count));
                     }
                     Err(error) => self.settings_status = Some(error.to_string()),
                 },
@@ -918,7 +918,7 @@ impl NotionApp {
                 Command::CopyPageContents => {
                     if let Some(page) = self.workspace.page(&self.current_page) {
                         ctx.copy_text(page_markdown(page));
-                        self.page_status = Some("Page contents copied.".to_string());
+                        self.page_status = Some(i18n::t("copied_contents"));
                     }
                 }
                 Command::TogglePageToc => {
@@ -940,9 +940,9 @@ impl NotionApp {
                     if let Some(page) = self.current_page_mut() {
                         page.archived = !page.archived;
                         self.page_status = Some(if page.archived {
-                            "Page archived.".to_string()
+                            i18n::t("page_archived")
                         } else {
-                            "Page restored from archive.".to_string()
+                            i18n::t("page_restored")
                         });
                     }
                 }
@@ -950,7 +950,7 @@ impl NotionApp {
                 Command::AddPageComment => {
                     let text = self.comment_input.trim().to_string();
                     if text.is_empty() {
-                        self.page_status = Some("Write a comment first.".to_string());
+                        self.page_status = Some(i18n::t("write_comment_first"));
                     } else if let Some(page) = self.current_page_mut() {
                         page.comments.push(Comment::new(
                             Uuid::new_v4().to_string(),
@@ -959,7 +959,7 @@ impl NotionApp {
                             now_label(),
                         ));
                         self.comment_input.clear();
-                        self.page_status = Some("Comment added.".to_string());
+                        self.page_status = Some(i18n::t("comment_added"));
                     }
                 }
                 Command::DeletePageComment(id) => {

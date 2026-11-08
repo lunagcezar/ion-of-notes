@@ -3,6 +3,7 @@
 //! Both surfaces belong together: version history is opened from the page
 //! actions menu and restores through the same `Command` path.
 
+use crate::i18n;
 use crate::model::{Page, Workspace};
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
@@ -11,44 +12,48 @@ use super::super::palette::{Palette, strong_font};
 use super::super::view::ViewState;
 use super::super::widgets::{menu_button, toggle_button};
 
-fn action_items(view: &ViewState) -> Vec<(&'static str, &'static str, Command)> {
+fn action_items(view: &ViewState) -> Vec<(String, &'static str, Command)> {
     vec![
-        ("Copy link", "Ctrl+L", Command::CopyLink),
-        ("Copy page contents", "", Command::CopyPageContents),
-        ("Duplicate", "Ctrl+D", Command::DuplicatePage),
+        (i18n::t("copy_link"), "Ctrl+L", Command::CopyLink),
+        (i18n::t("copy_page_contents"), "", Command::CopyPageContents),
+        (i18n::t("duplicate"), "Ctrl+D", Command::DuplicatePage),
         (
-            "Move to",
+            i18n::t("move_to"),
             "Ctrl+Shift+P",
-            Command::SetPageStatus("Move to is not available in this build.".to_string()),
+            Command::SetPageStatus(i18n::t("move_unavailable")),
         ),
-        ("Version history", "", Command::OpenVersionHistory),
+        (i18n::t("version_history"), "", Command::OpenVersionHistory),
         (
-            "Updates & analytics",
+            i18n::t("updates_analytics"),
             "",
-            Command::SetPageStatus("Updates & analytics are not available yet.".to_string()),
+            Command::SetPageStatus(i18n::t("updates_unavailable")),
         ),
         (
-            "Suggest edits",
+            i18n::t("suggest_edits"),
             "",
-            Command::SetPageStatus("Suggest edits is not available yet.".to_string()),
+            Command::SetPageStatus(i18n::t("suggest_unavailable")),
         ),
-        ("Use with AI", "", Command::OpenAiChat),
+        (i18n::t("use_with_ai"), "", Command::OpenAiChat),
         (
-            "Notify me",
+            i18n::t("notify_me"),
             "Comments",
-            Command::SetPageStatus("Notifications are not available yet.".to_string()),
+            Command::SetPageStatus(i18n::t("notify_unavailable")),
         ),
-        ("Archive", "", Command::TogglePageArchive),
+        (i18n::t("archive"), "", Command::TogglePageArchive),
         (
-            "Move to Trash",
+            i18n::t("move_to_trash"),
             "",
             Command::DeletePage(view.current_page.clone()),
         ),
-        ("Show / hide sidebar", "Ctrl+\\", Command::ToggleSidebar),
         (
-            "More",
+            i18n::t("show_hide_sidebar"),
+            "Ctrl+\\",
+            Command::ToggleSidebar,
+        ),
+        (
+            i18n::t("more"),
             "",
-            Command::SetPageStatus("More actions are not available yet.".to_string()),
+            Command::SetPageStatus(i18n::t("more_unavailable")),
         ),
     ]
 }
@@ -97,7 +102,7 @@ pub(crate) fn render_page_actions(
                         if !q.is_empty() && !label.to_lowercase().contains(&q) {
                             continue;
                         }
-                        if menu_button(ui, label, hint, palette).clicked() {
+                        if menu_button(ui, &label, hint, palette).clicked() {
                             let keep_open = matches!(
                                 command,
                                 Command::SetPageStatus(_)
@@ -117,7 +122,7 @@ pub(crate) fn render_page_actions(
                     if q.is_empty() {
                         // Appearance & layout.
                         ui.label(
-                            egui::RichText::new("Appearance & layout")
+                            egui::RichText::new(i18n::t("appearance_layout"))
                                 .size(11.0)
                                 .color(palette.muted),
                         );
@@ -161,25 +166,37 @@ pub(crate) fn render_page_actions(
                         let discussions = page.map(|p| p.discussions).unwrap_or(false);
                         let inline_comments = page.map(|p| p.inline_comments).unwrap_or(false);
                         let archived = page.map(|p| p.archived).unwrap_or(false);
-                        if toggle_button(ui, "Table of contents", show_toc, palette).clicked() {
+                        if toggle_button(ui, &i18n::t("table_of_contents"), show_toc, palette)
+                            .clicked()
+                        {
                             commands.push(Command::TogglePageToc);
                         }
-                        if toggle_button(ui, "Page discussions", discussions, palette).clicked() {
+                        if toggle_button(ui, &i18n::t("page_discussions"), discussions, palette)
+                            .clicked()
+                        {
                             commands.push(Command::TogglePageDiscussions);
                         }
-                        if toggle_button(ui, "Inline comments", inline_comments, palette).clicked()
+                        if toggle_button(ui, &i18n::t("inline_comments"), inline_comments, palette)
+                            .clicked()
                         {
                             commands.push(Command::TogglePageInlineComments);
                         }
-                        if toggle_button(ui, "Archived", archived, palette).clicked() {
+                        if toggle_button(ui, &i18n::t("archived"), archived, palette).clicked() {
                             commands.push(Command::TogglePageArchive);
                         }
-                        if toggle_button(ui, "Available offline", view.available_offline, palette)
-                            .clicked()
+                        if toggle_button(
+                            ui,
+                            &i18n::t("available_offline"),
+                            view.available_offline,
+                            palette,
+                        )
+                        .clicked()
                         {
                             commands.push(Command::ToggleAvailableOffline);
                         }
-                        if toggle_button(ui, "Lock page", view.lock_page, palette).clicked() {
+                        if toggle_button(ui, &i18n::t("lock_page"), view.lock_page, palette)
+                            .clicked()
+                        {
                             commands.push(Command::ToggleLockPage);
                         }
                         ui.add_space(8.0);
@@ -192,7 +209,7 @@ pub(crate) fn render_page_actions(
                             .map(|p| p.plain_text().split_whitespace().count())
                             .unwrap_or(0);
                         ui.label(
-                            egui::RichText::new("Last edited")
+                            egui::RichText::new(i18n::t("last_edited"))
                                 .size(11.0)
                                 .color(palette.muted),
                         );
@@ -203,7 +220,7 @@ pub(crate) fn render_page_actions(
                             .unwrap_or_else(|| "just now".to_string());
                         ui.label(egui::RichText::new(updated).size(11.0).color(palette.text));
                         ui.label(
-                            egui::RichText::new(format!("{words} words"))
+                            egui::RichText::new(format!("{words} {}", i18n::t("words")))
                                 .size(10.5)
                                 .color(palette.muted),
                         );

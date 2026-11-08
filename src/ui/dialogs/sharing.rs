@@ -3,6 +3,7 @@
 //! Share popover and Inbox panel.
 
 use crate::collab::{Access, Role};
+use crate::i18n;
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::super::commands::Command;
@@ -10,6 +11,23 @@ use super::super::icons::{draw_inbox, draw_person};
 use super::super::palette::{Palette, strong_font};
 use super::super::view::ViewState;
 use super::super::widgets::{popover_frame, section_label};
+
+fn role_label(role: Role) -> String {
+    match role {
+        Role::Owner => i18n::t("workspace_owner"),
+        Role::Member => i18n::t("member"),
+        Role::Guest => i18n::t("guest"),
+    }
+}
+
+fn access_label(access: Access) -> String {
+    match access {
+        Access::Full => i18n::t("access_full"),
+        Access::Edit => i18n::t("access_edit"),
+        Access::View => i18n::t("access_view"),
+        Access::None => i18n::t("access_none"),
+    }
+}
 
 pub(crate) fn render_share(
     ctx: &egui::Context,
@@ -29,7 +47,7 @@ pub(crate) fn render_share(
             ui.horizontal(|ui| {
                 ui.add(
                     egui::Button::new(
-                        egui::RichText::new("Share")
+                        egui::RichText::new(i18n::t("share"))
                             .size(13.0)
                             .strong()
                             .color(palette.text),
@@ -38,7 +56,7 @@ pub(crate) fn render_share(
                 );
                 ui.add(
                     egui::Button::new(
-                        egui::RichText::new("Publish")
+                        egui::RichText::new(i18n::t("publish"))
                             .size(13.0)
                             .color(palette.muted),
                     )
@@ -67,7 +85,7 @@ pub(crate) fn render_share(
                 let edit = ui.add(
                     egui::TextEdit::singleline(&mut invite)
                         .desired_width(300.0)
-                        .hint_text("Email, separated by commas")
+                        .hint_text(i18n::t("email_commas"))
                         .text_color(palette.text),
                 );
                 if edit.changed() {
@@ -76,7 +94,7 @@ pub(crate) fn render_share(
                 if ui
                     .add(
                         egui::Button::new(
-                            egui::RichText::new("Send invite")
+                            egui::RichText::new(i18n::t("send_invite"))
                                 .size(12.5)
                                 .color(Color32::WHITE),
                         )
@@ -90,13 +108,17 @@ pub(crate) fn render_share(
             });
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Role").size(11.0).color(palette.muted));
+                ui.label(
+                    egui::RichText::new(i18n::t("role"))
+                        .size(11.0)
+                        .color(palette.muted),
+                );
                 for role in [Role::Guest, Role::Member] {
                     let active = view.invite_role == role;
                     if ui
                         .add(
                             egui::Button::new(
-                                egui::RichText::new(role.label())
+                                egui::RichText::new(role_label(role))
                                     .size(11.0)
                                     .color(if active { palette.text } else { palette.muted }),
                             )
@@ -119,7 +141,7 @@ pub(crate) fn render_share(
                 egui::TextEdit::multiline(&mut message)
                     .desired_rows(2)
                     .desired_width(f32::INFINITY)
-                    .hint_text("Add a note to your invite...")
+                    .hint_text(i18n::t("invite_note"))
                     .text_color(palette.text),
             );
             if message_edit.changed() {
@@ -178,7 +200,7 @@ pub(crate) fn render_share(
                 });
 
             ui.add_space(8.0);
-            section_label(ui, "General access", palette);
+            section_label(ui, &i18n::t("general_access"), palette);
             let (general, response) =
                 ui.allocate_exact_size(Vec2::new(ui.available_width(), 32.0), Sense::click());
             if response.hovered() {
@@ -188,14 +210,14 @@ pub(crate) fn render_share(
             ui.painter().text(
                 general.min + Vec2::new(4.0, 16.0),
                 Align2::LEFT_CENTER,
-                "Everyone at workspace",
+                i18n::t("everyone_workspace"),
                 FontId::proportional(13.0),
                 palette.text,
             );
             ui.painter().text(
                 general.max + Vec2::new(-4.0, -16.0),
                 Align2::RIGHT_CENTER,
-                view.share_general_access.label(),
+                access_label(view.share_general_access),
                 FontId::proportional(12.0),
                 palette.muted,
             );
@@ -213,7 +235,7 @@ pub(crate) fn render_share(
             ui.add_space(10.0);
             ui.horizontal(|ui| {
                 ui.label(
-                    egui::RichText::new("Advanced")
+                    egui::RichText::new(i18n::t("advanced"))
                         .size(13.0)
                         .color(palette.text),
                 );
@@ -221,7 +243,7 @@ pub(crate) fn render_share(
                     if ui
                         .add(
                             egui::Button::new(
-                                egui::RichText::new("Copy link")
+                                egui::RichText::new(i18n::t("copy_link"))
                                     .size(13.0)
                                     .color(palette.text),
                             )

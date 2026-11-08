@@ -239,6 +239,14 @@
   are hidden from normal views and listed in the Library Archive view
   (implemented in `spec-026`). Block-anchored inline comments, notifications,
   analytics and move-to remain follow-ups.
+
+### 1.16 Internationalization coverage (spec-028)
+
+- FR-76: Core UI labels and status messages for the sidebar, Share, Library,
+  page actions, comments and Settings use a shared key table with English,
+  Portuguese (Brazil) and Esperanto translations; key completeness and locale
+  fallback are tested (implemented in `spec-028`). Long-form demo copy and
+  remaining strings continue to be migrated incrementally.
 - NFR-10: Every completed spec is committed to git in the same session
   (`AGENTS.md` → Commits).
 - NFR-11: Search results are cached by query and workspace version; an
@@ -304,6 +312,7 @@
 | FR-73 (implemented)           | `spec-024-library-views.md` |
 | FR-74 (implemented)           | `spec-025-settings-pages.md` |
 | FR-75 (implemented)           | `spec-026-page-actions-and-comments.md` |
+| FR-76 (implemented)           | `spec-028-i18n-coverage.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

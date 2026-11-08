@@ -50,6 +50,9 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
   with add/delete comments, Inline comments preference, Archive/restore and
   status feedback; archived pages are hidden from normal views and listed in
   the Library Archive view.
+- Core navigation, Share, Library, page-action, comment and Settings copy is
+  translated into English, Portuguese (Brazil) and Esperanto through one key
+  table; long-form demo copy remains English for now.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

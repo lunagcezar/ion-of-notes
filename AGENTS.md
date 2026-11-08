@@ -115,6 +115,8 @@ src/
   shortcuts.rs     pure keyboard-shortcut table (Combo -> Action) + docs table
   screenshot.rs    ColorImage -> RGBA -> PNG
   cli.rs           argument parsing
+  i18n.rs          locale switching + dynamic key translation helper
+locales/           en.yml, pt-BR.yml, eo.yml key tables
   ui.rs            module root: declarations + public re-exports (facade)
   ui/
     palette.rs     colors, fonts, tab-title helper, theming (NFR-06)

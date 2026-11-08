@@ -123,7 +123,10 @@ pub struct NotionApp {
 
 impl NotionApp {
     pub fn new(cc: &eframe::CreationContext<'_>, screenshot: Option<PathBuf>) -> Self {
-        crate::i18n::set_locale("en");
+        let initial_locale =
+            std::env::var("NOT_NOTION_LOCALE").unwrap_or_else(|_| "en".to_string());
+        crate::i18n::set_locale(&initial_locale);
+        let language = crate::i18n::current_locale();
         // The composition root (app layer) wires the concrete JSON adapter to
         // the server/client ports; the window only consumes the ready graph.
         let (mut client, mut workspace) = app::build_desktop();
@@ -230,7 +233,7 @@ impl NotionApp {
             },
             settings_query: String::new(),
             settings_status: None,
-            language: "en".to_string(),
+            language,
             dark: true,
             theme_dirty: false,
             table_view: true,

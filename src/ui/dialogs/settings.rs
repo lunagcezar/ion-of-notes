@@ -1,5 +1,6 @@
 //! Settings window: navigation rail, search filtering and page routing.
 
+use crate::i18n;
 use crate::model::Workspace;
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
@@ -69,6 +70,20 @@ fn settings_icon(label: &str) -> fn(&egui::Painter, Rect, Color32) {
     }
 }
 
+fn settings_label(label: &str) -> String {
+    match label {
+        "Local workspace" => i18n::t("local_workspace"),
+        "Preferences" => i18n::t("preferences"),
+        "General" => i18n::t("general"),
+        "People" => i18n::t("people"),
+        "Sidebar" => i18n::t("sidebar"),
+        "Analytics" => i18n::t("analytics"),
+        "AI assistant" => i18n::t("ai_assistant"),
+        "Offline" => i18n::t("offline"),
+        _ => label.to_string(),
+    }
+}
+
 /// One settings-nav entry that selects the page shown on the right.
 fn settings_nav(
     ui: &mut egui::Ui,
@@ -78,7 +93,15 @@ fn settings_nav(
     commands: &mut Vec<Command>,
 ) {
     let selected = view.settings_page == label;
-    if nav_item(ui, label, selected, palette, settings_icon(label)).clicked() {
+    if nav_item(
+        ui,
+        &settings_label(label),
+        selected,
+        palette,
+        settings_icon(label),
+    )
+    .clicked()
+    {
         commands.push(Command::SetSettingsPage(label.to_string()));
     }
 }
@@ -141,6 +164,18 @@ fn settings_description(label: &str) -> &'static str {
         .find(|(item, _)| *item == label)
         .map(|(_, description)| *description)
         .unwrap_or("")
+}
+
+fn page_label(page: &str) -> String {
+    match page {
+        "Preferences" => i18n::t("preferences"),
+        "General" => i18n::t("general"),
+        "Sidebar" => i18n::t("sidebar"),
+        "People" => i18n::t("people"),
+        "Offline" => i18n::t("offline"),
+        "AI assistant" => i18n::t("ai_assistant"),
+        _ => page.to_string(),
+    }
 }
 
 pub(crate) fn render_settings(
@@ -247,7 +282,7 @@ pub(crate) fn render_settings(
                                 "Manage this section of your workspace"
                             };
                             ui.label(
-                                egui::RichText::new(page)
+                                egui::RichText::new(page_label(page))
                                     .font(strong_font(28.0))
                                     .color(palette.text),
                             );

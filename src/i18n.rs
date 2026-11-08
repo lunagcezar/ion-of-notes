@@ -30,3 +30,19 @@ pub fn label_for(locale: &str) -> &'static str {
 pub fn current_locale() -> String {
     rust_i18n::locale().to_string()
 }
+
+/// Translate one key in the current locale.
+///
+/// Keeping this helper in one place means the UI can pass dynamic label keys
+/// (for example a settings tab name) without repeating the macro at every call
+/// site (spec-028).
+pub fn t(key: &str) -> String {
+    let locale = rust_i18n::locale().to_string();
+    let key = format!("{locale}.{key}");
+    crate::_rust_i18n_translate(&locale, &key).to_string()
+}
+
+/// Translate a key that contains a `%{count}` placeholder.
+pub fn t_count(key: &str, count: usize) -> String {
+    t(key).replace("%{count}", &count.to_string())
+}

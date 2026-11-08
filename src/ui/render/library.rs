@@ -2,6 +2,7 @@
 
 //! Library table: tabs, page rows and the empty state.
 
+use crate::i18n;
 use crate::model::Workspace;
 use egui::{Align2, Color32, CornerRadius, FontId, Rect, Sense, Stroke, Vec2};
 
@@ -11,6 +12,21 @@ use super::super::library_filter::pages_for_view;
 use super::super::palette::{Palette, strong_font};
 use super::super::view::ViewState;
 use super::database::header_cell;
+
+fn tab_label(tab: &str) -> String {
+    match tab {
+        "Recents" => i18n::t("recents"),
+        "Favorites" => i18n::t("favorites"),
+        "Shared" => i18n::t("shared"),
+        "Private" => i18n::t("private"),
+        "AI Meeting Notes" => i18n::t("ai_meeting_notes"),
+        "Agents" => i18n::t("agents"),
+        "Templates" => i18n::t("templates"),
+        "Archive" => i18n::t("archive_view"),
+        "Trash" => i18n::t("trash"),
+        _ => tab.to_string(),
+    }
+}
 
 pub(super) fn render_library(
     ui: &mut egui::Ui,
@@ -60,11 +76,11 @@ pub(super) fn render_library(
                 for tab in ["Recents", "Favorites", "Shared", "Private"] {
                     let active = view.library_tab == tab;
                     let btn = ui.add(
-                        egui::Button::new(egui::RichText::new(tab).size(13.0).color(if active {
-                            palette.text
-                        } else {
-                            palette.muted
-                        }))
+                        egui::Button::new(
+                            egui::RichText::new(tab_label(tab))
+                                .size(13.0)
+                                .color(if active { palette.text } else { palette.muted }),
+                        )
                         .fill(if active {
                             palette.selected
                         } else {
@@ -77,7 +93,9 @@ pub(super) fn render_library(
                     }
                 }
                 ui.menu_button(
-                    egui::RichText::new("More").size(13.0).color(palette.muted),
+                    egui::RichText::new(i18n::t("more"))
+                        .size(13.0)
+                        .color(palette.muted),
                     |ui| {
                         for tab in [
                             "AI Meeting Notes",
@@ -86,7 +104,7 @@ pub(super) fn render_library(
                             "Archive",
                             "Trash",
                         ] {
-                            if ui.button(tab).clicked() {
+                            if ui.button(tab_label(tab)).clicked() {
                                 commands.push(Command::SetLibraryTab(tab.to_string()));
                                 ui.close();
                             }
@@ -100,10 +118,10 @@ pub(super) fn render_library(
             let created_w = (full - 192.0) * 0.24;
             let source_w = (full - 192.0) * 0.20;
             ui.horizontal(|ui| {
-                header_cell(ui, name_w, "Page name", palette);
-                header_cell(ui, created_w, "Created by", palette);
-                header_cell(ui, source_w, "Source", palette);
-                header_cell(ui, 120.0, "Last edited time", palette);
+                header_cell(ui, name_w, &i18n::t("page_name"), palette);
+                header_cell(ui, created_w, &i18n::t("created_by"), palette);
+                header_cell(ui, source_w, &i18n::t("source"), palette);
+                header_cell(ui, 120.0, &i18n::t("last_edited_time"), palette);
             });
             ui.separator();
 
@@ -111,7 +129,7 @@ pub(super) fn render_library(
             if pages.is_empty() {
                 ui.add_space(20.0);
                 ui.label(
-                    egui::RichText::new("No pages in this view yet.")
+                    egui::RichText::new(i18n::t("no_pages"))
                         .size(13.0)
                         .color(palette.muted),
                 );
