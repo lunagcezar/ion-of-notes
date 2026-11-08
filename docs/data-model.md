@@ -47,9 +47,23 @@ are supplied for older files (spec-025).
 | `favorite`          | `bool`              | Shown in the Favorites sidebar section           |
 | `locked`            | `bool`              | Prevents editing when true (serde default false) |
 | `available_offline` | `bool`              | Marks page for offline listing (serde default)   |
+| `show_toc`          | `bool`              | Render the heading table of contents             |
+| `discussions`       | `bool`              | Show the page-level discussion thread            |
+| `inline_comments`   | `bool`              | Persist the inline-comment preference            |
+| `archived`          | `bool`              | Hide from normal views; show in Library Archive  |
+| `comments`          | `Vec<Comment>`      | Page-level discussion comments                   |
 | `blocks`            | `Vec<Block>`        | Ordered editable content                         |
 | `rows`              | `Vec<TableRow>`     | Inline table database (empty for normal pages)   |
 | `updated_at`        | `String`            | ISO-8601-like display timestamp                  |
+
+## Entity: Comment
+
+| Field        | Type     | Description              |
+| ------------ | -------- | ------------------------ |
+| `id`         | `String` | UUID v4                  |
+| `author`     | `String` | Display author label     |
+| `text`       | `String` | Comment body             |
+| `created_at` | `String` | Display timestamp        |
 
 ## Entity: Block
 

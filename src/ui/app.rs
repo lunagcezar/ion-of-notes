@@ -9,6 +9,7 @@
 use crate::app;
 use crate::client::Client;
 use crate::collab::{Access, Member, PageVersion, Role, general_access};
+use crate::model::Comment;
 use crate::model::{SearchResult, Workspace};
 use crate::ollama::{self, OllamaConfig, OllamaStatus};
 use crate::screenshot;
@@ -105,6 +106,8 @@ pub struct NotionApp {
     pub(super) icon_picker_tab: IconTab,
     pub(super) icon_picker_query: String,
     pub(super) page_actions_open: bool,
+    pub(super) page_status: Option<String>,
+    pub(super) comment_input: String,
     pub(super) version_history_open: bool,
     pub(super) versions: Arc<Vec<PageVersion>>,
     pub(super) version_selected: usize,
@@ -123,7 +126,7 @@ impl NotionApp {
         crate::i18n::set_locale("en");
         // The composition root (app layer) wires the concrete JSON adapter to
         // the server/client ports; the window only consumes the ready graph.
-        let (mut client, workspace) = app::build_desktop();
+        let (mut client, mut workspace) = app::build_desktop();
         let current_page = workspace
             .pages
             .first()
@@ -177,6 +180,19 @@ impl NotionApp {
                     "Local workspace".to_string(),
                 )
             };
+        if demo == "discussions"
+            && let Some(page) = workspace.page_mut("p-home")
+        {
+            page.show_toc = true;
+            page.discussions = true;
+            page.inline_comments = true;
+            page.comments.push(Comment::new(
+                "demo-comment",
+                "Local user",
+                "This page looks good.",
+                "Nov 08, 2026 10:00",
+            ));
+        }
         let nav_history = vec![demo_current_page.clone()];
         let ai_config = OllamaConfig::from_env();
         let ai_status = ollama::detect(&ai_config);
@@ -263,6 +279,8 @@ impl NotionApp {
             icon_picker_tab: IconTab::Emoji,
             icon_picker_query: String::new(),
             page_actions_open: demo == "pageactions",
+            page_status: None,
+            comment_input: String::new(),
             version_history_open: false,
             versions: Arc::new(Vec::new()),
             version_selected: 0,

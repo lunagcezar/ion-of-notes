@@ -38,8 +38,8 @@ pub use collab::{
     export_tree, page_markdown, people_csv, people_markdown, realtime_contract,
 };
 pub use model::{
-    Block, BlockKind, Page, PageDiff, PageDraft, PageSummary, SearchResult, TableRow, Workspace,
-    WorkspaceError,
+    Block, BlockKind, Comment, Page, PageDiff, PageDraft, PageSummary, SearchResult, TableRow,
+    Workspace, WorkspaceError,
 };
 pub use ollama::{
     DEFAULT_HOST, DEFAULT_MODEL, DEFAULT_PORT, OllamaConfig, OllamaStatus, build_generate_body,

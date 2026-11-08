@@ -13,16 +13,20 @@ use std::collections::HashSet;
 /// views with no pages yet.
 pub fn pages_for_view<'a>(pages: &'a [Page], tab: &str, shared: &HashSet<String>) -> Vec<&'a Page> {
     match tab {
-        "Favorites" => pages.iter().filter(|page| page.favorite).collect(),
+        "Favorites" => pages
+            .iter()
+            .filter(|page| page.favorite && !page.archived)
+            .collect(),
         "Shared" => pages
             .iter()
-            .filter(|page| shared.contains(&page.id))
+            .filter(|page| shared.contains(&page.id) && !page.archived)
             .collect(),
         "Private" => pages
             .iter()
-            .filter(|page| !shared.contains(&page.id))
+            .filter(|page| !shared.contains(&page.id) && !page.archived)
             .collect(),
-        "Recents" | "" => pages.iter().collect(),
+        "Recents" | "" => pages.iter().filter(|page| !page.archived).collect(),
+        "Archive" => pages.iter().filter(|page| page.archived).collect(),
         _ => Vec::new(),
     }
 }

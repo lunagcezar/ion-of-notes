@@ -155,6 +155,31 @@ impl TableRow {
     }
 }
 
+/// One page-level discussion comment.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Comment {
+    pub id: String,
+    pub author: String,
+    pub text: String,
+    pub created_at: String,
+}
+
+impl Comment {
+    pub fn new(
+        id: impl Into<String>,
+        author: impl Into<String>,
+        text: impl Into<String>,
+        created_at: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            author: author.into(),
+            text: text.into(),
+            created_at: created_at.into(),
+        }
+    }
+}
+
 /// A page in the workspace tree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Page {
@@ -167,6 +192,16 @@ pub struct Page {
     pub locked: bool,
     #[serde(default)]
     pub available_offline: bool,
+    #[serde(default)]
+    pub show_toc: bool,
+    #[serde(default)]
+    pub discussions: bool,
+    #[serde(default)]
+    pub inline_comments: bool,
+    #[serde(default)]
+    pub archived: bool,
+    #[serde(default)]
+    pub comments: Vec<Comment>,
     pub blocks: Vec<Block>,
     pub rows: Vec<TableRow>,
     pub updated_at: String,
@@ -184,9 +219,22 @@ impl Page {
             favorite: false,
             locked: false,
             available_offline: false,
+            show_toc: false,
+            discussions: false,
+            inline_comments: false,
+            archived: false,
+            comments: Vec::new(),
             rows: Vec::new(),
             updated_at: now_label(),
         }
+    }
+
+    /// Non-empty headings, in page order (used by the table of contents).
+    pub fn headings(&self) -> Vec<&Block> {
+        self.blocks
+            .iter()
+            .filter(|block| block.kind.is_heading() && !block.text.trim().is_empty())
+            .collect()
     }
 
     /// All block text joined into one searchable string.
@@ -434,7 +482,10 @@ impl Workspace {
     }
 
     pub fn favorites(&self) -> Vec<&Page> {
-        self.pages.iter().filter(|p| p.favorite).collect()
+        self.pages
+            .iter()
+            .filter(|page| page.favorite && !page.archived)
+            .collect()
     }
 
     pub fn bump_version(&mut self) {

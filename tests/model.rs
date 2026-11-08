@@ -1,6 +1,6 @@
 //! Tests for the pure workspace data model (public API only).
 
-use not_notion::model::{Block, BlockKind, Page, PageDiff, Workspace, WorkspaceError};
+use not_notion::model::{Block, BlockKind, Comment, Page, PageDiff, Workspace, WorkspaceError};
 
 fn block(id: &str, kind: BlockKind, text: &str) -> Block {
     Block::new(id, kind, text)
@@ -179,6 +179,56 @@ fn workspace_diff_detects_changed_added_removed_and_reordered_pages() {
 
     assert_eq!(before.diff(&before), PageDiff::default());
     assert!(before.diff(&before).is_empty());
+}
+
+#[test]
+fn page_action_flags_and_comments_roundtrip() {
+    let mut page = page("p", "P", None);
+    assert!(!page.show_toc);
+    assert!(!page.discussions);
+    assert!(!page.inline_comments);
+    assert!(!page.archived);
+    page.show_toc = true;
+    page.discussions = true;
+    page.inline_comments = true;
+    page.archived = true;
+    page.comments.push(Comment::new(
+        "c1",
+        "Local user",
+        "A comment",
+        "Nov 08, 2026 10:00",
+    ));
+
+    let json = serde_json::to_string(&page).unwrap();
+    let back: Page = serde_json::from_str(&json).unwrap();
+    assert_eq!(back, page);
+}
+
+#[test]
+fn headings_are_filtered_for_the_table_of_contents() {
+    let mut page = page("p", "P", None);
+    page.blocks = vec![
+        Block::new("h1", BlockKind::Heading1, "Title"),
+        Block::new("p", BlockKind::Paragraph, "Body"),
+        Block::new("h2", BlockKind::Heading2, ""),
+    ];
+    let headings = page.headings();
+    assert_eq!(headings.len(), 1);
+    assert_eq!(headings[0].text, "Title");
+}
+
+#[test]
+fn favorites_and_search_ignore_archived_pages() {
+    let mut ws = Workspace::new("w");
+    let mut archived = page("a", "Archived", None);
+    archived.favorite = true;
+    archived.archived = true;
+    archived
+        .blocks
+        .push(block("b", BlockKind::Paragraph, "needle"));
+    ws.add_page(archived).unwrap();
+    assert!(ws.favorites().is_empty());
+    assert!(ws.search("needle").is_empty());
 }
 
 #[test]

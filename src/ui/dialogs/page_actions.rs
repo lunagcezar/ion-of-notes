@@ -14,22 +14,42 @@ use super::super::widgets::{menu_button, toggle_button};
 fn action_items(view: &ViewState) -> Vec<(&'static str, &'static str, Command)> {
     vec![
         ("Copy link", "Ctrl+L", Command::CopyLink),
-        ("Copy page contents", "", Command::ClosePageActions),
+        ("Copy page contents", "", Command::CopyPageContents),
         ("Duplicate", "Ctrl+D", Command::DuplicatePage),
-        ("Move to", "Ctrl+Shift+P", Command::ClosePageActions),
+        (
+            "Move to",
+            "Ctrl+Shift+P",
+            Command::SetPageStatus("Move to is not available in this build.".to_string()),
+        ),
         ("Version history", "", Command::OpenVersionHistory),
-        ("Updates & analytics", "", Command::ClosePageActions),
-        ("Suggest edits", "", Command::ClosePageActions),
+        (
+            "Updates & analytics",
+            "",
+            Command::SetPageStatus("Updates & analytics are not available yet.".to_string()),
+        ),
+        (
+            "Suggest edits",
+            "",
+            Command::SetPageStatus("Suggest edits is not available yet.".to_string()),
+        ),
         ("Use with AI", "", Command::OpenAiChat),
-        ("Notify me", "Comments", Command::ClosePageActions),
-        ("Archive", "", Command::ClosePageActions),
+        (
+            "Notify me",
+            "Comments",
+            Command::SetPageStatus("Notifications are not available yet.".to_string()),
+        ),
+        ("Archive", "", Command::TogglePageArchive),
         (
             "Move to Trash",
             "",
             Command::DeletePage(view.current_page.clone()),
         ),
         ("Show / hide sidebar", "Ctrl+\\", Command::ToggleSidebar),
-        ("More", "", Command::ClosePageActions),
+        (
+            "More",
+            "",
+            Command::SetPageStatus("More actions are not available yet.".to_string()),
+        ),
     ]
 }
 
@@ -78,8 +98,16 @@ pub(crate) fn render_page_actions(
                             continue;
                         }
                         if menu_button(ui, label, hint, palette).clicked() {
+                            let keep_open = matches!(
+                                command,
+                                Command::SetPageStatus(_)
+                                    | Command::CopyPageContents
+                                    | Command::TogglePageArchive
+                            );
                             commands.push(command);
-                            commands.push(Command::ClosePageActions);
+                            if !keep_open {
+                                commands.push(Command::ClosePageActions);
+                            }
                         }
                     }
                     ui.add_space(8.0);
@@ -128,6 +156,24 @@ pub(crate) fn render_page_actions(
                         if toggle_button(ui, "Full width", view.full_width, palette).clicked() {
                             commands.push(Command::ToggleFullWidth);
                         }
+                        let page = ws.page(&view.current_page);
+                        let show_toc = page.map(|p| p.show_toc).unwrap_or(false);
+                        let discussions = page.map(|p| p.discussions).unwrap_or(false);
+                        let inline_comments = page.map(|p| p.inline_comments).unwrap_or(false);
+                        let archived = page.map(|p| p.archived).unwrap_or(false);
+                        if toggle_button(ui, "Table of contents", show_toc, palette).clicked() {
+                            commands.push(Command::TogglePageToc);
+                        }
+                        if toggle_button(ui, "Page discussions", discussions, palette).clicked() {
+                            commands.push(Command::TogglePageDiscussions);
+                        }
+                        if toggle_button(ui, "Inline comments", inline_comments, palette).clicked()
+                        {
+                            commands.push(Command::TogglePageInlineComments);
+                        }
+                        if toggle_button(ui, "Archived", archived, palette).clicked() {
+                            commands.push(Command::TogglePageArchive);
+                        }
                         if toggle_button(ui, "Available offline", view.available_offline, palette)
                             .clicked()
                         {
@@ -151,16 +197,20 @@ pub(crate) fn render_page_actions(
                                 .color(palette.muted),
                         );
                         ui.add_space(2.0);
-                        ui.label(
-                            egui::RichText::new("Local workspace · just now")
-                                .size(11.0)
-                                .color(palette.text),
-                        );
+                        let updated = ws
+                            .page(&view.current_page)
+                            .map(|page| page.updated_at.clone())
+                            .unwrap_or_else(|| "just now".to_string());
+                        ui.label(egui::RichText::new(updated).size(11.0).color(palette.text));
                         ui.label(
                             egui::RichText::new(format!("{words} words"))
                                 .size(10.5)
                                 .color(palette.muted),
                         );
+                        if let Some(status) = &view.page_status {
+                            ui.add_space(4.0);
+                            ui.label(egui::RichText::new(status).size(10.5).color(palette.accent));
+                        }
                     }
                 });
         });

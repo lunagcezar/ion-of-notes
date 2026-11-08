@@ -85,7 +85,9 @@ fn library_views_filter_pages() {
     favorite.favorite = true;
     let shared_page = Page::new("shared", "Shared", "S");
     let private = Page::new("private", "Private", "P");
-    let pages = vec![favorite, shared_page, private];
+    let mut archived = Page::new("archived", "Archived", "A");
+    archived.archived = true;
+    let pages = vec![favorite, shared_page, private, archived];
     let shared = HashSet::from(["shared".to_string()]);
 
     let favorites = pages_for_view(&pages, "Favorites", &shared);
@@ -98,6 +100,8 @@ fn library_views_filter_pages() {
 
     assert_eq!(pages_for_view(&pages, "Private", &shared).len(), 2);
     assert_eq!(pages_for_view(&pages, "Recents", &shared).len(), 3);
+    assert_eq!(pages_for_view(&pages, "Archive", &shared).len(), 1);
+    assert_eq!(pages_for_view(&pages, "Archive", &shared)[0].id, "archived");
     assert!(pages_for_view(&pages, "Agents", &shared).is_empty());
 }
 

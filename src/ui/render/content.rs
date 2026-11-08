@@ -236,6 +236,45 @@ fn render_page(
         });
     });
 
+    if page.show_toc {
+        let headings: Vec<(String, BlockKind)> = page
+            .headings()
+            .into_iter()
+            .map(|block| (block.text.clone(), block.kind))
+            .collect();
+        ui.horizontal(|ui| {
+            ui.add_space(gutter);
+            ui.vertical(|ui| {
+                ui.set_width(width);
+                ui.label(
+                    egui::RichText::new("Table of contents")
+                        .size(12.0)
+                        .strong()
+                        .color(palette.muted),
+                );
+                if headings.is_empty() {
+                    ui.label(
+                        egui::RichText::new("Add a heading to build the table of contents.")
+                            .size(12.0)
+                            .color(palette.muted),
+                    );
+                }
+                for (text, kind) in &headings {
+                    let indent = match kind {
+                        BlockKind::Heading2 => 12.0,
+                        BlockKind::Heading3 => 24.0,
+                        _ => 0.0,
+                    };
+                    ui.horizontal(|ui| {
+                        ui.add_space(indent);
+                        ui.label(egui::RichText::new(text).size(12.5).color(palette.accent));
+                    });
+                }
+            });
+        });
+        ui.add_space(20.0);
+    }
+
     let mut numbered: usize = 0;
     let block_count = page.blocks.len();
     for index in 0..page.blocks.len() {
@@ -270,6 +309,74 @@ fn render_page(
                 .color(palette.muted),
         );
     });
+
+    if page.discussions {
+        ui.add_space(26.0);
+        ui.horizontal(|ui| {
+            ui.add_space(gutter);
+            ui.vertical(|ui| {
+                ui.set_width(width);
+                ui.label(
+                    egui::RichText::new("Page discussions")
+                        .font(strong_font(18.0))
+                        .color(palette.text),
+                );
+                ui.add_space(6.0);
+                if page.comments.is_empty() {
+                    ui.label(
+                        egui::RichText::new("No comments yet.")
+                            .size(12.0)
+                            .color(palette.muted),
+                    );
+                }
+                for comment in &page.comments {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new(&comment.author)
+                                .strong()
+                                .color(palette.text),
+                        );
+                        ui.label(
+                            egui::RichText::new(&comment.created_at)
+                                .size(10.5)
+                                .color(palette.muted),
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.small_button("Delete").clicked() {
+                                commands.push(Command::DeletePageComment(comment.id.clone()));
+                            }
+                        });
+                    });
+                    ui.label(egui::RichText::new(&comment.text).color(palette.text));
+                    ui.add_space(6.0);
+                }
+                let mut input = view.comment_input.clone();
+                let edit = ui.add(
+                    egui::TextEdit::multiline(&mut input)
+                        .desired_rows(2)
+                        .desired_width(width)
+                        .hint_text("Add a comment...")
+                        .text_color(palette.text),
+                );
+                if edit.changed() {
+                    commands.push(Command::SetCommentInput(input));
+                }
+                if ui.button("Comment").clicked() {
+                    commands.push(Command::AddPageComment);
+                }
+                if page.inline_comments {
+                    ui.add_space(6.0);
+                    ui.label(
+                        egui::RichText::new(
+                            "Inline comments are enabled; block-level anchors are not implemented yet.",
+                        )
+                        .size(11.0)
+                        .color(palette.muted),
+                    );
+                }
+            });
+        });
+    }
 
     if !page.rows.is_empty() || page.title == "Tasks" {
         ui.add_space(26.0);

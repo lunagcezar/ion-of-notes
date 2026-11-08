@@ -305,6 +305,9 @@ fn render_tree(
 ) {
     let children = ws.children(parent);
     for page in children {
+        if page.archived {
+            continue;
+        }
         let has_children = !ws.children(Some(&page.id)).is_empty();
         let open = view.expanded.contains(&page.id);
         let indent = 10.0 + depth as f32 * 16.0;

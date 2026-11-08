@@ -6,6 +6,22 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-026-page-actions-and-comments
+
+- Page actions now include Copy page contents (markdown to clipboard), a
+  rendered Table of contents, Page discussions, Inline comments toggle,
+  Archive/restore and status feedback for placeholder actions.
+- `Page` persists `show_toc`, `discussions`, `inline_comments`, `archived` and
+  `comments`; `Comment` is a serde model type.
+- Page discussions support listing, adding and deleting comments.
+- Archived pages are hidden from the sidebar, Favorites, search, Recents,
+  Shared and Private; the Library More menu has an Archive view.
+- Added `NOT_NOTION_SHOW=discussions` for the TOC/comments preview.
+- Red: page flags/comments round-trip, heading filtering, archived
+  favorites/search and Library archive tests were written first.
+- Docs: added `spec/spec-026-page-actions-and-comments.md`; updated
+  requirements, data model, README and `AGENTS.md`.
+
 ### Added — spec-025-settings-pages
 
 - Added persisted `WorkspaceSettings` on `Workspace`: workspace id/icon,

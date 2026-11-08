@@ -230,6 +230,15 @@
   editable and persisted with the workspace; General / Sidebar / People /
   Offline pages are functional (implemented in `spec-025`). Workspace deletion
   remains disabled in this build.
+
+### 1.15 Page actions and comments (spec-026)
+
+- FR-75: Page actions support Copy page contents, a rendered Table of
+  contents, Page discussions with add/delete comments, Inline comments toggle,
+  Archive/restore and status feedback for placeholder actions; archived pages
+  are hidden from normal views and listed in the Library Archive view
+  (implemented in `spec-026`). Block-anchored inline comments, notifications,
+  analytics and move-to remain follow-ups.
 - NFR-10: Every completed spec is committed to git in the same session
   (`AGENTS.md` → Commits).
 - NFR-11: Search results are cached by query and workspace version; an
@@ -294,6 +303,7 @@
 | FR-72 (implemented)           | `spec-023-add-members-sharing-dialog.md` |
 | FR-73 (implemented)           | `spec-024-library-views.md` |
 | FR-74 (implemented)           | `spec-025-settings-pages.md` |
+| FR-75 (implemented)           | `spec-026-page-actions-and-comments.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

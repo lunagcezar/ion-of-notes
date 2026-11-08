@@ -168,6 +168,15 @@ pub(super) enum Command {
     // Page actions / settings from the "..." menu (spec-013).
     OpenPageActions,
     ClosePageActions,
+    CopyPageContents,
+    TogglePageToc,
+    TogglePageDiscussions,
+    TogglePageInlineComments,
+    TogglePageArchive,
+    SetCommentInput(String),
+    AddPageComment,
+    DeletePageComment(String),
+    SetPageStatus(String),
     // Version history (spec-015).
     OpenVersionHistory,
     CloseVersionHistory,

@@ -46,6 +46,10 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
 - Settings General / Sidebar / People / Offline are functional and persist
   workspace settings (name, icon, landing page, domains, toggles, exports,
   offline search and People options). Workspace deletion is disabled.
+- Page actions support Copy page contents, Table of contents, Page discussions
+  with add/delete comments, Inline comments preference, Archive/restore and
+  status feedback; archived pages are hidden from normal views and listed in
+  the Library Archive view.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

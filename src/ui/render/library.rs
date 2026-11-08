@@ -79,7 +79,13 @@ pub(super) fn render_library(
                 ui.menu_button(
                     egui::RichText::new("More").size(13.0).color(palette.muted),
                     |ui| {
-                        for tab in ["AI Meeting Notes", "Agents", "Templates", "Trash"] {
+                        for tab in [
+                            "AI Meeting Notes",
+                            "Agents",
+                            "Templates",
+                            "Archive",
+                            "Trash",
+                        ] {
                             if ui.button(tab).clicked() {
                                 commands.push(Command::SetLibraryTab(tab.to_string()));
                                 ui.close();

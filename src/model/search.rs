@@ -12,6 +12,9 @@ impl Workspace {
         }
         let mut ranked: Vec<(u32, usize, SearchResult)> = Vec::new();
         for (index, page) in self.pages.iter().enumerate() {
+            if page.archived {
+                continue;
+            }
             let title = page.title.to_lowercase();
             let rows = page
                 .rows

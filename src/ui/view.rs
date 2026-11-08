@@ -63,6 +63,8 @@ pub(super) struct ViewState {
     pub(super) icon_picker_tab: IconTab,
     pub(super) icon_picker_query: String,
     pub(super) page_actions_open: bool,
+    pub(super) page_status: Option<String>,
+    pub(super) comment_input: String,
     pub(super) version_history_open: bool,
     pub(super) versions: Arc<Vec<PageVersion>>,
     pub(super) version_selected: usize,

@@ -5,8 +5,8 @@
 //! Splitting it from the struct/eframe shell keeps `ui::app` small (SRP,
 //! spec-017).
 
-use crate::collab::{MemberDraft, Role, Share, general_access};
-use crate::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
+use crate::collab::{MemberDraft, Role, Share, general_access, page_markdown};
+use crate::model::{Block, BlockKind, Comment, Page, PageDraft, TableRow, Workspace, now_label};
 use crate::ollama;
 use crate::shortcuts::Action;
 use std::collections::HashSet;
@@ -78,6 +78,8 @@ impl NotionApp {
             icon_picker_tab: self.icon_picker_tab,
             icon_picker_query: self.icon_picker_query.clone(),
             page_actions_open: self.page_actions_open,
+            page_status: self.page_status.clone(),
+            comment_input: self.comment_input.clone(),
             version_history_open: self.version_history_open,
             versions: Arc::clone(&self.versions),
             version_selected: self.version_selected,
@@ -128,6 +130,8 @@ impl NotionApp {
         self.active_tab = self.tabs.len() - 1;
         self.current_page = id.clone();
         self.library_open = false;
+        self.comment_input.clear();
+        self.page_status = None;
         self.push_history(id);
     }
 
@@ -334,6 +338,8 @@ impl NotionApp {
                     }
                     self.library_open = false;
                     self.close_overlays();
+                    self.comment_input.clear();
+                    self.page_status = None;
                     self.push_history(id);
                 }
                 Command::NewPage(parent) => {
@@ -905,9 +911,63 @@ impl NotionApp {
                 // ---- Page actions / appearance (spec-013) -------------------
                 Command::OpenPageActions => {
                     self.close_overlays();
+                    self.page_status = None;
                     self.page_actions_open = true;
                 }
                 Command::ClosePageActions => self.page_actions_open = false,
+                Command::CopyPageContents => {
+                    if let Some(page) = self.workspace.page(&self.current_page) {
+                        ctx.copy_text(page_markdown(page));
+                        self.page_status = Some("Page contents copied.".to_string());
+                    }
+                }
+                Command::TogglePageToc => {
+                    if let Some(page) = self.current_page_mut() {
+                        page.show_toc = !page.show_toc;
+                    }
+                }
+                Command::TogglePageDiscussions => {
+                    if let Some(page) = self.current_page_mut() {
+                        page.discussions = !page.discussions;
+                    }
+                }
+                Command::TogglePageInlineComments => {
+                    if let Some(page) = self.current_page_mut() {
+                        page.inline_comments = !page.inline_comments;
+                    }
+                }
+                Command::TogglePageArchive => {
+                    if let Some(page) = self.current_page_mut() {
+                        page.archived = !page.archived;
+                        self.page_status = Some(if page.archived {
+                            "Page archived.".to_string()
+                        } else {
+                            "Page restored from archive.".to_string()
+                        });
+                    }
+                }
+                Command::SetCommentInput(input) => self.comment_input = input,
+                Command::AddPageComment => {
+                    let text = self.comment_input.trim().to_string();
+                    if text.is_empty() {
+                        self.page_status = Some("Write a comment first.".to_string());
+                    } else if let Some(page) = self.current_page_mut() {
+                        page.comments.push(Comment::new(
+                            Uuid::new_v4().to_string(),
+                            "Local user",
+                            text,
+                            now_label(),
+                        ));
+                        self.comment_input.clear();
+                        self.page_status = Some("Comment added.".to_string());
+                    }
+                }
+                Command::DeletePageComment(id) => {
+                    if let Some(page) = self.current_page_mut() {
+                        page.comments.retain(|comment| comment.id != id);
+                    }
+                }
+                Command::SetPageStatus(message) => self.page_status = Some(message),
                 Command::OpenVersionHistory => {
                     self.close_overlays();
                     self.versions = Arc::new(
