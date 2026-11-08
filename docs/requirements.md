@@ -189,8 +189,8 @@
   persisted through a `CollabStore` port and restored on restart; a failing
   collaboration store returns an API `500` (implemented in `spec-019`).
 - FR-64: A single-page edit is sent with `PATCH /api/pages/{id}` and persisted
-  with debounce; full-workspace replacement is reserved for multi-page
-  operations (planned, spec-016 A2).
+  with debounce; full-workspace replacement is reserved for added, removed or
+  reordered pages (implemented in `spec-020`).
 - FR-65: Page lookup, children and breadcrumbs use a derived workspace index
   without changing the JSON shape (planned, spec-016 A3).
 - FR-66: Version history has a documented retention limit and a restore is
@@ -265,6 +265,7 @@
 | FR-63..FR-71, NFR-13..NFR-15  | `spec-016-architecture-follow-up-and-observation.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
+| FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

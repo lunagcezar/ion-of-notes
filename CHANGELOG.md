@@ -6,6 +6,24 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — spec-020-per-page-writes-and-debounce
+
+- Single-page edits now persist with `PATCH /api/pages/{id}` instead of a
+  whole-workspace `PUT`. The full snapshot remains the fallback for added,
+  removed or reordered pages.
+- Added `model::PageDiff` (changed/added/removed/reordered pages) and
+  `ui::edit_queue` (`CommitPlan`, `PendingEdits`, `execute_plan`).
+- The UI keeps the last successfully committed workspace and debounces writes
+  for 250 ms. The debounce timer resets only when the diff actually changes, so
+  a redraw cannot postpone the flush forever.
+- Pending edits are force-flushed on page/tab switch, Library/Settings,
+  reload, new/delete page, reset, version history, restore and window close;
+  `on_exit` also flushes when the OS closes the window.
+- Red: new `tests/model.rs` diff tests and `tests/ui.rs` planning/debounce/
+  execute-plan tests were written first and observed failing.
+- Docs: added `spec/spec-020-per-page-writes-and-debounce.md`; updated
+  requirements, README and `AGENTS.md`.
+
 ### Added — spec-019-collaboration-persistence
 
 - Collaboration state is now durable. Added a `CollabStore` port with

@@ -9,8 +9,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 
+mod diff;
 mod search;
 mod seed;
+
+pub use diff::PageDiff;
 
 /// A short, human-friendly timestamp used for display only.
 pub fn now_label() -> String {

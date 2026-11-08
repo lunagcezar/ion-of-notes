@@ -1,6 +1,6 @@
 //! Tests for the pure workspace data model (public API only).
 
-use not_notion::model::{Block, BlockKind, Page, Workspace, WorkspaceError};
+use not_notion::model::{Block, BlockKind, Page, PageDiff, Workspace, WorkspaceError};
 
 fn block(id: &str, kind: BlockKind, text: &str) -> Block {
     Block::new(id, kind, text)
@@ -19,7 +19,10 @@ fn seed_has_expected_pages() {
     assert_eq!(ws.version, 0);
     let titles: Vec<&str> = ws.pages.iter().map(|p| p.title.as_str()).collect();
     for expected in ["Home", "Getting Started", "Projects", "Tasks", "Notes"] {
-        assert!(titles.contains(&expected), "missing seeded page: {expected}");
+        assert!(
+            titles.contains(&expected),
+            "missing seeded page: {expected}"
+        );
     }
     assert!(
         ws.pages.iter().any(|p| !p.rows.is_empty()),
@@ -139,6 +142,43 @@ fn children_and_favorites_are_filtered() {
     assert_eq!(ws.children(Some("a")).len(), 1);
     assert_eq!(ws.favorites().len(), 1);
     assert_eq!(ws.favorites()[0].title, "A");
+}
+
+#[test]
+fn workspace_diff_detects_changed_added_removed_and_reordered_pages() {
+    let mut before = Workspace::new("w");
+    before.add_page(page("a", "A", None)).unwrap();
+    before.add_page(page("b", "B", None)).unwrap();
+
+    let mut changed = before.clone();
+    changed.page_mut("a").unwrap().title = "A2".to_string();
+    let diff = before.diff(&changed);
+    assert_eq!(diff.changed, vec!["a"]);
+    assert!(diff.added.is_empty());
+    assert!(diff.removed.is_empty());
+    assert!(!diff.reordered);
+    assert!(!diff.requires_full_replace());
+
+    let mut added = before.clone();
+    added.add_page(page("c", "C", None)).unwrap();
+    let diff = before.diff(&added);
+    assert_eq!(diff.added, vec!["c"]);
+    assert!(diff.requires_full_replace());
+
+    let mut removed = before.clone();
+    removed.remove_page("b").unwrap();
+    let diff = before.diff(&removed);
+    assert_eq!(diff.removed, vec!["b"]);
+    assert!(diff.requires_full_replace());
+
+    let mut reordered = before.clone();
+    reordered.pages.swap(0, 1);
+    let diff = before.diff(&reordered);
+    assert!(diff.reordered);
+    assert!(diff.requires_full_replace());
+
+    assert_eq!(before.diff(&before), PageDiff::default());
+    assert!(before.diff(&before).is_empty());
 }
 
 #[test]

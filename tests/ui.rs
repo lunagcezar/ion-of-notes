@@ -1,9 +1,13 @@
 //! Tests for the UI's public visual helpers (public API only).
 
-use not_notion::model::BlockKind;
+use not_notion::client::Client;
+use not_notion::model::{BlockKind, Page, PageDiff, Workspace};
+use not_notion::server::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi};
 use not_notion::ui::{
-    block_menu_options, settings_matches, status_color, Palette, SearchCache,
+    CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan, plan_for,
+    settings_matches, status_color,
 };
+use std::sync::{Arc, Mutex};
 
 #[test]
 fn palette_colors_are_distinct_per_theme() {
@@ -35,8 +39,119 @@ fn settings_search_matches_titles_and_descriptions_case_insensitively() {
     assert!(settings_matches("", "Anything", "Anything"));
     assert!(settings_matches("  ", "Anything", "Anything"));
     assert!(settings_matches("LANG", "Language", "Choose a language"));
-    assert!(settings_matches("appearance", "Preferences", "Appearance and input"));
-    assert!(!settings_matches("billing", "People", "Manage who can access"));
+    assert!(settings_matches(
+        "appearance",
+        "Preferences",
+        "Appearance and input"
+    ));
+    assert!(!settings_matches(
+        "billing",
+        "People",
+        "Manage who can access"
+    ));
+}
+
+#[test]
+fn commit_plan_uses_patch_for_changed_pages_and_replace_for_structure() {
+    assert_eq!(plan_for(&PageDiff::default()), CommitPlan::None);
+
+    let changed = PageDiff {
+        changed: vec!["a".to_string()],
+        ..PageDiff::default()
+    };
+    assert_eq!(
+        plan_for(&changed),
+        CommitPlan::Update(vec!["a".to_string()])
+    );
+
+    let added = PageDiff {
+        added: vec!["b".to_string()],
+        ..PageDiff::default()
+    };
+    assert_eq!(plan_for(&added), CommitPlan::Replace);
+
+    let reordered = PageDiff {
+        reordered: true,
+        ..PageDiff::default()
+    };
+    assert_eq!(plan_for(&reordered), CommitPlan::Replace);
+}
+
+#[test]
+fn pending_edits_debounces_and_forces_flush() {
+    let mut pending = PendingEdits::new(0.25);
+    assert!(!pending.should_flush(0.0));
+
+    pending.mark(1.0);
+    assert!(!pending.should_flush(1.1));
+    assert!(pending.should_flush(1.25));
+
+    pending.force();
+    assert!(pending.should_flush(1.26));
+    pending.flushed();
+    assert!(!pending.should_flush(2.0));
+}
+
+#[derive(Clone, Default)]
+struct RecordingApi {
+    requests: Arc<Mutex<Vec<ApiRequest>>>,
+}
+
+impl WorkspaceApi for RecordingApi {
+    fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
+        self.requests.lock().unwrap().push(request.clone());
+        let body = match request.method {
+            Method::Patch => {
+                let page: Page = serde_json::from_str(request.body.as_deref().unwrap()).unwrap();
+                serde_json::to_string(&Envelope::ok(page)).unwrap()
+            }
+            Method::Put => {
+                let workspace: Workspace =
+                    serde_json::from_str(request.body.as_deref().unwrap()).unwrap();
+                serde_json::to_string(&Envelope::ok(workspace)).unwrap()
+            }
+            _ => serde_json::to_string(&Envelope::ok(())).unwrap(),
+        };
+        ApiResponse { status: 200, body }
+    }
+}
+
+#[test]
+fn execute_plan_uses_patch_for_one_page_and_put_for_replace() {
+    let workspace = Workspace::seed("x");
+    let page = workspace.pages[0].clone();
+
+    let api = RecordingApi::default();
+    let mut client = Client::new(api.clone());
+    assert!(execute_plan(
+        &mut client,
+        &workspace,
+        &CommitPlan::Update(vec![page.id.clone()])
+    ));
+    let requests = api.requests.lock().unwrap().clone();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].method, Method::Patch);
+    assert_eq!(requests[0].path, format!("/api/pages/{}", page.id));
+
+    let api = RecordingApi::default();
+    let mut client = Client::new(api.clone());
+    assert!(execute_plan(&mut client, &workspace, &CommitPlan::Replace));
+    let requests = api.requests.lock().unwrap().clone();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].method, Method::Put);
+    assert_eq!(requests[0].path, "/api/workspace");
+}
+
+#[test]
+fn pending_edits_does_not_postpone_the_debounce_for_an_unchanged_diff() {
+    let diff = PageDiff {
+        changed: vec!["a".to_string()],
+        ..PageDiff::default()
+    };
+    let mut pending = PendingEdits::new(0.25);
+    pending.observe(&diff, 1.0);
+    pending.observe(&diff, 1.2);
+    assert!(pending.should_flush(1.25));
 }
 
 #[test]

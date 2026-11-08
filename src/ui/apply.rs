@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 use super::app::NotionApp;
 use super::commands::{Command, IconTab, NewTabChoice, new_tab_choices};
+use super::edit_queue::{execute_plan, plan_for};
 use super::palette::apply_theme;
 use super::view::ViewState;
 
@@ -182,6 +183,37 @@ impl NotionApp {
             .unwrap_or(false)
     }
 
+    /// Persist the difference between the last committed state and the
+    /// current workspace. Single-page edits use `PATCH`; structural changes
+    /// use the full snapshot fallback. The debounce window keeps rapid typing
+    /// from sending one request per frame (spec-020).
+    pub(super) fn commit_edits(&mut self, now: f64, force: bool) {
+        let diff = self.last_committed.diff(&self.workspace);
+        if diff.is_empty() {
+            self.pending_edits.flushed();
+            return;
+        }
+
+        self.pending_edits.observe(&diff, now);
+        if force {
+            self.pending_edits.force();
+        }
+        if !self.pending_edits.should_flush(now) {
+            return;
+        }
+
+        let plan = plan_for(&diff);
+        let sent = execute_plan(&mut self.client, &self.workspace, &plan);
+
+        if sent {
+            self.last_committed = self.workspace.clone();
+            self.pending_edits.flushed();
+        } else {
+            // Keep the diff but wait another debounce window before retrying.
+            self.pending_edits.mark(now);
+        }
+    }
+
     #[allow(clippy::too_many_lines)]
     pub(super) fn apply_commands(
         &mut self,
@@ -189,6 +221,33 @@ impl NotionApp {
         ctx: &egui::Context,
         frame_before: Workspace,
     ) {
+        let now = ctx.input(|i| i.time);
+        let force_flush = commands.iter().any(|command| {
+            matches!(
+                command,
+                Command::SelectPage(_)
+                    | Command::SelectTab(_)
+                    | Command::CloseTab(_)
+                    | Command::GoBack
+                    | Command::GoForward
+                    | Command::OpenLibrary
+                    | Command::OpenSettings
+                    | Command::Reload
+                    | Command::NewPage(_)
+                    | Command::DeletePage(_)
+                    | Command::ResetWorkspace
+                    | Command::ActivateNewTab(_)
+                    | Command::ActivateSelectedNewTab
+                    | Command::OpenVersionHistory
+                    | Command::RestoreVersion(_)
+                    | Command::CloseAll
+                    | Command::WindowClose
+            )
+        });
+        if force_flush {
+            self.commit_edits(now, true);
+        }
+
         let mut had_undo_redo = false;
         let mut index = 0;
         while index < commands.len() {
@@ -791,9 +850,11 @@ impl NotionApp {
         }
 
         if self.pending_reload {
+            self.commit_edits(now, true);
             if let Ok(workspace) = self.client.workspace() {
                 self.workspace = workspace;
                 self.last_committed = self.workspace.clone();
+                self.pending_edits.flushed();
                 if self.workspace.page(&self.current_page).is_none() {
                     self.current_page = self
                         .workspace
@@ -806,10 +867,7 @@ impl NotionApp {
             self.pending_reload = false;
         }
 
-        if self.workspace != self.last_committed {
-            let _ = self.client.replace_workspace(&self.workspace);
-            self.last_committed = self.workspace.clone();
-        }
+        self.commit_edits(now, false);
     }
 
     fn push_history(&mut self, id: String) {

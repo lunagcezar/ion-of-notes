@@ -30,6 +30,8 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
 - `workspace.json` and `collab.json` are separate documents. A corrupt
   collaboration file cannot destroy pages, and a failed collaboration write
   is reported as an API `500`.
+- Single-page edits persist with `PATCH /api/pages/{id}` and a 250 ms debounce;
+  the full-workspace `PUT` is reserved for added, removed or reordered pages.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

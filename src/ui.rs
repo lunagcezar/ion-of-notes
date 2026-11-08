@@ -12,6 +12,7 @@ mod app;
 mod apply;
 mod commands;
 mod dialogs;
+mod edit_queue;
 mod icons;
 mod input;
 mod page_icon;
@@ -24,8 +25,9 @@ mod view;
 mod widgets;
 
 pub use app::NotionApp;
+pub use edit_queue::{CommitPlan, PendingEdits, execute_plan, plan_for};
 pub use palette::{
-    block_menu_options, install_fonts, status_color, strong_font, tab_title, Palette,
+    Palette, block_menu_options, install_fonts, status_color, strong_font, tab_title,
 };
 pub use search_cache::SearchCache;
 pub use settings_search::settings_matches;

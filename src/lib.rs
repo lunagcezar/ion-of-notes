@@ -47,7 +47,7 @@ pub use collab::{
     RealtimeEvent, RealtimeKind, Role, Share, SyncBatch,
 };
 pub use model::{
-    Block, BlockKind, Page, PageDraft, PageSummary, SearchResult, TableRow, Workspace,
+    Block, BlockKind, Page, PageDraft, PageDiff, PageSummary, SearchResult, TableRow, Workspace,
     WorkspaceError,
 };
 pub use server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};

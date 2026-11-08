@@ -24,6 +24,7 @@ use super::dialogs::{
     render_search, render_settings, render_share, render_shortcuts, render_slash,
     render_version_history, render_workspace_menu,
 };
+use super::edit_queue::PendingEdits;
 use super::page_icon::render_icon_picker;
 use super::palette::{Palette, apply_theme};
 use super::render::{TITLE_BAR_HEIGHT, render_content, render_sidebar, render_title_bar};
@@ -37,6 +38,7 @@ pub struct NotionApp {
     pub(super) client: Client<WorkspaceServer>,
     pub(super) workspace: Workspace,
     pub(super) last_committed: Workspace,
+    pub(super) pending_edits: PendingEdits,
     pub(super) current_page: String,
     pub(super) tabs: Vec<String>,
     pub(super) active_tab: usize,
@@ -136,6 +138,7 @@ impl NotionApp {
         Self {
             client,
             last_committed: workspace.clone(),
+            pending_edits: PendingEdits::new(0.25),
             workspace,
             current_page: demo_current_page.clone(),
             tabs: vec![demo_current_page],
@@ -385,5 +388,10 @@ impl eframe::App for NotionApp {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
         }
+    }
+
+    fn on_exit(&mut self) {
+        // Flush pending edits even when the window is closed by the OS.
+        self.commit_edits(f64::MAX, true);
     }
 }

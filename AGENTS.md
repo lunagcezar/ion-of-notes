@@ -98,6 +98,7 @@ src/
   model/
     seed.rs        neutral demo workspace used on first start
     search.rs      ranked search + excerpt helper
+    diff.rs        changed/added/removed/reordered page diff
   store.rs         WorkspaceStore + CollabStore ports, JSON/null adapters, data_path/collab_path
   server.rs        WorkspaceServer (workspace + collaboration state), WorkspaceApi trait, routes
   server/
@@ -138,6 +139,7 @@ src/
       help.rs           keyboard shortcut sheet
       search_window.rs  shared search / new-tab windows
     widgets.rs     shared popover frame, menu row, toggle, section label
+    edit_queue.rs  pure commit plan + debounce for per-page writes
     switcher.rs    one shared search / new-tab window (DRY)
     page_icon.rs   page-icon feature: catalog, picker and one renderer
     search_cache.rs pure query/version cache so redraws do not re-query
