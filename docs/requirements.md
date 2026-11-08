@@ -182,12 +182,44 @@
 - FR-62: The page actions menu opens a version-history window backed by
   `GET /api/pages/{id}/versions`; snapshots are listed newest first and the
   selected snapshot can be restored through `Client::update_page` (spec-015).
+
+### 1.11 Architecture follow-up and clean-room observation (spec-016)
+
+- FR-63: Collaboration state (members, shares, sync log, page versions) is
+  persisted through a `CollabStore` port and restored on restart; a failing
+  collaboration store returns an API `500` (planned, spec-016 A1).
+- FR-64: A single-page edit is sent with `PATCH /api/pages/{id}` and persisted
+  with debounce; full-workspace replacement is reserved for multi-page
+  operations (planned, spec-016 A2).
+- FR-65: Page lookup, children and breadcrumbs use a derived workspace index
+  without changing the JSON shape (planned, spec-016 A3).
+- FR-66: Version history has a documented retention limit and a restore is
+  recorded as a new version (planned, spec-016 A4).
+- FR-67: `ui/app.rs` is split into cohesive `commands`, `view` and `input`
+  modules behind the `ui.rs` facade (planned, spec-016 A5).
+- FR-68: All user-visible strings are covered by the locale key table with an
+  English fallback, checked by a completeness test (planned, spec-016 A6).
+- FR-69: Client serialization failures return an explicit `ClientError::Encode`
+  instead of sending an empty body (planned, spec-016 A7).
+- FR-70: The optional loopback listener serves concurrent connections without
+  blocking one client behind another (planned, spec-016 A8).
+- FR-71: Settings search filters the rows inside the open section, not only the
+  navigation rail (planned, spec-016 A9).
 - NFR-10: Every completed spec is committed to git in the same session
   (`AGENTS.md` → Commits).
 - NFR-11: Search results are cached by query and workspace version; an
   unchanged frame must not call the server again (`ui/search_cache.rs`).
 - NFR-12: JSON saves are atomic (temporary file + move) and a storage failure
   is reported as an API `500`, never as a silent success.
+- NFR-13: `cargo fmt --check` is clean; formatting-only changes are committed
+  separately from behavior changes (spec-016 A10).
+- NFR-14: Server behavior is learned through public documentation, own-account
+  HAR captures, exports and a mock contract. Interception tools are used only
+  on traffic we control; Wireshark is not the primary discovery tool and
+  protection mechanisms are never bypassed (ADR-005, spec-016 Track B).
+- NFR-15: An unchanged frame does not call the server, a single-page edit does
+  not send a whole-workspace payload, and the loopback listener does not
+  serialize independent clients (spec-016 A2/A3/A8).
 
 ## 2. Non-functional requirements
 
@@ -228,6 +260,7 @@
 | FR-44..FR-51                  | `spec-012-interaction-polish.md`      |
 | FR-52..FR-60, NFR-10          | `spec-013-interaction-polish-and-modularity.md` |
 | FR-61, FR-62, NFR-11, NFR-12  | `spec-015-hardening-and-performance.md` |
+| FR-63..FR-71, NFR-13..NFR-15  | `spec-016-architecture-follow-up-and-observation.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

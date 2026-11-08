@@ -6,6 +6,18 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Planned — spec-016-architecture-follow-up-and-observation
+
+- Added `spec/spec-016-architecture-follow-up-and-observation.md`: phased
+  follow-up work for collaboration persistence, per-page writes and debounce,
+  a workspace index, version retention, the `ui/app.rs` split, localization
+  coverage, explicit client encode errors, a concurrent loopback listener,
+  settings row filtering, and a `cargo fmt --check` baseline.
+- Added `docs/adr-005-clean-room-server-observation.md`: public documentation,
+  own-account HAR captures, exports and a derived mock contract are the primary
+  discovery sources; Wireshark/mitmproxy are only for traffic we control, with
+  redaction and a clean-room log. This is a plan, not an implementation yet.
+
 ### Added / Changed — spec-015-hardening-and-performance
 
 - **Settings search:** the Settings rail now actually filters by the query

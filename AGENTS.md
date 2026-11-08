@@ -481,6 +481,10 @@ registered here so the step is automated rather than remembered.
   feature-first, not DDD; split by responsibility, not line count; Rust Book
   ch. 7 / ch. 14, Rust API Guidelines): `docs/adr-004-modularization-decision.md`
   and `spec/spec-013-interaction-polish-and-modularity.md`.
+- 2026-11-07 clean-room server observation (public docs + own-account HAR +
+  mock contract; Wireshark only for traffic we control; redaction and a
+  clean-room log): `docs/adr-005-clean-room-server-observation.md` and
+  `spec/spec-016-architecture-follow-up-and-observation.md`.
 - Spec Driven Development: https://www.ibm.com/think/topics/spec-driven-development
 - Self-hosted collaborative API decision (accounts, sync, sharing, real-time,
   and the workspace export tree): `docs/adr-003-self-hosted-collaborative-api.md`
