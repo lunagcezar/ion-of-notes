@@ -15,6 +15,9 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Keep at most this many snapshots per page (newest first).
+pub const MAX_VERSIONS_PER_PAGE: usize = 50;
+
 mod export;
 
 pub use export::{export_tree, page_markdown, people_csv, people_markdown};
@@ -352,6 +355,23 @@ impl CollabState {
             updated_at: page.updated_at.clone(),
             snapshot,
         });
+
+        // Prune the oldest snapshots for this page only (spec-022).
+        let mut excess = self
+            .versions
+            .iter()
+            .filter(|v| v.page_id == page.id)
+            .count()
+            .saturating_sub(MAX_VERSIONS_PER_PAGE);
+        let mut index = 0;
+        while index < self.versions.len() && excess > 0 {
+            if self.versions[index].page_id == page.id {
+                self.versions.remove(index);
+                excess -= 1;
+            } else {
+                index += 1;
+            }
+        }
     }
 
     pub fn versions_for(&self, page_id: &str) -> Vec<PageVersion> {

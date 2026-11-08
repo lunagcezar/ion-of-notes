@@ -13,6 +13,10 @@ pages (spec-019). No egui types appear here.
 | `pages`   | `Vec<Page>`  | All pages, order is the sidebar order        |
 | `version` | `u64`        | Increments on every successful write         |
 
+`Workspace` also holds a private `WorkspaceIndex` (id positions and parent →
+children) that is derived state: it is skipped by serde, rebuilt after
+deserialization and after add/remove, and ignored by equality (spec-022).
+
 ## Entity: Page
 
 | Field               | Type                | Description                                      |
@@ -105,7 +109,9 @@ types. They are the DTOs of the decided API.
 `CollabState` methods: `invite`, `set_access`, `shares_for`, `access_for`
 (most-specific-first resolution), `can_write`, `record`, `changes_since`,
 `record_version`, `versions_for`. It is persisted through the `CollabStore`
-port (`JsonCollabStore` writes `collab.json`) and restored on startup. The
+port (`JsonCollabStore` writes `collab.json`) and restored on startup. Version
+history keeps at most `MAX_VERSIONS_PER_PAGE` (50) newest snapshots per page;
+older snapshots are pruned and other pages are untouched (spec-022). The
 version snapshots are read by
 `Client::page_versions` and shown in the page-actions version-history window
 (spec-015); restoring one writes it back through `Client::update_page`.

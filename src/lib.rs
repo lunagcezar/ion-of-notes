@@ -33,9 +33,9 @@ pub use app::{
 };
 pub use client::{Client, ClientError};
 pub use collab::{
-    Access, Change, ChangeOp, CollabState, ExportFile, Member, MemberDraft, PageVersion,
-    RealtimeContract, RealtimeEvent, RealtimeKind, Role, Share, SyncBatch, export_tree,
-    page_markdown, people_csv, people_markdown, realtime_contract,
+    Access, Change, ChangeOp, CollabState, ExportFile, MAX_VERSIONS_PER_PAGE, Member, MemberDraft,
+    PageVersion, RealtimeContract, RealtimeEvent, RealtimeKind, Role, Share, SyncBatch,
+    export_tree, page_markdown, people_csv, people_markdown, realtime_contract,
 };
 pub use model::{
     Block, BlockKind, Page, PageDiff, PageDraft, PageSummary, SearchResult, TableRow, Workspace,

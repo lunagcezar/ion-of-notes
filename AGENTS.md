@@ -99,6 +99,7 @@ src/
     seed.rs        neutral demo workspace used on first start
     search.rs      ranked search + excerpt helper
     diff.rs        changed/added/removed/reordered page diff
+    index.rs       derived page/children lookup index
   store.rs         WorkspaceStore + CollabStore ports, JSON/null adapters, data_path/collab_path
   server.rs        WorkspaceServer (workspace + collaboration state), WorkspaceApi trait, routes
   server/
@@ -106,6 +107,7 @@ src/
     url.rs         percent-encoding/decoding shared by client and server
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
   collab.rs        accounts/roles, sharing, sync log, realtime DTOs, CollabState
+                   (version history capped at 50 snapshots per page)
   collab/
     export.rs      Notion-style markdown/CSV export tree
   ollama.rs        AI assistant adapter: Ollama CLI in PATH or service at host:port

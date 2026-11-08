@@ -182,6 +182,51 @@ fn workspace_diff_detects_changed_added_removed_and_reordered_pages() {
 }
 
 #[test]
+fn workspace_index_finds_pages_children_and_breadcrumbs() {
+    let mut ws = Workspace::new("w");
+    ws.add_page(page("a", "A", None)).unwrap();
+    ws.add_page(page("b", "B", Some("a"))).unwrap();
+    ws.add_page(page("c", "C", Some("b"))).unwrap();
+
+    assert_eq!(ws.page("a").unwrap().title, "A");
+    assert_eq!(ws.page("c").unwrap().title, "C");
+    assert_eq!(ws.children(None).len(), 1);
+    assert_eq!(ws.children(Some("a")).len(), 1);
+    assert_eq!(ws.children(Some("b")).len(), 1);
+    assert_eq!(ws.breadcrumbs("c"), vec!["A", "B", "C"]);
+
+    ws.remove_page("a").unwrap();
+    assert!(ws.page("a").is_none());
+    assert!(ws.page("c").is_none());
+
+    ws.add_page(page("d", "D", None)).unwrap();
+    let json = serde_json::to_string(&ws).unwrap();
+    let back: Workspace = serde_json::from_str(&json).unwrap();
+    assert_eq!(back, ws);
+    assert_eq!(back.page("d").unwrap().title, "D");
+    assert!(back.page("a").is_none());
+}
+
+#[test]
+fn workspace_index_falls_back_after_direct_page_mutation() {
+    let mut ws = Workspace::new("w");
+    ws.pages.push(page("direct", "Direct", None));
+    assert_eq!(ws.page("direct").unwrap().title, "Direct");
+    ws.page_mut("direct").unwrap().title = "Changed".to_string();
+    assert_eq!(ws.page("direct").unwrap().title, "Changed");
+}
+
+#[test]
+fn workspace_index_survives_a_page_reorder() {
+    let mut ws = Workspace::new("w");
+    ws.add_page(page("a", "A", None)).unwrap();
+    ws.add_page(page("b", "B", None)).unwrap();
+    ws.pages.swap(0, 1);
+    assert_eq!(ws.page("a").unwrap().title, "A");
+    assert_eq!(ws.page("b").unwrap().title, "B");
+}
+
+#[test]
 fn block_kind_labels_are_unique() {
     let labels: Vec<&str> = BlockKind::all().iter().map(|k| k.label()).collect();
     let unique: std::collections::HashSet<&str> = labels.iter().copied().collect();

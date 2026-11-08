@@ -3,8 +3,8 @@
 
 use not_notion::client::Client;
 use not_notion::collab::{
-    Access, ChangeOp, CollabState, MemberDraft, Role, Share, export_tree, page_markdown,
-    people_csv, people_markdown, realtime_contract,
+    Access, ChangeOp, CollabState, MAX_VERSIONS_PER_PAGE, MemberDraft, Role, Share, export_tree,
+    page_markdown, people_csv, people_markdown, realtime_contract,
 };
 use not_notion::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
 use not_notion::server::WorkspaceServer;
@@ -80,6 +80,26 @@ fn sync_log_returns_only_changes_after_the_cursor() {
     assert_eq!(batch.changes[0].op, ChangeOp::Create);
     assert_eq!(state.changes_since(1).changes.len(), 1);
     assert!(state.changes_since(batch.cursor).changes.is_empty());
+}
+
+#[test]
+fn version_retention_keeps_the_newest_snapshots_per_page() {
+    let mut state = CollabState::new();
+    let mut page = Page::new("p-retain", "Retain", "R");
+    let total = MAX_VERSIONS_PER_PAGE + 5;
+    for index in 0..total {
+        page.title = format!("revision {index}");
+        state.record_version(&page, "m-owner");
+    }
+
+    let versions = state.versions_for("p-retain");
+    assert_eq!(versions.len(), MAX_VERSIONS_PER_PAGE);
+    assert_eq!(versions[0].version, total as u64);
+    assert_eq!(versions.last().unwrap().version, 6);
+
+    let other = Page::new("p-other", "Other", "O");
+    state.record_version(&other, "m-owner");
+    assert_eq!(state.versions_for("p-other").len(), 1);
 }
 
 #[test]

@@ -35,6 +35,8 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
 - `--serve` reads each request on its connection thread and locks the server
   state only for `handle`, so independent clients do not block each other's
   I/O. Serialization failures surface as `ClientError::Encode`.
+- Page lookups, children and breadcrumbs use a private derived workspace index;
+  version history keeps the newest 50 snapshots per page.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

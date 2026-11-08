@@ -6,6 +6,22 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — spec-022-workspace-index-and-version-retention
+
+- Added a private `WorkspaceIndex` (`model/index.rs`) mapping page ids to
+  positions and parents to child ids. `page`, `page_mut`, `children` and
+  `breadcrumbs` now use it, with a safe linear fallback after direct `pages`
+  mutations.
+- The index is skipped by serde, rebuilt after deserialization and after
+  `add_page`/`remove_page`, and ignored by `Workspace` equality; the JSON shape
+  is unchanged.
+- Added `MAX_VERSIONS_PER_PAGE` (50). `CollabState::record_version` prunes the
+  oldest snapshots for the same page and leaves other pages untouched.
+- Red: new index tests in `tests/model.rs` and the retention test in
+  `tests/collab.rs` were written first and observed failing.
+- Docs: added `spec/spec-022-workspace-index-and-version-retention.md`; updated
+  requirements, data model, README and `AGENTS.md`.
+
 ### Changed — spec-021-quality-and-concurrency-baseline
 
 - Added `ClientError::Encode` and `client::encode_body`; every mutation now

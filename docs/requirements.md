@@ -192,9 +192,9 @@
   with debounce; full-workspace replacement is reserved for added, removed or
   reordered pages (implemented in `spec-020`).
 - FR-65: Page lookup, children and breadcrumbs use a derived workspace index
-  without changing the JSON shape (planned, spec-016 A3).
-- FR-66: Version history has a documented retention limit and a restore is
-  recorded as a new version (planned, spec-016 A4).
+  without changing the JSON shape (implemented in `spec-022`).
+- FR-66: Version history has a documented retention limit (50 per page) and a
+  restore is recorded as a new version (implemented in `spec-022`).
 - FR-67: `ui/app.rs` is split into cohesive `commands`, `view`, `input` and
   `apply` modules behind the `ui.rs` facade; `ui/dialogs.rs` and
   `ui/render.rs` are facades over cohesive submodules (implemented in
@@ -267,6 +267,7 @@
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |
 | FR-69, FR-70 (implemented)    | `spec-021-quality-and-concurrency-baseline.md` |
+| FR-65, FR-66 (implemented)    | `spec-022-workspace-index-and-version-retention.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

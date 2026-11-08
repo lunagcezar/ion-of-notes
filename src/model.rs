@@ -10,10 +10,12 @@ use std::collections::HashSet;
 use std::fmt;
 
 mod diff;
+mod index;
 mod search;
 mod seed;
 
 pub use diff::PageDiff;
+use index::WorkspaceIndex;
 
 /// A short, human-friendly timestamp used for display only.
 pub fn now_label() -> String {
@@ -254,11 +256,46 @@ impl fmt::Display for WorkspaceError {
 impl std::error::Error for WorkspaceError {}
 
 /// The whole workspace: one JSON document on disk.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+///
+/// The private index is derived state: it is skipped by serde, rebuilt after
+/// deserialization and after add/remove, and ignored by equality.
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Workspace {
     pub name: String,
     pub pages: Vec<Page>,
     pub version: u64,
+    #[serde(skip)]
+    index: WorkspaceIndex,
+}
+
+impl PartialEq for Workspace {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.pages == other.pages && self.version == other.version
+    }
+}
+
+impl Eq for Workspace {}
+
+#[derive(Deserialize)]
+struct WorkspaceData {
+    name: String,
+    pages: Vec<Page>,
+    version: u64,
+}
+
+impl<'de> Deserialize<'de> for Workspace {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let data = WorkspaceData::deserialize(deserializer)?;
+        Ok(Self {
+            index: WorkspaceIndex::build(&data.pages),
+            name: data.name,
+            pages: data.pages,
+            version: data.version,
+        })
+    }
 }
 
 impl Workspace {
@@ -267,14 +304,36 @@ impl Workspace {
             name: name.to_string(),
             pages: Vec::new(),
             version: 0,
+            index: WorkspaceIndex::default(),
         }
     }
 
     pub fn page(&self, id: &str) -> Option<&Page> {
+        let position = if self.index.len() == self.pages.len() {
+            self.index.position(id)
+        } else {
+            None
+        };
+        if let Some(position) = position
+            && let Some(page) = self.pages.get(position)
+            && page.id == id
+        {
+            return Some(page);
+        }
         self.pages.iter().find(|p| p.id == id)
     }
 
     pub fn page_mut(&mut self, id: &str) -> Option<&mut Page> {
+        let position = if self.index.len() == self.pages.len() {
+            self.index.position(id)
+        } else {
+            None
+        };
+        if let Some(position) = position
+            && self.pages.get(position).is_some_and(|page| page.id == id)
+        {
+            return self.pages.get_mut(position);
+        }
         self.pages.iter_mut().find(|p| p.id == id)
     }
 
@@ -288,6 +347,7 @@ impl Workspace {
             return Err(WorkspaceError::InvalidParent(parent.to_string()));
         }
         self.pages.push(page);
+        self.index = WorkspaceIndex::build(&self.pages);
         Ok(())
     }
 
@@ -318,10 +378,23 @@ impl Workspace {
             .map(|p| p.id.clone())
             .collect();
         self.pages.retain(|p| !doomed.contains(&p.id));
+        self.index = WorkspaceIndex::build(&self.pages);
         Ok(removed)
     }
 
     pub fn children(&self, parent: Option<&str>) -> Vec<&Page> {
+        if self.index.len() == self.pages.len() {
+            let ids = self.index.children(parent);
+            let mut children = Vec::with_capacity(ids.len());
+            for id in ids {
+                if let Some(page) = self.page(id) {
+                    children.push(page);
+                }
+            }
+            if children.len() == ids.len() {
+                return children;
+            }
+        }
         self.pages
             .iter()
             .filter(|p| p.parent.as_deref() == parent)
