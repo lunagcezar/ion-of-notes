@@ -2,6 +2,7 @@
 
 //! Share popover and Inbox panel.
 
+use crate::collab::{Access, Role};
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::super::commands::Command;
@@ -21,8 +22,8 @@ pub(crate) fn render_share(
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_size(Vec2::new(460.0, 340.0))
-        .fixed_pos(Pos2::new(screen.right() - 480.0, screen.top() + 82.0))
+        .fixed_size(Vec2::new(480.0, 560.0))
+        .fixed_pos(Pos2::new(screen.right() - 500.0, screen.top() + 82.0))
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -55,29 +56,28 @@ pub(crate) fn render_share(
                     {
                         commands.push(Command::CloseShare);
                     }
-                    ui.label(
-                        egui::RichText::new("Learn about sharing")
-                            .size(11.0)
-                            .color(palette.accent),
-                    );
                 });
             });
-            ui.add_space(10.0);
+            ui.add_space(8.0);
             ui.separator();
             ui.add_space(12.0);
+
+            let mut invite = view.invite_input.clone();
             ui.horizontal(|ui| {
-                let mut invite = String::new();
-                ui.add(
+                let edit = ui.add(
                     egui::TextEdit::singleline(&mut invite)
-                        .desired_width(280.0)
-                        .hint_text("Email or group, separated by commas")
+                        .desired_width(300.0)
+                        .hint_text("Email, separated by commas")
                         .text_color(palette.text),
                 );
+                if edit.changed() {
+                    commands.push(Command::SetInviteInput(invite));
+                }
                 if ui
                     .add(
                         egui::Button::new(
-                            egui::RichText::new("Invite")
-                                .size(13.0)
+                            egui::RichText::new("Send invite")
+                                .size(12.5)
                                 .color(Color32::WHITE),
                         )
                         .fill(palette.accent)
@@ -85,58 +85,129 @@ pub(crate) fn render_share(
                     )
                     .clicked()
                 {
-                    commands.push(Command::CloseShare);
+                    commands.push(Command::SendInvites);
                 }
             });
-            ui.add_space(14.0);
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("Role").size(11.0).color(palette.muted));
+                for role in [Role::Guest, Role::Member] {
+                    let active = view.invite_role == role;
+                    if ui
+                        .add(
+                            egui::Button::new(
+                                egui::RichText::new(role.label())
+                                    .size(11.0)
+                                    .color(if active { palette.text } else { palette.muted }),
+                            )
+                            .fill(if active {
+                                palette.selected
+                            } else {
+                                Color32::TRANSPARENT
+                            })
+                            .corner_radius(CornerRadius::same(5)),
+                        )
+                        .clicked()
+                    {
+                        commands.push(Command::SetInviteRole(role));
+                    }
+                }
+            });
+            ui.add_space(6.0);
+            let mut message = view.invite_message.clone();
+            let message_edit = ui.add(
+                egui::TextEdit::multiline(&mut message)
+                    .desired_rows(2)
+                    .desired_width(f32::INFINITY)
+                    .hint_text("Add a note to your invite...")
+                    .text_color(palette.text),
+            );
+            if message_edit.changed() {
+                commands.push(Command::SetInviteMessage(message));
+            }
+            if let Some(error) = &view.invite_error {
+                ui.label(
+                    egui::RichText::new(error)
+                        .size(11.0)
+                        .color(Color32::from_rgb(224, 108, 108)),
+                );
+            }
+            if let Some(status) = &view.invite_status {
+                ui.label(egui::RichText::new(status).size(11.0).color(palette.accent));
+            }
+            ui.add_space(10.0);
+            ui.separator();
+            ui.add_space(8.0);
 
-            let (row, _) =
-                ui.allocate_exact_size(Vec2::new(ui.available_width(), 44.0), Sense::hover());
-            draw_person(
-                ui.painter(),
-                Rect::from_min_size(row.min + Vec2::new(2.0, 12.0), Vec2::splat(20.0)),
-                palette.muted,
-            );
-            ui.painter().text(
-                row.min + Vec2::new(32.0, 16.0),
-                Align2::LEFT_CENTER,
-                "Local workspace (You)",
-                FontId::proportional(13.0),
-                palette.text,
-            );
-            ui.painter().text(
-                row.min + Vec2::new(32.0, 32.0),
-                Align2::LEFT_CENTER,
-                "Owner",
-                FontId::proportional(11.0),
-                palette.muted,
-            );
-            ui.painter().text(
-                row.max + Vec2::new(-4.0, -22.0),
-                Align2::RIGHT_CENTER,
-                "Full access",
-                FontId::proportional(12.0),
-                palette.muted,
-            );
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .max_height(180.0)
+                .show(ui, |ui| {
+                    for member in view.share_members.iter() {
+                        let (row, _) = ui.allocate_exact_size(
+                            Vec2::new(ui.available_width(), 44.0),
+                            Sense::hover(),
+                        );
+                        draw_person(
+                            ui.painter(),
+                            Rect::from_min_size(row.min + Vec2::new(2.0, 12.0), Vec2::splat(20.0)),
+                            palette.muted,
+                        );
+                        ui.painter().text(
+                            row.min + Vec2::new(32.0, 16.0),
+                            Align2::LEFT_CENTER,
+                            &member.name,
+                            FontId::proportional(13.0),
+                            palette.text,
+                        );
+                        ui.painter().text(
+                            row.min + Vec2::new(32.0, 32.0),
+                            Align2::LEFT_CENTER,
+                            &member.email,
+                            FontId::proportional(11.0),
+                            palette.muted,
+                        );
+                        ui.painter().text(
+                            row.max + Vec2::new(-4.0, -22.0),
+                            Align2::RIGHT_CENTER,
+                            member.role.label(),
+                            FontId::proportional(12.0),
+                            palette.muted,
+                        );
+                    }
+                });
 
             ui.add_space(8.0);
             section_label(ui, "General access", palette);
-            let (general, _) =
-                ui.allocate_exact_size(Vec2::new(ui.available_width(), 32.0), Sense::hover());
+            let (general, response) =
+                ui.allocate_exact_size(Vec2::new(ui.available_width(), 32.0), Sense::click());
+            if response.hovered() {
+                ui.painter()
+                    .rect_filled(general, CornerRadius::same(5), palette.hover);
+            }
             ui.painter().text(
                 general.min + Vec2::new(4.0, 16.0),
                 Align2::LEFT_CENTER,
-                "Everyone with the link",
+                "Everyone at workspace",
                 FontId::proportional(13.0),
                 palette.text,
             );
             ui.painter().text(
                 general.max + Vec2::new(-4.0, -16.0),
                 Align2::RIGHT_CENTER,
-                "Full access",
+                view.share_general_access.label(),
                 FontId::proportional(12.0),
                 palette.muted,
             );
+            if response.clicked() {
+                let next = match view.share_general_access {
+                    Access::Full => Access::Edit,
+                    Access::Edit => Access::View,
+                    Access::View => Access::None,
+                    Access::None => Access::Full,
+                };
+                commands.push(Command::SetGeneralAccess(next));
+            }
             ui.add_space(10.0);
             ui.separator();
             ui.add_space(10.0);
@@ -158,11 +229,11 @@ pub(crate) fn render_share(
                         )
                         .clicked()
                     {
+                        commands.push(Command::CopyLink);
                         commands.push(Command::CloseShare);
                     }
                 });
             });
-            let _ = view;
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())

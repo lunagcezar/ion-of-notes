@@ -142,6 +142,7 @@ src/
       search_window.rs  shared search / new-tab windows
     widgets.rs     shared popover frame, menu row, toggle, section label
     edit_queue.rs  pure commit plan + debounce for per-page writes
+    invite.rs      pure invite email parsing/validation/name derivation
     switcher.rs    one shared search / new-tab window (DRY)
     page_icon.rs   page-icon feature: catalog, picker and one renderer
     search_cache.rs pure query/version cache so redraws do not re-query

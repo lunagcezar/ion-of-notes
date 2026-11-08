@@ -5,6 +5,7 @@
 //! Keeping the shapes here separates "what can happen" from the state machine
 //! in `ui::app` (SRP, spec-017).
 
+use crate::collab::{Access, Role};
 use crate::model::{BlockKind, Workspace};
 use egui::Pos2;
 
@@ -72,6 +73,11 @@ pub(super) enum Command {
     SetLibraryTab(String),
     OpenShare,
     CloseShare,
+    SetInviteInput(String),
+    SetInviteRole(Role),
+    SetInviteMessage(String),
+    SendInvites,
+    SetGeneralAccess(Access),
     OpenInbox,
     CloseInbox,
     GoBack,

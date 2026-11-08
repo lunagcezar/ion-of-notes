@@ -66,6 +66,26 @@ impl Access {
     }
 }
 
+/// Resolve the general ("everyone") access for a page from a share list.
+///
+/// Page-specific general rules win over the workspace-general rule; an empty
+/// list means no access. Used by the Share dialog (spec-023).
+pub fn general_access(shares: &[Share], page_id: &str) -> Access {
+    let is_general =
+        |share: &&Share| share.subject == "*" || share.subject == "Everyone at workspace";
+    if let Some(share) = shares
+        .iter()
+        .find(|share| share.page_id == page_id && is_general(share))
+    {
+        return share.access;
+    }
+    shares
+        .iter()
+        .find(|share| share.page_id == "*" && is_general(share))
+        .map(|share| share.access)
+        .unwrap_or(Access::None)
+}
+
 /// An account / member of the workspace (one row of the People directory).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Member {

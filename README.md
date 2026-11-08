@@ -37,6 +37,9 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
   I/O. Serialization failures surface as `ClientError::Encode`.
 - Page lookups, children and breadcrumbs use a private derived workspace index;
   version history keeps the newest 50 snapshots per page.
+- The Share popover is functional: it loads members, invites comma-separated
+  emails with Guest/Member roles, cycles general access and copies the page
+  link. The optional invite message is UI-only for now.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

@@ -4,7 +4,7 @@
 use not_notion::client::Client;
 use not_notion::collab::{
     Access, ChangeOp, CollabState, MAX_VERSIONS_PER_PAGE, MemberDraft, Role, Share, export_tree,
-    page_markdown, people_csv, people_markdown, realtime_contract,
+    general_access, page_markdown, people_csv, people_markdown, realtime_contract,
 };
 use not_notion::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
 use not_notion::server::WorkspaceServer;
@@ -80,6 +80,25 @@ fn sync_log_returns_only_changes_after_the_cursor() {
     assert_eq!(batch.changes[0].op, ChangeOp::Create);
     assert_eq!(state.changes_since(1).changes.len(), 1);
     assert!(state.changes_since(batch.cursor).changes.is_empty());
+}
+
+#[test]
+fn general_access_prefers_page_rules_then_workspace_rules() {
+    let shares = vec![
+        Share {
+            page_id: "*".to_string(),
+            subject: "Everyone at workspace".to_string(),
+            access: Access::View,
+        },
+        Share {
+            page_id: "p1".to_string(),
+            subject: "Everyone at workspace".to_string(),
+            access: Access::Edit,
+        },
+    ];
+    assert_eq!(general_access(&shares, "p1"), Access::Edit);
+    assert_eq!(general_access(&shares, "p2"), Access::View);
+    assert_eq!(general_access(&[], "p1"), Access::None);
 }
 
 #[test]

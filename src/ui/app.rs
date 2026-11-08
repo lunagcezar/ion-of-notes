@@ -8,7 +8,7 @@
 
 use crate::app;
 use crate::client::Client;
-use crate::collab::PageVersion;
+use crate::collab::{Access, Member, PageVersion, Role, general_access};
 use crate::model::{SearchResult, Workspace};
 use crate::ollama::{self, OllamaConfig, OllamaStatus};
 use crate::screenshot;
@@ -59,6 +59,13 @@ pub struct NotionApp {
     pub(super) library_open: bool,
     pub(super) library_tab: String,
     pub(super) share_open: bool,
+    pub(super) share_members: Arc<Vec<Member>>,
+    pub(super) invite_input: String,
+    pub(super) invite_role: Role,
+    pub(super) invite_message: String,
+    pub(super) invite_error: Option<String>,
+    pub(super) invite_status: Option<String>,
+    pub(super) share_general_access: Access,
     pub(super) inbox_open: bool,
     pub(super) nav_history: Vec<String>,
     pub(super) nav_pos: usize,
@@ -113,7 +120,7 @@ impl NotionApp {
         crate::i18n::set_locale("en");
         // The composition root (app layer) wires the concrete JSON adapter to
         // the server/client ports; the window only consumes the ready graph.
-        let (client, workspace) = app::build_desktop();
+        let (mut client, workspace) = app::build_desktop();
         let current_page = workspace
             .pages
             .first()
@@ -131,6 +138,18 @@ impl NotionApp {
                 .unwrap_or_else(|| current_page.clone())
         } else {
             current_page.clone()
+        };
+        let (share_members, share_general_access) = if demo == "share" {
+            let members = client.list_members().unwrap_or_default();
+            let shares = client
+                .list_shares(Some(&demo_current_page))
+                .unwrap_or_default();
+            (
+                Arc::new(members),
+                general_access(&shares, &demo_current_page),
+            )
+        } else {
+            (Arc::new(Vec::new()), Access::None)
         };
         let nav_history = vec![demo_current_page.clone()];
         let ai_config = OllamaConfig::from_env();
@@ -164,6 +183,13 @@ impl NotionApp {
             library_open: demo == "library",
             library_tab: "Recents".to_string(),
             share_open: demo == "share",
+            share_members,
+            invite_input: String::new(),
+            invite_role: Role::Guest,
+            invite_message: String::new(),
+            invite_error: None,
+            invite_status: None,
+            share_general_access,
             inbox_open: demo == "inbox",
             nav_history,
             nav_pos: 0,

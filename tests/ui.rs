@@ -4,8 +4,9 @@ use not_notion::client::Client;
 use not_notion::model::{BlockKind, Page, PageDiff, Workspace};
 use not_notion::server::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi};
 use not_notion::ui::{
-    CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan, plan_for,
-    settings_matches, status_color,
+    CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan,
+    is_valid_email, member_name_from_email, parse_invite_emails, plan_for, settings_matches,
+    status_color,
 };
 use std::sync::{Arc, Mutex};
 
@@ -75,6 +76,18 @@ fn commit_plan_uses_patch_for_changed_pages_and_replace_for_structure() {
         ..PageDiff::default()
     };
     assert_eq!(plan_for(&reordered), CommitPlan::Replace);
+}
+
+#[test]
+fn invite_helpers_parse_validate_and_name_emails() {
+    assert_eq!(
+        parse_invite_emails("a@b.com, c@d.org, , "),
+        vec!["a@b.com", "c@d.org"]
+    );
+    assert!(is_valid_email("a@b.com"));
+    assert!(!is_valid_email("nope"));
+    assert!(!is_valid_email("a@b"));
+    assert_eq!(member_name_from_email("jane.doe@example.com"), "Jane Doe");
 }
 
 #[test]

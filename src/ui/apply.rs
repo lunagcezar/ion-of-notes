@@ -5,6 +5,7 @@
 //! Splitting it from the struct/eframe shell keeps `ui::app` small (SRP,
 //! spec-017).
 
+use crate::collab::{MemberDraft, Share, general_access};
 use crate::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
 use crate::ollama;
 use crate::shortcuts::Action;
@@ -14,6 +15,7 @@ use uuid::Uuid;
 use super::app::NotionApp;
 use super::commands::{Command, IconTab, NewTabChoice, new_tab_choices};
 use super::edit_queue::{execute_plan, plan_for};
+use super::invite::{is_valid_email, member_name_from_email, parse_invite_emails};
 use super::palette::apply_theme;
 use super::view::ViewState;
 
@@ -42,6 +44,13 @@ impl NotionApp {
             library_open: self.library_open,
             library_tab: self.library_tab.clone(),
             share_open: self.share_open,
+            share_members: Arc::clone(&self.share_members),
+            invite_input: self.invite_input.clone(),
+            invite_role: self.invite_role,
+            invite_message: self.invite_message.clone(),
+            invite_error: self.invite_error.clone(),
+            invite_status: self.invite_status.clone(),
+            share_general_access: self.share_general_access,
             inbox_open: self.inbox_open,
             slash_for: self.slash_for.clone(),
             slash_pos: self.slash_pos,
@@ -181,6 +190,17 @@ impl NotionApp {
             .page(&self.current_page)
             .map(|p| p.locked)
             .unwrap_or(false)
+    }
+
+    /// Refresh the member directory and the general-access level for the
+    /// current page (spec-023).
+    fn refresh_share(&mut self) {
+        self.share_members = Arc::new(self.client.list_members().unwrap_or_default());
+        let shares = self
+            .client
+            .list_shares(Some(&self.current_page))
+            .unwrap_or_default();
+        self.share_general_access = general_access(&shares, &self.current_page);
     }
 
     /// Persist the difference between the last committed state and the
@@ -360,8 +380,64 @@ impl NotionApp {
                 Command::OpenShare => {
                     self.close_overlays();
                     self.share_open = true;
+                    self.invite_error = None;
+                    self.invite_status = None;
+                    self.refresh_share();
                 }
                 Command::CloseShare => self.share_open = false,
+                Command::SetInviteInput(input) => self.invite_input = input,
+                Command::SetInviteRole(role) => self.invite_role = role,
+                Command::SetInviteMessage(message) => self.invite_message = message,
+                Command::SendInvites => {
+                    let emails: Vec<String> = parse_invite_emails(&self.invite_input)
+                        .into_iter()
+                        .filter(|email| is_valid_email(email))
+                        .collect();
+                    if emails.is_empty() {
+                        self.invite_error =
+                            Some("Enter at least one valid email address.".to_string());
+                        self.invite_status = None;
+                    } else {
+                        let mut invited = 0;
+                        let mut errors = Vec::new();
+                        for email in emails {
+                            let draft = MemberDraft {
+                                name: member_name_from_email(&email),
+                                email,
+                                role: self.invite_role,
+                            };
+                            match self.client.invite_member(&draft) {
+                                Ok(_) => invited += 1,
+                                Err(error) => errors.push(error.to_string()),
+                            }
+                        }
+                        if invited > 0 {
+                            self.invite_input.clear();
+                            self.invite_status = Some(format!("Invited {invited} member(s)."));
+                        }
+                        self.invite_error = if errors.is_empty() {
+                            None
+                        } else {
+                            Some(errors.join("; "))
+                        };
+                        self.refresh_share();
+                    }
+                }
+                Command::SetGeneralAccess(access) => {
+                    let share = Share {
+                        page_id: self.current_page.clone(),
+                        subject: "Everyone at workspace".to_string(),
+                        access,
+                    };
+                    match self.client.set_share(&share) {
+                        Ok(_) => {
+                            self.share_general_access = access;
+                            self.invite_error = None;
+                            self.invite_status = Some("General access updated.".to_string());
+                        }
+                        Err(error) => self.invite_error = Some(error.to_string()),
+                    }
+                }
                 Command::OpenInbox => {
                     self.close_overlays();
                     self.inbox_open = true;

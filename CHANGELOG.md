@@ -6,6 +6,22 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-023-add-members-sharing-dialog
+
+- The Share popover is functional: it loads the member directory and general
+  access when opened, supports comma-separated emails, Guest/Member roles and
+  an optional message, sends invites through `Client::invite_member`, refreshes
+  the list and shows inline status/errors.
+- General access cycles Full → Can edit → Can view → No access → Full and is
+  persisted with `Client::set_share`; Copy link copies the page link.
+- Added pure `ui/invite.rs` helpers (`parse_invite_emails`, `is_valid_email`,
+  `member_name_from_email`) and `collab::general_access`.
+- Added `NOT_NOTION_SHOW=share` population for screenshot previews.
+- Red: new invite-helper tests in `tests/ui.rs` and the general-access test in
+  `tests/collab.rs` were written first and observed failing.
+- Docs: added `spec/spec-023-add-members-sharing-dialog.md`; updated
+  requirements, README and `AGENTS.md`.
+
 ### Changed — spec-022-workspace-index-and-version-retention
 
 - Added a private `WorkspaceIndex` (`model/index.rs`) mapping page ids to

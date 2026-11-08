@@ -207,6 +207,15 @@
   blocking one client behind another (implemented in `spec-021`).
 - FR-71: Settings search filters the rows inside the open section, not only the
   navigation rail (planned, spec-016 A9).
+
+### 1.12 Sharing dialog (spec-023)
+
+- FR-72: The Share popover loads the member directory and general access,
+  supports comma-separated emails with Guest/Member roles, sends invites
+  through the client, refreshes the list, shows status/errors, cycles general
+  access through Full/Can edit/Can view/No access, and copies the page link
+  (implemented in `spec-023`). The optional invite message is UI-only until
+  `MemberDraft` carries a note field.
 - NFR-10: Every completed spec is committed to git in the same session
   (`AGENTS.md` → Commits).
 - NFR-11: Search results are cached by query and workspace version; an
@@ -268,6 +277,7 @@
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |
 | FR-69, FR-70 (implemented)    | `spec-021-quality-and-concurrency-baseline.md` |
 | FR-65, FR-66 (implemented)    | `spec-022-workspace-index-and-version-retention.md` |
+| FR-72 (implemented)           | `spec-023-add-members-sharing-dialog.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 
