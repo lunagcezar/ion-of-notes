@@ -334,7 +334,7 @@ pub(super) fn render_page_actions(
     commands: &mut Vec<Command>,
 ) {
     let screen = ctx.viewport_rect();
-    egui::Window::new("page_actions")
+    let resp = egui::Window::new("page_actions")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
@@ -457,17 +457,24 @@ pub(super) fn render_page_actions(
                     }
                 });
         });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+    {
+        commands.push(Command::ClosePageActions);
+    }
 }
 
 // ---- Settings --------------------------------------------------------------
 
 pub(super) fn render_settings(
     ctx: &egui::Context,
+    ws: &Workspace,
     view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    egui::Window::new("settings")
+    let resp = egui::Window::new("settings")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
@@ -502,23 +509,23 @@ pub(super) fn render_settings(
                     ui.add_space(18.0);
                     let (search, _) =
                         ui.allocate_exact_size(Vec2::new(264.0, 30.0), Sense::hover());
-                    ui.painter().rect_filled(
-                        search,
-                        CornerRadius::same(6),
-                        palette.hover,
-                    );
+                    ui.painter().rect_filled(search, CornerRadius::same(6), palette.hover);
                     draw_search(
                         ui.painter(),
                         Rect::from_min_size(search.min + Vec2::new(8.0, 7.0), Vec2::splat(16.0)),
                         palette.muted,
                     );
-                    ui.painter().text(
-                        search.min + Vec2::new(32.0, 15.0),
-                        Align2::LEFT_CENTER,
-                        "Search settings",
-                        FontId::proportional(12.0),
-                        palette.muted,
+                    let mut query = view.settings_query.clone();
+                    let edit = ui.put(
+                        Rect::from_min_size(search.min + Vec2::new(28.0, 2.0), Vec2::new(228.0, 26.0)),
+                        egui::TextEdit::singleline(&mut query)
+                            .frame(egui::Frame::NONE)
+                            .hint_text("Search settings")
+                            .text_color(palette.text),
                     );
+                    if edit.changed() {
+                        commands.push(Command::SetSettingsQuery(query));
+                    }
                     ui.add_space(14.0);
                     section_label(ui, "Account", palette);
                     settings_nav(ui, view, "Local workspace", palette, commands);
@@ -578,18 +585,22 @@ pub(super) fn render_settings(
                                     .color(palette.muted),
                             );
                             ui.add_space(26.0);
-                            if page == "AI assistant" {
-                                render_ai_settings(ui, view, palette, commands);
-                            } else if page == "Preferences" {
-                                render_preferences(ui, view, palette, commands);
-                            } else {
-                                ui.label(
-                                    egui::RichText::new(
-                                        "Settings for this section live on your self-hosted workspace.",
-                                    )
-                                    .size(13.0)
-                                    .color(palette.muted),
-                                );
+                            match page {
+                                "AI assistant" => render_ai_settings(ui, view, palette, commands),
+                                "Preferences" => render_preferences(ui, view, palette, commands),
+                                "General" => render_workspace_settings(ui, ws, view, palette, commands),
+                                "Sidebar" => render_sidebar_settings(ui, view, palette, commands),
+                                "Offline" => render_offline_settings(ui, ws, view, palette, commands),
+                                "People" => render_people_settings(ui, ws, view, palette, commands),
+                                _ => {
+                                    ui.label(
+                                        egui::RichText::new(
+                                            "Settings for this section live on your self-hosted workspace.",
+                                        )
+                                        .size(13.0)
+                                        .color(palette.muted),
+                                    );
+                                }
                             }
                             ui.add_space(24.0);
                         });
@@ -620,6 +631,12 @@ pub(super) fn render_settings(
                 commands.push(Command::CloseSettings);
             }
         });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+    {
+        commands.push(Command::CloseSettings);
+    }
 }
 
 /// A read-only preference row (label, description and a value chip on the
@@ -730,18 +747,47 @@ fn render_preferences(
     ui.add_space(12.0);
     ui.separator();
     ui.add_space(8.0);
-    display_row(
-        ui,
-        "Language",
-        "Choose the language you want to use the app in",
-        "English (US) ⌄",
-        palette,
+    let (lang_rect, lang_resp) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), 46.0), Sense::click());
+    if lang_resp.hovered() {
+        ui.painter().rect_filled(lang_rect, CornerRadius::same(6), palette.hover);
+    }
+    ui.painter().text(
+        lang_rect.min + Vec2::new(0.0, 14.0),
+        Align2::LEFT_CENTER,
+        rust_i18n::t!("language"),
+        FontId::proportional(12.5),
+        palette.text,
     );
+    ui.painter().text(
+        lang_rect.min + Vec2::new(0.0, 32.0),
+        Align2::LEFT_CENTER,
+        rust_i18n::t!("language_description"),
+        FontId::proportional(11.0),
+        palette.muted,
+    );
+    let lang_label = crate::i18n::label_for(&view.language);
+    let chip = Rect::from_min_size(Pos2::new(lang_rect.max.x - 170.0, lang_rect.min.y + 9.0), Vec2::new(170.0, 26.0));
+    ui.painter().rect_stroke(chip, CornerRadius::same(6), Stroke::new(1.0, palette.border), egui::StrokeKind::Inside);
+    ui.painter().text(chip.center(), Align2::CENTER_CENTER, format!("{lang_label} ⌄"), FontId::proportional(12.0), palette.text);
+    if lang_resp.clicked() {
+        let codes: Vec<&str> = crate::i18n::SUPPORTED.iter().map(|(c, _)| *c).collect();
+        let idx = codes.iter().position(|c| *c == view.language).unwrap_or(0);
+        let next = codes[(idx + 1) % codes.len()];
+        commands.push(Command::SetLanguage(next.to_string()));
+    }
     display_row(
         ui,
         "Number format",
         "Choose how numbers and currencies are formatted",
         "1.000.000,00 ⌄",
+        palette,
+    );
+    display_row(
+        ui,
+        "Time format",
+        "Choose 12-hour or 24-hour time display",
+        "24-hour",
         palette,
     );
 
@@ -809,6 +855,122 @@ fn render_preferences(
         .clicked()
     {
         commands.push(Command::ResetWorkspace);
+    }
+}
+
+fn render_workspace_settings(
+    ui: &mut egui::Ui,
+    ws: &Workspace,
+    view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    ui.label(
+        egui::RichText::new("Workspace")
+            .font(strong_font(17.0))
+            .color(palette.text),
+    );
+    ui.add_space(12.0);
+    ui.separator();
+    ui.add_space(12.0);
+    display_row(ui, "Workspace name", "Shown in the sidebar and exports", &ws.name, palette);
+    display_row(ui, "Workspace icon", "Customize the workspace identity", "Default", palette);
+    ui.add_space(18.0);
+    ui.label(egui::RichText::new("Members & access").font(strong_font(17.0)).color(palette.text));
+    ui.add_space(8.0);
+    ui.separator();
+    ui.add_space(8.0);
+    display_row(ui, "Members", "Manage who can access this workspace", "Manage", palette);
+    if ui.add(egui::Button::new("Invite members")).clicked() {
+        commands.push(Command::OpenShare);
+    }
+    ui.add_space(18.0);
+    ui.label(egui::RichText::new("Data & export").font(strong_font(17.0)).color(palette.text));
+    ui.add_space(8.0);
+    ui.separator();
+    ui.add_space(8.0);
+    ui.label(
+        egui::RichText::new("Export includes pages, version history metadata, and People.")
+            .size(12.0)
+            .color(palette.muted),
+    );
+    let _ = (view, commands);
+}
+
+fn render_sidebar_settings(
+    ui: &mut egui::Ui,
+    _view: &ViewState,
+    palette: &Palette,
+    _commands: &mut Vec<Command>,
+) {
+    ui.label(
+        egui::RichText::new("Customize sidebar")
+            .font(strong_font(17.0))
+            .color(palette.text),
+    );
+    ui.add_space(8.0);
+    ui.label(
+        egui::RichText::new("Choose what appears in the sidebar. Drag-and-drop ordering is planned; toggles are available here.")
+            .size(12.0)
+            .color(palette.muted),
+    );
+    ui.add_space(12.0);
+    ui.separator();
+    ui.add_space(8.0);
+    for item in ["Search", "Library", "Settings", "Inbox", "Favorites", "Private pages", "Customize sidebar"] {
+        display_row(ui, item, "Show in sidebar", "Visible", palette);
+    }
+}
+
+fn render_offline_settings(
+    ui: &mut egui::Ui,
+    ws: &Workspace,
+    view: &ViewState,
+    palette: &Palette,
+    _commands: &mut Vec<Command>,
+) {
+    ui.label(egui::RichText::new("Offline pages").font(strong_font(17.0)).color(palette.text));
+    ui.add_space(8.0);
+    ui.label(
+        egui::RichText::new("Pages marked \"Available offline\" are kept for offline access and listed here.")
+            .size(12.0)
+            .color(palette.muted),
+    );
+    ui.add_space(12.0);
+    ui.separator();
+    ui.add_space(8.0);
+    let mut found = false;
+    for page in ws.pages.iter().filter(|p| p.available_offline) {
+        found = true;
+        ui.label(egui::RichText::new(format!("• {}", page.title)).color(palette.text));
+    }
+    if !found {
+        ui.label(
+            egui::RichText::new("No offline pages yet. Use Page actions → Available offline.")
+                .size(12.0)
+                .color(palette.muted),
+        );
+    }
+    let _ = view;
+}
+
+fn render_people_settings(
+    ui: &mut egui::Ui,
+    _ws: &Workspace,
+    _view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    ui.label(egui::RichText::new("People").font(strong_font(17.0)).color(palette.text));
+    ui.add_space(8.0);
+    ui.label(
+        egui::RichText::new("Members and guests are managed by your self-hosted workspace server.")
+            .size(12.0)
+            .color(palette.muted),
+    );
+    ui.add_space(12.0);
+    if ui.add(egui::Button::new("Invite members")).clicked() {
+        commands.push(Command::OpenShare);
     }
 }
 
@@ -974,7 +1136,7 @@ pub(super) fn render_shortcuts(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    egui::Window::new("shortcut_sheet")
+    let resp = egui::Window::new("shortcut_sheet")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
@@ -1037,6 +1199,181 @@ pub(super) fn render_shortcuts(
                 });
             let _ = view;
         });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+    {
+        commands.push(Command::CloseShortcuts);
+    }
+}
+
+// ---- App / workspace / grid menus -----------------------------------------
+
+fn popup_menu(
+    ctx: &egui::Context,
+    id: &str,
+    pos: Pos2,
+    width: f32,
+    palette: &Palette,
+    items: &[(&str, &str, Command)],
+    commands: &mut Vec<Command>,
+    close: Command,
+) {
+    let resp = egui::Window::new(id)
+        .title_bar(false)
+        .collapsible(false)
+        .resizable(false)
+        .fixed_pos(pos)
+        .default_width(width)
+        .frame(
+            egui::Frame::NONE
+                .fill(palette.content)
+                .corner_radius(CornerRadius::same(8))
+                .inner_margin(Margin::same(6))
+                .stroke(Stroke::new(1.0, palette.border)),
+        )
+        .show(ctx, |ui| {
+            for (label, hint, cmd) in items {
+                if *label == "---" {
+                    ui.separator();
+                    continue;
+                }
+                let r = menu_button(ui, label, hint, palette);
+                if r.clicked() {
+                    commands.push(cmd.clone());
+                    commands.push(close.clone());
+                }
+            }
+        });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+    {
+        commands.push(close);
+    }
+}
+
+pub(super) fn render_app_menu(
+    ctx: &egui::Context,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    let screen = ctx.viewport_rect();
+    let items = vec![
+        ("File", "", Command::NoOp),
+        ("  New page", "Ctrl+N", Command::NewPage(None)),
+        ("  New tab", "Ctrl+T", Command::OpenNewTab),
+        ("  Close tab", "Ctrl+W", Command::CloseTab(usize::MAX)),
+        ("---", "", Command::NoOp),
+        ("Edit", "", Command::NoOp),
+        ("  Undo", "Ctrl+Z", Command::Undo),
+        ("  Redo", "Ctrl+Shift+Z", Command::Redo),
+        ("  Copy link", "Ctrl+L", Command::CopyLink),
+        ("---", "", Command::NoOp),
+        ("View", "", Command::NoOp),
+        ("  Toggle sidebar", "Ctrl+\\", Command::ToggleSidebar),
+        ("  Zoom in", "Ctrl++", Command::ZoomIn),
+        ("  Zoom out", "Ctrl+-", Command::ZoomOut),
+        ("  Full screen", "F11", Command::ToggleFullscreen),
+        ("---", "", Command::NoOp),
+        ("History", "", Command::NoOp),
+        ("  Back", "Ctrl+[", Command::GoBack),
+        ("  Forward", "Ctrl+]", Command::GoForward),
+        ("---", "", Command::NoOp),
+        ("Window", "", Command::NoOp),
+        ("  Minimize", "", Command::WindowMinimize),
+        ("  Next tab", "Ctrl+Tab", Command::NextTab),
+        ("---", "", Command::NoOp),
+        ("Help", "", Command::NoOp),
+        ("  Keyboard shortcuts", "F1", Command::OpenShortcuts),
+        ("  Settings", "Ctrl+,", Command::OpenSettings),
+    ];
+    popup_menu(
+        ctx,
+        "app_menu",
+        Pos2::new(screen.left() + 38.0, screen.top() + 42.0),
+        260.0,
+        palette,
+        &items,
+        commands,
+        Command::CloseAppMenu,
+    );
+}
+
+pub(super) fn render_workspace_menu(
+    ctx: &egui::Context,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    let screen = ctx.viewport_rect();
+    let resp = egui::Window::new("workspace_menu")
+        .title_bar(false)
+        .collapsible(false)
+        .resizable(false)
+        .fixed_pos(Pos2::new(screen.left() + 12.0, screen.bottom() - 250.0))
+        .default_width(240.0)
+        .frame(
+            egui::Frame::NONE
+                .fill(palette.content)
+                .corner_radius(CornerRadius::same(8))
+                .inner_margin(Margin::same(6))
+                .stroke(Stroke::new(1.0, palette.border)),
+        )
+        .show(ctx, |ui| {
+            let items: &[(&str, Command, Option<&str>)] = &[
+                ("Workspace settings", Command::OpenSettings, Some("General")),
+                ("Invite members", Command::OpenShare, None),
+                ("Add account", Command::OpenSettings, Some("People")),
+                ("---", Command::NoOp, None),
+                ("Switch workspace", Command::OpenLibrary, None),
+                ("Create new workspace", Command::OpenSettings, Some("General")),
+            ];
+            for (label, cmd, page) in items {
+                if *label == "---" {
+                    ui.separator();
+                    continue;
+                }
+                let r = menu_button(ui, label, "", palette);
+                if r.clicked() {
+                    if let Some(p) = page {
+                        commands.push(Command::SetSettingsPage((*p).to_string()));
+                    }
+                    commands.push(cmd.clone());
+                    commands.push(Command::CloseWorkspaceMenu);
+                }
+            }
+        });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+    {
+        commands.push(Command::CloseWorkspaceMenu);
+    }
+}
+
+pub(super) fn render_grid_menu(
+    ctx: &egui::Context,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    let screen = ctx.viewport_rect();
+    let items = vec![
+        ("Library", "", Command::OpenLibrary),
+        ("Skills", "", Command::SetSettingsPage("AI assistant".into())),
+        ("Trash", "", Command::OpenLibrary),
+        ("---", "", Command::NoOp),
+        ("Settings", "", Command::OpenSettings),
+    ];
+    popup_menu(
+        ctx,
+        "grid_menu",
+        Pos2::new(screen.left() + 220.0, screen.bottom() - 220.0),
+        180.0,
+        palette,
+        &items,
+        commands,
+        Command::CloseGridMenu,
+    );
 }
 
 // ---- Share, inbox and slash menu -------------------------------------------
@@ -1048,7 +1385,7 @@ pub(super) fn render_share(
     commands: &mut Vec<Command>,
 ) {
     let screen = ctx.viewport_rect();
-    egui::Window::new("share")
+    let resp = egui::Window::new("share")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
@@ -1183,6 +1520,12 @@ pub(super) fn render_share(
             });
             let _ = view;
         });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+    {
+        commands.push(Command::CloseShare);
+    }
 }
 
 pub(super) fn render_inbox(
@@ -1192,7 +1535,7 @@ pub(super) fn render_inbox(
     commands: &mut Vec<Command>,
 ) {
     let screen = ctx.viewport_rect();
-    egui::Window::new("inbox")
+    let resp = egui::Window::new("inbox")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
@@ -1292,6 +1635,12 @@ pub(super) fn render_inbox(
             }
             let _ = view;
         });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+    {
+        commands.push(Command::CloseInbox);
+    }
 }
 
 /// One entry of the block menu: a label and the kind it turns the block into.

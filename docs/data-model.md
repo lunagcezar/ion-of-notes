@@ -13,16 +13,18 @@ whole workspace is one JSON document on disk. No egui types appear here.
 
 ## Entity: Page
 
-| Field        | Type                | Description                                    |
-| ------------ | ------------------- | ---------------------------------------------- |
-| `id`         | `String`            | UUID v4, unique inside the workspace           |
-| `title`      | `String`            | Editable page title                            |
-| `icon`       | `String`            | Short neutral glyph or two-letter mark         |
-| `parent`     | `Option<String>`    | Parent page id, `None` for a root page         |
-| `favorite`   | `bool`              | Shown in the Favorites sidebar section         |
-| `blocks`     | `Vec<Block>`        | Ordered editable content                       |
-| `rows`       | `Vec<TableRow>`     | Inline table database (empty for normal pages) |
-| `updated_at` | `String`            | ISO-8601-like display timestamp                |
+| Field               | Type                | Description                                      |
+| ------------------- | ------------------- | ------------------------------------------------ |
+| `id`                | `String`            | UUID v4, unique inside the workspace             |
+| `title`             | `String`            | Editable page title                              |
+| `icon`              | `String`            | Glyph/emoji or image reference                   |
+| `parent`            | `Option<String>`    | Parent page id, `None` for a root page           |
+| `favorite`          | `bool`              | Shown in the Favorites sidebar section           |
+| `locked`            | `bool`              | Prevents editing when true (serde default false) |
+| `available_offline` | `bool`              | Marks page for offline listing (serde default)   |
+| `blocks`            | `Vec<Block>`        | Ordered editable content                         |
+| `rows`              | `Vec<TableRow>`     | Inline table database (empty for normal pages)   |
+| `updated_at`        | `String`            | ISO-8601-like display timestamp                  |
 
 ## Entity: Block
 
@@ -89,13 +91,14 @@ types. They are the DTOs of the decided API.
 | `Share` | `page_id, subject, access: Access` | Permission grant; `page_id == "*"` is general |
 | `Access` | `Full \| Edit \| View \| None` | Share popover levels; `can_write` for Full/Edit |
 | `Change` | `seq, page_id, op, actor` | One versioned sync-log entry |
+| `PageVersion` | `version, page_id, title, actor, updated_at, snapshot` | Stored page snapshot for version history |
 | `ChangeOp` | `Create \| Update \| Delete \| Replace` | Mutation kind |
 | `SyncBatch` | `cursor, changes: Vec<Change>` | `GET /api/sync?since=` response |
 | `RealtimeEvent` | `kind, page_id, actor, payload` | WebSocket frame payload |
 | `RealtimeKind` | `Presence \| Edit \| Awareness \| Sync` | Frame category |
 | `RealtimeContract` | `transport, channel, events, conflict_resolution` | `GET /api/realtime` discovery |
 | `ExportFile` | `path, content` | One file of the in-memory export tree |
-| `CollabState` | `members, shares, changes, next_seq` | Server-owned state + pure methods |
+| `CollabState` | `members, shares, changes, next_seq, versions` | Server-owned state + pure methods |
 
 `CollabState` methods: `invite`, `set_access`, `shares_for`, `access_for`
 (most-specific-first resolution), `can_write`, `record`, `changes_since`.

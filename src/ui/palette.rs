@@ -122,12 +122,16 @@ pub fn install_fonts(ctx: &egui::Context) {
     }
     let regular = std::fs::read(r"C:\Windows\Fonts\segoeui.ttf").ok();
     let bold = std::fs::read(r"C:\Windows\Fonts\segoeuib.ttf").ok();
-    // Segoe UI Symbol supplies outline glyphs for the monochrome symbols used
-    // as customizable page icons (spec-013). It is appended as a fallback so
-    // missing glyphs in the UI faces still resolve to a real, drawable shape.
+    // Segoe UI Symbol / Emoji supply glyphs for page icons (spec-013/014).
     let symbol = std::fs::read(r"C:\Windows\Fonts\seguisym.ttf").ok();
+    let emoji = std::fs::read(r"C:\Windows\Fonts\seguiemj.ttf").ok();
     let serif = std::fs::read(r"C:\Windows\Fonts\times.ttf").ok();
-    if regular.is_none() && bold.is_none() && symbol.is_none() && serif.is_none() {
+    if regular.is_none()
+        && bold.is_none()
+        && symbol.is_none()
+        && emoji.is_none()
+        && serif.is_none()
+    {
         return;
     }
 
@@ -161,6 +165,16 @@ pub fn install_fonts(ctx: &egui::Context) {
             strong.push(name);
         }
         STRONG_FONT.store(true, Ordering::SeqCst);
+    }
+    if let Some(bytes) = emoji {
+        defs.font_data.insert(
+            "ui-emoji".to_owned(),
+            Arc::new(FontData::from_owned(bytes)),
+        );
+        defs.families
+            .entry(FontFamily::Proportional)
+            .or_default()
+            .push("ui-emoji".to_owned());
     }
     if let Some(bytes) = symbol {
         defs.font_data.insert(

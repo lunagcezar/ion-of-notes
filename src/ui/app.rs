@@ -23,8 +23,9 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use super::dialogs::{
-    render_inbox, render_new_tab, render_page_actions, render_search, render_settings,
-    render_share, render_shortcuts, render_slash,
+    render_app_menu, render_grid_menu, render_inbox, render_new_tab, render_page_actions,
+    render_search, render_settings, render_share, render_shortcuts, render_slash,
+    render_workspace_menu,
 };
 use super::page_icon::render_icon_picker;
 use super::palette::{apply_theme, Palette};
@@ -91,6 +92,7 @@ pub(super) enum Command {
     SetTableView(bool),
     OpenLibrary,
     CloseLibrary,
+    SetLibraryTab(String),
     OpenShare,
     CloseShare,
     OpenInbox,
@@ -156,6 +158,8 @@ pub(super) enum Command {
     RefreshAiStatus,
     // Settings, help and window zoom.
     SetSettingsPage(String),
+    SetSettingsQuery(String),
+    SetLanguage(String),
     OpenShortcuts,
     CloseShortcuts,
     ZoomIn,
@@ -178,6 +182,12 @@ pub(super) enum Command {
     // Page actions / settings from the "..." menu (spec-013).
     OpenPageActions,
     ClosePageActions,
+    ToggleWorkspaceMenu,
+    CloseWorkspaceMenu,
+    OpenAppMenu,
+    CloseAppMenu,
+    ToggleGridMenu,
+    CloseGridMenu,
     ToggleFullWidth,
     ToggleSmallText,
     SetFontStyle(FontStyle),
@@ -201,9 +211,12 @@ pub(super) struct ViewState {
     pub(super) search_results: Vec<SearchResult>,
     pub(super) settings_open: bool,
     pub(super) settings_page: String,
+    pub(super) settings_query: String,
+    pub(super) language: String,
     pub(super) dark: bool,
     pub(super) table_view: bool,
     pub(super) library_open: bool,
+    pub(super) library_tab: String,
     pub(super) share_open: bool,
     pub(super) inbox_open: bool,
     pub(super) slash_for: Option<String>,
@@ -233,6 +246,9 @@ pub(super) struct ViewState {
     pub(super) small_text: bool,
     pub(super) available_offline: bool,
     pub(super) lock_page: bool,
+    pub(super) workspace_menu_open: bool,
+    pub(super) app_menu_open: bool,
+    pub(super) grid_menu_open: bool,
     pub(super) drag_from: Option<String>,
     pub(super) drag_to: Option<String>,
 }
@@ -252,10 +268,13 @@ pub struct NotionApp {
     search_results: Vec<SearchResult>,
     settings_open: bool,
     settings_page: String,
+    settings_query: String,
+    language: String,
     dark: bool,
     theme_dirty: bool,
     table_view: bool,
     library_open: bool,
+    library_tab: String,
     share_open: bool,
     inbox_open: bool,
     nav_history: Vec<String>,
@@ -296,14 +315,16 @@ pub struct NotionApp {
     font_style: FontStyle,
     full_width: bool,
     small_text: bool,
-    available_offline: bool,
-    lock_page: bool,
+    workspace_menu_open: bool,
+    app_menu_open: bool,
+    grid_menu_open: bool,
     drag_from: Option<String>,
     drag_to: Option<String>,
 }
 
 impl NotionApp {
     pub fn new(cc: &eframe::CreationContext<'_>, screenshot: Option<PathBuf>) -> Self {
+        crate::i18n::set_locale("en");
         // The composition root (app layer) wires the concrete JSON adapter to
         // the server/client ports; the window only consumes the ready graph.
         let (client, workspace) = app::build_desktop();
@@ -347,10 +368,13 @@ impl NotionApp {
             } else {
                 "Preferences".to_string()
             },
+            settings_query: String::new(),
+            language: "en".to_string(),
             dark: true,
             theme_dirty: false,
             table_view: true,
             library_open: demo == "library",
+            library_tab: "Recents".to_string(),
             share_open: demo == "share",
             inbox_open: demo == "inbox",
             nav_history,
@@ -388,14 +412,20 @@ impl NotionApp {
             font_style: FontStyle::Default,
             full_width: false,
             small_text: false,
-            available_offline: false,
-            lock_page: false,
+            workspace_menu_open: false,
+            app_menu_open: false,
+            grid_menu_open: false,
             drag_from: None,
             drag_to: None,
         }
     }
 
     fn view_state(&self) -> ViewState {
+        let (available_offline, lock_page) = self
+            .workspace
+            .page(&self.current_page)
+            .map(|p| (p.available_offline, p.locked))
+            .unwrap_or((false, false));
         ViewState {
             current_page: self.current_page.clone(),
             tabs: self.tabs.clone(),
@@ -407,9 +437,12 @@ impl NotionApp {
             search_results: self.search_results.clone(),
             settings_open: self.settings_open,
             settings_page: self.settings_page.clone(),
+            settings_query: self.settings_query.clone(),
+            language: self.language.clone(),
             dark: self.dark,
             table_view: self.table_view,
             library_open: self.library_open,
+            library_tab: self.library_tab.clone(),
             share_open: self.share_open,
             inbox_open: self.inbox_open,
             slash_for: self.slash_for.clone(),
@@ -437,8 +470,11 @@ impl NotionApp {
             font_style: self.font_style,
             full_width: self.full_width,
             small_text: self.small_text,
-            available_offline: self.available_offline,
-            lock_page: self.lock_page,
+            available_offline,
+            lock_page,
+            workspace_menu_open: self.workspace_menu_open,
+            app_menu_open: self.app_menu_open,
+            grid_menu_open: self.grid_menu_open,
             drag_from: self.drag_from.clone(),
             drag_to: self.drag_to.clone(),
         }
@@ -538,6 +574,13 @@ impl NotionApp {
         }
     }
 
+    fn page_locked(&self) -> bool {
+        self.workspace
+            .page(&self.current_page)
+            .map(|p| p.locked)
+            .unwrap_or(false)
+    }
+
     #[allow(clippy::too_many_lines)]
     fn apply_commands(
         &mut self,
@@ -549,6 +592,33 @@ impl NotionApp {
         let mut index = 0;
         while index < commands.len() {
             let command = commands[index].clone();
+            let locked = self.page_locked();
+            let blocked = locked
+                && matches!(
+                    command,
+                    Command::DeletePage(_)
+                        | Command::ToggleFavorite(_)
+                        | Command::SetTableView(_)
+                        | Command::OpenSlash { .. }
+                        | Command::SetBlockKind(_, _)
+                        | Command::ApplyMarkdown { .. }
+                        | Command::InsertBlockAfter(_)
+                        | Command::AppendBlock
+                        | Command::AddBlock { .. }
+                        | Command::StartBlockDrag(_)
+                        | Command::HoverBlockDrag(_)
+                        | Command::DropBlock
+                        | Command::DeleteBlock(_)
+                        | Command::ToggleTodo(_)
+                        | Command::CycleStatus(_)
+                        | Command::AddRow
+                        | Command::SetPageIcon(_)
+                        | Command::DuplicatePage
+                );
+            if blocked {
+                index += 1;
+                continue;
+            }
             match command {
                 Command::SelectPage(id) => {
                     self.current_page = id.clone();
@@ -625,6 +695,7 @@ impl NotionApp {
                     self.library_open = true;
                 }
                 Command::CloseLibrary => self.library_open = false,
+                Command::SetLibraryTab(tab) => self.library_tab = tab,
                 Command::OpenShare => {
                     self.close_overlays();
                     self.share_open = true;
@@ -878,14 +949,15 @@ impl NotionApp {
                     }
                 }
                 Command::CloseTab(index) => {
-                    if self.tabs.len() > 1 {
+                    let index = if index == usize::MAX { self.active_tab } else { index };
+                    if self.tabs.len() > 1 && index < self.tabs.len() {
                         let id = self.tabs.remove(index);
                         self.closed_tabs.push(id);
                         if self.active_tab >= self.tabs.len() {
                             self.active_tab = self.tabs.len() - 1;
                         }
                         self.current_page = self.tabs[self.active_tab].clone();
-                    } else {
+                    } else if self.tabs.len() <= 1 {
                         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 }
@@ -949,6 +1021,11 @@ impl NotionApp {
                 }
                 // ---- Settings / help / window ------------------------------
                 Command::SetSettingsPage(page) => self.settings_page = page,
+                Command::SetSettingsQuery(query) => self.settings_query = query,
+                Command::SetLanguage(locale) => {
+                    crate::i18n::set_locale(&locale);
+                    self.language = locale;
+                },
                 Command::OpenShortcuts => {
                     self.close_overlays();
                     self.shortcuts_open = true;
@@ -1037,13 +1114,37 @@ impl NotionApp {
                     self.page_actions_open = true;
                 }
                 Command::ClosePageActions => self.page_actions_open = false,
+                Command::ToggleWorkspaceMenu => {
+                    let open = !self.workspace_menu_open;
+                    self.close_overlays();
+                    self.workspace_menu_open = open;
+                }
+                Command::CloseWorkspaceMenu => self.workspace_menu_open = false,
+                Command::OpenAppMenu => {
+                    let open = !self.app_menu_open;
+                    self.close_overlays();
+                    self.app_menu_open = open;
+                }
+                Command::CloseAppMenu => self.app_menu_open = false,
+                Command::ToggleGridMenu => {
+                    let open = !self.grid_menu_open;
+                    self.close_overlays();
+                    self.grid_menu_open = open;
+                }
+                Command::CloseGridMenu => self.grid_menu_open = false,
                 Command::ToggleFullWidth => self.full_width = !self.full_width,
                 Command::ToggleSmallText => self.small_text = !self.small_text,
                 Command::SetFontStyle(style) => self.font_style = style,
                 Command::ToggleAvailableOffline => {
-                    self.available_offline = !self.available_offline;
+                    if let Some(page) = self.current_page_mut() {
+                        page.available_offline = !page.available_offline;
+                    }
                 }
-                Command::ToggleLockPage => self.lock_page = !self.lock_page,
+                Command::ToggleLockPage => {
+                    if let Some(page) = self.current_page_mut() {
+                        page.locked = !page.locked;
+                    }
+                }
                 // ---- Search / new-tab panes (spec-013) ----------------------
                 Command::SetSearchSelected(index) => self.search_selected = index,
                 Command::ToggleHighlightPane => self.highlight_pane = !self.highlight_pane,
@@ -1271,7 +1372,11 @@ impl eframe::App for NotionApp {
                 .exact_size(266.0)
                 .resizable(false)
                 .show_separator_line(false)
-                .frame(egui::Frame::NONE.fill(palette.sidebar))
+                .frame(
+                    egui::Frame::NONE
+                        .fill(palette.sidebar)
+                        .inner_margin(egui::Margin::symmetric(10, 6)),
+                )
                 .show(ui, |ui| {
                     render_sidebar(ui, &self.workspace, &view, &palette, &mut commands);
                 });
@@ -1290,7 +1395,7 @@ impl eframe::App for NotionApp {
             render_search(&ctx, &self.workspace, &view, &palette, &mut commands);
         }
         if view.settings_open {
-            render_settings(&ctx, &view, &palette, &mut commands);
+            render_settings(&ctx, &self.workspace, &view, &palette, &mut commands);
         }
         if view.share_open {
             render_share(&ctx, &view, &palette, &mut commands);
@@ -1312,6 +1417,15 @@ impl eframe::App for NotionApp {
         }
         if view.page_actions_open {
             render_page_actions(&ctx, &self.workspace, &view, &palette, &mut commands);
+        }
+        if view.app_menu_open {
+            render_app_menu(&ctx, &palette, &mut commands);
+        }
+        if view.workspace_menu_open {
+            render_workspace_menu(&ctx, &palette, &mut commands);
+        }
+        if view.grid_menu_open {
+            render_grid_menu(&ctx, &palette, &mut commands);
         }
 
         self.apply_commands(commands, &ctx, frame_before);

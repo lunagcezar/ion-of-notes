@@ -11,20 +11,22 @@ use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, V
 use super::app::{Command, IconTab, ViewState};
 use super::palette::Palette;
 
-/// Monochrome glyphs available in the Segoe UI Symbol fallback face. These are
-/// outline glyphs (not color emoji), so they always resolve to a real shape.
-/// Kept in one place so the picker and its filter share one catalog (DRY).
+/// Emoji choices for the page icon picker (rendered via system emoji font when
+/// available, with symbol fallbacks).
 pub(super) const EMOJI: &[&str] = &[
-    "★", "☆", "☀", "☁", "☂", "☃", "☄", "☎", "☕", "☘", "☺", "☻", "☾", "☽", "♠", "♣", "♥", "♦",
-    "♫", "♪", "✈", "✉", "✎", "✏", "✂", "✦", "✧", "❄", "❅", "❆", "❖", "➤", "✔", "✖", "✚", "✡",
-    "⚑", "⚐", "⚓", "⚙", "⚡", "⏰", "⌂", "⌛", "⏳", "◐", "◑", "◆", "◇", "●", "○", "◎", "✿", "❀",
+    "😀", "😃", "😄", "😁", "😊", "🙂", "😉", "😍", "🤔", "😎", "🥳", "🤖",
+    "📄", "📘", "📚", "📓", "📝", "📌", "📎", "🗂", "📁", "📂", "🗃", "🗒",
+    "✅", "☑", "⭐", "🌟", "🔥", "💡", "🎯", "🚀", "🛠", "⚙", "🔒", "🔓",
+    "🏠", "🏢", "🌍", "🌐", "💬", "📣", "📅", "⏰", "📈", "📊", "🧩", "🎨",
+    "🧪", "🔬", "📦", "🧭", "🗺", "❤️", "💙", "💚", "💛", "🟣", "🔵", "🟢",
 ];
 
-/// A more geometric set for the "Icons" tab (arrows, shapes, bullets).
+/// Monochrome icon/symbol glyphs for the "Icons" tab.
 pub(super) const ICONS: &[&str] = &[
-    "←", "→", "↑", "↓", "↔", "↕", "↖", "↗", "↘", "↙", "⇄", "⇅", "⌃", "⌄", "⟲", "⟳", "■", "□",
-    "▲", "▼", "◀", "▶", "◁", "▷", "▢", "▣", "▤", "▥", "▦", "▧", "▨", "▩", "◧", "◨", "◩", "◪",
-    "⊞", "⊟", "⊠", "⊡", "⊙", "⊚", "⊛", "⊜", "∞", "§", "¶", "†", "‡", "•", "▪", "▫", "◊", "◈",
+    "★", "☆", "☀", "☁", "☂", "☕", "☎", "✉", "✎", "✏", "✂", "✦", "✔", "✖", "⚑", "⚙",
+    "←", "→", "↑", "↓", "↔", "↕", "⟲", "⟳", "■", "□", "▲", "▼", "◀", "▶", "◆", "◇",
+    "●", "○", "◎", "◐", "◑", "▢", "▣", "▤", "▥", "⊞", "⊟", "∞", "§", "¶", "•",
+    "▪", "▫", "◊", "⌂", "⌛", "♫", "♪", "❖", "➤", "✚", "⚓", "⚡", "❄", "✿",
 ];
 
 fn catalog(tab: IconTab) -> &'static [&'static str] {
@@ -69,7 +71,7 @@ pub(super) fn render_icon_picker(
     let screen = ctx.viewport_rect();
     let size = Vec2::new(404.0, 344.0);
     let pos = Pos2::new(screen.left() + 304.0, screen.top() + 236.0);
-    egui::Window::new("page_icon_picker")
+    let resp = egui::Window::new("page_icon_picker")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
@@ -255,4 +257,10 @@ pub(super) fn render_icon_picker(
                 }
             }
         });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+    {
+        commands.push(Command::CloseIconPicker);
+    }
 }

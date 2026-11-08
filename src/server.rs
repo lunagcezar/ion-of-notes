@@ -232,6 +232,17 @@ impl WorkspaceApi for WorkspaceServer {
             }
             (Method::Put, "/api/workspace") => match parse_body::<Workspace>(request) {
                 Ok(workspace) => {
+                    let actor = self.collab.owner_id();
+                    for page in &workspace.pages {
+                        let changed = self
+                            .workspace
+                            .page(&page.id)
+                            .map(|old| old != page)
+                            .unwrap_or(true);
+                        if changed {
+                            self.collab.record_version(page, &actor);
+                        }
+                    }
                     self.workspace = workspace;
                     self.write(ChangeOp::Replace, "__workspace__");
                     json(200, Envelope::ok(self.workspace.clone()))
@@ -266,6 +277,8 @@ impl WorkspaceApi for WorkspaceServer {
                         return bad(&e.to_string());
                     }
                     let page_id = page.id.clone();
+                    let actor = self.collab.owner_id();
+                    self.collab.record_version(&page, &actor);
                     self.write(ChangeOp::Create, &page_id);
                     json(201, Envelope::ok(page))
                 }
@@ -316,10 +329,20 @@ impl WorkspaceApi for WorkspaceServer {
             // ---------------------------------------------------------------
 
             (method, page_path) if page_path.starts_with("/api/pages/") => {
-                let id = &page_path["/api/pages/".len()..];
-                if id.is_empty() {
+                let rest = &page_path["/api/pages/".len()..];
+                if rest.is_empty() {
                     return not_found("unknown route");
                 }
+                if let Some(id) = rest.strip_suffix("/versions") {
+                    if id.is_empty() {
+                        return not_found("unknown route");
+                    }
+                    return match method {
+                        Method::Get => json(200, Envelope::ok(self.collab.versions_for(id))),
+                        _ => not_found("unknown route"),
+                    };
+                }
+                let id = rest;
                 match method {
                     Method::Get => match self.workspace.page(id) {
                         Some(page) => json(200, Envelope::ok(page.clone())),
@@ -331,6 +354,8 @@ impl WorkspaceApi for WorkspaceServer {
                             match self.workspace.page_mut(id) {
                                 Some(slot) => {
                                     *slot = page.clone();
+                                    let actor = self.collab.owner_id();
+                                    self.collab.record_version(&page, &actor);
                                     self.write(ChangeOp::Update, id);
                                     json(200, Envelope::ok(page))
                                 }

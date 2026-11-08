@@ -119,6 +119,17 @@ pub struct Change {
     pub actor: String,
 }
 
+/// A stored version snapshot of a page (server-side version history).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PageVersion {
+    pub version: u64,
+    pub page_id: String,
+    pub title: String,
+    pub actor: String,
+    pub updated_at: String,
+    pub snapshot: String,
+}
+
 /// A page of the sync log: all changes after a cursor plus the new cursor.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SyncBatch {
@@ -187,15 +198,17 @@ impl ExportFile {
     }
 }
 
-/// All collaboration state owned by the server: accounts, permissions and the
-/// sync log. Persistence of this state is a separate store adapter behind the
-/// `WorkspaceStore` seam (documented in the ADR); the domain itself is pure.
+/// All collaboration state owned by the server: accounts, permissions, sync log,
+/// and per-page version history. Persistence of this state is a separate store
+/// adapter behind the `WorkspaceStore` seam; the domain itself is pure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CollabState {
     pub members: Vec<Member>,
     pub shares: Vec<Share>,
     pub changes: Vec<Change>,
     pub next_seq: u64,
+    #[serde(default)]
+    pub versions: Vec<PageVersion>,
 }
 
 impl Default for CollabState {
@@ -226,6 +239,7 @@ impl CollabState {
             }],
             changes: Vec::new(),
             next_seq: 1,
+            versions: Vec::new(),
         }
     }
 
@@ -309,6 +323,38 @@ impl CollabState {
         self.next_seq += 1;
         self.changes.push(change.clone());
         change
+    }
+
+    /// Store a page snapshot in version history.
+    pub fn record_version(&mut self, page: &crate::model::Page, actor: &str) {
+        let snapshot = serde_json::to_string(page).unwrap_or_default();
+        let version = self
+            .versions
+            .iter()
+            .filter(|v| v.page_id == page.id)
+            .map(|v| v.version)
+            .max()
+            .unwrap_or(0)
+            + 1;
+        self.versions.push(PageVersion {
+            version,
+            page_id: page.id.clone(),
+            title: page.title.clone(),
+            actor: actor.to_string(),
+            updated_at: page.updated_at.clone(),
+            snapshot,
+        });
+    }
+
+    pub fn versions_for(&self, page_id: &str) -> Vec<PageVersion> {
+        let mut items: Vec<PageVersion> = self
+            .versions
+            .iter()
+            .filter(|v| v.page_id == page_id)
+            .cloned()
+            .collect();
+        items.sort_by(|a, b| b.version.cmp(&a.version));
+        items
     }
 
     /// Return only changes newer than `since`, plus the new cursor.

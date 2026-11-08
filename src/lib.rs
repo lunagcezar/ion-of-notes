@@ -12,10 +12,13 @@
 //! The project is open source (MIT). That is a license fact, not a marketing
 //! feature: the window does not advertise a "free edition".
 
+rust_i18n::i18n!("locales", fallback = "en");
+
 pub mod app;
 pub mod cli;
 pub mod client;
 pub mod collab;
+pub mod i18n;
 pub mod model;
 pub mod ollama;
 pub mod screenshot;
@@ -37,8 +40,8 @@ pub use shortcuts::{
 pub use client::{Client, ClientError};
 pub use collab::{
     export_tree, page_markdown, people_csv, people_markdown, realtime_contract, Access, Change,
-    ChangeOp, CollabState, ExportFile, Member, MemberDraft, RealtimeContract, RealtimeEvent,
-    RealtimeKind, Role, Share, SyncBatch,
+    ChangeOp, CollabState, ExportFile, Member, MemberDraft, PageVersion, RealtimeContract,
+    RealtimeEvent, RealtimeKind, Role, Share, SyncBatch,
 };
 pub use model::{
     Block, BlockKind, Page, PageDraft, PageSummary, SearchResult, TableRow, Workspace,

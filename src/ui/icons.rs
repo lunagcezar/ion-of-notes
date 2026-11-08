@@ -38,6 +38,7 @@ pub(super) fn icon_button(
     icon_button_with_sense(ui, size, palette, Sense::click(), draw)
 }
 
+#[allow(dead_code)]
 /// A small icon that is both clickable and draggable (the block reorder grip).
 pub(super) fn drag_icon_button(
     ui: &mut egui::Ui,
@@ -378,6 +379,18 @@ pub(super) fn draw_lines(painter: &egui::Painter, rect: Rect, color: Color32) {
     for (dy, half) in [(-5.0, 6.0), (0.0, 5.0), (5.0, 4.0)] {
         painter.line(
             vec![c + Vec2::new(-half, dy), c + Vec2::new(half, dy)],
+            s,
+        );
+    }
+}
+
+/// App menu (hamburger) icon.
+pub(super) fn draw_menu(painter: &egui::Painter, rect: Rect, color: Color32) {
+    let c = rect.center();
+    let s = Stroke::new(1.4, color);
+    for dy in [-4.5, 0.0, 4.5] {
+        painter.line(
+            vec![c + Vec2::new(-6.0, dy), c + Vec2::new(6.0, dy)],
             s,
         );
     }

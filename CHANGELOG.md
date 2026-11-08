@@ -6,6 +6,20 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-014-bug-fixes-and-improvements
+
+- **Editor:** Backspace in an empty text block deletes the block (keeping at least one). Block row layout is kept stable across hover to avoid focus loss while typing; text edits use persistent IDs. Locked pages make content read-only and block structural edits.
+- **Drag & reorder:** The six-dot block handle uses click-and-drag with drop targeting; hover/drag state is tracked for reorder.
+- **Modals:** Search/new-tab, settings, share, inbox, shortcuts, page actions, and icon picker close when clicking outside their window.
+- **Icon picker:** Emoji tab now includes actual emoji glyphs (with Segoe UI Emoji fallback) alongside an Icons tab and Upload; icon choices render consistently.
+- **Sidebar / chrome:** Added sidebar inner padding, interactive workspace/account row dropdown (workspace settings, invite members, add account, switch/create workspace), clickable grid menu (Library, Skills, Trash, Settings), functional "Customize sidebar" entry opening settings, and a compact app menu (File/Edit/View/History/Window/Help) replacing the pin-like quick-note button.
+- **Library:** Tabs (Recents, Favorites, Shared, Private, More) are functional and filter the page list.
+- **Settings:** Search settings field is interactive; added Workspace settings, Sidebar customization, Offline pages, and People sections. Language & time shows a working language selector (cycles supported locales) and time format row.
+- **Internationalization:** Added `rust-i18n` with `en`, `pt-BR`, and `eo` locale files and an `i18n` module; locale can be changed from Preferences.
+- **Page state:** `Page` gained `locked` and `available_offline` fields (serde defaults) reflected in UI toggles and persisted.
+- **Version history (server):** Added `PageVersion` snapshots in `CollabState`, `/api/pages/{id}/versions`, and snapshot recording on page create/update and workspace replace.
+- **Docs:** Added `spec/spec-014-bug-fixes-and-improvements.md`.
+
 ### Added — spec-001-project-foundation
 
 - Created `AGENTS.md` with the architecture (client + server), the Rust/eframe

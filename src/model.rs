@@ -153,6 +153,10 @@ pub struct Page {
     pub icon: String,
     pub parent: Option<String>,
     pub favorite: bool,
+    #[serde(default)]
+    pub locked: bool,
+    #[serde(default)]
+    pub available_offline: bool,
     pub blocks: Vec<Block>,
     pub rows: Vec<TableRow>,
     pub updated_at: String,
@@ -168,6 +172,8 @@ impl Page {
             icon: icon.into(),
             parent: None,
             favorite: false,
+            locked: false,
+            available_offline: false,
             rows: Vec::new(),
             updated_at: now_label(),
         }

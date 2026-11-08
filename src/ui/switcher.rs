@@ -150,7 +150,7 @@ pub(super) fn render_switcher(
         screen.left() + ((screen.width() - size.x) / 2.0).max(0.0),
         screen.top() + 110.0,
     );
-    egui::Window::new(spec.id)
+    let resp = egui::Window::new(spec.id)
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
@@ -483,6 +483,17 @@ pub(super) fn render_switcher(
             ui.add_space(6.0);
             switcher_footer(ui, palette);
         });
+    if let Some(inner) = resp {
+        let rect = inner.response.rect;
+        if ctx.input(|i| i.pointer.any_click())
+            && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !rect.contains(p)))
+        {
+            match spec.mode {
+                SwitcherMode::NewTab => commands.push(Command::CloseNewTab),
+                SwitcherMode::Search => commands.push(Command::CloseSearch),
+            }
+        }
+    }
 }
 
 /// Rough word wrap for the preview text (display only).
