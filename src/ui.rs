@@ -9,14 +9,19 @@
 //! mutates server state directly.
 
 mod app;
+mod apply;
+mod commands;
 mod dialogs;
 mod icons;
+mod input;
 mod page_icon;
 mod palette;
 mod render;
 mod search_cache;
 mod settings_search;
 mod switcher;
+mod view;
+mod widgets;
 
 pub use app::NotionApp;
 pub use palette::{

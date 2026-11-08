@@ -279,7 +279,9 @@ spec defines the operational steps.
 - [ ] A2 `PendingEdits`/debounce helper + per-page `PATCH` path + tests.
 - [ ] A3 private `WorkspaceIndex` + invariant tests.
 - [ ] A4 version retention constant + pruning + restore audit test.
-- [ ] A5 split `ui/app.rs` into `ui/commands.rs`, `ui/view.rs`, `ui/input.rs`.
+- [x] A5 split `ui/app.rs` into `ui/commands.rs`, `ui/view.rs`, `ui/input.rs`
+  (completed in `spec-017`, which also split `ui/dialogs.rs` and
+  `ui/render.rs`).
 - [ ] A6 expand locale keys and add `tests/i18n.rs`.
 - [ ] A7 `ClientError::Encode` and remove `unwrap_or_default` from `client.rs`.
 - [ ] A8 concurrent `--serve` listener + concurrency test.

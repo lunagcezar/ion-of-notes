@@ -108,11 +108,28 @@ src/
     palette.rs     colors, fonts, tab-title helper, theming (NFR-06)
     icons.rs       original shape artwork (chrome, sidebar, book, controls,
                    page icon)
-    app.rs         state, Command handling, eframe::App, preview hook
-    render.rs      tab strip, sidebar, breadcrumbs, page, blocks, Library,
-                   inline database and floating controls
-    dialogs.rs     Settings, Share, Inbox, shortcut sheet, page actions,
-                   block menu
+    commands.rs    Command, IconTab, FontStyle, NewTabChoice + pure builders
+    view.rs        ViewState snapshot passed to render functions
+    input.rs       egui key events -> shortcut actions (pure input adapter)
+    app.rs         NotionApp struct, new(), eframe::App shell, preview hook
+    apply.rs       command application and state transitions
+    render.rs      facade for the render submodules
+    render/
+      chrome.rs    tab strip and window controls
+      sidebar.rs   search, Library/Settings/Inbox, favorites, tree, bottom group
+      content.rs   breadcrumbs, page header, blocks, floating controls
+      library.rs   Library table and tabs
+      database.rs  inline table / board database
+    dialogs.rs     facade for the dialog submodules
+    dialogs/
+      settings.rs       settings window, rail, search filtering
+      settings_pages.rs Preferences / Workspace / Sidebar / Offline / People / AI
+      sharing.rs        Share popover and Inbox
+      page_actions.rs   page actions and version history
+      menus.rs          app / workspace / grid / slash menus
+      help.rs           keyboard shortcut sheet
+      search_window.rs  shared search / new-tab windows
+    widgets.rs     shared popover frame, menu row, toggle, section label
     switcher.rs    one shared search / new-tab window (DRY)
     page_icon.rs   page-icon feature: catalog, picker and one renderer
     search_cache.rs pure query/version cache so redraws do not re-query

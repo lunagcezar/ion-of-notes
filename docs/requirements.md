@@ -195,8 +195,10 @@
   without changing the JSON shape (planned, spec-016 A3).
 - FR-66: Version history has a documented retention limit and a restore is
   recorded as a new version (planned, spec-016 A4).
-- FR-67: `ui/app.rs` is split into cohesive `commands`, `view` and `input`
-  modules behind the `ui.rs` facade (planned, spec-016 A5).
+- FR-67: `ui/app.rs` is split into cohesive `commands`, `view`, `input` and
+  `apply` modules behind the `ui.rs` facade; `ui/dialogs.rs` and
+  `ui/render.rs` are facades over cohesive submodules (implemented in
+  `spec-017`, planned in spec-016 A5).
 - FR-68: All user-visible strings are covered by the locale key table with an
   English fallback, checked by a completeness test (planned, spec-016 A6).
 - FR-69: Client serialization failures return an explicit `ClientError::Encode`
@@ -261,6 +263,7 @@
 | FR-52..FR-60, NFR-10          | `spec-013-interaction-polish-and-modularity.md` |
 | FR-61, FR-62, NFR-11, NFR-12  | `spec-015-hardening-and-performance.md` |
 | FR-63..FR-71, NFR-13..NFR-15  | `spec-016-architecture-follow-up-and-observation.md` |
+| FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

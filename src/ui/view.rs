@@ -1,0 +1,69 @@
+//! The immutable view snapshot passed to the pure render modules.
+//!
+//! `ViewState` is built once per frame from `NotionApp`; render functions only
+//! read it. Keeping the shape separate from the state machine keeps rendering
+//! independent of command handling (SRP, spec-017).
+
+use super::commands::{FontStyle, IconTab};
+use crate::collab::PageVersion;
+use crate::model::SearchResult;
+use egui::Pos2;
+use std::collections::HashSet;
+use std::sync::Arc;
+
+/// A snapshot of non-workspace app state passed to pure render functions.
+pub(super) struct ViewState {
+    pub(super) current_page: String,
+    pub(super) tabs: Vec<String>,
+    pub(super) active_tab: usize,
+    pub(super) sidebar_open: bool,
+    pub(super) expanded: HashSet<String>,
+    pub(super) search_open: bool,
+    pub(super) search_query: String,
+    pub(super) search_results: Arc<Vec<SearchResult>>,
+    pub(super) settings_open: bool,
+    pub(super) settings_page: String,
+    pub(super) settings_query: String,
+    pub(super) language: String,
+    pub(super) dark: bool,
+    pub(super) table_view: bool,
+    pub(super) library_open: bool,
+    pub(super) library_tab: String,
+    pub(super) share_open: bool,
+    pub(super) inbox_open: bool,
+    pub(super) slash_for: Option<String>,
+    pub(super) slash_pos: Pos2,
+    pub(super) new_tab_open: bool,
+    pub(super) new_tab_query: String,
+    pub(super) new_tab_selected: usize,
+    pub(super) ai_query: String,
+    pub(super) ai_answer: Option<String>,
+    pub(super) ai_error: Option<String>,
+    pub(super) ai_busy: bool,
+    pub(super) ai_status: String,
+    pub(super) ai_connected: bool,
+    pub(super) ai_endpoint: String,
+    pub(super) ai_model: String,
+    pub(super) ai_prefer_cli: bool,
+    pub(super) shortcuts_open: bool,
+    pub(super) search_selected: usize,
+    pub(super) highlight_pane: bool,
+    pub(super) filters: bool,
+    pub(super) icon_picker_open: bool,
+    pub(super) icon_picker_tab: IconTab,
+    pub(super) icon_picker_query: String,
+    pub(super) page_actions_open: bool,
+    pub(super) version_history_open: bool,
+    pub(super) versions: Arc<Vec<PageVersion>>,
+    pub(super) version_selected: usize,
+    pub(super) font_style: FontStyle,
+    pub(super) full_width: bool,
+    pub(super) small_text: bool,
+    pub(super) available_offline: bool,
+    pub(super) lock_page: bool,
+    pub(super) workspace_menu_open: bool,
+    pub(super) app_menu_open: bool,
+    pub(super) grid_menu_open: bool,
+    pub(super) drag_from: Option<String>,
+    pub(super) drag_to: Option<String>,
+}

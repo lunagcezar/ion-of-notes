@@ -13,9 +13,11 @@ Everything is written in English and built spec-first (`spec/`) and test-first
 The code follows ports-and-adapters with DRY and SOLID applied throughout:
 
 - `src/` holds implementation only. `ui/` splits the window into `palette`,
-  `icons`, `app` (state/commands), `render` (sidebar, page, blocks), `dialogs`,
-  `switcher`, `page_icon`, `search_cache` and `settings_search` — each with one
-  responsibility.
+  `icons`, `commands`, `view`, `input`, `app` (state shell), `apply` (command
+  application), `render/` (chrome, sidebar, content, Library, database),
+  `dialogs/` (settings, sharing, page actions, menus, help, search window),
+  `widgets`, `switcher`, `page_icon`, `search_cache` and `settings_search` —
+  each with one responsibility.
 - `WorkspaceApi` is the transport port and `WorkspaceStore` the persistence
   port. `JsonStore` and `NoStore` are adapters; a different backend can be
   injected with `WorkspaceServer::with_store` without editing the core.

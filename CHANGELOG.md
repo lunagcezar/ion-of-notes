@@ -6,6 +6,25 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — spec-017-ui-modularization
+
+- Pure refactor of the three multi-responsibility UI files, split by
+  responsibility (ADR-004), with no behavior or visual change:
+  - `ui/app.rs` 1508 → 389 lines: state shell + `new()` + `eframe::App`;
+    command application moved to `ui/apply.rs`; command shapes to
+    `ui/commands.rs`; view snapshot to `ui/view.rs`; key translation to
+    `ui/input.rs`.
+  - `ui/dialogs.rs` 2029 → 21-line facade: settings, settings pages, sharing,
+    page actions/version history, menus, shortcut sheet and search/new-tab
+    windows now live in cohesive `ui/dialogs/*` modules; shared popover/menu
+    widgets moved to `ui/widgets.rs`.
+  - `ui/render.rs` 1335 → 16-line facade: chrome, sidebar, content, Library and
+    inline database now live in `ui/render/*`.
+- `ui.rs` stays the facade; `AGENTS.md` and `README.md` document the new tree.
+- `cargo build`, `cargo test --all-targets` (85 tests), clippy and the default
+  screenshot are unchanged and green.
+- Added `spec/spec-017-ui-modularization.md`.
+
 ### Planned — spec-016-architecture-follow-up-and-observation
 
 - Added `spec/spec-016-architecture-follow-up-and-observation.md`: phased
