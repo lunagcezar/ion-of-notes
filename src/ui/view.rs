@@ -24,6 +24,7 @@ pub(super) struct ViewState {
     pub(super) settings_open: bool,
     pub(super) settings_page: String,
     pub(super) settings_query: String,
+    pub(super) settings_status: Option<String>,
     pub(super) language: String,
     pub(super) dark: bool,
     pub(super) table_view: bool,

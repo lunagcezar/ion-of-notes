@@ -43,6 +43,9 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
 - Library tabs filter Recents / Favorites / Shared / Private, the More menu
   offers placeholder views, and rows show the owner, workspace source and real
   last-edited time.
+- Settings General / Sidebar / People / Offline are functional and persist
+  workspace settings (name, icon, landing page, domains, toggles, exports,
+  offline search and People options). Workspace deletion is disabled.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

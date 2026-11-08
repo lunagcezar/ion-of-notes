@@ -6,6 +6,27 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-025-settings-pages
+
+- Added persisted `WorkspaceSettings` on `Workspace`: workspace id/icon,
+  landing page, allowed domains, sidebar visibility toggles, other-apps,
+  analytics, offline automatic downloads and People toggles.
+- General page: editable workspace name, icon, landing page, allowed email
+  domains, invite members and export buttons.
+- Sidebar page: working visibility toggles, other-apps, exports and analytics.
+- People page: member directory, directory/activity/hover toggles, a disabled
+  danger-zone action and the workspace ID.
+- Offline page: automatic downloads, searchable offline pages and last-edited
+  times.
+- Workspace-level settings changes are detected by `PageDiff.settings_changed`
+  and use the full `PUT /api/workspace` fallback.
+- Added `NOT_NOTION_SHOW=settings-general|settings-sidebar|settings-people|settings-offline`
+  previews.
+- Red: `WorkspaceSettings` round-trip and settings-diff tests were written
+  first.
+- Docs: added `spec/spec-025-settings-pages.md`; updated requirements, data
+  model, README and `AGENTS.md`.
+
 ### Changed — spec-024-library-views
 
 - Library tabs are functional: Favorites filters favorite pages, Shared shows

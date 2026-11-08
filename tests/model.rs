@@ -182,6 +182,37 @@ fn workspace_diff_detects_changed_added_removed_and_reordered_pages() {
 }
 
 #[test]
+fn workspace_settings_roundtrip_through_json() {
+    let mut ws = Workspace::new("w");
+    ws.settings.analytics = true;
+    ws.settings.allowed_domains.push("example.com".to_string());
+    ws.settings.landing_page = Some("p1".to_string());
+    ws.settings.sidebar_library = false;
+
+    let json = serde_json::to_string(&ws).unwrap();
+    let back: Workspace = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.settings, ws.settings);
+}
+
+#[test]
+fn workspace_settings_change_requires_full_replace() {
+    let mut before = Workspace::new("w");
+    before.add_page(page("a", "A", None)).unwrap();
+
+    let mut settings_changed = before.clone();
+    settings_changed.settings.analytics = true;
+    let diff = before.diff(&settings_changed);
+    assert!(diff.settings_changed);
+    assert!(diff.requires_full_replace());
+
+    let mut name_changed = before.clone();
+    name_changed.name = "renamed".to_string();
+    let diff = before.diff(&name_changed);
+    assert!(diff.settings_changed);
+    assert!(diff.requires_full_replace());
+}
+
+#[test]
 fn workspace_index_finds_pages_children_and_breadcrumbs() {
     let mut ws = Workspace::new("w");
     ws.add_page(page("a", "A", None)).unwrap();

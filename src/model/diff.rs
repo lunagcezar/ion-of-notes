@@ -19,6 +19,8 @@ pub struct PageDiff {
     pub removed: Vec<String>,
     /// True when the same set of pages appears in a different order.
     pub reordered: bool,
+    /// True when the workspace name or workspace settings changed.
+    pub settings_changed: bool,
 }
 
 impl PageDiff {
@@ -27,11 +29,15 @@ impl PageDiff {
             && self.added.is_empty()
             && self.removed.is_empty()
             && !self.reordered
+            && !self.settings_changed
     }
 
-    /// A structural change (add/remove/reorder) needs the full snapshot.
+    /// A structural or workspace-level change needs the full snapshot.
     pub fn requires_full_replace(&self) -> bool {
-        !self.added.is_empty() || !self.removed.is_empty() || self.reordered
+        !self.added.is_empty()
+            || !self.removed.is_empty()
+            || self.reordered
+            || self.settings_changed
     }
 }
 
@@ -66,6 +72,7 @@ impl Workspace {
                 .iter()
                 .map(|p| p.id.as_str())
                 .eq(after.pages.iter().map(|p| p.id.as_str()));
+        diff.settings_changed = self.name != after.name || self.settings != after.settings;
         diff
     }
 }

@@ -100,6 +100,7 @@ src/
     search.rs      ranked search + excerpt helper
     diff.rs        changed/added/removed/reordered page diff
     index.rs       derived page/children lookup index
+    settings.rs    persisted workspace settings
   store.rs         WorkspaceStore + CollabStore ports, JSON/null adapters, data_path/collab_path
   server.rs        WorkspaceServer (workspace + collaboration state), WorkspaceApi trait, routes
   server/
@@ -470,7 +471,7 @@ unversioned routes today; the full production contract (`/api/v1`, sessions,
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust
 tab strip is the only window frame and doubles as a drag handle.
-`NOT_NOTION_SHOW=library|share|inbox|settings|search|tasks|newtab|ai|shortcuts|iconpicker|pageactions`
+`NOT_NOTION_SHOW=library|share|inbox|settings|settings-general|settings-sidebar|settings-people|settings-offline|search|tasks|newtab|ai|shortcuts|iconpicker|pageactions`
 is a harmless preview hook: it opens one pictured state on startup so it can be
 captured with `--screenshot`. Normal runs (and the rebuild check) never set it.
 

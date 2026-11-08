@@ -13,9 +13,11 @@ mod diff;
 mod index;
 mod search;
 mod seed;
+mod settings;
 
 pub use diff::PageDiff;
 use index::WorkspaceIndex;
+pub use settings::WorkspaceSettings;
 
 /// A short, human-friendly timestamp used for display only.
 pub fn now_label() -> String {
@@ -264,13 +266,18 @@ pub struct Workspace {
     pub name: String,
     pub pages: Vec<Page>,
     pub version: u64,
+    #[serde(default)]
+    pub settings: WorkspaceSettings,
     #[serde(skip)]
     index: WorkspaceIndex,
 }
 
 impl PartialEq for Workspace {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.pages == other.pages && self.version == other.version
+        self.name == other.name
+            && self.pages == other.pages
+            && self.version == other.version
+            && self.settings == other.settings
     }
 }
 
@@ -281,6 +288,8 @@ struct WorkspaceData {
     name: String,
     pages: Vec<Page>,
     version: u64,
+    #[serde(default)]
+    settings: WorkspaceSettings,
 }
 
 impl<'de> Deserialize<'de> for Workspace {
@@ -294,6 +303,7 @@ impl<'de> Deserialize<'de> for Workspace {
             name: data.name,
             pages: data.pages,
             version: data.version,
+            settings: data.settings,
         })
     }
 }
@@ -304,6 +314,7 @@ impl Workspace {
             name: name.to_string(),
             pages: Vec::new(),
             version: 0,
+            settings: WorkspaceSettings::default(),
             index: WorkspaceIndex::default(),
         }
     }

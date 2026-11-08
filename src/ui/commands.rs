@@ -142,6 +142,9 @@ pub(super) enum Command {
     // Settings, help and window zoom.
     SetSettingsPage(String),
     SetSettingsQuery(String),
+    SetSettingsStatus(String),
+    ExportWorkspace,
+    ExportMembers,
     SetLanguage(String),
     OpenShortcuts,
     CloseShortcuts,

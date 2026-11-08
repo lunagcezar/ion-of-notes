@@ -52,6 +52,7 @@ pub struct NotionApp {
     pub(super) settings_open: bool,
     pub(super) settings_page: String,
     pub(super) settings_query: String,
+    pub(super) settings_status: Option<String>,
     pub(super) language: String,
     pub(super) dark: bool,
     pub(super) theme_dirty: bool,
@@ -142,7 +143,7 @@ impl NotionApp {
             current_page.clone()
         };
         let (share_members, share_general_access, library_shared, library_owner) =
-            if demo == "share" || demo == "library" {
+            if demo == "share" || demo == "library" || demo == "settings-people" {
                 let members = client.list_members().unwrap_or_default();
                 let shares = client
                     .list_shares(Some(&demo_current_page))
@@ -194,13 +195,25 @@ impl NotionApp {
             search_query: String::new(),
             search_results: Arc::new(Vec::new()),
             search_cache: SearchCache::default(),
-            settings_open: matches!(demo.as_str(), "settings" | "ai"),
-            settings_page: if demo == "ai" {
-                "AI assistant".to_string()
-            } else {
-                "Preferences".to_string()
+            settings_open: matches!(
+                demo.as_str(),
+                "settings"
+                    | "ai"
+                    | "settings-general"
+                    | "settings-sidebar"
+                    | "settings-people"
+                    | "settings-offline"
+            ),
+            settings_page: match demo.as_str() {
+                "ai" => "AI assistant".to_string(),
+                "settings-general" => "General".to_string(),
+                "settings-sidebar" => "Sidebar".to_string(),
+                "settings-people" => "People".to_string(),
+                "settings-offline" => "Offline".to_string(),
+                _ => "Preferences".to_string(),
             },
             settings_query: String::new(),
+            settings_status: None,
             language: "en".to_string(),
             dark: true,
             theme_dirty: false,
@@ -384,7 +397,7 @@ impl eframe::App for NotionApp {
             render_search(&ctx, &self.workspace, &view, &palette, &mut commands);
         }
         if view.settings_open {
-            render_settings(&ctx, &self.workspace, &view, &palette, &mut commands);
+            render_settings(&ctx, &mut self.workspace, &view, &palette, &mut commands);
         }
         if view.share_open {
             render_share(&ctx, &view, &palette, &mut commands);

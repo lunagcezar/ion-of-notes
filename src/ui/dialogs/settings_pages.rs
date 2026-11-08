@@ -6,6 +6,7 @@ use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Str
 use super::super::commands::Command;
 use super::super::palette::{Palette, strong_font};
 use super::super::view::ViewState;
+use super::super::widgets::toggle_button;
 use super::settings::display_row;
 
 pub(super) fn render_preferences(
@@ -196,129 +197,304 @@ pub(super) fn render_preferences(
 
 pub(super) fn render_workspace_settings(
     ui: &mut egui::Ui,
-    ws: &Workspace,
+    ws: &mut Workspace,
     view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    ui.add_space(4.0);
     ui.label(
-        egui::RichText::new("Workspace")
-            .font(strong_font(17.0))
+        egui::RichText::new("Workspace settings")
+            .font(strong_font(15.0))
             .color(palette.text),
     );
-    ui.add_space(12.0);
-    ui.separator();
-    ui.add_space(12.0);
-    display_row(
-        ui,
-        "Workspace name",
-        "Shown in the sidebar and exports",
-        &ws.name,
-        palette,
+    ui.add_space(6.0);
+    ui.label(
+        egui::RichText::new("Workspace name")
+            .size(12.0)
+            .color(palette.text),
     );
-    display_row(
-        ui,
-        "Workspace icon",
-        "Customize the workspace identity",
-        "Default",
-        palette,
+    ui.add(
+        egui::TextEdit::singleline(&mut ws.name)
+            .desired_width(320.0)
+            .text_color(palette.text),
     );
+    ui.add_space(8.0);
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("Icon").size(12.0).color(palette.text));
+        ui.add(
+            egui::TextEdit::singleline(&mut ws.settings.icon)
+                .desired_width(48.0)
+                .text_color(palette.text),
+        );
+    });
+    ui.add_space(8.0);
+    ui.label(
+        egui::RichText::new("Custom landing page")
+            .size(12.0)
+            .color(palette.text),
+    );
+    let pages: Vec<(String, String)> = ws
+        .pages
+        .iter()
+        .map(|page| (page.id.clone(), page.title.clone()))
+        .collect();
+    let selected = ws
+        .settings
+        .landing_page
+        .as_deref()
+        .and_then(|id| {
+            pages
+                .iter()
+                .find(|(page_id, _)| page_id == id)
+                .map(|(_, title)| title.as_str())
+        })
+        .unwrap_or("First page");
+    egui::ComboBox::from_id_salt("landing_page")
+        .selected_text(selected)
+        .show_ui(ui, |ui| {
+            ui.selectable_value(&mut ws.settings.landing_page, None, "First page");
+            for (id, title) in &pages {
+                ui.selectable_value(&mut ws.settings.landing_page, Some(id.clone()), title);
+            }
+        });
+
+    ui.add_space(18.0);
+    ui.label(
+        egui::RichText::new("Allowed email domains")
+            .font(strong_font(15.0))
+            .color(palette.text),
+    );
+    ui.add_space(6.0);
+    let input_id = egui::Id::unique("allowed_domain_input");
+    let mut domain: String = ui
+        .ctx()
+        .data(|data| data.get_temp(input_id).unwrap_or_default());
+    ui.horizontal(|ui| {
+        let edit = ui.add(
+            egui::TextEdit::singleline(&mut domain)
+                .desired_width(260.0)
+                .hint_text("Type an email domain...")
+                .text_color(palette.text),
+        );
+        if edit.changed() {
+            ui.ctx()
+                .data_mut(|data| data.insert_temp(input_id, domain.clone()));
+        }
+        if ui.button("Add domain").clicked() {
+            let value = domain.trim();
+            if !value.is_empty() && !ws.settings.allowed_domains.iter().any(|item| item == value) {
+                ws.settings.allowed_domains.push(value.to_string());
+            }
+            ui.ctx()
+                .data_mut(|data| data.remove_temp::<String>(input_id));
+        }
+    });
+    let mut remove = None;
+    for (index, value) in ws.settings.allowed_domains.iter().enumerate() {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new(value).size(12.0).color(palette.text));
+            if ui.button("Remove").clicked() {
+                remove = Some(index);
+            }
+        });
+    }
+    if let Some(index) = remove {
+        ws.settings.allowed_domains.remove(index);
+    }
+
     ui.add_space(18.0);
     ui.label(
         egui::RichText::new("Members & access")
-            .font(strong_font(17.0))
+            .font(strong_font(15.0))
             .color(palette.text),
     );
-    ui.add_space(8.0);
-    ui.separator();
-    ui.add_space(8.0);
-    display_row(
-        ui,
-        "Members",
-        "Manage who can access this workspace",
-        "Manage",
-        palette,
-    );
+    ui.add_space(6.0);
     if ui.add(egui::Button::new("Invite members")).clicked() {
         commands.push(Command::OpenShare);
     }
+
     ui.add_space(18.0);
     ui.label(
         egui::RichText::new("Data & export")
-            .font(strong_font(17.0))
+            .font(strong_font(15.0))
             .color(palette.text),
     );
-    ui.add_space(8.0);
-    ui.separator();
-    ui.add_space(8.0);
+    ui.add_space(6.0);
     ui.label(
         egui::RichText::new("Export includes pages, version history metadata, and People.")
             .size(12.0)
             .color(palette.muted),
     );
-    let _ = (view, commands);
+    ui.horizontal(|ui| {
+        if ui.button("Export workspace content").clicked() {
+            commands.push(Command::ExportWorkspace);
+        }
+        if ui.button("Export members").clicked() {
+            commands.push(Command::ExportMembers);
+        }
+    });
+    if let Some(status) = &view.settings_status {
+        ui.label(egui::RichText::new(status).size(11.0).color(palette.accent));
+    }
 }
 
 pub(super) fn render_sidebar_settings(
     ui: &mut egui::Ui,
-    _view: &ViewState,
+    ws: &mut Workspace,
+    view: &ViewState,
     palette: &Palette,
-    _commands: &mut Vec<Command>,
+    commands: &mut Vec<Command>,
 ) {
+    ui.add_space(4.0);
     ui.label(
-        egui::RichText::new("Customize sidebar")
-            .font(strong_font(17.0))
+        egui::RichText::new("Sidebar items")
+            .font(strong_font(15.0))
             .color(palette.text),
     );
-    ui.add_space(8.0);
-    ui.label(
-        egui::RichText::new("Choose what appears in the sidebar. Drag-and-drop ordering is planned; toggles are available here.")
-            .size(12.0)
-            .color(palette.muted),
-    );
-    ui.add_space(12.0);
-    ui.separator();
-    ui.add_space(8.0);
-    for item in [
-        "Search",
-        "Library",
-        "Settings",
-        "Inbox",
-        "Favorites",
-        "Private pages",
+    ui.add_space(6.0);
+
+    if toggle_button(ui, "Library", ws.settings.sidebar_library, palette).clicked() {
+        ws.settings.sidebar_library = !ws.settings.sidebar_library;
+    }
+    if toggle_button(ui, "Settings", ws.settings.sidebar_settings, palette).clicked() {
+        ws.settings.sidebar_settings = !ws.settings.sidebar_settings;
+    }
+    if toggle_button(ui, "Inbox", ws.settings.sidebar_inbox, palette).clicked() {
+        ws.settings.sidebar_inbox = !ws.settings.sidebar_inbox;
+    }
+    if toggle_button(ui, "Favorites", ws.settings.sidebar_favorites, palette).clicked() {
+        ws.settings.sidebar_favorites = !ws.settings.sidebar_favorites;
+    }
+    if toggle_button(ui, "Private pages", ws.settings.sidebar_private, palette).clicked() {
+        ws.settings.sidebar_private = !ws.settings.sidebar_private;
+    }
+    if toggle_button(
+        ui,
+        "Invite members card",
+        ws.settings.sidebar_invite,
+        palette,
+    )
+    .clicked()
+    {
+        ws.settings.sidebar_invite = !ws.settings.sidebar_invite;
+    }
+    if toggle_button(
+        ui,
         "Customize sidebar",
-    ] {
-        display_row(ui, item, "Show in sidebar", "Visible", palette);
+        ws.settings.sidebar_customize,
+        palette,
+    )
+    .clicked()
+    {
+        ws.settings.sidebar_customize = !ws.settings.sidebar_customize;
+    }
+    if toggle_button(
+        ui,
+        "Show other apps in sidebar",
+        ws.settings.show_other_apps,
+        palette,
+    )
+    .clicked()
+    {
+        ws.settings.show_other_apps = !ws.settings.show_other_apps;
+    }
+
+    ui.add_space(18.0);
+    ui.label(
+        egui::RichText::new("Export")
+            .font(strong_font(15.0))
+            .color(palette.text),
+    );
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        if ui.button("Export workspace content").clicked() {
+            commands.push(Command::ExportWorkspace);
+        }
+        if ui.button("Export members").clicked() {
+            commands.push(Command::ExportMembers);
+        }
+    });
+    if let Some(status) = &view.settings_status {
+        ui.label(egui::RichText::new(status).size(11.0).color(palette.accent));
+    }
+
+    ui.add_space(18.0);
+    ui.label(
+        egui::RichText::new("Analytics")
+            .font(strong_font(15.0))
+            .color(palette.text),
+    );
+    if toggle_button(
+        ui,
+        "Save and display page view analytics",
+        ws.settings.analytics,
+        palette,
+    )
+    .clicked()
+    {
+        ws.settings.analytics = !ws.settings.analytics;
     }
 }
 
 pub(super) fn render_offline_settings(
     ui: &mut egui::Ui,
-    ws: &Workspace,
-    view: &ViewState,
+    ws: &mut Workspace,
+    _view: &ViewState,
     palette: &Palette,
     _commands: &mut Vec<Command>,
 ) {
+    ui.add_space(4.0);
+    if toggle_button(
+        ui,
+        "Automatic downloads",
+        ws.settings.offline_auto_download,
+        palette,
+    )
+    .clicked()
+    {
+        ws.settings.offline_auto_download = !ws.settings.offline_auto_download;
+    }
+    ui.add_space(14.0);
     ui.label(
         egui::RichText::new("Offline pages")
-            .font(strong_font(17.0))
+            .font(strong_font(15.0))
             .color(palette.text),
     );
-    ui.add_space(8.0);
-    ui.label(
-        egui::RichText::new(
-            "Pages marked \"Available offline\" are kept for offline access and listed here.",
-        )
-        .size(12.0)
-        .color(palette.muted),
+    ui.add_space(6.0);
+
+    let search_id = egui::Id::unique("offline_search");
+    let mut query: String = ui
+        .ctx()
+        .data(|data| data.get_temp(search_id).unwrap_or_default());
+    let edit = ui.add(
+        egui::TextEdit::singleline(&mut query)
+            .desired_width(280.0)
+            .hint_text("Search offline pages")
+            .text_color(palette.text),
     );
-    ui.add_space(12.0);
-    ui.separator();
-    ui.add_space(8.0);
+    if edit.changed() {
+        ui.ctx()
+            .data_mut(|data| data.insert_temp(search_id, query.clone()));
+    }
+    let query = query.trim().to_lowercase();
     let mut found = false;
-    for page in ws.pages.iter().filter(|p| p.available_offline) {
+    for page in ws
+        .pages
+        .iter()
+        .filter(|page| page.available_offline && page.title.to_lowercase().contains(&query))
+    {
         found = true;
-        ui.label(egui::RichText::new(format!("• {}", page.title)).color(palette.text));
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new(&page.title).color(palette.text));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.label(
+                    egui::RichText::new(&page.updated_at)
+                        .size(11.0)
+                        .color(palette.muted),
+                );
+            });
+        });
     }
     if !found {
         ui.label(
@@ -327,31 +503,118 @@ pub(super) fn render_offline_settings(
                 .color(palette.muted),
         );
     }
-    let _ = view;
 }
 
 pub(super) fn render_people_settings(
     ui: &mut egui::Ui,
-    _ws: &Workspace,
-    _view: &ViewState,
+    ws: &mut Workspace,
+    view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    ui.add_space(4.0);
+
+    if toggle_button(
+        ui,
+        "People directory",
+        ws.settings.people_directory,
+        palette,
+    )
+    .clicked()
+    {
+        ws.settings.people_directory = !ws.settings.people_directory;
+    }
+    if toggle_button(
+        ui,
+        "Show recent activity",
+        ws.settings.recent_activity,
+        palette,
+    )
+    .clicked()
+    {
+        ws.settings.recent_activity = !ws.settings.recent_activity;
+    }
+    if toggle_button(ui, "Hover cards", ws.settings.hover_cards, palette).clicked() {
+        ws.settings.hover_cards = !ws.settings.hover_cards;
+    }
+
+    ui.add_space(18.0);
     ui.label(
-        egui::RichText::new("People")
-            .font(strong_font(17.0))
+        egui::RichText::new("Members")
+            .font(strong_font(15.0))
             .color(palette.text),
     );
-    ui.add_space(8.0);
-    ui.label(
-        egui::RichText::new("Members and guests are managed by your self-hosted workspace server.")
-            .size(12.0)
-            .color(palette.muted),
-    );
-    ui.add_space(12.0);
+    ui.add_space(6.0);
+    if view.share_members.is_empty() {
+        ui.label(
+            egui::RichText::new("No members loaded.")
+                .size(12.0)
+                .color(palette.muted),
+        );
+    }
+    for member in view.share_members.iter() {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new(&member.name).color(palette.text));
+            ui.add_space(8.0);
+            ui.label(
+                egui::RichText::new(&member.email)
+                    .size(11.0)
+                    .color(palette.muted),
+            );
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.label(
+                    egui::RichText::new(member.role.label())
+                        .size(11.0)
+                        .color(palette.muted),
+                );
+            });
+        });
+        ui.add_space(4.0);
+    }
     if ui.add(egui::Button::new("Invite members")).clicked() {
         commands.push(Command::OpenShare);
     }
+
+    ui.add_space(18.0);
+    ui.label(
+        egui::RichText::new("Danger zone")
+            .font(strong_font(15.0))
+            .color(palette.text),
+    );
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        ui.label(
+            egui::RichText::new(
+                "Permanently delete this workspace, including all pages and files.",
+            )
+            .size(12.0)
+            .color(palette.muted),
+        );
+        if ui
+            .add(egui::Button::new(
+                egui::RichText::new("Delete workspace").color(Color32::from_rgb(224, 108, 108)),
+            ))
+            .clicked()
+        {
+            commands.push(Command::SetSettingsStatus(
+                "Workspace deletion is disabled in this build.".to_string(),
+            ));
+        }
+    });
+    if let Some(status) = &view.settings_status {
+        ui.label(egui::RichText::new(status).size(11.0).color(palette.accent));
+    }
+    ui.add_space(12.0);
+    ui.label(
+        egui::RichText::new("Workspace ID")
+            .size(12.0)
+            .color(palette.text),
+    );
+    ui.label(
+        egui::RichText::new(&ws.settings.id)
+            .size(11.0)
+            .color(palette.muted),
+    );
 }
 
 pub(super) fn render_ai_settings(

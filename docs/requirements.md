@@ -222,6 +222,14 @@
 - FR-73: The Library tabs are functional (Recents / Favorites / Shared /
   Private), the More menu offers placeholder views, and rows show the owner,
   workspace source and real last-edited time (implemented in `spec-024`).
+
+### 1.14 Settings pages (spec-025)
+
+- FR-74: Workspace settings (name, icon, landing page, allowed domains,
+  sidebar visibility, analytics, offline downloads and People toggles) are
+  editable and persisted with the workspace; General / Sidebar / People /
+  Offline pages are functional (implemented in `spec-025`). Workspace deletion
+  remains disabled in this build.
 - NFR-10: Every completed spec is committed to git in the same session
   (`AGENTS.md` → Commits).
 - NFR-11: Search results are cached by query and workspace version; an
@@ -285,6 +293,7 @@
 | FR-65, FR-66 (implemented)    | `spec-022-workspace-index-and-version-retention.md` |
 | FR-72 (implemented)           | `spec-023-add-members-sharing-dialog.md` |
 | FR-73 (implemented)           | `spec-024-library-views.md` |
+| FR-74 (implemented)           | `spec-025-settings-pages.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

@@ -39,6 +39,7 @@ impl NotionApp {
             settings_open: self.settings_open,
             settings_page: self.settings_page.clone(),
             settings_query: self.settings_query.clone(),
+            settings_status: self.settings_status.clone(),
             language: self.language.clone(),
             dark: self.dark,
             table_view: self.table_view,
@@ -204,6 +205,11 @@ impl NotionApp {
             .list_shares(Some(&self.current_page))
             .unwrap_or_default();
         self.share_general_access = general_access(&shares, &self.current_page);
+    }
+
+    /// Refresh the member directory used by Share and Settings → People.
+    fn refresh_members(&mut self) {
+        self.share_members = Arc::new(self.client.list_members().unwrap_or_default());
     }
 
     /// Refresh the Library filters and owner label (spec-024).
@@ -382,6 +388,10 @@ impl NotionApp {
                 Command::OpenSettings => {
                     self.close_overlays();
                     self.settings_open = true;
+                    self.settings_status = None;
+                    if self.settings_page == "People" {
+                        self.refresh_members();
+                    }
                 }
                 Command::CloseSettings => self.settings_open = false,
                 Command::ToggleTheme => {
@@ -781,8 +791,31 @@ impl NotionApp {
                     self.ai_status = ollama::detect(&self.ai_config);
                 }
                 // ---- Settings / help / window ------------------------------
-                Command::SetSettingsPage(page) => self.settings_page = page,
+                Command::SetSettingsPage(page) => {
+                    self.settings_page = page.clone();
+                    self.settings_status = None;
+                    if page == "People" {
+                        self.refresh_members();
+                    }
+                }
                 Command::SetSettingsQuery(query) => self.settings_query = query,
+                Command::SetSettingsStatus(message) => self.settings_status = Some(message),
+                Command::ExportWorkspace => match self.client.export_tree() {
+                    Ok(files) => {
+                        self.settings_status = Some(format!("Exported {} files.", files.len()))
+                    }
+                    Err(error) => self.settings_status = Some(error.to_string()),
+                },
+                Command::ExportMembers => match self.client.export_tree() {
+                    Ok(files) => {
+                        let count = files
+                            .iter()
+                            .filter(|file| file.path.starts_with("People"))
+                            .count();
+                        self.settings_status = Some(format!("Exported {count} People files."));
+                    }
+                    Err(error) => self.settings_status = Some(error.to_string()),
+                },
                 Command::SetLanguage(locale) => {
                     crate::i18n::set_locale(&locale);
                     self.language = locale;

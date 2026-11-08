@@ -145,7 +145,7 @@ fn settings_description(label: &str) -> &'static str {
 
 pub(crate) fn render_settings(
     ctx: &egui::Context,
-    ws: &Workspace,
+    ws: &mut Workspace,
     view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
@@ -285,7 +285,7 @@ pub(crate) fn render_settings(
                                         render_workspace_settings(ui, ws, view, palette, commands)
                                     }
                                     "Sidebar" => {
-                                        render_sidebar_settings(ui, view, palette, commands)
+                                        render_sidebar_settings(ui, ws, view, palette, commands)
                                     }
                                     "Offline" => {
                                         render_offline_settings(ui, ws, view, palette, commands)

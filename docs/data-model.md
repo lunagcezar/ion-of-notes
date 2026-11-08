@@ -17,6 +17,25 @@ pages (spec-019). No egui types appear here.
 children) that is derived state: it is skipped by serde, rebuilt after
 deserialization and after add/remove, and ignored by equality (spec-022).
 
+## Entity: WorkspaceSettings
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | `String` | Stable local workspace id (default `local-workspace`) |
+| `icon` | `String` | Workspace icon glyph |
+| `landing_page` | `Option<String>` | Page opened on first landing |
+| `allowed_domains` | `Vec<String>` | Domains allowed to join |
+| `sidebar_*` | `bool` | Visibility toggles for sidebar sections |
+| `show_other_apps` | `bool` | Show other apps in the sidebar |
+| `analytics` | `bool` | Save/display page-view analytics |
+| `offline_auto_download` | `bool` | Automatically download offline pages |
+| `people_directory` | `bool` | Enable the People directory |
+| `recent_activity` | `bool` | Show recent activity on profiles |
+| `hover_cards` | `bool` | Show profile hover cards |
+
+`Workspace.settings` is serialized with the workspace document and defaults
+are supplied for older files (spec-025).
+
 ## Entity: Page
 
 | Field               | Type                | Description                                      |
