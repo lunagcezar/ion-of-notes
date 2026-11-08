@@ -8,6 +8,7 @@
 
 use crate::app;
 use crate::client::Client;
+use crate::collab::PageVersion;
 use crate::model::{
     Block, BlockKind, Page, PageDraft, SearchResult, TableRow, Workspace,
 };
@@ -25,11 +26,12 @@ use uuid::Uuid;
 use super::dialogs::{
     render_app_menu, render_grid_menu, render_inbox, render_new_tab, render_page_actions,
     render_search, render_settings, render_share, render_shortcuts, render_slash,
-    render_workspace_menu,
+    render_version_history, render_workspace_menu,
 };
 use super::page_icon::render_icon_picker;
 use super::palette::{apply_theme, Palette};
 use super::render::{render_content, render_sidebar, render_title_bar, TITLE_BAR_HEIGHT};
+use super::search_cache::SearchCache;
 
 /// Tabs of the page-icon picker (spec-013).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -182,6 +184,11 @@ pub(super) enum Command {
     // Page actions / settings from the "..." menu (spec-013).
     OpenPageActions,
     ClosePageActions,
+    // Version history (spec-015).
+    OpenVersionHistory,
+    CloseVersionHistory,
+    SetVersionSelected(usize),
+    RestoreVersion(usize),
     ToggleWorkspaceMenu,
     CloseWorkspaceMenu,
     OpenAppMenu,
@@ -208,7 +215,7 @@ pub(super) struct ViewState {
     pub(super) expanded: HashSet<String>,
     pub(super) search_open: bool,
     pub(super) search_query: String,
-    pub(super) search_results: Vec<SearchResult>,
+    pub(super) search_results: Arc<Vec<SearchResult>>,
     pub(super) settings_open: bool,
     pub(super) settings_page: String,
     pub(super) settings_query: String,
@@ -241,6 +248,9 @@ pub(super) struct ViewState {
     pub(super) icon_picker_tab: IconTab,
     pub(super) icon_picker_query: String,
     pub(super) page_actions_open: bool,
+    pub(super) version_history_open: bool,
+    pub(super) versions: Arc<Vec<PageVersion>>,
+    pub(super) version_selected: usize,
     pub(super) font_style: FontStyle,
     pub(super) full_width: bool,
     pub(super) small_text: bool,
@@ -265,7 +275,8 @@ pub struct NotionApp {
     expanded: HashSet<String>,
     search_open: bool,
     search_query: String,
-    search_results: Vec<SearchResult>,
+    search_results: Arc<Vec<SearchResult>>,
+    search_cache: SearchCache,
     settings_open: bool,
     settings_page: String,
     settings_query: String,
@@ -312,6 +323,9 @@ pub struct NotionApp {
     icon_picker_tab: IconTab,
     icon_picker_query: String,
     page_actions_open: bool,
+    version_history_open: bool,
+    versions: Arc<Vec<PageVersion>>,
+    version_selected: usize,
     font_style: FontStyle,
     full_width: bool,
     small_text: bool,
@@ -361,7 +375,8 @@ impl NotionApp {
             expanded: HashSet::new(),
             search_open: demo == "search",
             search_query: String::new(),
-            search_results: Vec::new(),
+            search_results: Arc::new(Vec::new()),
+            search_cache: SearchCache::default(),
             settings_open: matches!(demo.as_str(), "settings" | "ai"),
             settings_page: if demo == "ai" {
                 "AI assistant".to_string()
@@ -409,6 +424,9 @@ impl NotionApp {
             icon_picker_tab: IconTab::Emoji,
             icon_picker_query: String::new(),
             page_actions_open: demo == "pageactions",
+            version_history_open: false,
+            versions: Arc::new(Vec::new()),
+            version_selected: 0,
             font_style: FontStyle::Default,
             full_width: false,
             small_text: false,
@@ -434,7 +452,7 @@ impl NotionApp {
             expanded: self.expanded.clone(),
             search_open: self.search_open,
             search_query: self.search_query.clone(),
-            search_results: self.search_results.clone(),
+            search_results: Arc::clone(&self.search_results),
             settings_open: self.settings_open,
             settings_page: self.settings_page.clone(),
             settings_query: self.settings_query.clone(),
@@ -467,6 +485,9 @@ impl NotionApp {
             icon_picker_tab: self.icon_picker_tab,
             icon_picker_query: self.icon_picker_query.clone(),
             page_actions_open: self.page_actions_open,
+            version_history_open: self.version_history_open,
+            versions: Arc::clone(&self.versions),
+            version_selected: self.version_selected,
             font_style: self.font_style,
             full_width: self.full_width,
             small_text: self.small_text,
@@ -503,6 +524,7 @@ impl NotionApp {
         self.shortcuts_open = false;
         self.icon_picker_open = false;
         self.page_actions_open = false;
+        self.version_history_open = false;
         self.drag_from = None;
         self.drag_to = None;
     }
@@ -614,6 +636,7 @@ impl NotionApp {
                         | Command::AddRow
                         | Command::SetPageIcon(_)
                         | Command::DuplicatePage
+                        | Command::RestoreVersion(_)
                 );
             if blocked {
                 index += 1;
@@ -905,12 +928,12 @@ impl NotionApp {
                         if let Some(choice) = choices.get(self.new_tab_selected).cloned() {
                             commands.push(Command::ActivateNewTab(choice));
                         }
-                    } else if self.search_open {
-                        if let Some(result) = self.search_results.get(self.search_selected) {
-                            let id = result.page_id.clone();
-                            self.open_in_tab(id);
-                            self.close_overlays();
-                        }
+                    } else if self.search_open
+                        && let Some(result) = self.search_results.get(self.search_selected)
+                    {
+                        let id = result.page_id.clone();
+                        self.open_in_tab(id);
+                        self.close_overlays();
                     }
                 }
                 Command::ActivateNewTab(choice) => {
@@ -975,11 +998,11 @@ impl NotionApp {
                     }
                 }
                 Command::ReopenClosedTab => {
-                    if let Some(id) = self.closed_tabs.pop() {
-                        if self.workspace.page(&id).is_some() {
-                            self.open_in_tab(id);
-                            self.close_overlays();
-                        }
+                    if let Some(id) = self.closed_tabs.pop()
+                        && self.workspace.page(&id).is_some()
+                    {
+                        self.open_in_tab(id);
+                        self.close_overlays();
                     }
                 }
                 // ---- AI assistant ------------------------------------------
@@ -1114,6 +1137,26 @@ impl NotionApp {
                     self.page_actions_open = true;
                 }
                 Command::ClosePageActions => self.page_actions_open = false,
+                Command::OpenVersionHistory => {
+                    self.close_overlays();
+                    self.versions =
+                        Arc::new(self.client.page_versions(&self.current_page).unwrap_or_default());
+                    self.version_selected = 0;
+                    self.version_history_open = true;
+                }
+                Command::CloseVersionHistory => self.version_history_open = false,
+                Command::SetVersionSelected(index) => self.version_selected = index,
+                Command::RestoreVersion(index) => {
+                    if let Some(version) = self.versions.get(index).cloned()
+                        && let Ok(mut page) = serde_json::from_str::<Page>(&version.snapshot)
+                    {
+                        page.id = self.current_page.clone();
+                        if self.client.update_page(&page).is_ok() {
+                            self.pending_reload = true;
+                        }
+                    }
+                    self.version_history_open = false;
+                }
                 Command::ToggleWorkspaceMenu => {
                     let open = !self.workspace_menu_open;
                     self.close_overlays();
@@ -1306,6 +1349,7 @@ impl eframe::App for NotionApp {
             || self.search_open
             || self.icon_picker_open
             || self.page_actions_open
+            || self.version_history_open
             || self.shortcuts_open
             || self.slash_for.is_some();
         let (actions, consumed) = collect_shortcuts(&ctx, popup_open);
@@ -1327,22 +1371,30 @@ impl eframe::App for NotionApp {
         let mut commands: Vec<Command> =
             actions.iter().map(|a| self.command_for_action(*a)).collect();
 
-        // Search results are fetched through the client before any rendering.
-        self.search_results = if self.search_query.trim().is_empty() {
-            self.workspace
-                .pages
-                .iter()
-                .take(6)
-                .map(|p| SearchResult {
-                    page_id: p.id.clone(),
-                    page_title: p.title.clone(),
-                    snippet: p.plain_text(),
-                    score: 0,
-                })
-                .collect()
-        } else {
-            self.client.search(&self.search_query).unwrap_or_default()
-        };
+        // Search results are fetched through the client before rendering, but
+        // only when the query or the workspace version changed (spec-015).
+        // An unchanged frame is a cache hit and never calls the server.
+        if self
+            .search_cache
+            .needs_refresh(&self.search_query, self.workspace.version)
+        {
+            let results = if self.search_query.trim().is_empty() {
+                self.workspace
+                    .pages
+                    .iter()
+                    .take(6)
+                    .map(|p| SearchResult {
+                        page_id: p.id.clone(),
+                        page_title: p.title.clone(),
+                        snippet: p.plain_text(),
+                        score: 0,
+                    })
+                    .collect()
+            } else {
+                self.client.search(&self.search_query).unwrap_or_default()
+            };
+            self.search_results = Arc::new(results);
+        }
 
         let palette = Palette::for_theme(self.dark);
         let view = self.view_state();
@@ -1418,6 +1470,9 @@ impl eframe::App for NotionApp {
         if view.page_actions_open {
             render_page_actions(&ctx, &self.workspace, &view, &palette, &mut commands);
         }
+        if view.version_history_open {
+            render_version_history(&ctx, &view, &palette, &mut commands);
+        }
         if view.app_menu_open {
             render_app_menu(&ctx, &palette, &mut commands);
         }
@@ -1443,9 +1498,9 @@ impl eframe::App for NotionApp {
                     done.store(true, Ordering::SeqCst);
                 });
             }
-            if self.screenshot_done.load(Ordering::SeqCst) && self.frames >= 120 {
-                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-            } else if self.frames >= 360 {
+            if (self.screenshot_done.load(Ordering::SeqCst) && self.frames >= 120)
+                || self.frames >= 360
+            {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
         }

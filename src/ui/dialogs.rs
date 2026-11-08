@@ -12,6 +12,7 @@ use super::icons::{
     draw_search, draw_settings,
 };
 use super::palette::{strong_font, Palette};
+use super::settings_search::settings_matches;
 use super::switcher::{render_switcher, SwitcherMode, SwitcherRow, SwitcherSpec};
 
 /// A compact window frame shared by the popovers.
@@ -172,6 +173,7 @@ fn build_search_rows(ws: &Workspace, view: &ViewState) -> Vec<SwitcherRow> {
 }
 
 /// Build the shared spec, then hand it to the one switcher renderer (DRY).
+#[allow(clippy::too_many_arguments)]
 fn switcher_spec<'a>(
     id: &'static str,
     hint: &'a str,
@@ -310,7 +312,7 @@ fn action_items(view: &ViewState) -> Vec<(&'static str, &'static str, Command)> 
         ("Copy page contents", "", Command::ClosePageActions),
         ("Duplicate", "Ctrl+D", Command::DuplicatePage),
         ("Move to", "Ctrl+Shift+P", Command::ClosePageActions),
-        ("Version history", "", Command::ClosePageActions),
+        ("Version history", "", Command::OpenVersionHistory),
         ("Updates & analytics", "", Command::ClosePageActions),
         ("Suggest edits", "", Command::ClosePageActions),
         ("Use with AI", "", Command::OpenAiChat),
@@ -459,13 +461,227 @@ pub(super) fn render_page_actions(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
     {
         commands.push(Command::ClosePageActions);
     }
 }
 
+// ---- Version history (spec-015) -------------------------------------------
+
+/// A short human-readable preview of a stored page snapshot.
+fn snapshot_preview(snapshot: &str) -> String {
+    match serde_json::from_str::<Page>(snapshot) {
+        Ok(page) => {
+            let body = page.plain_text();
+            let body = if body.chars().count() > 220 {
+                format!("{}…", body.chars().take(220).collect::<String>())
+            } else {
+                body
+            };
+            if body.is_empty() {
+                page.title
+            } else {
+                format!("{}\n\n{}", page.title, body)
+            }
+        }
+        Err(_) => snapshot.chars().take(220).collect(),
+    }
+}
+
+pub(super) fn render_version_history(
+    ctx: &egui::Context,
+    view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    let resp = egui::Window::new("version_history")
+        .title_bar(false)
+        .collapsible(false)
+        .resizable(false)
+        .fixed_size(Vec2::new(560.0, 560.0))
+        .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
+        .frame(
+            egui::Frame::NONE
+                .fill(palette.content)
+                .corner_radius(CornerRadius::same(10))
+                .inner_margin(Margin::same(16))
+                .stroke(Stroke::new(1.0, palette.border)),
+        )
+        .show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new("Version history")
+                        .font(strong_font(20.0))
+                        .color(palette.text),
+                );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .add(
+                            egui::Button::new(
+                                egui::RichText::new("×").size(18.0).color(palette.muted),
+                            )
+                            .frame(false),
+                        )
+                        .clicked()
+                    {
+                        commands.push(Command::CloseVersionHistory);
+                    }
+                });
+            });
+            ui.add_space(8.0);
+            ui.separator();
+            ui.add_space(8.0);
+
+            if view.versions.is_empty() {
+                ui.label(
+                    egui::RichText::new("No versions have been recorded for this page yet.")
+                        .size(13.0)
+                        .color(palette.muted),
+                );
+                return;
+            }
+
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .max_height(250.0)
+                .show(ui, |ui| {
+                    for (index, version) in view.versions.iter().enumerate() {
+                        let selected = index == view.version_selected;
+                        let (rect, response) = ui.allocate_exact_size(
+                            Vec2::new(ui.available_width(), 46.0),
+                            Sense::click(),
+                        );
+                        if selected || response.hovered() {
+                            ui.painter().rect_filled(
+                                rect,
+                                CornerRadius::same(6),
+                                if selected {
+                                    palette.selected
+                                } else {
+                                    palette.hover
+                                },
+                            );
+                        }
+                        ui.painter().text(
+                            rect.min + Vec2::new(10.0, 14.0),
+                            Align2::LEFT_CENTER,
+                            format!("Version {} · {}", version.version, version.title),
+                            FontId::proportional(13.0),
+                            palette.text,
+                        );
+                        ui.painter().text(
+                            rect.min + Vec2::new(10.0, 32.0),
+                            Align2::LEFT_CENTER,
+                            format!("{} · {}", version.actor, version.updated_at),
+                            FontId::proportional(11.0),
+                            palette.muted,
+                        );
+                        if response.clicked() {
+                            commands.push(Command::SetVersionSelected(index));
+                        }
+                    }
+                });
+
+            ui.add_space(10.0);
+            ui.separator();
+            ui.add_space(8.0);
+            if let Some(version) = view.versions.get(view.version_selected) {
+                ui.label(
+                    egui::RichText::new("Snapshot preview")
+                        .size(12.0)
+                        .strong()
+                        .color(palette.text),
+                );
+                ui.add_space(4.0);
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false, false])
+                    .max_height(120.0)
+                    .show(ui, |ui| {
+                        ui.label(
+                            egui::RichText::new(snapshot_preview(&version.snapshot))
+                                .size(12.0)
+                                .color(palette.muted),
+                        );
+                    });
+                ui.add_space(8.0);
+                if ui
+                    .add(egui::Button::new("Restore this version"))
+                    .clicked()
+                {
+                    commands.push(Command::RestoreVersion(view.version_selected));
+                }
+            }
+        });
+
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| {
+            i.pointer
+                .interact_pos()
+                .is_some_and(|p| !inner.response.rect.contains(p))
+        })
+    {
+        commands.push(Command::CloseVersionHistory);
+    }
+}
+
 // ---- Settings --------------------------------------------------------------
+
+/// One settings-rail entry: the section label and the searchable description.
+/// Keeping the list here means the rail and the search filter never disagree
+/// (DRY, spec-015).
+const SETTINGS_NAV: &[(&str, &[(&str, &str)])] = &[
+    (
+        "Account",
+        &[
+            ("Local workspace", "Workspace name, members and access"),
+            ("Preferences", "Appearance, input options, language and time"),
+            ("Notifications", "Inbox and notification preferences"),
+        ],
+    ),
+    (
+        "Workspace",
+        &[
+            ("General", "Workspace identity, members and data"),
+            ("Requests", "Workspace access requests"),
+            ("People", "Manage who can access this workspace"),
+            ("Sidebar", "Choose what appears in the sidebar"),
+            ("Analytics", "Workspace analytics"),
+            ("Import", "Import pages and data"),
+        ],
+    ),
+    (
+        "Features",
+        &[
+            ("AI assistant", "Local AI powered by Ollama"),
+            ("Meeting notes", "Meeting notes and transcripts"),
+            ("Connections", "Connected services"),
+            ("Automation", "Workspace automation"),
+            ("Offline", "Available offline pages"),
+        ],
+    ),
+];
+
+/// The first settings section whose title or description matches the query.
+fn first_settings_match(query: &str) -> Option<&'static str> {
+    SETTINGS_NAV
+        .iter()
+        .flat_map(|(_, items)| items.iter())
+        .find(|(label, description)| settings_matches(query, label, description))
+        .map(|(label, _)| *label)
+}
+
+/// The searchable description of a section, used to keep the content pane in
+/// sync with the filtered rail.
+fn settings_description(label: &str) -> &'static str {
+    SETTINGS_NAV
+        .iter()
+        .flat_map(|(_, items)| items.iter())
+        .find(|(item, _)| *item == label)
+        .map(|(_, description)| *description)
+        .unwrap_or("")
+}
 
 pub(super) fn render_settings(
     ctx: &egui::Context,
@@ -524,35 +740,32 @@ pub(super) fn render_settings(
                             .text_color(palette.text),
                     );
                     if edit.changed() {
+                        // Typing a query narrows the rail and moves to the
+                        // first matching section (spec-015). An empty query
+                        // leaves the current section alone.
+                        if !query.trim().is_empty()
+                            && let Some(first) = first_settings_match(&query)
+                        {
+                            commands.push(Command::SetSettingsPage(first.to_string()));
+                        }
                         commands.push(Command::SetSettingsQuery(query));
                     }
                     ui.add_space(14.0);
-                    section_label(ui, "Account", palette);
-                    settings_nav(ui, view, "Local workspace", palette, commands);
-                    settings_nav(ui, view, "Preferences", palette, commands);
-                    settings_nav(ui, view, "Notifications", palette, commands);
-                    ui.add_space(14.0);
-                    section_label(ui, "Workspace", palette);
-                    for label in [
-                        "General",
-                        "Requests",
-                        "People",
-                        "Sidebar",
-                        "Analytics",
-                        "Import",
-                    ] {
-                        settings_nav(ui, view, label, palette, commands);
-                    }
-                    ui.add_space(14.0);
-                    section_label(ui, "Features", palette);
-                    for label in [
-                        "AI assistant",
-                        "Meeting notes",
-                        "Connections",
-                        "Automation",
-                        "Offline",
-                    ] {
-                        settings_nav(ui, view, label, palette, commands);
+                    for (section, items) in SETTINGS_NAV {
+                        let visible: Vec<_> = items
+                            .iter()
+                            .filter(|(label, description)| {
+                                settings_matches(&view.settings_query, label, description)
+                            })
+                            .collect();
+                        if visible.is_empty() {
+                            continue;
+                        }
+                        section_label(ui, section, palette);
+                        for (label, _) in visible {
+                            settings_nav(ui, view, label, palette, commands);
+                        }
+                        ui.add_space(14.0);
                     }
                 });
 
@@ -585,21 +798,50 @@ pub(super) fn render_settings(
                                     .color(palette.muted),
                             );
                             ui.add_space(26.0);
-                            match page {
-                                "AI assistant" => render_ai_settings(ui, view, palette, commands),
-                                "Preferences" => render_preferences(ui, view, palette, commands),
-                                "General" => render_workspace_settings(ui, ws, view, palette, commands),
-                                "Sidebar" => render_sidebar_settings(ui, view, palette, commands),
-                                "Offline" => render_offline_settings(ui, ws, view, palette, commands),
-                                "People" => render_people_settings(ui, ws, view, palette, commands),
-                                _ => {
-                                    ui.label(
-                                        egui::RichText::new(
-                                            "Settings for this section live on your self-hosted workspace.",
-                                        )
-                                        .size(13.0)
-                                        .color(palette.muted),
-                                    );
+                            let query = view.settings_query.trim();
+                            if !query.is_empty()
+                                && !settings_matches(
+                                    query,
+                                    page,
+                                    settings_description(page),
+                                )
+                            {
+                                ui.label(
+                                    egui::RichText::new(format!(
+                                        "No settings match “{query}”. Try a different word."
+                                    ))
+                                    .size(13.0)
+                                    .color(palette.muted),
+                                );
+                            } else {
+                                match page {
+                                    "AI assistant" => {
+                                        render_ai_settings(ui, view, palette, commands)
+                                    }
+                                    "Preferences" => {
+                                        render_preferences(ui, view, palette, commands)
+                                    }
+                                    "General" => {
+                                        render_workspace_settings(ui, ws, view, palette, commands)
+                                    }
+                                    "Sidebar" => {
+                                        render_sidebar_settings(ui, view, palette, commands)
+                                    }
+                                    "Offline" => {
+                                        render_offline_settings(ui, ws, view, palette, commands)
+                                    }
+                                    "People" => {
+                                        render_people_settings(ui, ws, view, palette, commands)
+                                    }
+                                    _ => {
+                                        ui.label(
+                                            egui::RichText::new(
+                                                "Settings for this section live on your self-hosted workspace.",
+                                            )
+                                            .size(13.0)
+                                            .color(palette.muted),
+                                        );
+                                    }
                                 }
                             }
                             ui.add_space(24.0);
@@ -633,7 +875,7 @@ pub(super) fn render_settings(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
     {
         commands.push(Command::CloseSettings);
     }
@@ -1201,7 +1443,7 @@ pub(super) fn render_shortcuts(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
     {
         commands.push(Command::CloseShortcuts);
     }
@@ -1209,6 +1451,7 @@ pub(super) fn render_shortcuts(
 
 // ---- App / workspace / grid menus -----------------------------------------
 
+#[allow(clippy::too_many_arguments)]
 fn popup_menu(
     ctx: &egui::Context,
     id: &str,
@@ -1247,7 +1490,7 @@ fn popup_menu(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
     {
         commands.push(close);
     }
@@ -1345,7 +1588,7 @@ pub(super) fn render_workspace_menu(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
     {
         commands.push(Command::CloseWorkspaceMenu);
     }
@@ -1522,7 +1765,7 @@ pub(super) fn render_share(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
     {
         commands.push(Command::CloseShare);
     }
@@ -1637,7 +1880,7 @@ pub(super) fn render_inbox(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
     {
         commands.push(Command::CloseInbox);
     }

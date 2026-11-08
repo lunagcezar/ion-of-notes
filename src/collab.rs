@@ -353,7 +353,7 @@ impl CollabState {
             .filter(|v| v.page_id == page_id)
             .cloned()
             .collect();
-        items.sort_by(|a, b| b.version.cmp(&a.version));
+        items.sort_by_key(|v| std::cmp::Reverse(v.version));
         items
     }
 

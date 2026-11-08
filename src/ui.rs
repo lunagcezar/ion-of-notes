@@ -14,9 +14,13 @@ mod icons;
 mod page_icon;
 mod palette;
 mod render;
+mod search_cache;
+mod settings_search;
 mod switcher;
 
 pub use app::NotionApp;
 pub use palette::{
     block_menu_options, install_fonts, status_color, strong_font, tab_title, Palette,
 };
+pub use search_cache::SearchCache;
+pub use settings_search::settings_matches;

@@ -7,7 +7,7 @@
 
 use crate::model::Workspace;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 /// The default location of the JSON workspace file.
@@ -65,13 +65,32 @@ impl WorkspaceStore for JsonStore {
 }
 
 /// Write a workspace snapshot as pretty-printed JSON.
+///
+/// The document is first written to a sibling temporary file and then moved
+/// into place. An interrupted save therefore cannot leave a truncated
+/// `workspace.json` behind (spec-015). The rename is the fast path; on a
+/// platform where the destination already exists and cannot be replaced, a
+/// copy fallback keeps the old file valid until the new bytes are complete.
 pub fn save(path: &Path, workspace: &Workspace) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let json = serde_json::to_string_pretty(workspace)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-    fs::write(path, json)
+    let temporary = path.with_extension("tmp");
+    {
+        let file = fs::File::create(&temporary)?;
+        let mut writer = io::BufWriter::new(file);
+        serde_json::to_writer_pretty(&mut writer, workspace)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        writer.flush()?;
+    }
+    match fs::rename(&temporary, path) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            fs::copy(&temporary, path)?;
+            fs::remove_file(&temporary)?;
+            Ok(())
+        }
+    }
 }
 
 /// Read a workspace snapshot from JSON.

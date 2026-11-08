@@ -87,6 +87,21 @@ fn bad_json_maps_to_decode_error() {
 }
 
 #[test]
+fn page_versions_are_newest_first_after_updates() {
+    let mut c = Client::new(server());
+    let mut page = c.get_page("p-home").unwrap();
+    page.title = "First revision".to_string();
+    c.update_page(&page).unwrap();
+    page.title = "Second revision".to_string();
+    c.update_page(&page).unwrap();
+
+    let versions = c.page_versions("p-home").unwrap();
+    assert!(versions.len() >= 2);
+    assert!(versions.windows(2).all(|pair| pair[0].version > pair[1].version));
+    assert!(versions.iter().any(|v| v.title == "Second revision"));
+}
+
+#[test]
 fn replace_workspace_roundtrip() {
     let mut c = Client::new(server());
     let mut replacement = Workspace::new("replaced");

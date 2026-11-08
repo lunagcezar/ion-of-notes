@@ -143,12 +143,13 @@ impl WorkspaceServer {
     }
 
     /// Single write path (DRY): bump the version, append one sync-log entry,
-    /// and persist. Every mutation goes through here.
-    fn write(&mut self, op: ChangeOp, page_id: &str) {
+    /// and persist. Every mutation goes through here and reports a storage
+    /// failure to the caller instead of hiding it (spec-015).
+    fn write(&mut self, op: ChangeOp, page_id: &str) -> std::io::Result<()> {
         self.workspace.bump_version();
         let actor = self.collab.owner_id();
         self.collab.record(op, page_id, &actor);
-        let _ = self.persist();
+        self.persist()
     }
 }
 
@@ -166,6 +167,10 @@ fn bad(message: &str) -> ApiResponse {
 
 fn not_found(message: &str) -> ApiResponse {
     json::<()>(404, Envelope::err(message))
+}
+
+fn server_error(message: &str) -> ApiResponse {
+    json::<()>(500, Envelope::err(message))
 }
 
 fn parse_body<T: DeserializeOwned>(request: &ApiRequest) -> Result<T, String> {
@@ -244,7 +249,9 @@ impl WorkspaceApi for WorkspaceServer {
                         }
                     }
                     self.workspace = workspace;
-                    self.write(ChangeOp::Replace, "__workspace__");
+                    if let Err(error) = self.write(ChangeOp::Replace, "__workspace__") {
+                        return server_error(&error.to_string());
+                    }
                     json(200, Envelope::ok(self.workspace.clone()))
                 }
                 Err(message) => bad(&message),
@@ -279,7 +286,9 @@ impl WorkspaceApi for WorkspaceServer {
                     let page_id = page.id.clone();
                     let actor = self.collab.owner_id();
                     self.collab.record_version(&page, &actor);
-                    self.write(ChangeOp::Create, &page_id);
+                    if let Err(error) = self.write(ChangeOp::Create, &page_id) {
+                        return server_error(&error.to_string());
+                    }
                     json(201, Envelope::ok(page))
                 }
                 Err(message) => bad(&message),
@@ -356,7 +365,9 @@ impl WorkspaceApi for WorkspaceServer {
                                     *slot = page.clone();
                                     let actor = self.collab.owner_id();
                                     self.collab.record_version(&page, &actor);
-                                    self.write(ChangeOp::Update, id);
+                                    if let Err(error) = self.write(ChangeOp::Update, id) {
+                                        return server_error(&error.to_string());
+                                    }
                                     json(200, Envelope::ok(page))
                                 }
                                 None => not_found("page not found"),
@@ -366,7 +377,9 @@ impl WorkspaceApi for WorkspaceServer {
                     },
                     Method::Delete => match self.workspace.remove_page(id) {
                         Ok(removed) => {
-                            self.write(ChangeOp::Delete, id);
+                            if let Err(error) = self.write(ChangeOp::Delete, id) {
+                                return server_error(&error.to_string());
+                            }
                             json(200, Envelope::ok(removed))
                         }
                         Err(e) => not_found(&e.to_string()),

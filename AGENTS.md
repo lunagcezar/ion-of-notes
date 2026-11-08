@@ -115,6 +115,8 @@ src/
                    block menu
     switcher.rs    one shared search / new-tab window (DRY)
     page_icon.rs   page-icon feature: catalog, picker and one renderer
+    search_cache.rs pure query/version cache so redraws do not re-query
+    settings_search.rs pure settings title/description matcher
 tests/
   common/mod.rs    shared test helpers (DRY; not a test target)
   model.rs         one integration-test crate per module (named after it)

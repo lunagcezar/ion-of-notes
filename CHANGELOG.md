@@ -6,6 +6,36 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added / Changed — spec-015-hardening-and-performance
+
+- **Settings search:** the Settings rail now actually filters by the query
+  (title or description), jumps to the first matching section, and shows a
+  clear "No settings match" message. The matching rule is a pure helper in
+  `ui/settings_search.rs` (spec-014 item 4 completed).
+- **Version history:** the page actions "Version history" entry is functional.
+  `Client::page_versions` reads the existing
+  `GET /api/pages/{id}/versions` route, a new window lists snapshots newest
+  first, and "Restore this version" writes the chosen snapshot back through
+  `Client::update_page`. New `Command`s keep the UI on the same client-bound
+  path.
+- **Search performance:** `ui/search_cache.rs` caches the last query and
+  workspace version, so an unchanged frame no longer asks the server for search
+  results. Results are stored in an `Arc` and cloned cheaply into `ViewState`.
+- **Persistence reliability:** `store::save` writes to a sibling temporary file
+  and then moves it into place, so an interrupted save cannot truncate
+  `workspace.json`. `WorkspaceServer::write` now returns the storage error and
+  mutation routes answer `500` instead of silently claiming success.
+- **Performance build:** added a thin-LTO release profile.
+- **Quality:** `cargo clippy --all-targets -- -D warnings` is clean; the
+  pre-existing `map_or(false, …)`, collapsible-`if`, sort and `io::Error`
+  lints were fixed.
+- Red: new tests in `tests/ui.rs` (settings matcher, search cache),
+  `tests/client.rs` (version order), `tests/store.rs` (atomic save) and
+  `tests/store_port.rs` (failing store → 500) were written first.
+- Docs: added `spec/spec-015-hardening-and-performance.md`, updated
+  `docs/requirements.md`, `docs/unknowns.md`, `README.md` and the module tree
+  in `AGENTS.md`.
+
 ### Added — spec-014-bug-fixes-and-improvements
 
 - **Editor:** Backspace in an empty text block deletes the block (keeping at least one). Block row layout is kept stable across hover to avoid focus loss while typing; text edits use persistent IDs. Locked pages make content read-only and block structural edits.

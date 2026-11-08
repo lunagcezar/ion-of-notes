@@ -486,7 +486,7 @@ pub(super) fn render_switcher(
     if let Some(inner) = resp {
         let rect = inner.response.rect;
         if ctx.input(|i| i.pointer.any_click())
-            && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !rect.contains(p)))
+            && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !rect.contains(p)))
         {
             match spec.mode {
                 SwitcherMode::NewTab => commands.push(Command::CloseNewTab),

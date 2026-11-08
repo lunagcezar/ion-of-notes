@@ -29,5 +29,5 @@ pub fn write_png(path: &Path, image: &ColorImage) -> io::Result<()> {
     }
     buffer
         .save(path)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        .map_err(io::Error::other)
 }

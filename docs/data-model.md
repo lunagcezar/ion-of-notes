@@ -101,7 +101,10 @@ types. They are the DTOs of the decided API.
 | `CollabState` | `members, shares, changes, next_seq, versions` | Server-owned state + pure methods |
 
 `CollabState` methods: `invite`, `set_access`, `shares_for`, `access_for`
-(most-specific-first resolution), `can_write`, `record`, `changes_since`.
+(most-specific-first resolution), `can_write`, `record`, `changes_since`,
+`record_version`, `versions_for`. The version snapshots are read by
+`Client::page_versions` and shown in the page-actions version-history window
+(spec-015); restoring one writes it back through `Client::update_page`.
 
 ## Export tree (takes the described workspace export into account)
 

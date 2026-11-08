@@ -471,10 +471,10 @@ pub(super) fn render_content(
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 6.0;
             ui.add_space(16.0);
-            if !view.sidebar_open {
-                if ui.add(egui::Button::new(">").frame(false)).clicked() {
-                    commands.push(Command::ToggleSidebar);
-                }
+            if !view.sidebar_open
+                && ui.add(egui::Button::new(">").frame(false)).clicked()
+            {
+                commands.push(Command::ToggleSidebar);
             }
             let mut crumbs = crumb_chain(ws, &view.current_page);
             if crumbs.is_empty() {

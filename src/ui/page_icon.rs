@@ -259,7 +259,7 @@ pub(super) fn render_icon_picker(
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| i.pointer.interact_pos().map_or(false, |p| !inner.response.rect.contains(p)))
+        && ctx.input(|i| i.pointer.interact_pos().is_some_and(|p| !inner.response.rect.contains(p)))
     {
         commands.push(Command::CloseIconPicker);
     }

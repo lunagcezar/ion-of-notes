@@ -6,7 +6,7 @@
 //! server and, later, a remote transport.
 
 use crate::collab::{
-    ExportFile, Member, MemberDraft, RealtimeContract, Share, SyncBatch,
+    ExportFile, Member, MemberDraft, PageVersion, RealtimeContract, Share, SyncBatch,
 };
 use crate::model::{Page, PageDraft, PageSummary, SearchResult, Workspace};
 use crate::server::{url_encode, ApiRequest, Envelope, Method, WorkspaceApi};
@@ -101,6 +101,15 @@ impl<A: WorkspaceApi> Client<A> {
         self.call(ApiRequest::new(
             Method::Delete,
             format!("/api/pages/{id}"),
+            None,
+        ))
+    }
+
+    /// Newest-first snapshots recorded by the server (version history).
+    pub fn page_versions(&mut self, id: &str) -> Result<Vec<PageVersion>, ClientError> {
+        self.call(ApiRequest::new(
+            Method::Get,
+            format!("/api/pages/{id}/versions"),
             None,
         ))
     }

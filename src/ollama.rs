@@ -89,7 +89,7 @@ pub fn parse_endpoint(endpoint: &str) -> Result<(String, u16), String> {
         }
     }
     let authority = s
-        .split(|c| c == '/' || c == '?' || c == '#')
+        .split(['/', '?', '#'])
         .next()
         .unwrap_or("");
     if authority.is_empty() {
@@ -168,10 +168,10 @@ pub fn service_reachable(endpoint: &str) -> bool {
 /// Detect the best available transport, honouring `prefer_cli`.
 pub fn detect(config: &OllamaConfig) -> OllamaStatus {
     let cli = cli_version();
-    if config.prefer_cli {
-        if let Some(version) = &cli {
-            return OllamaStatus::Cli { version: version.clone() };
-        }
+    if config.prefer_cli
+        && let Some(version) = &cli
+    {
+        return OllamaStatus::Cli { version: version.clone() };
     }
     if service_reachable(&config.endpoint) {
         return OllamaStatus::Service { endpoint: config.endpoint.clone() };

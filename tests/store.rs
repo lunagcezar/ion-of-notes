@@ -17,6 +17,18 @@ fn save_and_load_roundtrip() {
 }
 
 #[test]
+fn save_is_atomic_and_leaves_no_temporary_file() {
+    let path = temp_path("atomic", "json");
+    remove(&path);
+    let ws = Workspace::seed("atomic");
+    store::save(&path, &ws).unwrap();
+    assert_eq!(store::load(&path).unwrap(), ws);
+    let temporary = path.with_extension("tmp");
+    assert!(!temporary.exists(), "temporary save file must be removed");
+    remove(&path);
+}
+
+#[test]
 fn load_or_seed_creates_file() {
     let path = temp_path("seed", "json");
     remove(&path);

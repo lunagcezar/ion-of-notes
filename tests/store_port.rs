@@ -24,6 +24,27 @@ impl WorkspaceStore for RecordingStore {
     }
 }
 
+#[derive(Clone, Default)]
+struct FailingStore;
+
+impl WorkspaceStore for FailingStore {
+    fn persist(&self, _workspace: &Workspace) -> std::io::Result<()> {
+        Err(std::io::Error::other("simulated disk failure"))
+    }
+}
+
+#[test]
+fn persistence_failure_is_reported_as_a_server_error() {
+    let mut server = WorkspaceServer::with_store(Workspace::new("x"), FailingStore);
+    let response = server.handle(&ApiRequest::new(
+        Method::Post,
+        "/api/pages",
+        Some(page_draft_json("Will not persist", None)),
+    ));
+    assert_eq!(response.status, 500);
+    assert!(response.body.contains("simulated disk failure"));
+}
+
 #[test]
 fn server_accepts_a_swappable_store_without_touching_disk() {
     let store = RecordingStore::default();

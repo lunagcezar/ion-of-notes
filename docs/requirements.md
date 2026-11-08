@@ -176,8 +176,18 @@
 - FR-60: Code is divided by coherent responsibility, not by line count or DDD
   scaffolding (ADR-004): `ui/switcher.rs` and `ui/page_icon.rs` are separate
   cohesive modules behind the `ui.rs` facade.
+- FR-61: The Settings search field filters the navigation rail by section title
+  or description, moves to the first match, and reports when nothing matches
+  (`ui/settings_search.rs`, spec-015).
+- FR-62: The page actions menu opens a version-history window backed by
+  `GET /api/pages/{id}/versions`; snapshots are listed newest first and the
+  selected snapshot can be restored through `Client::update_page` (spec-015).
 - NFR-10: Every completed spec is committed to git in the same session
   (`AGENTS.md` → Commits).
+- NFR-11: Search results are cached by query and workspace version; an
+  unchanged frame must not call the server again (`ui/search_cache.rs`).
+- NFR-12: JSON saves are atomic (temporary file + move) and a storage failure
+  is reported as an API `500`, never as a silent success.
 
 ## 2. Non-functional requirements
 
@@ -217,6 +227,7 @@
 | FR-37..FR-42, NFR-03, NFR-06  | `spec-009-visual-fidelity.md`         |
 | FR-44..FR-51                  | `spec-012-interaction-polish.md`      |
 | FR-52..FR-60, NFR-10          | `spec-013-interaction-polish-and-modularity.md` |
+| FR-61, FR-62, NFR-11, NFR-12  | `spec-015-hardening-and-performance.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

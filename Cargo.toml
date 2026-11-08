@@ -17,3 +17,9 @@ rust-i18n = "3"
 
 [profile.dev]
 opt-level = 0
+
+# Ship a smaller, faster binary: thin LTO lets the egui/eframe code inline
+# across crates without the build cost of full LTO.
+[profile.release]
+lto = "thin"
+codegen-units = 1
