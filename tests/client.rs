@@ -1,8 +1,9 @@
 //! Tests for the client layer (public API only).
 
-use not_notion::client::{Client, ClientError};
+use not_notion::client::{Client, ClientError, encode_body};
 use not_notion::model::{Page, PageDraft, Workspace};
 use not_notion::server::{ApiRequest, ApiResponse, WorkspaceApi, WorkspaceServer};
+use serde::Serialize;
 
 struct Stub {
     status: u16,
@@ -74,7 +75,10 @@ fn http_error_maps_to_client_error() {
         status: 500,
         body: "boom".to_string(),
     });
-    assert_eq!(c.workspace(), Err(ClientError::Http(500, "boom".to_string())));
+    assert_eq!(
+        c.workspace(),
+        Err(ClientError::Http(500, "boom".to_string()))
+    );
 }
 
 #[test]
@@ -84,6 +88,24 @@ fn bad_json_maps_to_decode_error() {
         body: "{not json".to_string(),
     });
     assert!(matches!(c.workspace(), Err(ClientError::Decode(_))));
+}
+
+struct FailingSerialize;
+
+impl Serialize for FailingSerialize {
+    fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        Err(<S::Error as serde::ser::Error>::custom("encode failed"))
+    }
+}
+
+#[test]
+fn encode_failure_maps_to_encode_error() {
+    let error = encode_body(&FailingSerialize).unwrap_err();
+    assert!(matches!(error, ClientError::Encode(_)));
+    assert!(error.to_string().contains("encode failed"));
 }
 
 #[test]
@@ -97,7 +119,11 @@ fn page_versions_are_newest_first_after_updates() {
 
     let versions = c.page_versions("p-home").unwrap();
     assert!(versions.len() >= 2);
-    assert!(versions.windows(2).all(|pair| pair[0].version > pair[1].version));
+    assert!(
+        versions
+            .windows(2)
+            .all(|pair| pair[0].version > pair[1].version)
+    );
     assert!(versions.iter().any(|v| v.title == "Second revision"));
 }
 

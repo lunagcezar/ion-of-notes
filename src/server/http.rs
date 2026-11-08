@@ -2,6 +2,7 @@
 
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use super::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
@@ -74,8 +75,8 @@ fn request_complete(buffer: &[u8]) -> bool {
     buffer.len() >= index + 4 + length
 }
 
-/// Handle one connection and write one response.
-pub fn serve_once<A: WorkspaceApi>(api: &mut A, stream: &mut TcpStream) -> std::io::Result<()> {
+/// Read one HTTP request from a connection.
+fn read_request(stream: &mut TcpStream) -> std::io::Result<ApiRequest> {
     stream.set_read_timeout(Some(Duration::from_secs(2)))?;
     let mut buffer = Vec::new();
     let mut chunk = [0u8; 4096];
@@ -91,24 +92,63 @@ pub fn serve_once<A: WorkspaceApi>(api: &mut A, stream: &mut TcpStream) -> std::
             Err(e) => return Err(e),
         }
     }
-    let request = parse_http_request(&buffer)
-        .unwrap_or_else(|| ApiRequest::new(Method::Get, "/health", None));
+    Ok(
+        parse_http_request(&buffer)
+            .unwrap_or_else(|| ApiRequest::new(Method::Get, "/health", None)),
+    )
+}
+
+/// Handle one connection and write one response.
+pub fn serve_once<A: WorkspaceApi>(api: &mut A, stream: &mut TcpStream) -> std::io::Result<()> {
+    let request = read_request(stream)?;
     let response = api.handle(&request);
     stream.write_all(&format_http_response(&response))?;
     stream.flush()
 }
 
-/// Blocking loopback API server. Only used by `--serve`.
-pub fn serve_forever(addr: &str, mut server: WorkspaceServer) -> std::io::Result<()> {
-    let listener = TcpListener::bind(addr)?;
-    println!("not-notion API listening on http://{addr}");
+/// Serve connections from an already-bound listener.
+///
+/// Requests are read on the connection thread; the server state is locked only
+/// for `handle`, so a slow client cannot hold the state while it is still
+/// sending its request (spec-021).
+pub fn serve_on(listener: TcpListener, server: WorkspaceServer) -> std::io::Result<()> {
+    let server = Arc::new(Mutex::new(server));
     for incoming in listener.incoming() {
         match incoming {
             Ok(mut stream) => {
-                let _ = serve_once(&mut server, &mut stream);
+                let server = Arc::clone(&server);
+                std::thread::spawn(move || {
+                    let request = match read_request(&mut stream) {
+                        Ok(request) => request,
+                        Err(error) => {
+                            eprintln!("request error: {error}");
+                            return;
+                        }
+                    };
+                    let response = match server.lock() {
+                        Ok(mut guard) => guard.handle(&request),
+                        Err(error) => {
+                            eprintln!("server lock poisoned: {error}");
+                            return;
+                        }
+                    };
+                    if let Err(error) = stream
+                        .write_all(&format_http_response(&response))
+                        .and_then(|()| stream.flush())
+                    {
+                        eprintln!("response error: {error}");
+                    }
+                });
             }
-            Err(e) => eprintln!("connection error: {e}"),
+            Err(error) => eprintln!("connection error: {error}"),
         }
     }
     Ok(())
+}
+
+/// Blocking loopback API server. Only used by `--serve`.
+pub fn serve_forever(addr: &str, server: WorkspaceServer) -> std::io::Result<()> {
+    let listener = TcpListener::bind(addr)?;
+    println!("not-notion API listening on http://{addr}");
+    serve_on(listener, server)
 }

@@ -32,6 +32,9 @@ The code follows ports-and-adapters with DRY and SOLID applied throughout:
   is reported as an API `500`.
 - Single-page edits persist with `PATCH /api/pages/{id}` and a 250 ms debounce;
   the full-workspace `PUT` is reserved for added, removed or reordered pages.
+- `--serve` reads each request on its connection thread and locks the server
+  state only for `handle`, so independent clients do not block each other's
+  I/O. Serialization failures surface as `ClientError::Encode`.
 - Tests live in `tests/`, one integration-test crate per module, with shared
   helpers in `tests/common/mod.rs`. No tests are mixed into source files.
 - `docs/adr-001-stack-evaluation.md` records the decision on a suggested

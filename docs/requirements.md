@@ -202,9 +202,9 @@
 - FR-68: All user-visible strings are covered by the locale key table with an
   English fallback, checked by a completeness test (planned, spec-016 A6).
 - FR-69: Client serialization failures return an explicit `ClientError::Encode`
-  instead of sending an empty body (planned, spec-016 A7).
+  instead of sending an empty body (implemented in `spec-021`).
 - FR-70: The optional loopback listener serves concurrent connections without
-  blocking one client behind another (planned, spec-016 A8).
+  blocking one client behind another (implemented in `spec-021`).
 - FR-71: Settings search filters the rows inside the open section, not only the
   navigation rail (planned, spec-016 A9).
 - NFR-10: Every completed spec is committed to git in the same session
@@ -266,6 +266,7 @@
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |
+| FR-69, FR-70 (implemented)    | `spec-021-quality-and-concurrency-baseline.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

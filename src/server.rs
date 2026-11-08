@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 mod http;
 mod url;
 
-pub use http::{format_http_response, parse_http_request, serve_forever, serve_once};
+pub use http::{format_http_response, parse_http_request, serve_forever, serve_on, serve_once};
 use std::path::PathBuf;
 use url::url_decode;
 pub use url::url_encode;

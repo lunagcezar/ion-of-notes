@@ -9,13 +9,15 @@ use crate::collab::{
     ExportFile, Member, MemberDraft, PageVersion, RealtimeContract, Share, SyncBatch,
 };
 use crate::model::{Page, PageDraft, PageSummary, SearchResult, Workspace};
-use crate::server::{url_encode, ApiRequest, Envelope, Method, WorkspaceApi};
+use crate::server::{ApiRequest, Envelope, Method, WorkspaceApi, url_encode};
+use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ClientError {
     Http(u16, String),
+    Encode(String),
     Decode(String),
     NotFound(String),
 }
@@ -24,10 +26,17 @@ impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ClientError::Http(status, body) => write!(f, "server returned {status}: {body}"),
+            ClientError::Encode(message) => write!(f, "could not encode request: {message}"),
             ClientError::Decode(message) => write!(f, "could not decode response: {message}"),
             ClientError::NotFound(id) => write!(f, "not found: {id}"),
         }
     }
+}
+
+/// Serialize a request body, returning an explicit encode error instead of
+/// sending an empty body (spec-021).
+pub fn encode_body<T: Serialize>(value: &T) -> Result<String, ClientError> {
+    serde_json::to_string(value).map_err(|e| ClientError::Encode(e.to_string()))
 }
 
 impl std::error::Error for ClientError {}
@@ -53,8 +62,8 @@ impl<A: WorkspaceApi> Client<A> {
         if !(200..300).contains(&response.status) {
             return Err(ClientError::Http(response.status, response.body));
         }
-        let envelope: Envelope<T> = serde_json::from_str(&response.body)
-            .map_err(|e| ClientError::Decode(e.to_string()))?;
+        let envelope: Envelope<T> =
+            serde_json::from_str(&response.body).map_err(|e| ClientError::Decode(e.to_string()))?;
         match (envelope.data, envelope.error) {
             (Some(data), _) => Ok(data),
             (None, Some(message)) => Err(ClientError::Http(response.status, message)),
@@ -67,7 +76,7 @@ impl<A: WorkspaceApi> Client<A> {
     }
 
     pub fn replace_workspace(&mut self, workspace: &Workspace) -> Result<Workspace, ClientError> {
-        let body = serde_json::to_string(workspace).unwrap_or_default();
+        let body = encode_body(workspace)?;
         self.call(ApiRequest::new(Method::Put, "/api/workspace", Some(body)))
     }
 
@@ -84,12 +93,12 @@ impl<A: WorkspaceApi> Client<A> {
     }
 
     pub fn create_page(&mut self, draft: &PageDraft) -> Result<Page, ClientError> {
-        let body = serde_json::to_string(draft).unwrap_or_default();
+        let body = encode_body(draft)?;
         self.call(ApiRequest::new(Method::Post, "/api/pages", Some(body)))
     }
 
     pub fn update_page(&mut self, page: &Page) -> Result<Page, ClientError> {
-        let body = serde_json::to_string(page).unwrap_or_default();
+        let body = encode_body(page)?;
         self.call(ApiRequest::new(
             Method::Patch,
             format!("/api/pages/{}", page.id),
@@ -129,7 +138,7 @@ impl<A: WorkspaceApi> Client<A> {
     }
 
     pub fn invite_member(&mut self, draft: &MemberDraft) -> Result<Member, ClientError> {
-        let body = serde_json::to_string(draft).unwrap_or_default();
+        let body = encode_body(draft)?;
         self.call(ApiRequest::new(Method::Post, "/api/members", Some(body)))
     }
 
@@ -142,7 +151,7 @@ impl<A: WorkspaceApi> Client<A> {
     }
 
     pub fn set_share(&mut self, share: &Share) -> Result<Share, ClientError> {
-        let body = serde_json::to_string(share).unwrap_or_default();
+        let body = encode_body(share)?;
         self.call(ApiRequest::new(Method::Put, "/api/shares", Some(body)))
     }
 

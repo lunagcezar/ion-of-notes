@@ -39,13 +39,13 @@ pub fn collab_path() -> PathBuf {
 ///
 /// The trait is deliberately small (Interface Segregation): the core only
 /// needs to persist a snapshot after a successful mutation.
-pub trait WorkspaceStore {
+pub trait WorkspaceStore: Send + Sync {
     /// Persist one full workspace snapshot.
     fn persist(&self, workspace: &Workspace) -> io::Result<()>;
 }
 
 /// Persistence port for collaboration state.
-pub trait CollabStore {
+pub trait CollabStore: Send + Sync {
     /// Persist one full collaboration snapshot.
     fn persist(&self, state: &CollabState) -> io::Result<()>;
 }

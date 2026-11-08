@@ -6,6 +6,21 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — spec-021-quality-and-concurrency-baseline
+
+- Added `ClientError::Encode` and `client::encode_body`; every mutation now
+  uses the checked encoder instead of `unwrap_or_default()`, so a serialization
+  failure cannot send an empty request body.
+- `WorkspaceStore` and `CollabStore` are now `Send + Sync`, allowing the server
+  to be shared across connection threads.
+- Added `server::serve_on`: requests are read on the connection thread, the
+  server state is locked only for `handle`, and each connection gets its own
+  worker. `serve_forever` delegates to it.
+- Red: `tests/client.rs` encode-failure and `tests/server.rs` two-connection
+  concurrency tests were written first and observed failing.
+- Docs: added `spec/spec-021-quality-and-concurrency-baseline.md`; updated
+  requirements and `AGENTS.md`.
+
 ### Changed — spec-020-per-page-writes-and-debounce
 
 - Single-page edits now persist with `PATCH /api/pages/{id}` instead of a

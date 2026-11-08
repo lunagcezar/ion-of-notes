@@ -5,10 +5,13 @@ mod common;
 use common::{data, page_draft_json, remove, temp_path};
 use not_notion::model::{Page, SearchResult, Workspace};
 use not_notion::server::{
-    format_http_response, parse_http_request, ApiRequest, ApiResponse, Envelope, Method,
-    WorkspaceApi, WorkspaceServer,
+    ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi, WorkspaceServer, format_http_response,
+    parse_http_request, serve_on,
 };
 use not_notion::store;
+use std::io::{Read, Write};
+use std::net::{TcpListener, TcpStream};
+use std::time::Duration;
 
 #[test]
 fn health_route() {
@@ -159,6 +162,37 @@ fn parse_http_request_extracts_method_path_body() {
     assert_eq!(req.path, "/api/pages");
     assert_eq!(req.body.as_deref(), Some(body));
     assert!(parse_http_request(b"garbage").is_none());
+}
+
+#[test]
+fn serve_on_handles_two_concurrent_connections() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server = WorkspaceServer::new(Workspace::seed("x"));
+    std::thread::spawn(move || {
+        let _ = serve_on(listener, server);
+    });
+
+    let mut first = TcpStream::connect(addr).unwrap();
+    let mut second = TcpStream::connect(addr).unwrap();
+    first
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .unwrap();
+    second
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .unwrap();
+
+    let request = b"GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+    first.write_all(request).unwrap();
+    second.write_all(request).unwrap();
+
+    let mut first_response = String::new();
+    let mut second_response = String::new();
+    first.read_to_string(&mut first_response).unwrap();
+    second.read_to_string(&mut second_response).unwrap();
+
+    assert!(first_response.starts_with("HTTP/1.1 200"));
+    assert!(second_response.starts_with("HTTP/1.1 200"));
 }
 
 #[test]
