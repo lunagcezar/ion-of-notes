@@ -75,14 +75,15 @@ Status vocabulary:
 | [035](spec-035-comments-users-and-files.md) | Comments, users and files | implemented | Comment CRUD, users, file uploads |
 | [036](spec-036-webhooks-and-event-delivery.md) | Webhooks and event delivery | implemented | Subscriptions, signatures, retries, all documented events |
 | [037](spec-037-limits-and-operations.md) | Limits, rate limiting and operations | implemented | Rate/size/block limits, retry policy, operational errors |
+| [038](spec-038-axum-web-server-and-contract-suite.md) | Axum web server and contract suite | implemented | Axum/Tokio adapter, B5 contract suite, graceful shutdown |
 
 ## 3. Work status
 
 | Item | Where | Status |
 | ---- | ----- | ------ |
-| B5 — broader mock server + contract suite | spec-016 | **Next:** v2 slices 030–037 are implemented |
+| B5 — broader mock server + contract suite | spec-016 | **Implemented:** Axum adapter + `tests/web.rs` (spec-038) |
 | A9 — settings row filtering inside the open section | spec-016 | **Implemented:** per-page row table and filtered rendering |
-| B4 — derive the contract from public API docs | spec-016 / ADR-006 | **Reviewed 2026-11-08**; specs 030–037 implemented |
+| B4 — derive the contract from public API docs | spec-016 / ADR-006 | **Reviewed 2026-11-08**; specs 030–038 implemented |
 | B3 - own-account HAR | spec-016 | **Blocked** by the strict B1 scope; needs a new decision |
 | v2 foundation | spec-030 | **Implemented:** versioning, errors, capabilities |
 | v2 pagination | spec-031 | **Implemented:** cursor lists |
@@ -95,7 +96,7 @@ Status vocabulary:
 | Persist the selected language | spec-028 follow-up | Add to `WorkspaceSettings` or local config |
 | Send or remove the invite message | spec-023 follow-up | Add `message` to `MemberDraft` or drop the UI field |
 | Block-anchored inline comments | spec-026 follow-up | Model + tests |
-| Production auth / WebSocket / PostgreSQL | ADR-003 | Adapters behind the existing ports |
+| Production auth / WebSocket / PostgreSQL | ADR-003 | **Next:** spec-039 (sessions + SQLite), then spec-040/041 |
 
 ## 4. Spec template
 

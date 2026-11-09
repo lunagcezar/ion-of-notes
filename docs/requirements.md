@@ -263,7 +263,7 @@
   course, meeting and blank templates that create real pages (implemented in
   `spec-027`). Custom templates and template search remain follow-ups.
 
-### 1.18 Public API alignment (specs 030–037; 030 implemented)
+### 1.18 Public API alignment (specs 030–038; implemented)
 
 These requirements come from the B4 public-documentation review
 (`docs/public-api-analysis.md`, ADR-006). Spec-030 (versioning, errors,
@@ -315,6 +315,9 @@ capabilities) is implemented; the rest are planned.
 - FR-94: Parent objects distinguish page, block, database, data source,
   workspace and agent parents (page/block in `spec-032`; database/data source
   in `spec-033`; agent parent is out of scope).
+- FR-95: `--serve` uses an Axum/Tokio/Tower HTTP adapter behind the existing
+  `WorkspaceApi` seam, with graceful shutdown, request IDs and `Retry-After`
+  (implemented in `spec-038`).
 
 ## 2. Non-functional requirements
 
@@ -370,6 +373,8 @@ capabilities) is implemented; the rest are planned.
   unknown fields and treat cursors as opaque (spec-030/031).
 - NFR-20: Legacy data (`Block.text`, `Page.rows`) migrates to the richer v2
   model without loss (spec-032/033).
+- NFR-21: The production HTTP adapter is infrastructure only; no framework type
+  appears in the domain or application core (ADR-007, spec-038).
 
 ## 3. Requirement → spec map
 
@@ -399,6 +404,7 @@ capabilities) is implemented; the rest are planned.
 | FR-86..FR-88, FR-93           | `spec-035-comments-users-and-files.md` |
 | FR-89                         | `spec-036-webhooks-and-event-delivery.md` |
 | FR-90, NFR-18                 | `spec-037-limits-and-operations.md` |
+| FR-95, NFR-21                 | `spec-038-axum-web-server-and-contract-suite.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |
@@ -427,4 +433,4 @@ capabilities) is implemented; the rest are planned.
   framing is superseded by the self-hosted accounts decision in ADR-003.
 - **Public API alignment (planned):** FR-78..FR-94 and NFR-17..NFR-20 come from
   the B4 public-documentation review and ADR-006. They are scheduled in
-  specs 030–037 and are not part of the current v1 behavior.
+  specs 030–038 and are not part of the current v1 behavior.

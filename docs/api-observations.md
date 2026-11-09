@@ -136,7 +136,7 @@ analysis is `docs/public-api-analysis.md`; this is the evidence summary.
 ### Decision
 
 ADR-006 decides to adopt the **patterns** behind our own `/api/v2` contract,
-not to clone the public API. The implementation roadmap is specs 030–037.
+not to clone the public API. The implementation roadmap is specs 030–038.
 No private endpoint, capture or proprietary payload was used.
 
 ## Current implementation status (2026-11-08)

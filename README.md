@@ -21,20 +21,21 @@ documentation map.
 
 ## Status (2026-11-08)
 
-- **Specs:** 001–037 implemented; 007 retired; 016 is a plan with B5 open; 029
+- **Specs:** 001–038 implemented; 007 retired; 016 is a plan with B5 done; 029
   is the documentation pass.
-- **Tests:** 212 integration tests; clippy and `cargo fmt --check` are clean.
+- **Tests:** 221 integration tests; clippy and `cargo fmt --check` are clean.
 - **Implemented:** workspace/page CRUD, blocks, inline table, search, theme,
   screenshot mode, members/shares/sync log, version history (50/page), export
   tree, per-page writes with 250 ms debounce, collaboration persistence,
   functional Share/Library/Settings/page-action/comment/onboarding/template
   surfaces, and en/pt-BR/eo translations for core UI copy.
-- **Decided, not built:** `/api/v1`, sessions/password hashing/Bearer auth, the
-  WebSocket + Yrs CRDT channel, and PostgreSQL/SQLx storage.
+- **Web server:** `--serve` uses an Axum/Tokio/Tower HTTP adapter (spec-038);
+  sessions/password hashing, the WebSocket + Yrs CRDT channel and
+  PostgreSQL/SQLx storage are the next adapters.
 - **Public API alignment (B4):** the public Notion developer docs were reviewed
   and turned into a v2 roadmap. The **foundation, pagination, rich text/blocks,
   properties/data sources, views, comments/users/files, webhooks and limits are
-  implemented** (specs 030–037): `/api/v2`, `Ion-Of-Notes-Version`, Bearer auth,
+  implemented** (specs 030–038): `/api/v2`, `Ion-Of-Notes-Version`, Bearer auth,
   structured `ApiError`, capabilities, request IDs, `ListResponse`, opaque
   cursors, rich text, block children, typed properties, databases, data
   sources, views, comments, users, file uploads, signed webhooks and the
@@ -79,19 +80,19 @@ egui, eframe, JSON files or sockets.
 
 ## Documentation
 
-| Read | Why |
-| ---- | --- |
-| [`docs/index.md`](docs/index.md) | Reading order and source-of-truth rules |
-| [`docs/architecture.md`](docs/architecture.md) | Layers, modules, request/persistence flows |
-| [`docs/contributor-guide.md`](docs/contributor-guide.md) | SDD/TDD workflow and where code belongs |
-| [`docs/testing.md`](docs/testing.md) | Test strategy, 17 test crates, fakes |
-| [`docs/glossary.md`](docs/glossary.md) | Shared vocabulary |
-| [`docs/api-contract.md`](docs/api-contract.md) | Implemented loopback API vs decided `/api/v1`/v2 |
-| [`docs/public-api-analysis.md`](docs/public-api-analysis.md) | B4 public Notion API analysis and v2 roadmap |
-| [`docs/clean-room.md`](docs/clean-room.md) | Allowed sources, evidence levels, stop conditions |
-| [`docs/review-findings.md`](docs/review-findings.md) | Review findings and follow-ups |
-| [`spec/README.md`](spec/README.md) | Spec index and status |
-| [`AGENTS.md`](AGENTS.md) | Working rules for agents and contributors |
+| Read                                                         | Why                                               |
+| ------------------------------------------------------------ | ------------------------------------------------- |
+| [`docs/index.md`](docs/index.md)                             | Reading order and source-of-truth rules           |
+| [`docs/architecture.md`](docs/architecture.md)               | Layers, modules, request/persistence flows        |
+| [`docs/contributor-guide.md`](docs/contributor-guide.md)     | SDD/TDD workflow and where code belongs           |
+| [`docs/testing.md`](docs/testing.md)                         | Test strategy, 17 test crates, fakes              |
+| [`docs/glossary.md`](docs/glossary.md)                       | Shared vocabulary                                 |
+| [`docs/api-contract.md`](docs/api-contract.md)               | Implemented loopback API vs decided `/api/v1`/v2  |
+| [`docs/public-api-analysis.md`](docs/public-api-analysis.md) | B4 public Notion API analysis and v2 roadmap      |
+| [`docs/clean-room.md`](docs/clean-room.md)                   | Allowed sources, evidence levels, stop conditions |
+| [`docs/review-findings.md`](docs/review-findings.md)         | Review findings and follow-ups                    |
+| [`spec/README.md`](spec/README.md)                           | Spec index and status                             |
+| [`AGENTS.md`](AGENTS.md)                                     | Working rules for agents and contributors         |
 
 ## Build and run
 
@@ -144,9 +145,7 @@ Normal runs never set this variable.
 
 ## Open source
 
-`ion-of-notes` is open source under the **MIT** license (see `LICENSE`). That is
-a license fact, not a marketing feature: the window does not advertise a free
-edition and shows no plan/feature-tier list.
+`ion-of-notes` is open source under the **MIT** license (see `LICENSE`).
 
 ## Clean room
 

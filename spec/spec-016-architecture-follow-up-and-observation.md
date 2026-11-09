@@ -49,10 +49,10 @@ Out of scope:
 
 > **Historical note (2026-11-08):** this evidence describes the code **before**
 > Track A. A1–A10 were implemented by specs 019–022, 028 and the A9 follow-up.
-> The current state is 212 tests, clippy clean, `cargo fmt --check` clean,
-> `CollabStore` persisted, per-page writes, indexed lookups, version retention
-> and row-level settings filtering. See `docs/review-findings.md` for the review
-> that confirmed it.
+> The current state is 221 tests, clippy clean, `cargo fmt --check` clean,
+> `CollabStore` persisted, per-page writes, indexed lookups, version retention,
+> row-level settings filtering and an Axum production HTTP adapter (spec-038).
+> See `docs/review-findings.md` for the review that confirmed it.
 
 ## Track A — acceptance criteria
 
@@ -313,9 +313,9 @@ spec defines the operational steps.
   scope; it can only resume after a new scope decision.
 - [x] B4 derive/update the contract and ADR if needed. **Reviewed 2026-11-08:**
   public developer docs analyzed in `docs/public-api-analysis.md`; ADR-006
-  decides the v2 alignment; specs 030–037 are implemented.
-- [ ] B5 implement the broader mock server and contract suite. **Pending:** the
-  next Track B step now that specs 030–037 are implemented.
+  decides the v2 alignment; specs 030–038 are implemented.
+- [x] B5 implement the broader mock server and contract suite. **Implemented
+  in spec-038:** Axum adapter plus `tests/web.rs` contract coverage.
 - [x] B6 record the tooling choice and TLS handling (ADR-005).
 - [x] B7 maintain `docs/reverse-engineering-log.md` (ongoing; the 2026-11-08
   entry records the documentation review and phase status).

@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (212 tests, 2026-11-08)
+## 3. Test-crate map (221 tests, 2026-11-09)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -58,6 +58,7 @@ flowchart TD
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
 | `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
 | `tests/webhooks.rs` | 9 | subscriptions, verification, signatures, aggregation, delivery/retry |
+| `tests/web.rs` | 9 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks |
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
 | `tests/shortcuts.rs` | 8 | shortcut table, exactness, focus/modifier guard |
 | `tests/ollama.rs` | 7 | endpoint parsing, request/response decoding, chunked bodies, status |
@@ -242,8 +243,8 @@ The hook is inert in normal runs and in the rebuild check.
 
 ## 10. v2 contract tests
 
-The public-API alignment roadmap (specs 030–037) adds new test areas. The
-specs 030–037 are implemented:
+The public-API alignment roadmap (specs 030–038) adds new test areas. The
+specs 030–038 are implemented:
 
 | Area | Test crate |
 | ---- | ---------- |
@@ -255,6 +256,7 @@ specs 030–037 are implemented:
 | comments, users, files, uploads | `tests/comments.rs` (implemented) |
 | webhook verification, signatures, retries | `tests/webhooks.rs` (implemented) |
 | rate/size/block limits | `tests/limits.rs` (implemented) |
+| Axum HTTP adapter and B5 contract suite | `tests/web.rs` (implemented) |
 
 These are written before implementation, following the same red → green rule.
 Contract tests drive the real `Client` against the v2 mock, not against the

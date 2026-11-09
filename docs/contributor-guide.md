@@ -154,7 +154,7 @@ flowchart LR
 
 ### 6.5 Public API v2 work
 
-1. Read `docs/public-api-analysis.md` and the relevant spec (030–037).
+1. Read `docs/public-api-analysis.md` and the relevant spec (030–038).
 2. Add v2 DTOs behind the existing ports; do not change v1 routes.
 3. Put pure logic in a new `src/model/*` or `src/server/*` module, not in a
    render function.

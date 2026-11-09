@@ -32,6 +32,7 @@ pub mod limits;
 mod pagination;
 mod rate_limit;
 mod url;
+pub mod web;
 
 pub use contract::{
     API_VERSION, AUTH_HEADER, ApiError, CODE_CONFLICT, CODE_INTERNAL, CODE_INVALID_CURSOR,
@@ -56,6 +57,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use url::url_decode;
 pub use url::url_encode;
+pub use web::serve_axum;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Method {

@@ -81,20 +81,26 @@ pub fn format_http_response(response: &ApiResponse) -> Vec<u8> {
 }
 
 /// The error body is the single source of truth: when it carries
-/// `additional_data.retry_after`, the HTTP adapter also emits the standard
-/// `Retry-After` header (spec-037).
-fn retry_after_header(response: &ApiResponse) -> String {
+/// `additional_data.retry_after`, the HTTP adapters emit the standard
+/// `Retry-After` header (spec-037, spec-038).
+pub(crate) fn retry_after_seconds(response: &ApiResponse) -> Option<u64> {
     if !matches!(response.status, 429 | 503 | 529) {
-        return String::new();
+        return None;
     }
     serde_json::from_str::<serde_json::Value>(&response.body)
         .ok()
         .and_then(|body| {
             body.get("additional_data")?
                 .get("retry_after")?
-                .as_str()
-                .map(|seconds| format!("Retry-After: {seconds}\r\n"))
+                .as_str()?
+                .parse()
+                .ok()
         })
+}
+
+fn retry_after_header(response: &ApiResponse) -> String {
+    retry_after_seconds(response)
+        .map(|seconds| format!("Retry-After: {seconds}\r\n"))
         .unwrap_or_default()
 }
 

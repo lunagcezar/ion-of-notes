@@ -2,7 +2,7 @@
 
 use ion_of_notes::app;
 use ion_of_notes::cli::{Args, Mode};
-use ion_of_notes::server::serve_forever;
+use ion_of_notes::server::serve_axum;
 use ion_of_notes::ui::NotionApp;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match args.mode {
         Mode::Serve { addr } => {
             // The composition root wires the JSON adapter to the server port.
-            serve_forever(&addr, app::build_server())?;
+            serve_axum(&addr, app::build_server())?;
             Ok(())
         }
         Mode::Desktop { screenshot } => {

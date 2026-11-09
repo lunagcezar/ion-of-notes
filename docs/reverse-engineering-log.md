@@ -107,8 +107,8 @@ does not contain captured traffic, secrets or proprietary artifacts.
 - **Decision:** ADR-006 accepts public API alignment behind our own `/api/v2`
   contract; v1 stays stable.
 - **Output:** `docs/public-api-analysis.md`, the **Observed (public docs)**
-  evidence level, and specs 030–037.
-- **Phase status:** B4 in progress (docs reviewed, specs 030–037 implemented);
+  evidence level, and specs 030–038.
+- **Phase status:** B4 in progress (docs reviewed, specs 030–038 implemented);
   B5 pending; B3 still blocked by B1.
 
 ## 2026-11-08 - B4 webhook event reference follow-up

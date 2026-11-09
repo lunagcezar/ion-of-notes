@@ -10,7 +10,7 @@ companion to `AGENTS.md` and the ADRs.
 
 - the **client** is the egui window plus `Client<A: WorkspaceApi>`;
 - the **server** owns workspace and collaboration state and exposes the same
-  contract in-process and through an optional loopback HTTP adapter.
+  contract in-process and through an optional Axum HTTP adapter.
 
 ```mermaid
 flowchart LR
@@ -45,7 +45,7 @@ flowchart TD
 | ----- | -------------- | ------------ |
 | Domain | entities, invariants, pure rules | `model.rs`, `model/*`, `collab.rs`, `collab/export.rs` |
 | Application | use cases, orchestration, contracts | `server.rs`, `client.rs`, `collab.rs` state methods |
-| Infrastructure | filesystem, HTTP, external AI service | `store.rs`, `server/http.rs`, `ollama.rs` |
+| Infrastructure | filesystem, HTTP, external AI service | `store.rs`, `server/http.rs`, `server/web.rs`, `ollama.rs` |
 | Presentation | window, commands, view state, rendering | `ui.rs`, `ui/*` |
 | Bootstrap | compose concrete adapters into the core | `app.rs` |
 
@@ -74,7 +74,8 @@ src/
   store.rs           WorkspaceStore + CollabStore ports and JSON adapters
   server.rs          WorkspaceServer, WorkspaceApi, routes
   server/
-    http.rs          loopback HTTP/1.1 adapter
+    http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
+    web.rs           Axum/Tokio HTTP adapter for --serve
     url.rs           shared percent-encoding
     contract.rs      v2 versioning, ApiError, capabilities, request IDs
     pagination.rs    v2 ListResponse, opaque cursors, page_size validation
@@ -214,9 +215,11 @@ flowchart LR
 Current state:
 
 - members, shares, sync log and page versions persist in `collab.json`;
-- the loopback adapter serves unversioned `/api/...` routes;
-- `/api/v1`, sessions, password hashing, WebSocket and Yrs are staged behind
-  the same seams (ADR-003);
+- `--serve` uses the Axum/Tokio adapter (spec-038); the hand-written loopback
+  listener remains for parser tests and as a fallback;
+- v1 and v2 routes are served through the same `WorkspaceApi` seam;
+- sessions, password hashing, WebSocket and Yrs are staged behind the same
+  seams (ADR-003, ADR-007);
 - `GET /api/realtime` returns the decided contract as data.
 
 ## 8. Design principles in practice
@@ -267,7 +270,7 @@ Adapters implement the ports; the composition root wires them.
 ## 10. Public API alignment roadmap
 
 The B4 review (`docs/public-api-analysis.md`, ADR-006) compares our v1 contract
-with the public Notion API and schedules the gaps as specs 030–037. The
+with the public Notion API and schedules the gaps as specs 030-038. The
 architecture stays the same: new adapters and DTOs sit behind the existing
 ports; v1 routes remain stable.
 
@@ -311,11 +314,12 @@ new stores and delivery workers.
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
 - The v2 **foundation, pagination, rich text/blocks, properties/data sources,
-  views, comments/users/files, webhooks and limits** exist (specs 030–037):
+  views, comments/users/files, webhooks and limits** exist (specs 030-038):
   `/api/v2`, version/auth/capability checks, structured errors, request IDs,
   cursor list envelopes, rich text, block metadata/children, typed properties,
   databases, data sources, views, comments, users, file uploads, signed webhook
-  delivery and the operational limits/retry contract.
+  delivery, the operational limits/retry contract and the Axum production HTTP
+  adapter.
 
 ## 12. Further reading
 
@@ -324,4 +328,5 @@ new stores and delivery workers.
 - `docs/api-contract.md` — current and decided API.
 - `docs/adr-002-architecture-guidelines.md` — guidelines.
 - `docs/adr-003-self-hosted-collaborative-api.md` — API decision.
-- `docs/adr-004-modularization-decision.md` — modularization decision.
+- `docs/adr-004-modularization-decision.md` - modularization decision.
+- `docs/adr-007-production-web-server.md` - Axum/Tokio/Tower server decision.

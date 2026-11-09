@@ -170,6 +170,7 @@ definition.
 | **Block limit** | Free multi-member workspace lifetime block limit (1000). | spec-037 |
 | **Retry-After** | Seconds to wait after a 429/529 before retrying. | spec-037 |
 | **RetryPolicy** | Client decision: retryable status, delay and attempt cap. | spec-037 |
+| **Axum adapter** | Tokio/Tower HTTP transport for `--serve`; calls `WorkspaceApi`. | spec-038 |
 
 ## 9. Naming rules
 

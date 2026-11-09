@@ -6,6 +6,21 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-038 Axum web server and contract suite
+
+- Added `src/server/web.rs`: an Axum/Tokio/Tower adapter for `--serve` behind
+  the existing `WorkspaceApi` seam, with `spawn_blocking`, tracing, a 2 MB
+  transport body cap and graceful Ctrl+C shutdown.
+- `--serve` now uses Axum; the hand-written loopback listener remains for
+  parser/formatter tests and as a fallback.
+- Responses carry `X-Request-Id` and `Retry-After`; `Content-Type` is set by
+  the adapter.
+- Added `tests/web.rs`: 9 contract tests for health, v1 pages, v2
+  version/auth, request IDs, `Retry-After`, 501 KB validation, query strings,
+  pagination, webhooks and structured 404s.
+- Added `docs/adr-007-production-web-server.md`.
+- B5 from spec-016 is complete; the suite is 221 tests. Docs updated.
+
 ### Changed — project rename to ion-of-notes
 
 - Renamed the crate/package and binary from `not-notion` to `ion-of-notes`

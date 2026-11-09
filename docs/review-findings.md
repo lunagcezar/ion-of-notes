@@ -42,7 +42,7 @@ flowchart LR
 
 All high/medium/low documentation findings below were **resolved in spec-029**
 unless marked otherwise. The public-API gaps found in B4 are separate and are
-listed in §5; they are planned in specs 030–037.
+listed in §5; they are planned in specs 030–038.
 
 ## 3. Documentation findings
 
@@ -111,7 +111,7 @@ listed in §5; they are planned in specs 030–037.
 ### RF-D06 — Unknowns ledger reported "65 tests" and stale U-06 progress
 
 - **Severity:** medium
-- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 212.
+- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 221.
   U-06 still said version history was only planned, while spec-015 implemented
   it and spec-026 added archive/discussions.
 - **Impact:** a reader could not tell which page actions are real.
@@ -303,7 +303,7 @@ block limits, retry guidance and the operational error taxonomy).
   or settings changes.
 - **Version retention:** 50 newest snapshots per page, restore records a new
   version.
-- **Test discipline:** 212 integration tests, no `#[cfg(test)]` in `src/`,
+- **Test discipline:** 221 integration tests, no `#[cfg(test)]` in `src/`,
   shared helpers in `tests/common/mod.rs`.
 - **Quality gates:** `cargo test --all-targets`, clippy and `cargo fmt --check`
   are clean at the time of this review.
@@ -339,6 +339,7 @@ block limits, retry guidance and the operational error taxonomy).
 | Done | Comments, users and files | `spec-035` |
 | Done | Webhooks and event delivery | `spec-036` |
 | Done | Limits and retry policy | `spec-037` |
+| Done | Axum web server and B5 contract suite | `spec-038` |
 | Done | Settings row filtering (A9) | spec-016 |
 | Later | Persist the selected language | spec-028 follow-up |
 | Later | Send or remove the invite message | spec-023 follow-up |

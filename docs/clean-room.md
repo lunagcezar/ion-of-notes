@@ -116,8 +116,8 @@ flowchart TD
 | **B1** | Permission and scope gate | **Done:** public behavior only, strict clean room |
 | **B2** | Behavioral inventory | **Done:** `docs/api-observations.md` + visual inventory |
 | **B3** | Own-account HAR capture | **Blocked** by B1 |
-| **B4** | Contract derivation | **In progress:** public developer docs reviewed 2026-11-08; specs 030–037 implemented |
-| **B5** | Mock server and contract tests | **Pending:** follows B4 |
+| **B4** | Contract derivation | **In progress:** public developer docs reviewed 2026-11-08; specs 030–038 implemented |
+| **B5** | Mock server and contract tests | **Done:** Axum adapter + `tests/web.rs` contract suite (spec-038) |
 | **B6** | Tooling policy | **Recorded:** DevTools first; interception only on our traffic |
 | **B7** | Clean-room log | **Ongoing:** every session appends an entry |
 | **B8** | Stop conditions | **Reviewed before every source** |
@@ -182,8 +182,8 @@ documentation, and they were reviewed with `webfetch` on 2026-11-08.
 4. Where they differ, update the observation, then the ADR, then the contract
    doc — before changing code.
 5. The full analysis is `docs/public-api-analysis.md`; the derived roadmap is
-   specs 030–037. Spec-030 is implemented; B5 (a broader mock server and
-   contract suite) follows the next v2 slices.
+   specs 030–038. All are implemented; B5 (the broader contract suite) is
+   covered by the Axum adapter and `tests/web.rs`.
 6. Do **not** infer private endpoints, payloads or auth flows that the public
    docs do not state. The public API is an integration contract, not the
    original product's private server.

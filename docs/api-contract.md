@@ -329,10 +329,22 @@ v1 routes stay stable.
   `service_overload`, `service_unavailable` and `conflict_error`.
 - Capabilities: read/update/insert content, read/insert comments and user-info
   levels. The content routes enforce read/update/insert separately.
-- Success bodies still use the existing `{data,error}` envelope until the v2
-  list/rich-content DTOs arrive in specs 031–033.
+- Success bodies use the existing `{data,error}` envelope for v1-compatible
+  routes; v2 list routes return `ListResponse<T>`.
 - The v2 routes mirror the v1 use cases for workspace, pages, versions, search,
   members, shares, sync, export and realtime; v1 is unchanged.
+
+### 8.1.1 HTTP transport (implemented, spec-038)
+
+- `--serve` uses an Axum/Tokio/Tower adapter behind the same `WorkspaceApi`
+  seam; the hand-written loopback listener remains for parser tests and as a
+  fallback.
+- Responses carry `Content-Type: application/json; charset=utf-8`,
+  `X-Request-Id` when the core produced one, and `Retry-After` for
+  `429`/`503`/`529` from `additional_data.retry_after`.
+- The transport body cap is 2 MB; the v2 500 KB check still returns the
+  documented `400 validation_error`.
+- Ctrl+C triggers graceful shutdown.
 
 | Concern | v1 today | v2 target | Spec | Status |
 | ------- | -------- | --------- | ---- | ------ |

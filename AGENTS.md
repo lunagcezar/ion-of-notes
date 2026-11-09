@@ -12,7 +12,7 @@ The system has two sides, as requested:
 - **Client** — the desktop window (Rust + eframe/egui) and an API client that
   only talks through a documented request/response contract.
 - **Server** — an in-process workspace service with a REST-shaped API, plus an
-  optional loopback HTTP listener (`--serve`) that exposes the very same API.
+  optional Axum HTTP listener (`--serve`) that exposes the very same API.
   All state lives on the server; the client never mutates server state directly.
   The decided target is a **self-hosted** server with **accounts, document
   synchronization, sharing and real-time editing**; v1 keeps the same contract
@@ -39,7 +39,7 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Data model       | `serde` + `serde_json`              | JSON persistence of the whole workspace             |
 | PNG output       | `image` (png feature only)          | `--screenshot` writes the rendered window           |
 | Display fonts    | Segoe UI (Windows system fonts)     | Optional bold "Strong" family; egui built-ins are the fallback |
-| Server transport | `std::net::TcpListener`             | Optional loopback HTTP/1.1 for `--serve`            |
+| Server transport | Axum 0.8 + Tokio + Tower/Tower-HTTP | Optional HTTP server for `--serve` (spec-038)        |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
@@ -111,12 +111,13 @@ src/
   store.rs         WorkspaceStore + CollabStore ports, JSON/null adapters, data_path/collab_path
   server.rs        WorkspaceServer (workspace + collaboration state), WorkspaceApi trait, routes
   server/
-    http.rs        loopback HTTP/1.1 adapter (parse/format/serve)
+    http.rs        legacy loopback HTTP/1.1 adapter (parse/format/tests)
     url.rs         percent-encoding/decoding shared by client and server
     contract.rs    v2 versioning, ApiError, capabilities, request IDs
     pagination.rs  v2 list envelope, opaque cursors, page_size validation
     limits.rs      plan/request budgets, size checks, block-limit policy
     rate_limit.rs  in-process per-connection and workspace rate limiter
+    web.rs         Axum/Tokio HTTP adapter for --serve (spec-038)
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
   collab.rs        accounts/roles, sharing, sync log, realtime DTOs, CollabState
                    (version history capped at 50 snapshots per page)
@@ -193,6 +194,7 @@ tests/
   comments.rs      comment CRUD, users, attachments and file uploads
   webhooks.rs      subscriptions, signatures, aggregation, delivery and retry
   limits.rs        rate/size/block limits, Retry-After, 409/503/529
+  web.rs           Axum HTTP adapter contract suite
   integration.rs   end-to-end client/server/store scenario
 ```
 
@@ -209,7 +211,7 @@ and dependency direction below).
 
 | Pattern | Where it is applied |
 | ------- | ------------------- |
-| Ports and adapters (hexagonal) | `WorkspaceApi` (transport) and `WorkspaceStore` (persistence) are traits declared by the core; the JSON file and loopback HTTP listener are adapters. |
+| Ports and adapters (hexagonal) | `WorkspaceApi` (transport) and `WorkspaceStore` (persistence) are traits declared by the core; the JSON file and the Axum/loopback HTTP listeners are adapters. |
 | Single Responsibility | One module per concern; `ui/` splits state, theming, icons, rendering, and dialogs. Each function has one job. |
 | Open / Closed | New transports or stores are added as new trait implementations; `WorkspaceServer` is not edited. |
 | Liskov Substitution | Any `WorkspaceApi` or `WorkspaceStore` implementation works everywhere the trait is expected (including test stubs). |
@@ -480,8 +482,9 @@ reviewed and compared with our contract. ADR-006 decides to adopt compatible
 patterns behind our own `/api/v2`, not to clone Notion. The roadmap is
 `spec-030` (versioning/errors/capabilities), `031` (pagination), `032` (rich
 text/blocks), `033` (properties/data sources), `034` (views), `035`
-(comments/users/files), `036` (webhooks) and `037` (limits). Specs 030–037 are
-implemented: `/api/v2`, required `Ion-Of-Notes-Version`, Bearer auth, `ApiError`,
+(comments/users/files), `036` (webhooks), `037` (limits) and `038` (Axum web
+server). Specs 030–038 are implemented: `/api/v2`, required
+`Ion-Of-Notes-Version`, Bearer auth, `ApiError`,
 capabilities, request IDs, `ListResponse` and opaque cursors, rich text/blocks,
 typed properties/data sources, views, comments/users/files, signed webhook
 delivery and the operational rate/size/block contract with retry guidance. v1
@@ -507,13 +510,13 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (212)    |
+| `cargo test --all-targets`               | Run all integration test crates (221)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |
 | `pwsh -File scripts/check-docs.ps1`      | Links, Mermaid fences and table columns  |
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
-| `cargo run -- --serve 127.0.0.1:8787`   | Run the loopback API server              |
+| `cargo run -- --serve 127.0.0.1:8787`   | Run the Axum API server                  |
 
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust
@@ -606,7 +609,7 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
 - Clean-room evidence levels and phases: `docs/api-observations.md`,
   `docs/reverse-engineering-log.md`, `docs/unknowns.md`.
 - Public Notion API alignment (B4): `docs/public-api-analysis.md`,
-  `docs/adr-006-public-api-alignment.md`, and specs 030–037. The public
+  `docs/adr-006-public-api-alignment.md`, and specs 030–038. The public
   developer docs are allowed evidence; captures are not.
 - Public API reference: <https://developers.notion.com/reference/intro>,
   <https://developers.notion.com/reference/pagination>,

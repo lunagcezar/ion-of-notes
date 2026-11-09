@@ -245,7 +245,7 @@ flowchart TD
 ## Target data model (v2, planned)
 
 The B4 public API review (`docs/public-api-analysis.md`, ADR-006) adds a richer
-target model. It is scheduled across specs 030–037; the v1 entities above
+target model. It is scheduled across specs 030–038; the v1 entities above
 remain the implemented shape until each spec lands. The rich text/block side
 (spec-032), properties/data sources (spec-033), views (spec-034),
 comments/users/files (spec-035), webhooks (spec-036) and limits (spec-037) are

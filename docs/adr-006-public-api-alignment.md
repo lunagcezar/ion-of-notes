@@ -1,6 +1,6 @@
 # ADR-006 — Public Notion API alignment
 
-- **Status:** Accepted (B4 review; specs 030–037 implemented)
+- **Status:** Accepted (B4 review; specs 030–038 implemented)
 - **Date:** 2026-11-08
 - **Supersedes:** none; refines ADR-003 (self-hosted collaborative API)
 - **Related:** `docs/public-api-analysis.md`, `docs/api-observations.md`,
