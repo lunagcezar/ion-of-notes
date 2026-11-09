@@ -1,8 +1,8 @@
-# AGENTS.md — not-notion
+# AGENTS.md — ion-of-notes
 
 ## Project Overview
 
-`not-notion` is a clean-room desktop workspace application: pages made of editable
+`ion-of-notes` is a clean-room desktop workspace application: pages made of editable
 blocks, a page tree sidebar, quick search, and an inline table database. It is
 rebuilt from a written request and descriptions only. Nothing inside the original
 program, its files, or its folder is read, listed, run, or decompiled.
@@ -19,7 +19,7 @@ The system has two sides, as requested:
   in-process behind the seam (see `docs/adr-003-self-hosted-collaborative-api.md`).
 
 All human-readable documentation and all source code are written in **English**.
-The working name of the application is **not-notion**.
+The working name of the application is **ion-of-notes**.
 
 The project is **open source** (MIT, `LICENSE`). That is a license fact, not a
 marketing feature: the person asked that "free & open for all" **not** be
@@ -481,7 +481,7 @@ patterns behind our own `/api/v2`, not to clone Notion. The roadmap is
 `spec-030` (versioning/errors/capabilities), `031` (pagination), `032` (rich
 text/blocks), `033` (properties/data sources), `034` (views), `035`
 (comments/users/files), `036` (webhooks) and `037` (limits). Specs 030–037 are
-implemented: `/api/v2`, required `Not-Notion-Version`, Bearer auth, `ApiError`,
+implemented: `/api/v2`, required `Ion-Of-Notes-Version`, Bearer auth, `ApiError`,
 capabilities, request IDs, `ListResponse` and opaque cursors, rich text/blocks,
 typed properties/data sources, views, comments/users/files, signed webhook
 delivery and the operational rate/size/block contract with retry guidance. v1
@@ -518,7 +518,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust
 tab strip is the only window frame and doubles as a drag handle.
-`NOT_NOTION_SHOW=library|share|inbox|settings|settings-general|settings-sidebar|settings-people|settings-offline|search|tasks|newtab|ai|shortcuts|iconpicker|pageactions|discussions|onboarding|templates`
+`ION_OF_NOTES_SHOW=library|share|inbox|settings|settings-general|settings-sidebar|settings-people|settings-offline|search|tasks|newtab|ai|shortcuts|iconpicker|pageactions|discussions|onboarding|templates`
 is a harmless preview hook: it opens one pictured state on startup so it can be
 captured with `--screenshot`. Normal runs (and the rebuild check) never set it.
 

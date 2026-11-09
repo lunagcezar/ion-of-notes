@@ -1,4 +1,4 @@
-# Clean-room guide — not-notion
+# Clean-room guide — ion-of-notes
 
 This is the operating manual for learning about the product without copying
 it. The project rule is absolute: **nothing inside the original program, its

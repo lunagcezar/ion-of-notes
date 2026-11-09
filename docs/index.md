@@ -1,4 +1,4 @@
-# Documentation index — not-notion
+# Documentation index — ion-of-notes
 
 This is the entry point for contributors and agents. It explains what to read,
 in what order, and which document is the source of truth for each concern.

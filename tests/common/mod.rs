@@ -8,8 +8,8 @@
 
 #![allow(dead_code)]
 
-use not_notion::model::PageDraft;
-use not_notion::server::{
+use ion_of_notes::model::PageDraft;
+use ion_of_notes::server::{
     API_VERSION, ApiRequest, ApiResponse, Envelope, ListResponse, Method, OWNER_TOKEN,
 };
 use serde::de::DeserializeOwned;
@@ -22,7 +22,7 @@ static COUNTER: AtomicU64 = AtomicU64::new(0);
 pub fn temp_path(tag: &str, extension: &str) -> PathBuf {
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
     std::env::temp_dir().join(format!(
-        "not-notion-{tag}-{}-{n}.{extension}",
+        "ion-of-notes-{tag}-{}-{n}.{extension}",
         std::process::id()
     ))
 }
@@ -56,7 +56,7 @@ pub fn v2_request(method: Method, path: &str, body: Option<String>) -> ApiReques
 /// Build a v2 request as a specific connection token.
 pub fn v2_request_as(token: &str, method: Method, path: &str, body: Option<String>) -> ApiRequest {
     ApiRequest::new(method, path, body)
-        .with_header("not-notion-version", API_VERSION)
+        .with_header("ion-of-notes-version", API_VERSION)
         .with_header("authorization", format!("Bearer {token}"))
 }
 

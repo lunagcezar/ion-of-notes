@@ -698,7 +698,7 @@ impl NotionApp {
                 Command::ResetWorkspace => {
                     let _ = self
                         .client
-                        .replace_workspace(&Workspace::seed("not-notion"));
+                        .replace_workspace(&Workspace::seed("ion-of-notes"));
                     self.pending_reload = true;
                 }
                 // ---- Tabs / "+" switcher ----------------------------------
@@ -923,7 +923,7 @@ impl NotionApp {
                 }
                 Command::Reload => self.pending_reload = true,
                 Command::CopyLink => {
-                    ctx.copy_text(format!("not-notion://page/{}", self.current_page));
+                    ctx.copy_text(format!("ion-of-notes://page/{}", self.current_page));
                 }
                 Command::CopyPageName => {
                     let name = self

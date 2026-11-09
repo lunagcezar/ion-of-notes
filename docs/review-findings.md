@@ -1,4 +1,4 @@
-# Review findings — not-notion
+# Review findings — ion-of-notes
 
 This document records the findings of the full documentation and architecture
 review performed on 2026-11-08 (spec-029). It is deliberately candid: a

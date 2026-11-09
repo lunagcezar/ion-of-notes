@@ -16,7 +16,7 @@ Scope:
 - Archive/restore with sidebar and Library filtering.
 - Status feedback for the remaining placeholder actions (Move to, Updates &
   analytics, Suggest edits, Notify me, More).
-- A `NOT_NOTION_SHOW=discussions` preview.
+- A `ION_OF_NOTES_SHOW=discussions` preview.
 
 Out of scope:
 
@@ -51,7 +51,7 @@ Out of scope:
    appears in the Library Archive view.
 6. **Given** a placeholder action, **when** it is clicked, **then** the menu
    shows a status message instead of silently doing nothing.
-7. **Given** `NOT_NOTION_SHOW=discussions`, **when** the screenshot runs,
+7. **Given** `ION_OF_NOTES_SHOW=discussions`, **when** the screenshot runs,
    **then** the TOC and discussions state is rendered.
 
 ## Test scenarios (written before implementation)

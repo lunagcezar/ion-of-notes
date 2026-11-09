@@ -3,8 +3,8 @@
 mod common;
 
 use common::page_draft_json;
-use not_notion::model::Workspace;
-use not_notion::server::{
+use ion_of_notes::model::Workspace;
+use ion_of_notes::server::{
     API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, Envelope, Method,
     OWNER_TOKEN, WorkspaceApi, WorkspaceServer, format_http_response, parse_http_request, serve_on,
 };
@@ -18,7 +18,7 @@ fn v2(method: Method, path: &str, body: Option<String>) -> ApiRequest {
 
 fn v2_as(token: &str, method: Method, path: &str, body: Option<String>) -> ApiRequest {
     ApiRequest::new(method, path, body)
-        .with_header("not-notion-version", API_VERSION)
+        .with_header("ion-of-notes-version", API_VERSION)
         .with_header("authorization", format!("Bearer {token}"))
 }
 
@@ -47,7 +47,7 @@ fn v2_requires_version_header() {
 fn v2_rejects_unsupported_version() {
     let mut server = WorkspaceServer::new(Workspace::seed("x"));
     let request = ApiRequest::new(Method::Get, "/api/v2/workspace", None)
-        .with_header("not-notion-version", "1900-01-01")
+        .with_header("ion-of-notes-version", "1900-01-01")
         .with_header("authorization", format!("Bearer {OWNER_TOKEN}"));
     let response = server.handle(&request);
 
@@ -89,7 +89,7 @@ fn v2_reports_validation_error() {
 fn v2_requires_a_bearer_token() {
     let mut server = WorkspaceServer::new(Workspace::seed("x"));
     let request = ApiRequest::new(Method::Get, "/api/v2/workspace", None)
-        .with_header("not-notion-version", API_VERSION);
+        .with_header("ion-of-notes-version", API_VERSION);
     let response = server.handle(&request);
 
     assert_eq!(response.status, 401);
@@ -224,7 +224,7 @@ fn v2_create_and_read_roundtrip() {
         Some(page_draft_json("V2 page", None)),
     ));
     assert_eq!(created.status, 201);
-    let page: not_notion::model::Page = serde_json::from_str::<Envelope<_>>(&created.body)
+    let page: ion_of_notes::model::Page = serde_json::from_str::<Envelope<_>>(&created.body)
         .unwrap()
         .data
         .unwrap();
@@ -235,7 +235,7 @@ fn v2_create_and_read_roundtrip() {
         None,
     ));
     assert_eq!(read.status, 200);
-    let read_page: not_notion::model::Page = serde_json::from_str::<Envelope<_>>(&read.body)
+    let read_page: ion_of_notes::model::Page = serde_json::from_str::<Envelope<_>>(&read.body)
         .unwrap()
         .data
         .unwrap();
@@ -256,10 +256,10 @@ fn http_response_echoes_the_request_id() {
 #[test]
 fn http_parser_collects_version_and_auth_headers() {
     let raw = format!(
-        "GET /api/v2/workspace HTTP/1.1\r\nHost: localhost\r\nNot-Notion-Version: {API_VERSION}\r\nAuthorization: Bearer {OWNER_TOKEN}\r\nConnection: close\r\n\r\n"
+        "GET /api/v2/workspace HTTP/1.1\r\nHost: localhost\r\nion-of-notes-version: {API_VERSION}\r\nAuthorization: Bearer {OWNER_TOKEN}\r\nConnection: close\r\n\r\n"
     );
     let request = parse_http_request(raw.as_bytes()).unwrap();
-    assert_eq!(request.header("not-notion-version"), Some(API_VERSION));
+    assert_eq!(request.header("ion-of-notes-version"), Some(API_VERSION));
     let expected = format!("Bearer {OWNER_TOKEN}");
     assert_eq!(request.header("authorization"), Some(expected.as_str()));
 }
@@ -278,7 +278,7 @@ fn v2_http_roundtrip_has_request_id_header() {
         .set_read_timeout(Some(Duration::from_secs(2)))
         .unwrap();
     let request = format!(
-        "GET /api/v2/workspace HTTP/1.1\r\nHost: localhost\r\nNot-Notion-Version: {API_VERSION}\r\nAuthorization: Bearer {OWNER_TOKEN}\r\nConnection: close\r\n\r\n"
+        "GET /api/v2/workspace HTTP/1.1\r\nHost: localhost\r\nion-of-notes-version: {API_VERSION}\r\nAuthorization: Bearer {OWNER_TOKEN}\r\nConnection: close\r\n\r\n"
     );
     stream.write_all(request.as_bytes()).unwrap();
     let mut response = String::new();
@@ -291,7 +291,7 @@ fn v2_http_roundtrip_has_request_id_header() {
 #[test]
 fn v2_persistence_failure_is_structured() {
     struct FailingStore;
-    impl not_notion::store::WorkspaceStore for FailingStore {
+    impl ion_of_notes::store::WorkspaceStore for FailingStore {
         fn persist(&self, _workspace: &Workspace) -> std::io::Result<()> {
             Err(std::io::Error::other("disk full"))
         }

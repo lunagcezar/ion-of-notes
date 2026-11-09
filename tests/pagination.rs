@@ -3,15 +3,15 @@
 mod common;
 
 use common::{list_data, page_draft_json, v2_request};
-use not_notion::client::Client;
-use not_notion::model::{Page, PageSummary, Workspace};
-use not_notion::server::{
+use ion_of_notes::client::Client;
+use ion_of_notes::model::{Page, PageSummary, Workspace};
+use ion_of_notes::server::{
     ApiResponse, ListResponse, Method, PageRequest, PaginationError, WorkspaceApi, WorkspaceServer,
     paginate,
 };
 
 fn v2_error_code(response: &ApiResponse) -> String {
-    serde_json::from_str::<not_notion::ApiError>(&response.body)
+    serde_json::from_str::<ion_of_notes::ApiError>(&response.body)
         .expect("v2 error body")
         .code
 }
@@ -187,7 +187,7 @@ fn v2_empty_list_has_no_cursor() {
         None,
     ));
     assert_eq!(response.status, 200);
-    let list: ListResponse<not_notion::model::SearchResult> = list_data(&response);
+    let list: ListResponse<ion_of_notes::model::SearchResult> = list_data(&response);
     assert!(list.results.is_empty());
     assert!(!list.has_more);
     assert_eq!(list.next_cursor, None);
@@ -217,7 +217,7 @@ fn v2_versions_are_newest_first_and_paginated() {
         None,
     ));
     assert_eq!(response.status, 200);
-    let list: ListResponse<not_notion::collab::PageVersion> = list_data(&response);
+    let list: ListResponse<ion_of_notes::collab::PageVersion> = list_data(&response);
     assert_eq!(list.results.len(), 1);
     assert!(list.has_more);
     assert!(list.next_cursor.is_some());
@@ -241,7 +241,7 @@ fn v2_sync_is_paginated() {
         None,
     ));
     assert_eq!(response.status, 200);
-    let list: ListResponse<not_notion::collab::Change> = list_data(&response);
+    let list: ListResponse<ion_of_notes::collab::Change> = list_data(&response);
     assert_eq!(list.results.len(), 1);
     assert!(list.has_more);
     assert!(list.next_cursor.is_some());

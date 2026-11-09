@@ -1,9 +1,9 @@
 //! Tests for the UI's public visual helpers (public API only).
 
-use not_notion::client::Client;
-use not_notion::model::{BlockKind, Page, PageDiff, Workspace};
-use not_notion::server::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi};
-use not_notion::ui::{
+use ion_of_notes::client::Client;
+use ion_of_notes::model::{BlockKind, Page, PageDiff, Workspace};
+use ion_of_notes::server::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi};
+use ion_of_notes::ui::{
     CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan,
     is_valid_email, member_name_from_email, pages_for_view, parse_invite_emails, plan_for,
     rows_for, section_matches, settings_matches, status_color, visible_rows,

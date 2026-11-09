@@ -11,7 +11,7 @@ In scope:
 
 - `WebhookSubscription` (id, url, event types, verification token, status);
 - subscription create/list/delete and verification handshake;
-- `X-Not-Notion-Signature` HMAC-SHA256 over the raw body;
+- `X-Ion-Of-Notes-Signature` HMAC-SHA256 over the raw body;
 - event types for pages, databases, data sources, comments, file uploads and
   views;
 - event payload shape (`id`, `timestamp`, `workspace_id`, `subscription_id`,
@@ -65,7 +65,7 @@ Current code: `src/collab.rs` `Change`/`ChangeOp` sync log;
 3. **Given** an active subscription, **when** a page is created, **then** a
    `page.created` event is delivered with the documented fields.
 4. **Given** a delivery, **when** the receiver validates the signature,
-   **then** `X-Not-Notion-Signature: sha256=<hex>` matches HMAC-SHA256 of the
+   **then** `X-Ion-Of-Notes-Signature: sha256=<hex>` matches HMAC-SHA256 of the
    raw body with the verification token.
 5. **Given** a failed delivery, **when** the receiver returns a non-2xx or
    times out, **then** delivery is retried with exponential backoff up to 8

@@ -1,6 +1,6 @@
 //! Locale completeness and translation lookup tests (spec-028).
 
-use not_notion::i18n;
+use ion_of_notes::i18n;
 use std::collections::HashSet;
 use std::path::Path;
 

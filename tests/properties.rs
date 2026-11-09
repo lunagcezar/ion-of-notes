@@ -3,13 +3,13 @@
 mod common;
 
 use common::{data, list_data, v2_request};
-use not_notion::client::Client;
-use not_notion::model::{
+use ion_of_notes::client::Client;
+use ion_of_notes::model::{
     DataSource, DataSourceInput, Database, DatabaseInput, DateValue, OptionRef, Page,
     PagePropertiesInput, PageProperty, Property, PropertyConfig, PropertyType, PropertyValue,
     RichText, SelectOption, StatusGroup, Workspace,
 };
-use not_notion::server::{ListResponse, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ListResponse, Method, WorkspaceApi, WorkspaceServer};
 use std::collections::BTreeMap;
 
 fn status_property() -> Property {

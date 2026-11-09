@@ -188,6 +188,6 @@ pub fn serve_on(listener: TcpListener, server: WorkspaceServer) -> std::io::Resu
 /// Blocking loopback API server. Only used by `--serve`.
 pub fn serve_forever(addr: &str, server: WorkspaceServer) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr)?;
-    println!("not-notion API listening on http://{addr}");
+    println!("ion-of-notes API listening on http://{addr}");
     serve_on(listener, server)
 }

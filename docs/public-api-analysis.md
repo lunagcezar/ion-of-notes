@@ -1,4 +1,4 @@
-# Public Notion API analysis — not-notion
+# Public Notion API analysis — ion-of-notes
 
 **Status:** B4 public-documentation review, 2026-11-08
 **Scope:** public documentation only. No capture, proxy, Wireshark, source
@@ -357,7 +357,7 @@ retrying a 503 write.
 
 ## 13. Comparison with the current implementation
 
-| Concern | Public Notion API | not-notion today | Gap |
+| Concern | Public Notion API | ion-of-notes today | Gap |
 | ------- | ----------------- | ---------------- | --- |
 | Auth | Bearer token + version header | none (loopback) | No auth, no version header |
 | Errors | structured `error` object + codes | `{data,error}` string | No codes, request IDs or retry guidance |
@@ -399,7 +399,7 @@ retrying a 503 write.
 
 ### Adapt (our own compatible design)
 
-- Use our own `Not-Notion-Version` header, not `Notion-Version`, to avoid
+- Use our own `Ion-Of-Notes-Version` header, not `Notion-Version`, to avoid
   impersonating another service.
 - Keep v1 loopback routes stable; add `/api/v2` behind the same `WorkspaceApi`
   seam and migrate the UI incrementally.

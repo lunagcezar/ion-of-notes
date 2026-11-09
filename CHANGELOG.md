@@ -6,6 +6,18 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — project rename to ion-of-notes
+
+- Renamed the crate/package and binary from `not-notion` to `ion-of-notes`
+  (Rust crate `ion_of_notes`).
+- Renamed the preview/environment hooks to `ION_OF_NOTES_SHOW`,
+  `ION_OF_NOTES_LOCALE` and `ION_OF_NOTES_OLLAMA_MODEL`.
+- Renamed the v2 header to `Ion-Of-Notes-Version` and the webhook signature
+  header to `X-Ion-Of-Notes-Signature`; API paths, payloads and behavior are
+  unchanged.
+- Updated the window title, locale `app_name`, data directory, URL scheme,
+  webhook `integration_id`, tests, scripts and all documentation.
+
 ### Changed — spec-016 A9 settings row filtering
 
 - Added a per-page `SettingsRow` table in `ui/settings_search.rs`; the table is
@@ -133,7 +145,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ### Added — spec-030-api-v2-foundation
 
-- Added `/api/v2` with a required `Not-Notion-Version: 2026-11-08` header,
+- Added `/api/v2` with a required `Ion-Of-Notes-Version: 2026-11-08` header,
   Bearer-token authentication and capability checks for content read, update
   and insert.
 - Added `ApiError` with `object`, `status`, `code`, `message`, `request_id` and
@@ -209,7 +221,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   the matching template and persists the choice.
 - Added the Template library window, reachable from Library → More → Templates
   and Settings → General → Get started.
-- Added `NOT_NOTION_SHOW=onboarding|templates` previews.
+- Added `ION_OF_NOTES_SHOW=onboarding|templates` previews.
 - Red: template catalog/page-builder and onboarding-purpose tests were written
   first.
 - Docs: added `spec/spec-027-onboarding-and-templates.md`; updated
@@ -238,7 +250,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Page discussions support listing, adding and deleting comments.
 - Archived pages are hidden from the sidebar, Favorites, search, Recents,
   Shared and Private; the Library More menu has an Archive view.
-- Added `NOT_NOTION_SHOW=discussions` for the TOC/comments preview.
+- Added `ION_OF_NOTES_SHOW=discussions` for the TOC/comments preview.
 - Red: page flags/comments round-trip, heading filtering, archived
   favorites/search and Library archive tests were written first.
 - Docs: added `spec/spec-026-page-actions-and-comments.md`; updated
@@ -258,7 +270,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   times.
 - Workspace-level settings changes are detected by `PageDiff.settings_changed`
   and use the full `PUT /api/workspace` fallback.
-- Added `NOT_NOTION_SHOW=settings-general|settings-sidebar|settings-people|settings-offline`
+- Added `ION_OF_NOTES_SHOW=settings-general|settings-sidebar|settings-people|settings-offline`
   previews.
 - Red: `WorkspaceSettings` round-trip and settings-diff tests were written
   first.
@@ -275,7 +287,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   Templates and Trash placeholder views.
 - Library rows now show the owner from the member directory, the workspace
   name as Source, and the page's real `updated_at` as Last edited time.
-- `OpenLibrary` refreshes shares/members; `NOT_NOTION_SHOW=library` populates
+- `OpenLibrary` refreshes shares/members; `ION_OF_NOTES_SHOW=library` populates
   the preview.
 - Added pure `ui/library_filter.rs` and its tests.
 - Docs: added `spec/spec-024-library-views.md`; updated requirements, README
@@ -291,7 +303,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   persisted with `Client::set_share`; Copy link copies the page link.
 - Added pure `ui/invite.rs` helpers (`parse_invite_emails`, `is_valid_email`,
   `member_name_from_email`) and `collab::general_access`.
-- Added `NOT_NOTION_SHOW=share` population for screenshot previews.
+- Added `ION_OF_NOTES_SHOW=share` population for screenshot previews.
 - Red: new invite-helper tests in `tests/ui.rs` and the general-access test in
   `tests/collab.rs` were written first and observed failing.
 - Docs: added `spec/spec-023-add-members-sharing-dialog.md`; updated
@@ -600,7 +612,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Typography: Segoe UI is used when the operating-system fonts are present,
   with a bold "Strong" family for titles and headings; egui's built-in fonts
   remain the fallback.
-- Added `NOT_NOTION_SHOW` (a harmless preview hook) so each opened state can
+- Added `ION_OF_NOTES_SHOW` (a harmless preview hook) so each opened state can
   be rendered with `--screenshot` and compared with the pictures. Normal runs
   and the rebuild check never set it.
 - Red: six tests in `tests/fidelity.rs` were written first and observed
@@ -630,7 +642,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   persistence adapter), since the data file location is an infrastructure
   decision; removed the stale `ui.rs` re-export and the unused import.
 - Red: two tests in `tests/app.rs` were written first and observed failing
-  (unresolved `not_notion::app`); green: the composition root and its wiring
+  (unresolved `ion_of_notes::app`); green: the composition root and its wiring
   were implemented. `cargo build` and `cargo test` are clean and green.
 - Recorded the decision in `docs/adr-002-architecture-guidelines.md` and this
   session in `spec/spec-010-architecture-guidelines.md`.
@@ -739,11 +751,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - **Shared search / new-tab window:** both opened states now use one renderer
   with a hint field, Today / Past week groups, a preview (highlight) pane, a
   footer of keyboard hints, and working **show/hide highlight pane** and
-  **show/hide filters** toggles. `NOT_NOTION_SHOW=search|newtab` previews them.
+  **show/hide filters** toggles. `ION_OF_NOTES_SHOW=search|newtab` previews them.
 - **Page actions:** the "..." control opens a searchable page-actions menu
   (Copy link, Duplicate, Move to Trash, Show/hide sidebar, …) with Appearance
   & layout (Default / Serif / Mono, Small text, Full width), Available offline
-  / Lock page toggles and a Last edited footer. `NOT_NOTION_SHOW=pageactions`
+  / Lock page toggles and a Last edited footer. `ION_OF_NOTES_SHOW=pageactions`
   previews it.
 - **Show / hide sidebar:** the tab-strip panel control (tooltip + `Ctrl+\\`)
   and the breadcrumb ">" control toggles it.
@@ -757,7 +769,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   chosen icon is stored on the `Page` and rendered by one helper in the
   header, sidebar, breadcrumbs, tab strip and switcher preview. Segoe UI
   Symbol and Times New Roman were registered as fallback faces for the glyphs
-  and the Serif font style. `NOT_NOTION_SHOW=iconpicker` previews it.
+  and the Serif font style. `ION_OF_NOTES_SHOW=iconpicker` previews it.
 - Red: two tests in `tests/shortcuts.rs` were written first and observed
   failing; green: the pure guard and the UI wiring were implemented.
   `cargo build` clean, `cargo test` green (80 tests), and a fresh

@@ -1,4 +1,4 @@
-# API Observations — not-notion
+# API Observations — ion-of-notes
 
 ## Purpose
 

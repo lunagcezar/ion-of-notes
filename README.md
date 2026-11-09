@@ -1,4 +1,4 @@
-# not-notion
+# ion-of-notes
 
 A clean-room desktop workspace application: pages made of editable blocks, a
 page-tree sidebar, quick search, an inline table database, and a self-hosted
@@ -34,7 +34,7 @@ documentation map.
 - **Public API alignment (B4):** the public Notion developer docs were reviewed
   and turned into a v2 roadmap. The **foundation, pagination, rich text/blocks,
   properties/data sources, views, comments/users/files, webhooks and limits are
-  implemented** (specs 030–037): `/api/v2`, `Not-Notion-Version`, Bearer auth,
+  implemented** (specs 030–037): `/api/v2`, `Ion-Of-Notes-Version`, Bearer auth,
   structured `ApiError`, capabilities, request IDs, `ListResponse`, opaque
   cursors, rich text, block children, typed properties, databases, data
   sources, views, comments, users, file uploads, signed webhooks and the
@@ -130,10 +130,10 @@ The window follows the dark-theme reference pictures in `reference/` (98
 pictures: the original 29 plus the later build) and the 72 local
 `screenshots/` pictures: a top tab strip, a sidebar, a breadcrumb bar, a
 centered page column, and the Library, Share, Inbox and Settings opened states.
-Set `NOT_NOTION_SHOW` to capture one state:
+Set `ION_OF_NOTES_SHOW` to capture one state:
 
 ```sh
-NOT_NOTION_SHOW=settings-general cargo run -- --screenshot shots/settings.png
+ION_OF_NOTES_SHOW=settings-general cargo run -- --screenshot shots/settings.png
 ```
 
 Accepted values: `library`, `share`, `inbox`, `settings`,
@@ -144,7 +144,7 @@ Normal runs never set this variable.
 
 ## Open source
 
-`not-notion` is open source under the **MIT** license (see `LICENSE`). That is
+`ion-of-notes` is open source under the **MIT** license (see `LICENSE`). That is
 a license fact, not a marketing feature: the window does not advertise a free
 edition and shows no plan/feature-tier list.
 

@@ -1,4 +1,4 @@
-# API contract — not-notion
+# API contract — ion-of-notes
 
 This document is the reference for the **implemented** loopback API and the
 **decided** production API. It separates the two on purpose:
@@ -313,7 +313,7 @@ v1 routes stay stable.
 
 ### 8.1 v2 foundation (implemented)
 
-- Required header: `Not-Notion-Version: 2026-11-08`.
+- Required header: `Ion-Of-Notes-Version: 2026-11-08`.
 - Auth: `Authorization: Bearer <token>`; the local demo owner token is
   `owner-token`. Connections live in memory and the owner connection is
   recreated on startup; a production deployment replaces this with self-hosted
@@ -336,7 +336,7 @@ v1 routes stay stable.
 
 | Concern | v1 today | v2 target | Spec | Status |
 | ------- | -------- | --------- | ---- | ------ |
-| Versioning | none | required `Not-Notion-Version` header | 030 | **implemented** |
+| Versioning | none | required `Ion-Of-Notes-Version` header | 030 | **implemented** |
 | Errors | `{data,error}` string | `object:"error"` + `status`/`code`/`message`/`request_id`/`additional_data` | 030 | **implemented** |
 | Capabilities | `Role` + `Access` | read/update/insert content, comments, user-info | 030 | **foundation implemented** |
 | Pagination | full arrays | `ListResponse<T>` with opaque cursors | 031 | **implemented** |
@@ -498,7 +498,7 @@ and `href`.
   `deleted`, `undeleted`), comments (`created`, `updated`, `deleted`), file
   uploads (`created`, `completed`, `expired`, `upload_failed`) and views
   (`created`, `updated`, `deleted`).
-- Deliveries are signed with `X-Not-Notion-Signature: sha256=<hex>`, an
+- Deliveries are signed with `X-Ion-Of-Notes-Signature: sha256=<hex>`, an
   HMAC-SHA256 over the raw JSON body keyed by the verification token.
 - High-frequency page/database/data-source events are aggregated per
   subscription and entity; comment, file-upload and view events deliver

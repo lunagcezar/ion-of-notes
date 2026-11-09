@@ -3,12 +3,12 @@
 mod common;
 
 use common::{data, list_data, v2_request, v2_request_as};
-use not_notion::client::Client;
-use not_notion::model::{
+use ion_of_notes::client::Client;
+use ion_of_notes::model::{
     AttachmentInput, CommentDisplayName, CommentDto, CommentInput, FileObject, FileUpload,
     FileUploadInput, ParentDto, RichText, UploadStatus, UserDto, UserType, Workspace,
 };
-use not_notion::server::{
+use ion_of_notes::server::{
     Capability, Connection, ListResponse, Method, WorkspaceApi, WorkspaceServer,
 };
 

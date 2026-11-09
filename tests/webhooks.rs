@@ -2,10 +2,10 @@
 
 mod common;
 
-use not_notion::client::Client;
-use not_notion::model::Workspace;
-use not_notion::server::WorkspaceServer;
-use not_notion::webhooks::{
+use ion_of_notes::client::Client;
+use ion_of_notes::model::Workspace;
+use ion_of_notes::server::WorkspaceServer;
+use ion_of_notes::webhooks::{
     SubscriptionStatus, WebhookEvent, WebhookEventType, WebhookSubscription,
     WebhookSubscriptionInput, sign, verify,
 };
@@ -37,7 +37,7 @@ fn start_receiver(fail_first: bool) -> (u16, Arc<Mutex<Vec<Received>>>) {
                 .lines()
                 .find(|line| {
                     line.to_ascii_lowercase()
-                        .starts_with("x-not-notion-signature:")
+                        .starts_with("x-ion-of-notes-signature:")
                 })
                 .and_then(|line| line.split_once(':'))
                 .map(|(_, value)| value.trim().to_string())
@@ -288,7 +288,7 @@ fn v2_webhook_api_and_client_roundtrip() {
     };
     // The API rejects loopback HTTP unless the server override is enabled.
     let error = client.create_webhook_v2(&input).unwrap_err();
-    assert!(matches!(error, not_notion::client::ClientError::Api(_)));
+    assert!(matches!(error, ion_of_notes::client::ClientError::Api(_)));
 
     let mut server = WorkspaceServer::new(Workspace::seed("x"));
     server.allow_insecure_webhooks(true);

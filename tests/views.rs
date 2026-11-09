@@ -3,18 +3,18 @@
 mod common;
 
 use common::{data, v2_request};
-use not_notion::client::Client;
-use not_notion::model::{
+use ion_of_notes::client::Client;
+use ion_of_notes::model::{
     Filter, Page, Sort, SortDirection, View, ViewConfig, ViewInput, ViewQueryInput,
     ViewQueryResult, ViewType, Workspace,
 };
-use not_notion::server::{Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{Method, WorkspaceApi, WorkspaceServer};
 
 #[test]
 fn view_model_roundtrips() {
     let view = View {
         id: "view-1".to_string(),
-        parent: not_notion::model::ParentDto::Database {
+        parent: ion_of_notes::model::ParentDto::Database {
             database_id: "db-1".to_string(),
         },
         data_source_id: Some("ds-1".to_string()),
@@ -144,7 +144,7 @@ fn v2_table_query_filters_and_sorts() {
         page.properties
             .get("status")
             .and_then(|property| match &property.value {
-                not_notion::model::PropertyValue::Status(Some(option)) => {
+                ion_of_notes::model::PropertyValue::Status(Some(option)) => {
                     Some(option.name.as_str())
                 }
                 _ => None,

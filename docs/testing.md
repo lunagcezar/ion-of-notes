@@ -1,4 +1,4 @@
-# Testing guide — not-notion
+# Testing guide — ion-of-notes
 
 This document explains the test strategy, the test-crate layout, the shared
 fixtures, and the red → green → refactor discipline. It is the practical
@@ -10,7 +10,7 @@ workflow).
 1. **No production code without a failing test first.** For a pure move or
    rename, the red step is a compile failure caused by the new module
    declaration before the code is moved.
-2. **Tests use public interfaces only.** A test imports `not_notion::…`; it
+2. **Tests use public interfaces only.** A test imports `ion_of_notes::…`; it
    never reaches into a private function.
 3. **Tests never live in `src/`.** No `#[cfg(test)]` block is allowed there.
 4. **One integration-test crate per module**, named after the module
@@ -228,7 +228,7 @@ the original 29 plus the later build) and `screenshots/` (72 local later UI
 pictures). Use the preview hook to open a specific state:
 
 ```sh
-NOT_NOTION_SHOW=settings-general cargo run -- --screenshot shots/settings.png
+ION_OF_NOTES_SHOW=settings-general cargo run -- --screenshot shots/settings.png
 ```
 
 The hook is inert in normal runs and in the rebuild check.

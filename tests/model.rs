@@ -1,6 +1,6 @@
 //! Tests for the pure workspace data model (public API only).
 
-use not_notion::model::{Block, BlockKind, Comment, Page, PageDiff, Workspace, WorkspaceError};
+use ion_of_notes::model::{Block, BlockKind, Comment, Page, PageDiff, Workspace, WorkspaceError};
 
 fn block(id: &str, kind: BlockKind, text: &str) -> Block {
     Block::new(id, kind, text)
@@ -14,8 +14,8 @@ fn page(id: &str, title: &str, parent: Option<&str>) -> Page {
 
 #[test]
 fn seed_has_expected_pages() {
-    let ws = Workspace::seed("not-notion");
-    assert_eq!(ws.name, "not-notion");
+    let ws = Workspace::seed("ion-of-notes");
+    assert_eq!(ws.name, "ion-of-notes");
     assert_eq!(ws.version, 0);
     let titles: Vec<&str> = ws.pages.iter().map(|p| p.title.as_str()).collect();
     for expected in ["Home", "Getting Started", "Projects", "Tasks", "Notes"] {

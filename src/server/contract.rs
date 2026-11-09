@@ -15,7 +15,7 @@ pub const API_VERSION: &str = "2026-11-08";
 pub const SUPPORTED_VERSIONS: &[&str] = &[API_VERSION];
 
 /// Required header for `/api/v2` requests.
-pub const VERSION_HEADER: &str = "not-notion-version";
+pub const VERSION_HEADER: &str = "ion-of-notes-version";
 
 /// Standard authorization header.
 pub const AUTH_HEADER: &str = "authorization";

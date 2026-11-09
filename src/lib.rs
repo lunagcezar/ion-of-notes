@@ -1,4 +1,4 @@
-//! `not-notion` — a clean-room, self-hosted workspace application.
+//! `ion-of-notes` — a clean-room, self-hosted workspace application.
 //!
 //! The crate is split at hard seams, following ports-and-adapters:
 //! `model` is pure data, `collab` holds the accounts/sharing/sync/export

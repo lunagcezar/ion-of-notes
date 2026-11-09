@@ -7,8 +7,8 @@
 mod common;
 
 use common::{remove, temp_path};
-use not_notion::app::{build_desktop_at, build_server_at};
-use not_notion::server::{ApiRequest, Method, WorkspaceApi};
+use ion_of_notes::app::{build_desktop_at, build_server_at};
+use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi};
 
 #[test]
 fn build_desktop_at_seeds_and_serves_the_workspace() {

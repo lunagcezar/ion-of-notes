@@ -15,7 +15,7 @@ Scope:
 - a template library window reachable from Library → More → Templates and
   Settings → General → Get started;
 - applying a template creates a real page with blocks and optional table rows;
-- preview hooks `NOT_NOTION_SHOW=onboarding|templates`.
+- preview hooks `ION_OF_NOTES_SHOW=onboarding|templates`.
 
 Out of scope:
 
@@ -47,7 +47,7 @@ Out of scope:
    with that template's title, blocks and rows is added and opened.
 5. **Given** the template catalog, **when** tests run, **then** ids are unique,
    pages build with stable ids, and purpose mapping is correct.
-6. **Given** `NOT_NOTION_SHOW=onboarding|templates`, **when** the screenshot
+6. **Given** `ION_OF_NOTES_SHOW=onboarding|templates`, **when** the screenshot
    runs, **then** the corresponding modal is rendered.
 
 ## Test scenarios (written before implementation)

@@ -3,8 +3,8 @@
 mod common;
 
 use common::{data, v2_request, v2_request_as};
-use not_notion::model::{Page, Workspace};
-use not_notion::server::{
+use ion_of_notes::model::{Page, Workspace};
+use ion_of_notes::server::{
     ApiError, Capability, Connection, Method, WorkspaceApi, WorkspaceServer, limits,
 };
 use std::time::Duration;
@@ -13,7 +13,7 @@ fn server() -> WorkspaceServer {
     WorkspaceServer::new(Workspace::seed("limits-tests"))
 }
 
-fn error(response: &not_notion::server::ApiResponse) -> ApiError {
+fn error(response: &ion_of_notes::server::ApiResponse) -> ApiError {
     serde_json::from_str(&response.body).expect("structured v2 error")
 }
 
@@ -62,7 +62,7 @@ fn http_adapter_emits_the_retry_after_header() {
     );
     let response = server.handle(&v2_request(Method::Get, "/api/v2/workspace", None));
     assert_eq!(response.status, 429);
-    let text = String::from_utf8(not_notion::server::format_http_response(&response)).unwrap();
+    let text = String::from_utf8(ion_of_notes::server::format_http_response(&response)).unwrap();
     assert!(text.starts_with("HTTP/1.1 429 Too Many Requests"));
     assert!(text.contains("Retry-After: 60"));
 }
@@ -286,7 +286,7 @@ fn the_write_that_reaches_the_block_limit_succeeds() {
 #[test]
 fn paid_plans_ignore_the_block_limit() {
     let mut server = server();
-    server.set_plan(not_notion::server::Plan::Business);
+    server.set_plan(ion_of_notes::server::Plan::Business);
     server.set_block_count(5000);
     let response = server.handle(&v2_request(
         Method::Post,
@@ -361,19 +361,19 @@ fn stale_if_match_returns_409_conflict() {
 
 #[test]
 fn request_budget_derives_from_plan_members_and_blocks() {
-    let free = not_notion::server::RequestBudget {
-        plan: not_notion::server::Plan::Free,
+    let free = ion_of_notes::server::RequestBudget {
+        plan: ion_of_notes::server::Plan::Free,
         members: 2,
         blocks: 1000,
     };
     assert!(free.block_limit_reached(1));
     assert_eq!(free.per_connection_limit(), 180);
 
-    let single = not_notion::server::RequestBudget { members: 1, ..free };
+    let single = ion_of_notes::server::RequestBudget { members: 1, ..free };
     assert!(!single.block_limit_reached(1));
 
-    let business = not_notion::server::RequestBudget {
-        plan: not_notion::server::Plan::Business,
+    let business = ion_of_notes::server::RequestBudget {
+        plan: ion_of_notes::server::Plan::Business,
         ..free
     };
     assert!(!business.block_limit_reached(1));

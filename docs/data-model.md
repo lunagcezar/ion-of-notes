@@ -1,4 +1,4 @@
-# Data Model — not-notion
+# Data Model — ion-of-notes
 
 All entities are plain Rust structs deriving `Serialize`/`Deserialize`. The
 workspace is one JSON document (`workspace.json`); collaboration state is a
@@ -9,7 +9,7 @@ pages (spec-019). No egui types appear here.
 
 | Field      | Type                | Description                                  |
 | ---------- | ------------------- | -------------------------------------------- |
-| `name`     | `String`            | Display name, default `not-notion`           |
+| `name`     | `String`            | Display name, default `ion-of-notes`           |
 | `pages`    | `Vec<Page>`         | All pages, order is the sidebar order        |
 | `version`  | `u64`               | Increments on every successful write         |
 | `settings` | `WorkspaceSettings` | Persisted workspace preferences (spec-025)   |

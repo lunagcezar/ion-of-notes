@@ -1,9 +1,9 @@
 //! Entry point: desktop window (default or `--screenshot`) or `--serve`.
 
-use not_notion::app;
-use not_notion::cli::{Args, Mode};
-use not_notion::server::serve_forever;
-use not_notion::ui::NotionApp;
+use ion_of_notes::app;
+use ion_of_notes::cli::{Args, Mode};
+use ion_of_notes::server::serve_forever;
+use ion_of_notes::ui::NotionApp;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse(std::env::args());
@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 viewport: egui::ViewportBuilder::default()
                     .with_inner_size([1322.0, 861.0])
                     .with_min_inner_size([900.0, 600.0])
-                    .with_title("not-notion")
+                    .with_title("ion-of-notes")
                     // The window frame (tab strip + minimize/maximize/close) is
                     // already drawn in Rust by `ui::render::render_title_bar`.
                     // Asking the OS for decorations too would show two frames.
@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let app: Box<dyn eframe::App> = Box::new(NotionApp::new(cc, screenshot));
                     Ok(app)
                 });
-            eframe::run_native("not-notion", options, creator)?;
+            eframe::run_native("ion-of-notes", options, creator)?;
             Ok(())
         }
     }

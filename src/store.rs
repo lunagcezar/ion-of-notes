@@ -24,7 +24,7 @@ pub fn data_path() -> PathBuf {
         .or_else(|| std::env::var_os("HOME"))
         .map(PathBuf::from)
         .unwrap_or_else(std::env::temp_dir);
-    base.join("not-notion").join("workspace.json")
+    base.join("ion-of-notes").join("workspace.json")
 }
 
 /// The default location of the JSON collaboration document.
@@ -163,7 +163,7 @@ pub fn load_or_seed(path: &Path) -> Workspace {
     match load(path) {
         Ok(workspace) => workspace,
         Err(_) => {
-            let workspace = Workspace::seed("not-notion");
+            let workspace = Workspace::seed("ion-of-notes");
             let _ = save(path, &workspace);
             workspace
         }

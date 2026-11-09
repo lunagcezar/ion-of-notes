@@ -3,8 +3,8 @@
 mod common;
 
 use common::{remove, temp_path};
-use not_notion::model::Workspace;
-use not_notion::store;
+use ion_of_notes::model::Workspace;
+use ion_of_notes::store;
 
 #[test]
 fn save_and_load_roundtrip() {

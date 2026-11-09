@@ -2941,7 +2941,7 @@ fn send_http_post(url: &str, body: &str, signature: &str) -> Result<u16, String>
         .set_write_timeout(Some(Duration::from_secs(2)))
         .map_err(|error| error.to_string())?;
     let request = format!(
-        "POST {path} HTTP/1.1\r\nHost: {authority}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nX-Not-Notion-Signature: {signature}\r\nConnection: close\r\n\r\n{body}",
+        "POST {path} HTTP/1.1\r\nHost: {authority}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nX-Ion-Of-Notes-Signature: {signature}\r\nConnection: close\r\n\r\n{body}",
         body.len()
     );
     stream

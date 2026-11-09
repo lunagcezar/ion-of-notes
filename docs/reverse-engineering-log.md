@@ -1,4 +1,4 @@
-# Reverse-engineering log — not-notion
+# Reverse-engineering log — ion-of-notes
 
 This is the clean-room audit trail. It records what was observed, from which
 public or authorized source, what was inferred, and what remains unknown. It

@@ -1,13 +1,13 @@
 //! Integration tests for the collaboration domain and the decided API
 //! (public API only, following the Red -> Green -> Refactor discipline).
 
-use not_notion::client::Client;
-use not_notion::collab::{
+use ion_of_notes::client::Client;
+use ion_of_notes::collab::{
     Access, ChangeOp, CollabState, MAX_VERSIONS_PER_PAGE, MemberDraft, Role, Share, export_tree,
     general_access, page_markdown, people_csv, people_markdown, realtime_contract,
 };
-use not_notion::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
-use not_notion::server::WorkspaceServer;
+use ion_of_notes::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
+use ion_of_notes::server::WorkspaceServer;
 
 #[test]
 fn roles_and_access_have_stable_labels() {
@@ -258,7 +258,7 @@ fn collaborative_api_roundtrip_through_the_client() {
 
 #[test]
 fn empty_member_draft_is_rejected_by_the_server() {
-    use not_notion::server::{ApiRequest, Method, WorkspaceApi};
+    use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi};
     let mut server = WorkspaceServer::new(Workspace::new("x"));
     let response = server.handle(&ApiRequest::new(
         Method::Post,

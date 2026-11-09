@@ -14,7 +14,7 @@ Scope:
   Trash);
 - real Created by, Source and Last edited time values;
 - refresh shares/members when the Library opens and for the
-  `NOT_NOTION_SHOW=library` preview.
+  `ION_OF_NOTES_SHOW=library` preview.
 
 Out of scope:
 
@@ -57,7 +57,7 @@ Out of scope:
 - `tests/ui.rs`: `pages_for_view` for Favorites, Shared, Private, Recents and
   an unknown placeholder view.
 - Existing client tests cover `list_shares` / `list_members`.
-- The Library screenshot is checked with `NOT_NOTION_SHOW=library`.
+- The Library screenshot is checked with `ION_OF_NOTES_SHOW=library`.
 
 ## Design
 

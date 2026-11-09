@@ -1,4 +1,4 @@
-# Architecture — not-notion
+# Architecture — ion-of-notes
 
 This document explains how the application is structured, why it is structured
 that way, and how a change travels through the system. It is the didactic
@@ -6,7 +6,7 @@ companion to `AGENTS.md` and the ADRs.
 
 ## 1. System context
 
-`not-notion` is a desktop workspace application with a client/server split:
+`ion-of-notes` is a desktop workspace application with a client/server split:
 
 - the **client** is the egui window plus `Client<A: WorkspaceApi>`;
 - the **server** owns workspace and collaboration state and exposes the same
@@ -262,7 +262,7 @@ Adapters implement the ports; the composition root wires them.
 | New UI surface | `ui/commands.rs` + `ui/view.rs` + `ui/apply.rs` + `ui/render/*` or `ui/dialogs/*` |
 | New translation | `locales/*.yml` + `i18n::t("key")` + `tests/i18n.rs` |
 | New starter template | `src/templates.rs` + `tests/templates.rs` |
-| New visual state | `NOT_NOTION_SHOW` preview hook + `--screenshot` |
+| New visual state | `ION_OF_NOTES_SHOW` preview hook + `--screenshot` |
 
 ## 10. Public API alignment roadmap
 

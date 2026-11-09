@@ -1,8 +1,8 @@
 //! Tests for the client layer (public API only).
 
-use not_notion::client::{Client, ClientError, RetryPolicy, encode_body};
-use not_notion::model::{Page, PageDraft, Workspace};
-use not_notion::server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::client::{Client, ClientError, RetryPolicy, encode_body};
+use ion_of_notes::model::{Page, PageDraft, Workspace};
+use ion_of_notes::server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
 use serde::Serialize;
 
 struct Stub {

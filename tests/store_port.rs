@@ -7,9 +7,9 @@
 mod common;
 
 use common::{page_draft_json, remove, temp_path};
-use not_notion::model::Workspace;
-use not_notion::server::{ApiRequest, Method, WorkspaceApi, WorkspaceServer};
-use not_notion::store::{JsonStore, NoStore, WorkspaceStore, load};
+use ion_of_notes::model::Workspace;
+use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::store::{JsonStore, NoStore, WorkspaceStore, load};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Default)]

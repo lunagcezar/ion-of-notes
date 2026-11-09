@@ -17,7 +17,7 @@ Scope:
 - cycle general access through Full / Can edit / Can view / No access and
   persist it with `Client::set_share`;
 - copy the page link from the dialog;
-- preview the populated Share state with `NOT_NOTION_SHOW=share`.
+- preview the populated Share state with `ION_OF_NOTES_SHOW=share`.
 
 Out of scope:
 
@@ -54,7 +54,7 @@ Out of scope:
    `set_share`.
 6. **Given** Copy link, **when** it is clicked, **then** the current page link
    is copied and the dialog closes.
-7. **Given** `NOT_NOTION_SHOW=share`, **when** the screenshot runs, **then**
+7. **Given** `ION_OF_NOTES_SHOW=share`, **when** the screenshot runs, **then**
    the populated Share state is rendered.
 
 ## Test scenarios (written before implementation)

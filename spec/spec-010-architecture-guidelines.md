@@ -60,7 +60,7 @@ reference pictures remain the visual source of truth.
 - `build_server_at_answers_health` — a composed server answers `GET /health`
   with `200`.
 - Both use the shared `tests/common/mod.rs` temp helpers (DRY); the red step
-  is the unresolved `not_notion::app` module observed before `src/app.rs`
+  is the unresolved `ion_of_notes::app` module observed before `src/app.rs`
   exists.
 
 ## Plan

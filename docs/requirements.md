@@ -1,4 +1,4 @@
-# Requirements — not-notion
+# Requirements — ion-of-notes
 
 ## 0. Scope and constraints
 
@@ -8,7 +8,7 @@
   (window + API client) and a **server** (workspace service + optional loopback
   HTTP listener).
 - R-02: All documentation and all implementation files are written in English.
-- R-03: Working product name is `not-notion`.
+- R-03: Working product name is `ion-of-notes`.
 - R-04: No copied logos, brand names, photos, or long passages of text. Neutral
   shapes, gradients, and short sample copy only.
 - R-05: Every feature is specified in `spec/` before implementation and built
@@ -269,7 +269,7 @@ These requirements come from the B4 public-documentation review
 (`docs/public-api-analysis.md`, ADR-006). Spec-030 (versioning, errors,
 capabilities) is implemented; the rest are planned.
 
-- FR-78: `/api/v2` requires a `Not-Notion-Version` header and returns a
+- FR-78: `/api/v2` requires a `Ion-Of-Notes-Version` header and returns a
   structured error object with `status`, `code`, `message`, `request_id` and
   optional `additional_data` (implemented in `spec-030`).
 - FR-79: Connections have capabilities for content read/update/insert, comment

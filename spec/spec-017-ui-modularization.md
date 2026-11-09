@@ -29,7 +29,7 @@ screenshot changes are intended.
 ### `ui/app.rs` → 389 lines
 
 - `ui/app.rs`: `NotionApp` struct, `new()`, `eframe::App` shell and the
-  `NOT_NOTION_SHOW` preview hook.
+  `ION_OF_NOTES_SHOW` preview hook.
 - `ui/apply.rs` (823 lines): command application and state transitions.
 - `ui/commands.rs` (182 lines): `Command`, `IconTab`, `FontStyle`,
   `NewTabChoice`, `new_tab_choices`.

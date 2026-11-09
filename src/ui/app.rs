@@ -126,7 +126,7 @@ pub struct NotionApp {
 impl NotionApp {
     pub fn new(cc: &eframe::CreationContext<'_>, screenshot: Option<PathBuf>) -> Self {
         let initial_locale =
-            std::env::var("NOT_NOTION_LOCALE").unwrap_or_else(|_| "en".to_string());
+            std::env::var("ION_OF_NOTES_LOCALE").unwrap_or_else(|_| "en".to_string());
         crate::i18n::set_locale(&initial_locale);
         let language = crate::i18n::current_locale();
         // The composition root (app layer) wires the concrete JSON adapter to
@@ -138,10 +138,10 @@ impl NotionApp {
             .map(|p| p.id.clone())
             .unwrap_or_default();
         apply_theme(&cc.egui_ctx, true);
-        // A harmless demo hook: with NOT_NOTION_SHOW set, one of the opened
+        // A harmless demo hook: with ION_OF_NOTES_SHOW set, one of the opened
         // states from the reference pictures is shown on startup. Normal runs
         // (and the rebuild check) never set it.
-        let demo = std::env::var("NOT_NOTION_SHOW").unwrap_or_default();
+        let demo = std::env::var("ION_OF_NOTES_SHOW").unwrap_or_default();
         let demo_current_page = if demo == "tasks" {
             workspace
                 .page("p-tasks")

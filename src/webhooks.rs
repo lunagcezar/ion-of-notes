@@ -257,7 +257,7 @@ impl WebhookEvent {
             timestamp: chrono::Utc::now().to_rfc3339(),
             workspace_id: workspace_id.into(),
             subscription_id: subscription_id.into(),
-            integration_id: "not-notion".to_string(),
+            integration_id: "ion-of-notes".to_string(),
             r#type: event_type,
             authors: vec![actor.clone()],
             accessible_by: vec![actor],

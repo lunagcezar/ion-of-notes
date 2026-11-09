@@ -3,12 +3,12 @@
 mod common;
 
 use common::{data, list_data, v2_request};
-use not_notion::client::Client;
-use not_notion::model::{
+use ion_of_notes::client::Client;
+use ion_of_notes::model::{
     Annotations, Block, BlockDto, BlockInput, BlockKind, Mention, ParentDto, RichText, TextContent,
     TextLink, Workspace,
 };
-use not_notion::server::{ListResponse, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ListResponse, Method, WorkspaceApi, WorkspaceServer};
 
 fn rich_text_with_bold(text: &str) -> RichText {
     let annotations = Annotations {
@@ -302,7 +302,7 @@ fn v2_block_errors_are_structured() {
         Some("{\"children\":[]}".to_string()),
     ));
     assert_eq!(response.status, 404);
-    let error: not_notion::ApiError = serde_json::from_str(&response.body).unwrap();
+    let error: ion_of_notes::ApiError = serde_json::from_str(&response.body).unwrap();
     assert_eq!(error.code, "object_not_found");
 
     let response = server.handle(&v2_request(Method::Get, "/api/v2/blocks/nope", None));

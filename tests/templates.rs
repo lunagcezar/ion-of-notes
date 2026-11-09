@@ -1,7 +1,7 @@
 //! Tests for the starter template catalog (spec-027).
 
-use not_notion::model::BlockKind;
-use not_notion::templates::{catalog, find, template_for_purpose};
+use ion_of_notes::model::BlockKind;
+use ion_of_notes::templates::{catalog, find, template_for_purpose};
 use std::collections::HashSet;
 
 #[test]

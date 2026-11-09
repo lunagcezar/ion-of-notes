@@ -3,7 +3,7 @@
 //! Bindings are taken from the app menu (reference/picture-6..11) and
 //! <https://www.notion.com/help/keyboard-shortcuts>.
 
-use not_notion::shortcuts::{Action, Combo, SHORTCUT_TABLE, lookup, shortcut_context_ok};
+use ion_of_notes::shortcuts::{Action, Combo, SHORTCUT_TABLE, lookup, shortcut_context_ok};
 
 fn combo(ctrl: bool, shift: bool, alt: bool, key: &'static str) -> Combo {
     Combo::new(ctrl, shift, alt, key)

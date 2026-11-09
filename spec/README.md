@@ -1,4 +1,4 @@
-# Spec index — not-notion
+# Spec index — ion-of-notes
 
 Every feature starts here. A spec is the boundary of one working session:
 nothing outside its scope is built in that session. This index is the map; the

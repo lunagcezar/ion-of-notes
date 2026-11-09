@@ -98,7 +98,7 @@ contract or the seeded demo data.
   bound globally.
 - `NewWindow` (Ctrl+Shift+N) opens the same new-tab switcher: the app keeps a
   single native window with several internal tabs.
-- `NOT_NOTION_SHOW` gained harmless preview values (`newtab`, `ai`,
+- `ION_OF_NOTES_SHOW` gained harmless preview values (`newtab`, `ai`,
   `shortcuts`) for capturing the new states; normal runs and the rebuild check
   never set it.
 - **Historical paths (2026-11-08):** the plan names `ui/app.rs`,

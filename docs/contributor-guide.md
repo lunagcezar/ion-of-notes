@@ -1,4 +1,4 @@
-# Contributor guide — not-notion
+# Contributor guide — ion-of-notes
 
 This guide is for humans and agents making changes. It explains the project's
 Spec-Driven Development (SDD) and Test-Driven Development (TDD) loop, where
@@ -141,7 +141,7 @@ flowchart LR
 4. Render in `ui/render/*` or `ui/dialogs/*`; collect commands, never mutate
    server state directly.
 5. Add pure helper tests where possible; otherwise verify with `--screenshot`.
-6. Add a `NOT_NOTION_SHOW` preview hook if the state is otherwise hard to
+6. Add a `ION_OF_NOTES_SHOW` preview hook if the state is otherwise hard to
    capture.
 
 ### 6.4 Translation
@@ -186,7 +186,7 @@ listeners left behind.
 
 ## 8. Preview hooks
 
-`NOT_NOTION_SHOW` opens one pictured state for `--screenshot`:
+`ION_OF_NOTES_SHOW` opens one pictured state for `--screenshot`:
 
 ```text
 library | share | inbox | settings | settings-general | settings-sidebar |
@@ -194,7 +194,7 @@ settings-people | settings-offline | search | tasks | newtab | ai |
 shortcuts | iconpicker | pageactions | discussions | onboarding | templates
 ```
 
-`NOT_NOTION_LOCALE=en|pt-BR|eo` selects the initial locale.
+`ION_OF_NOTES_LOCALE=en|pt-BR|eo` selects the initial locale.
 
 Normal runs never set these variables.
 

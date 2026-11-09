@@ -56,7 +56,7 @@ Out of scope:
 5. **Given** the Offline page, **when** it renders, **then** automatic downloads
    can be toggled and offline pages can be searched and show their last-edited
    time.
-6. **Given** `NOT_NOTION_SHOW=settings-general|settings-sidebar|settings-people|settings-offline`,
+6. **Given** `ION_OF_NOTES_SHOW=settings-general|settings-sidebar|settings-people|settings-offline`,
    **when** the screenshot runs, **then** the corresponding page is rendered.
 
 ## Test scenarios (written before implementation)
@@ -77,7 +77,7 @@ Out of scope:
 - `Command::ExportWorkspace`, `Command::ExportMembers` and
   `Command::SetSettingsStatus` surface export results/status.
 - `OpenSettings`/`SetSettingsPage("People")` refresh the member directory.
-- `NOT_NOTION_SHOW` accepts the four page names for screenshots.
+- `ION_OF_NOTES_SHOW` accepts the four page names for screenshots.
 
 ## Plan / tasks
 

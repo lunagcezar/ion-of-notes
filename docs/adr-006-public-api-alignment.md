@@ -44,7 +44,7 @@ developers.
 ## Decision
 
 1. **Adopt compatible patterns, not an exact clone.** Use our own
-   `Not-Notion-Version` header and `/api/v2` prefix. Never claim Notion wire
+   `Ion-Of-Notes-Version` header and `/api/v2` prefix. Never claim Notion wire
    compatibility.
 2. **Keep v1 stable.** Add v2 behind the existing `WorkspaceApi` seam; migrate
    the UI incrementally. v1 routes remain for the loopback adapter and existing

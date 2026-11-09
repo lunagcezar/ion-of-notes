@@ -4,7 +4,7 @@ mod common;
 
 use common::{remove, temp_path};
 use egui::{Color32, ColorImage};
-use not_notion::screenshot;
+use ion_of_notes::screenshot;
 
 fn sample() -> ColorImage {
     ColorImage::new(

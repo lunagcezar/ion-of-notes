@@ -1,4 +1,4 @@
-# Glossary — not-notion
+# Glossary — ion-of-notes
 
 Shared vocabulary for contributors and agents. When a term has a precise
 meaning in this project, this table is the source of truth. Terms are grouped
@@ -17,7 +17,7 @@ definition.
 | **Given / When / Then** | Acceptance-criteria form: precondition, action, observable result. | specs |
 | **Red / Green / Refactor** | Observe a failing test, make it pass minimally, then improve without behavior change. | `docs/testing.md` |
 | **Definition of done** | Tests, lint, format, screenshot, docs and commit all complete. | `docs/testing.md` §10 |
-| **Preview hook** | `NOT_NOTION_SHOW=<state>` opens one pictured state for `--screenshot`. | `AGENTS.md`, `ui/app.rs` |
+| **Preview hook** | `ION_OF_NOTES_SHOW=<state>` opens one pictured state for `--screenshot`. | `AGENTS.md`, `ui/app.rs` |
 | **Clean room** | Reconstruct only from public behavior; never read, run or decompile the original. | `docs/clean-room.md` |
 | **Evidence level** | `UI-observed`, `Inferred`, `Decided` or `Unknown`; prevents an inference from becoming a false fact. | `docs/api-observations.md` |
 | **B1 … B8** | The clean-room observation phases in `spec-016` (scope gate, inventory, capture, contract, mock, tooling, log, stop). | `spec/spec-016-*` |
@@ -134,7 +134,7 @@ definition.
 | ---- | ------- | ----- |
 | **B4** | The public-documentation review phase; public developer docs are allowed. | `docs/clean-room.md` |
 | **Observed (public docs)** | A fact stated by a public Notion developer page. | `docs/api-observations.md` |
-| **Not-Notion-Version** | Our own required version header for `/api/v2`; not `Notion-Version`. | spec-030 |
+| **Ion-Of-Notes-Version** | Our own required version header for `/api/v2`; not `Notion-Version`. | spec-030 |
 | **ApiError** | Structured error object with `status`, `code`, `message`, `request_id`, `additional_data`. | spec-030 |
 | **Capability** | A connection right: content read/update/insert, comment read/insert, user-info level. | spec-030 |
 | **Connection** | A token + member + workspace + capability set. | spec-030 |
@@ -163,7 +163,7 @@ definition.
 | **FileUpload** | Upload lifecycle: pending → uploaded, or expired/failed. | spec-035 |
 | **UserDto** | Person/bot user object with capability-filtered profile fields. | spec-035 |
 | **WebhookSubscription** | A verified HTTPS endpoint with selected event types. | spec-036 |
-| **HMAC-SHA256 signature** | `X-Not-Notion-Signature` over the raw webhook body. | spec-036 |
+| **HMAC-SHA256 signature** | `X-Ion-Of-Notes-Signature` over the raw webhook body. | spec-036 |
 | **Aggregated event** | A batched event such as `page.content_updated`. | spec-036 |
 | **Plan** | `free`/`business`/`enterprise`, used only for operational limits. | spec-037 |
 | **RequestBudget** | `{ plan, members, blocks }` inputs that derive the limits. | spec-037 |

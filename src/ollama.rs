@@ -50,7 +50,7 @@ impl Default for OllamaConfig {
 
 impl OllamaConfig {
     /// Build a config from the environment: `OLLAMA_HOST` (a host, a
-    /// `host:port` or a full URL) and `NOT_NOTION_OLLAMA_MODEL`. When no model
+    /// `host:port` or a full URL) and `ION_OF_NOTES_OLLAMA_MODEL`. When no model
     /// is configured, the first model reported by the service is used, so the
     /// assistant works without any setup on a machine that already runs Ollama.
     pub fn from_env() -> Self {
@@ -59,7 +59,7 @@ impl OllamaConfig {
             .filter(|v| !v.trim().is_empty())
             .map(|v| normalize_endpoint(&v))
             .unwrap_or_else(default_endpoint);
-        let model = std::env::var("NOT_NOTION_OLLAMA_MODEL")
+        let model = std::env::var("ION_OF_NOTES_OLLAMA_MODEL")
             .ok()
             .filter(|v| !v.trim().is_empty())
             .unwrap_or_else(|| {

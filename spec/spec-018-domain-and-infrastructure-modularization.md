@@ -104,8 +104,8 @@ candidates if they grow, but they are still cohesive enough to keep.
 ## Notes
 
 - No behavior, protocol, persistence or visual change is part of this spec.
-- The public API is unchanged: `not_notion::model`, `not_notion::collab` and
-  `not_notion::server` still expose the same names.
+- The public API is unchanged: `ion_of_notes::model`, `ion_of_notes::collab` and
+  `ion_of_notes::server` still expose the same names.
 - `ui/render/content.rs` and `ui/dialogs/settings_pages.rs` remain the largest
   cohesive UI files; they are left alone until a real second responsibility
   appears.

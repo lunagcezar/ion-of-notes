@@ -3,7 +3,7 @@
 //! No Ollama install or network is needed: only the request/response parsing
 //! and endpoint logic are exercised here.
 
-use not_notion::ollama::{
+use ion_of_notes::ollama::{
     DEFAULT_MODEL, DEFAULT_PORT, OllamaConfig, OllamaStatus, build_generate_body, decode_body,
     decode_chunked, default_endpoint, generate, normalize_endpoint, parse_endpoint,
     parse_generate_response, parse_tags_response,

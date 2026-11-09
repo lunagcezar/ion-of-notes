@@ -3,10 +3,10 @@
 mod common;
 
 use common::{page_draft_json, remove, temp_path};
-use not_notion::collab::{Access, CollabState, MemberDraft, Role, Share};
-use not_notion::model::Workspace;
-use not_notion::server::{ApiRequest, Method, WorkspaceApi, WorkspaceServer};
-use not_notion::store::{
+use ion_of_notes::collab::{Access, CollabState, MemberDraft, Role, Share};
+use ion_of_notes::model::Workspace;
+use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::store::{
     CollabStore, JsonCollabStore, NoCollabStore, NoStore, load_collab, load_collab_or_seed,
     save_collab,
 };

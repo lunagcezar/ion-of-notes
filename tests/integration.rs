@@ -3,10 +3,10 @@
 mod common;
 
 use common::{remove, temp_path};
-use not_notion::client::Client;
-use not_notion::model::{PageDraft, Workspace};
-use not_notion::server::WorkspaceServer;
-use not_notion::store;
+use ion_of_notes::client::Client;
+use ion_of_notes::model::{PageDraft, Workspace};
+use ion_of_notes::server::WorkspaceServer;
+use ion_of_notes::store;
 
 #[test]
 fn full_workspace_lifecycle_is_persisted() {

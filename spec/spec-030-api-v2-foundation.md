@@ -10,7 +10,7 @@ foundation** behind the existing `WorkspaceApi` seam.
 
 In scope:
 
-- a required `Not-Notion-Version` header for `/api/v2` requests;
+- a required `Ion-Of-Notes-Version` header for `/api/v2` requests;
 - a structured `ApiError` object with `status`, `code`, `message`,
   `request_id` and optional `additional_data`;
 - request IDs echoed in responses and logs;
@@ -54,7 +54,7 @@ Current code:
 
 ## Acceptance criteria
 
-1. **Given** a `/api/v2` request without `Not-Notion-Version`, **when** it is
+1. **Given** a `/api/v2` request without `Ion-Of-Notes-Version`, **when** it is
    handled, **then** it returns `400` with `code: "missing_version"` and no
    mutation occurs.
 2. **Given** an unsupported version, **when** it is handled, **then** it
@@ -146,7 +146,7 @@ pub enum Capability {
 
 ### Versioning
 
-- `Not-Notion-Version: 2026-11-08` is required on `/api/v2`.
+- `Ion-Of-Notes-Version: 2026-11-08` is required on `/api/v2`.
 - Additive changes do not bump the version; breaking changes do.
 - Responses may add fields; clients must ignore unknown fields.
 - Cursors are opaque (spec-031).
@@ -193,7 +193,7 @@ flowchart TD
 
 | Requirement | How |
 | ----------- | --- |
-| New FR (versioned v2 contract) | `Not-Notion-Version` and `/api/v2` |
+| New FR (versioned v2 contract) | `Ion-Of-Notes-Version` and `/api/v2` |
 | New FR (structured errors) | `ApiError` with stable codes |
 | New FR (capabilities) | `Capability` + `Connection` |
 | NFR (observability) | `request_id` in every response |
