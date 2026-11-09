@@ -21,9 +21,9 @@ documentation map.
 
 ## Status (2026-11-08)
 
-- **Specs:** 001–034 implemented; 007 retired; 016 is a plan with A9/B5
-  open; 029 is the documentation pass; 035–037 are planned.
-- **Tests:** 178 integration tests; clippy and `cargo fmt --check` are clean.
+- **Specs:** 001–035 implemented; 007 retired; 016 is a plan with A9/B5
+  open; 029 is the documentation pass; 036–037 are planned.
+- **Tests:** 186 integration tests; clippy and `cargo fmt --check` are clean.
 - **Implemented:** workspace/page CRUD, blocks, inline table, search, theme,
   screenshot mode, members/shares/sync log, version history (50/page), export
   tree, per-page writes with 250 ms debounce, collaboration persistence,
@@ -33,11 +33,12 @@ documentation map.
   WebSocket + Yrs CRDT channel, and PostgreSQL/SQLx storage.
 - **Public API alignment (B4):** the public Notion developer docs were reviewed
   and turned into a v2 roadmap. The **foundation, pagination, rich text/blocks,
-  properties/data sources and views are implemented** (specs 030–034):
-  `/api/v2`, `Not-Notion-Version`, Bearer auth, structured `ApiError`,
-  capabilities, request IDs, `ListResponse`, opaque cursors, rich text, block
-  children, typed properties, databases, data sources and views. Specs 035–037
-  cover comments/users/files, webhooks and limits. v1 stays stable. See
+  properties/data sources, views and comments/users/files are implemented**
+  (specs 030–035): `/api/v2`, `Not-Notion-Version`, Bearer auth, structured
+  `ApiError`, capabilities, request IDs, `ListResponse`, opaque cursors, rich
+  text, block children, typed properties, databases, data sources, views,
+  comments, users and file uploads. Specs 036–037 cover webhooks and limits.
+  v1 stays stable. See
   [`docs/public-api-analysis.md`](docs/public-api-analysis.md) and
   [`docs/adr-006-public-api-alignment.md`](docs/adr-006-public-api-alignment.md).
 - **Clean room:** strict public-behavior-only observation. No capture, proxy,

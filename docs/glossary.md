@@ -155,10 +155,12 @@ definition.
 | **Filter** | Typed predicate tree (and/or, equals, contains, empty, range, checked). | spec-034 |
 | **Sort** | `{ property, direction }` applied to a view query. | spec-034 |
 | **ViewQueryResult** | View id/type, grouped pages and a paginated page list. | spec-034 |
+| **CommentDto** | A v2 comment with page/block parent, rich text and attachments. | spec-035 |
 | **CommentAttachment** | A file attached to a comment; max 3 per comment. | spec-035 |
 | **CommentDisplayName** | `connection`, `user` or `custom` author label. | spec-035 |
 | **FileObject** | `file` (hosted), `file_upload` (API upload) or `external` URL. | spec-035 |
 | **FileUpload** | Upload lifecycle: pending → uploaded, or expired/failed. | spec-035 |
+| **UserDto** | Person/bot user object with capability-filtered profile fields. | spec-035 |
 | **WebhookSubscription** | A verified HTTPS endpoint with selected event types. | spec-036 |
 | **HMAC-SHA256 signature** | `X-Not-Notion-Signature` over the raw webhook body. | spec-036 |
 | **Aggregated event** | A batched event such as `page.content_updated`. | spec-036 |

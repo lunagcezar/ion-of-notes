@@ -201,6 +201,13 @@ Database/data-source methods: `list_databases_v2`, `create_database_v2`,
 View methods: `list_views_v2`, `create_view_v2`, `get_view_v2`,
 `update_view_v2`, `delete_view_v2` and `query_view_v2`.
 
+Comment/user/file methods: `list_comments_v2`/`list_comments_page_v2`,
+`create_comment_v2`, `get_comment_v2`, `update_comment_v2`,
+`delete_comment_v2`, `list_users_v2`, `get_user_v2`,
+`create_file_upload_v2`, `send_file_upload_v2`, `complete_file_upload_v2`,
+`get_file_upload_v2`, `list_file_uploads_v2` and
+`list_file_uploads_page_v2`.
+
 ## 6. Loopback HTTP adapter
 
 - Transport: `std::net::TcpListener`, HTTP/1.1, one request per connection.
@@ -337,9 +344,9 @@ v1 routes stay stable.
 | Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 | **implemented** |
 | Database | inline rows | database container + data sources | 033 | **implemented** |
 | Views | table/board | view object + filters/sorts/configuration | 034 | **implemented** |
-| Comments | page plain text | page/block, rich text, discussions, attachments | 035 | planned |
-| Users | `Member` | person/bot, profile, workspace limits | 035 | planned |
-| Files | none | file/file_upload/external + lifecycle | 035 | planned |
+| Comments | page plain text | page/block, rich text, discussions, attachments | 035 | **implemented** |
+| Users | `Member` | person/bot, profile, workspace limits | 035 | **implemented** |
+| Files | none | file/file_upload/external + lifecycle | 035 | **implemented** |
 | Webhooks | none | subscriptions, verification, HMAC, retries | 036 | planned |
 | Limits | none | rate/size/block limits, 429/529/503 guidance | 037 | planned |
 
@@ -369,6 +376,14 @@ Implemented v2 routes:
 | `GET` / `POST` | `/api/v2/views` | read / insert content |
 | `GET` / `PATCH` / `DELETE` | `/api/v2/views/{id}` | read / update content |
 | `POST` | `/api/v2/views/{id}/query` | read content |
+| `GET` / `POST` | `/api/v2/comments` | read / insert comments |
+| `GET` / `PATCH` / `DELETE` | `/api/v2/comments/{id}` | read / insert comments |
+| `GET` | `/api/v2/users` | read content |
+| `GET` | `/api/v2/users/{id}` | read content |
+| `GET` / `POST` | `/api/v2/file_uploads` | read / insert content |
+| `GET` | `/api/v2/file_uploads/{id}` | read content |
+| `POST` | `/api/v2/file_uploads/{id}/send` | insert content |
+| `POST` | `/api/v2/file_uploads/{id}/complete` | insert content |
 | `GET` | `/api/v2/realtime` | read content |
 
 ### 8.2 v2 list envelope (implemented)
@@ -445,6 +460,21 @@ and `href`.
   `ViewQueryResult { view_id, type, groups, pages, has_more, next_cursor }`,
   and groups board/calendar results.
 - `ensure_views` creates one default table view per data source.
+
+### 8.6 v2 comments, users and files (implemented)
+
+- `CommentDto` carries `parent` (page or block), `discussion_id`,
+  `property_id`, timestamps, `created_by`, rich text, attachments, an optional
+  display name and `has_pending_attachments`.
+- Comments support page/block parents, up to three uploaded attachments and
+  connection/user/custom display names.
+- `UserDto` distinguishes `person` and `bot`; profile fields are filtered by
+  the connection's user-info capability. Bots expose owner, workspace id/name
+  and `workspace_limits.max_file_upload_size_in_bytes`.
+- `FileUpload` has a pending → uploaded lifecycle; `FileObject` is `file`,
+  `file_upload` or `external`. Comments accept only uploaded file uploads.
+- Local upload URLs are placeholders; a production object store is a future
+  adapter behind the same contract.
 
 ```mermaid
 flowchart LR

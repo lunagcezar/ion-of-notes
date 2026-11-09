@@ -189,14 +189,31 @@ sequenceDiagram
 
 ## Plan / tasks
 
-- [ ] Spec + failing tests (red).
-- [ ] Comment/attachment/display-name DTOs and CRUD.
-- [ ] User person/bot DTOs and capability filtering.
-- [ ] File object/upload DTOs, lifecycle and local store.
-- [ ] Endpoints and client methods.
-- [ ] Update `docs/data-model.md`, `docs/api-contract.md`,
+- [x] Spec + failing tests (red).
+- [x] Comment/attachment/display-name DTOs and CRUD.
+- [x] User person/bot DTOs and capability filtering.
+- [x] File object/upload DTOs, lifecycle and local store.
+- [x] Endpoints and client methods.
+- [x] Update `docs/data-model.md`, `docs/api-contract.md`,
   `docs/requirements.md`.
-- [ ] Build/test/clippy/fmt, commit.
+- [x] Build/test/clippy/fmt, commit.
+
+## Result
+
+- Added `CommentDto`, `CommentInput`, `CommentAttachment`,
+  `CommentDisplayName`/`CommentDisplayNameDto`, `FileObject`, `FileUpload`,
+  `FileUploadInput`, `UploadStatus`, `UserDto`, `UserType`, `Person`, `Bot`,
+  `BotOwner` and `WorkspaceLimits`.
+- `Workspace` persists v2 comments and file uploads; the existing page-comment
+  UI model is unchanged.
+- Added v2 endpoints for comment CRUD/listing, user listing/retrieval and the
+  file-upload lifecycle (create/send/complete/list/retrieve).
+- Comments support page/block parents, rich text, discussions, up to three
+  validated attachments and connection/user/custom display names.
+- Users are person/bot objects and profile fields are filtered by the
+  connection's user-info capability.
+- Added client methods for comments, users and file uploads.
+- Tests: 8 in `tests/comments.rs`; the suite is 186 tests.
 
 ## Requirement mapping
 

@@ -111,7 +111,7 @@ listed in §5; they are planned in specs 030–037.
 ### RF-D06 — Unknowns ledger reported "65 tests" and stale U-06 progress
 
 - **Severity:** medium
-- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 178.
+- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 186.
   U-06 still said version history was only planned, while spec-015 implemented
   it and spec-026 added archive/discussions.
 - **Impact:** a reader could not tell which page actions are real.
@@ -283,8 +283,9 @@ not documentation bugs; each has a spec.
 `ApiError`, capabilities, request IDs), RF-P02 by spec-031 (`ListResponse`,
 opaque cursors), RF-P03 by spec-032 (rich text, block metadata/children,
 block endpoints), RF-P04 by spec-033 (typed properties, databases, data
-sources, row migration) and RF-P05 by spec-034 (view CRUD, filters/sorts,
-board/calendar grouping). RF-P06–RF-P12 remain planned in specs 035–037.
+sources, row migration), RF-P05 by spec-034 (view CRUD, filters/sorts,
+board/calendar grouping) and RF-P06–RF-P08 by spec-035 (comments, users, file
+uploads). RF-P09–RF-P12 remain planned in specs 036–037.
 
 ## 6. What the review confirmed is healthy
 
@@ -300,7 +301,7 @@ board/calendar grouping). RF-P06–RF-P12 remain planned in specs 035–037.
   or settings changes.
 - **Version retention:** 50 newest snapshots per page, restore records a new
   version.
-- **Test discipline:** 178 integration tests, no `#[cfg(test)]` in `src/`,
+- **Test discipline:** 186 integration tests, no `#[cfg(test)]` in `src/`,
   shared helpers in `tests/common/mod.rs`.
 - **Quality gates:** `cargo test --all-targets`, clippy and `cargo fmt --check`
   are clean at the time of this review.
@@ -333,7 +334,7 @@ board/calendar grouping). RF-P06–RF-P12 remain planned in specs 035–037.
 | Done | Rich text and block metadata/children | `spec-032` |
 | Done | Page properties and data sources | `spec-033` |
 | Done | Views | `spec-034` |
-| Next | Add comments, users and files | `spec-035` |
+| Done | Comments, users and files | `spec-035` |
 | Next | Add webhooks | `spec-036` |
 | Next | Add limits and retry policy | `spec-037` |
 | Next | Implement A9 settings row filtering | spec-016 |

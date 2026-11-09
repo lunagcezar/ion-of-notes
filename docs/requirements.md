@@ -291,11 +291,13 @@ capabilities) is implemented; the rest are planned.
 - FR-85: Views define table/board/calendar/list layouts with filters, sorts and
   configuration (implemented in `spec-034`).
 - FR-86: Comments attach to pages or blocks, carry rich text, a discussion id,
-  up to three attachments and an optional display name (spec-035).
+  up to three attachments and an optional display name (implemented in
+  `spec-035`).
 - FR-87: Users distinguish people and bots, expose optional profile fields and
-  respect user-info capabilities (spec-035).
+  respect user-info capabilities (implemented in `spec-035`).
 - FR-88: Files are `file`, `file_upload` or `external`; uploads have a
-  pending/uploaded/expired/failed lifecycle and temporary URLs (spec-035).
+  pending/uploaded/expired/failed lifecycle and temporary URLs (implemented in
+  `spec-035`).
 - FR-89: Webhook subscriptions verify an endpoint, sign payloads with
   HMAC-SHA256 and retry failed deliveries (spec-036).
 - FR-90: The server enforces rate, request-size and workspace block limits and

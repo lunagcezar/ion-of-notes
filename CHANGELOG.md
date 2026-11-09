@@ -6,6 +6,19 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-035-comments-users-and-files
+
+- Added rich comment DTOs (`CommentDto`, `CommentInput`,
+  `CommentAttachment`, display names) with page/block parents, discussions and
+  up to three validated attachments.
+- Added `UserDto` person/bot objects and capability-filtered profile fields.
+- Added `FileObject`, `FileUpload`, `FileUploadInput` and `UploadStatus` with
+  the create/send/complete lifecycle.
+- `Workspace` persists v2 comments and file uploads; the existing page-comment
+  UI model is unchanged.
+- Added v2 endpoints for comments, users and file uploads, plus client methods.
+- Tests: 8 in `tests/comments.rs`; the suite is 186 tests. Docs updated.
+
 ### Added — spec-034-views-and-database-layouts
 
 - Added `ViewType`, `Sort`, `SortDirection`, `Filter`, `ViewConfig`, `View`,

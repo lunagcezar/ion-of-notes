@@ -453,9 +453,9 @@ flowchart TD
 **Status (2026-11-08):** spec-030 (`/api/v2`, versioning, structured errors,
 capabilities, request IDs), spec-031 (`ListResponse`, opaque cursors),
 spec-032 (rich text, block metadata/children, block endpoints), spec-033
-(typed properties, databases, data sources, property items) and spec-034
-(views, filters, sorts, board/calendar grouping) are implemented. Specs 035–037
-remain planned.
+(typed properties, databases, data sources, property items), spec-034
+(views, filters, sorts, board/calendar grouping) and spec-035 (comments,
+users, file uploads) are implemented. Specs 036–037 remain planned.
 
 ## 16. Risks and open questions
 

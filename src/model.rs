@@ -1226,6 +1226,221 @@ impl ViewQueryResult {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum FileObject {
+    File {
+        url: String,
+        #[serde(default)]
+        expiry_time: Option<String>,
+    },
+    FileUpload {
+        id: String,
+    },
+    External {
+        url: String,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum UploadStatus {
+    #[default]
+    Pending,
+    Uploaded,
+    Expired,
+    Failed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FileUpload {
+    pub object: String,
+    pub id: String,
+    pub created_time: String,
+    pub last_edited_time: String,
+    #[serde(default)]
+    pub expiry_time: Option<String>,
+    pub status: UploadStatus,
+    #[serde(default)]
+    pub filename: Option<String>,
+    #[serde(default)]
+    pub content_type: Option<String>,
+    #[serde(default)]
+    pub content_length: Option<u64>,
+    #[serde(default)]
+    pub upload_url: Option<String>,
+    #[serde(default)]
+    pub complete_url: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct FileUploadInput {
+    #[serde(default)]
+    pub filename: Option<String>,
+    #[serde(default)]
+    pub content_type: Option<String>,
+    #[serde(default)]
+    pub content_length: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommentAttachment {
+    pub category: String,
+    pub file: FileObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum CommentDisplayName {
+    Connection,
+    User,
+    Custom { name: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommentDisplayNameDto {
+    pub r#type: String,
+    pub resolved_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommentDto {
+    pub object: String,
+    pub id: String,
+    pub parent: ParentDto,
+    pub discussion_id: String,
+    #[serde(default)]
+    pub property_id: Option<String>,
+    pub created_time: String,
+    pub last_edited_time: String,
+    pub created_by: UserRef,
+    #[serde(default)]
+    pub rich_text: Vec<RichText>,
+    #[serde(default)]
+    pub attachments: Vec<CommentAttachment>,
+    #[serde(default)]
+    pub display_name: Option<CommentDisplayNameDto>,
+    #[serde(default)]
+    pub has_pending_attachments: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AttachmentInput {
+    pub file_upload_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommentInput {
+    pub parent: ParentDto,
+    #[serde(default)]
+    pub discussion_id: Option<String>,
+    #[serde(default)]
+    pub property_id: Option<String>,
+    #[serde(default)]
+    pub rich_text: Vec<RichText>,
+    #[serde(default)]
+    pub attachments: Vec<AttachmentInput>,
+    #[serde(default)]
+    pub display_name: Option<CommentDisplayName>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UserType {
+    Person,
+    Bot,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Person {
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub email_verified: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum BotOwner {
+    Workspace { workspace: bool },
+    User { id: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkspaceLimits {
+    pub max_file_upload_size_in_bytes: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Bot {
+    pub owner: BotOwner,
+    #[serde(default)]
+    pub workspace_name: Option<String>,
+    pub workspace_id: String,
+    pub workspace_limits: WorkspaceLimits,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UserDto {
+    pub object: String,
+    pub id: String,
+    #[serde(default)]
+    pub r#type: Option<UserType>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub avatar_url: Option<String>,
+    #[serde(default)]
+    pub person: Option<Person>,
+    #[serde(default)]
+    pub bot: Option<Bot>,
+}
+
+impl UserDto {
+    pub fn person(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        email: Option<String>,
+        include_email: bool,
+    ) -> Self {
+        Self {
+            object: "user".to_string(),
+            id: id.into(),
+            r#type: Some(UserType::Person),
+            name: Some(name.into()),
+            avatar_url: None,
+            person: Some(Person {
+                email: include_email.then_some(email).flatten(),
+                email_verified: include_email,
+            }),
+            bot: None,
+        }
+    }
+
+    pub fn bot(
+        id: impl Into<String>,
+        workspace_id: impl Into<String>,
+        workspace_name: Option<String>,
+    ) -> Self {
+        Self {
+            object: "user".to_string(),
+            id: id.into(),
+            r#type: Some(UserType::Bot),
+            name: Some("Connection".to_string()),
+            avatar_url: None,
+            person: None,
+            bot: Some(Bot {
+                owner: BotOwner::Workspace { workspace: true },
+                workspace_name,
+                workspace_id: workspace_id.into(),
+                workspace_limits: WorkspaceLimits {
+                    max_file_upload_size_in_bytes: 5_242_880,
+                },
+            }),
+        }
+    }
+}
+
 /// One row of an inline table database.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TableRow {
@@ -1435,6 +1650,10 @@ pub struct Workspace {
     pub data_sources: Vec<DataSource>,
     #[serde(default)]
     pub views: Vec<View>,
+    #[serde(default)]
+    pub comments: Vec<CommentDto>,
+    #[serde(default)]
+    pub file_uploads: Vec<FileUpload>,
     #[serde(skip)]
     index: WorkspaceIndex,
 }
@@ -1448,6 +1667,8 @@ impl PartialEq for Workspace {
             && self.databases == other.databases
             && self.data_sources == other.data_sources
             && self.views == other.views
+            && self.comments == other.comments
+            && self.file_uploads == other.file_uploads
     }
 }
 
@@ -1466,6 +1687,10 @@ struct WorkspaceData {
     data_sources: Vec<DataSource>,
     #[serde(default)]
     views: Vec<View>,
+    #[serde(default)]
+    comments: Vec<CommentDto>,
+    #[serde(default)]
+    file_uploads: Vec<FileUpload>,
 }
 
 impl<'de> Deserialize<'de> for Workspace {
@@ -1487,6 +1712,8 @@ impl<'de> Deserialize<'de> for Workspace {
             databases: data.databases,
             data_sources: data.data_sources,
             views: data.views,
+            comments: data.comments,
+            file_uploads: data.file_uploads,
         })
     }
 }
@@ -1501,6 +1728,8 @@ impl Workspace {
             databases: Vec::new(),
             data_sources: Vec::new(),
             views: Vec::new(),
+            comments: Vec::new(),
+            file_uploads: Vec::new(),
             index: WorkspaceIndex::default(),
         }
     }

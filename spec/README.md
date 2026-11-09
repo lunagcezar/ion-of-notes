@@ -72,7 +72,7 @@ Status vocabulary:
 | [032](spec-032-rich-text-and-blocks.md) | Rich text and the block model | implemented | RichText, metadata, children, block endpoints |
 | [033](spec-033-page-properties-and-data-sources.md) | Page properties and data sources | implemented | Typed properties, databases, data sources, migration |
 | [034](spec-034-views-and-database-layouts.md) | Views and database layouts | implemented | View CRUD, filters/sorts, board/calendar grouping |
-| [035](spec-035-comments-users-and-files.md) | Comments, users and files | **planned** | Depends on 030/032 |
+| [035](spec-035-comments-users-and-files.md) | Comments, users and files | implemented | Comment CRUD, users, file uploads |
 | [036](spec-036-webhooks-and-event-delivery.md) | Webhooks and event delivery | **planned** | Depends on 030 |
 | [037](spec-037-limits-and-operations.md) | Limits, rate limiting and operations | **planned** | Depends on 030/031 |
 
@@ -89,7 +89,7 @@ Status vocabulary:
 | v2 rich text/blocks | spec-032 | **Implemented:** rich text, metadata, children |
 | v2 properties/data sources | spec-033 | **Implemented:** typed schema, values, migration |
 | v2 views | spec-034 | **Implemented:** CRUD, filters/sorts, grouping |
-| v2 comments/users/files | spec-035 | Comments, users, uploads |
+| v2 comments/users/files | spec-035 | **Implemented:** comments, users, uploads |
 | v2 webhooks | spec-036 | Subscriptions, signatures, retries |
 | v2 limits | spec-037 | Rate/size/block limits |
 | Persist the selected language | spec-028 follow-up | Add to `WorkspaceSettings` or local config |
