@@ -191,6 +191,13 @@ Block methods: `get_block_v2`, `list_block_children_v2`,
 `list_block_children_page_v2`, `append_block_children_v2`, `update_block_v2`
 and `delete_block_v2`.
 
+Database/data-source methods: `list_databases_v2`, `create_database_v2`,
+`get_database_v2`, `update_database_v2`, `delete_database_v2`,
+`list_data_sources_v2`, `create_data_source_v2`, `get_data_source_v2`,
+`update_data_source_v2`, `query_data_source_v2`,
+`query_data_source_page_v2`, `page_property_items_v2` and
+`page_property_items_page_v2`.
+
 ## 6. Loopback HTTP adapter
 
 - Transport: `std::net::TcpListener`, HTTP/1.1, one request per connection.
@@ -324,8 +331,8 @@ v1 routes stay stable.
 | Pagination | full arrays | `ListResponse<T>` with opaque cursors | 031 | **implemented** |
 | Blocks | flat text | rich text + metadata + children + block endpoints | 032 | **implemented** |
 | Page | title/icon/parent/blocks/rows | properties, icon, cover, parent, in_trash, url | 032/033 | planned |
-| Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 | planned |
-| Database | inline rows | database container + data sources | 033 | planned |
+| Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 | **implemented** |
+| Database | inline rows | database container + data sources | 033 | **implemented** |
 | Views | table/board | view object + filters/sorts/configuration | 034 | planned |
 | Comments | page plain text | page/block, rich text, discussions, attachments | 035 | planned |
 | Users | `Member` | person/bot, profile, workspace limits | 035 | planned |
@@ -349,6 +356,13 @@ Implemented v2 routes:
 | `GET` / `PUT` | `/api/v2/shares` | read / update content |
 | `GET` | `/api/v2/sync` | read content |
 | `GET` | `/api/v2/export` | read content |
+| `GET` / `POST` | `/api/v2/databases` | read / insert content |
+| `GET` / `PATCH` / `DELETE` | `/api/v2/databases/{id}` | read / update content |
+| `GET` / `POST` | `/api/v2/databases/{id}/data_sources` | read / insert content |
+| `GET` / `PATCH` | `/api/v2/data_sources/{id}` | read / update content |
+| `POST` | `/api/v2/data_sources/{id}/query` | read content |
+| `GET` / `PATCH` | `/api/v2/pages/{id}/properties` | read / update content |
+| `GET` | `/api/v2/pages/{id}/properties/{property_id}` | read content |
 | `GET` | `/api/v2/realtime` | read content |
 
 ### 8.2 v2 list envelope (implemented)
@@ -394,6 +408,23 @@ and `href`.
 - `DELETE /api/v2/blocks/{id}` — move a block to trash (`in_trash: true`).
 - Legacy `Block.text` is migrated to one rich text object; unsupported types
   are preserved as `type: "<original>"` with `unsupported_type`.
+
+### 8.4 v2 properties and data sources (implemented)
+
+- `Property` has `id`, `name`, `description`, `type` and type-specific
+  `config` (select/status options, relation target, formula expression,
+  rollup settings, unique-id prefix).
+- `PageProperty` carries `id`, `type` and a typed `value`; `Page` stores them
+  in `properties` keyed by property id.
+- `Database` is a container of `data_sources`; `DataSource` owns the property
+  schema and its `rows` (pages).
+- `Workspace::ensure_data_sources` migrates legacy `TableRow` pages into a
+  default database/data source with row pages and typed title/status/assignee/
+  due values.
+- Page property writes are `PATCH /api/v2/pages/{id}/properties`; omitted
+  properties keep their values, arrays are replaced, and the documented clear
+  rule is available through `PropertyValue::clear`.
+- Property-item reads return a paginated `ListResponse<PageProperty>`.
 
 ```mermaid
 flowchart LR

@@ -209,14 +209,31 @@ erDiagram
 
 ## Plan / tasks
 
-- [ ] Spec + failing tests (red).
-- [ ] `Property`, `PropertyConfig`, `PropertyValue`, `OptionRef`, `DateValue`.
-- [ ] `Database`, `DataSource`, `DatabaseRef`, `DataSourceRef`.
-- [ ] Page properties and property-item pagination.
-- [ ] Database/data source endpoints and validation.
-- [ ] Legacy `TableRow` migration adapter.
-- [ ] Update export/search and docs.
-- [ ] Build/test/clippy/fmt, commit.
+- [x] Spec + failing tests (red).
+- [x] `Property`, `PropertyConfig`, `PropertyValue`, `OptionRef`, `DateValue`.
+- [x] `Database`, `DataSource`, `DatabaseInput`, `DataSourceInput`, `DataSourceRef`.
+- [x] Page properties and property-item pagination.
+- [x] Database/data source endpoints and validation.
+- [x] Legacy `TableRow` migration adapter.
+- [x] Update export/search and docs.
+- [x] Build/test/clippy/fmt, commit.
+
+## Result
+
+- Added `PropertyType`, `Property`, `PropertyConfig`, `SelectOption`,
+  `StatusGroup`, `DateValue`, `OptionRef`, `PageRef`, `FileRef`,
+  `FormulaResult`, `RollupResult`, `PropertyValue` and `PageProperty`.
+- Added `Database`, `DataSource`, `DataSourceRef`, `DatabaseInput`,
+  `DataSourceInput` and `PagePropertiesInput`; `Page` now carries
+  `data_source_id` and typed `properties`.
+- `Workspace` persists `databases` and `data_sources`; `ensure_data_sources`
+  migrates each page with legacy `TableRow`s into a default database/data
+  source with row pages and typed title/status/assignee/due values.
+- Added v2 endpoints for databases, data sources, data-source queries, page
+  property writes and paginated property items.
+- Added client methods for databases, data sources, queries and property
+  items.
+- Tests: 9 in `tests/properties.rs`; the suite is 168 tests.
 
 ## Requirement mapping
 

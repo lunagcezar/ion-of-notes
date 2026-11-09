@@ -285,9 +285,9 @@ capabilities) is implemented; the rest are planned.
   `has_children` and a typed payload; block children are read/appended through
   dedicated endpoints (implemented in `spec-032`).
 - FR-83: Pages in a data source carry typed property values; property items
-  paginate large relation/people/rich-text values (spec-033).
+  paginate large relation/people/rich-text values (implemented in `spec-033`).
 - FR-84: A database is a container of data sources; each data source owns its
-  property schema and rows (spec-033).
+  property schema and rows (implemented in `spec-033`).
 - FR-85: Views define table/board/calendar/list layouts with filters, sorts and
   configuration (spec-034).
 - FR-86: Comments attach to pages or blocks, carry rich text, a discussion id,
@@ -311,8 +311,8 @@ capabilities) is implemented; the rest are planned.
   `icon`, `external`, `file`) rather than a bare glyph string (planned in
   spec-035).
 - FR-94: Parent objects distinguish page, block, database, data source,
-  workspace and agent parents (page/block implemented in `spec-032`; the rest
-  planned in specs 033/035).
+  workspace and agent parents (page/block in `spec-032`; database/data source
+  in `spec-033`; agent parent is out of scope).
 
 ## 2. Non-functional requirements
 

@@ -204,7 +204,7 @@ flowchart TD
   `DELETE /blocks/{id}` are implemented; children use spec-031 pagination.
 - Client: `get_block_v2`, `list_block_children_v2`/`..._page_v2`,
   `append_block_children_v2`, `update_block_v2`, `delete_block_v2`.
-- Tests: 12 in `tests/blocks.rs`; the suite is 159 tests.
+- Tests: 12 in `tests/blocks.rs`; the suite is 168 tests.
 
 ## Requirement mapping
 

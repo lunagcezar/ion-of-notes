@@ -39,8 +39,11 @@ pub use collab::{
     export_tree, page_markdown, people_csv, people_markdown, realtime_contract,
 };
 pub use model::{
-    Annotations, Block, BlockChildrenRequest, BlockDto, BlockInput, BlockKind, Comment, Equation,
-    Mention, Page, PageDiff, PageDraft, PageSummary, ParentDto, RichText, SearchResult, TableRow,
+    Annotations, Block, BlockChildrenRequest, BlockDto, BlockInput, BlockKind, Comment, DataSource,
+    DataSourceInput, DataSourceRef, Database, DatabaseInput, DateValue, Equation, FileRef,
+    FormulaResult, Mention, OptionRef, Page, PageDiff, PageDraft, PagePropertiesInput,
+    PageProperty, PageRef, PageSummary, ParentDto, Property, PropertyConfig, PropertyType,
+    PropertyValue, RichText, RollupResult, SearchResult, SelectOption, StatusGroup, TableRow,
     TextContent, TextLink, UserRef, Workspace, WorkspaceError,
 };
 pub use ollama::{

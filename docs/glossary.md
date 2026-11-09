@@ -147,6 +147,7 @@ definition.
 | **ParentDto** | Page/block/workspace parent object in the v2 block API. | spec-032 |
 | **Property** | A data source schema entry: id, name, type and type-specific settings. | spec-033 |
 | **PropertyValue** | A typed page value for a property. | spec-033 |
+| **PageProperty** | A property value with its stable id and type. | spec-033 |
 | **PropertyItem** | A single value or a paginated item of a property. | spec-033 |
 | **Data source** | A table under a database, owning its schema and rows. | spec-033 |
 | **Database** | A container of one or more data sources. | spec-033 |

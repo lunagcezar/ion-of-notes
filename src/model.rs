@@ -6,7 +6,7 @@
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 
 mod diff;
@@ -597,6 +597,10 @@ pub enum ParentDto {
     Page { page_id: String },
     #[serde(rename = "block_id")]
     Block { block_id: String },
+    #[serde(rename = "database_id")]
+    Database { database_id: String },
+    #[serde(rename = "data_source_id")]
+    DataSource { data_source_id: String },
     #[serde(rename = "workspace")]
     Workspace { workspace: bool },
 }
@@ -669,6 +673,388 @@ pub struct BlockInput {
 pub struct BlockChildrenRequest {
     #[serde(default)]
     pub children: Vec<BlockInput>,
+}
+
+/// A data-source property type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PropertyType {
+    Title,
+    RichText,
+    Number,
+    Select,
+    MultiSelect,
+    Status,
+    Date,
+    Checkbox,
+    Url,
+    Email,
+    PhoneNumber,
+    People,
+    Files,
+    Relation,
+    Formula,
+    Rollup,
+    CreatedTime,
+    CreatedBy,
+    LastEditedTime,
+    LastEditedBy,
+    UniqueId,
+}
+
+impl PropertyType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PropertyType::Title => "title",
+            PropertyType::RichText => "rich_text",
+            PropertyType::Number => "number",
+            PropertyType::Select => "select",
+            PropertyType::MultiSelect => "multi_select",
+            PropertyType::Status => "status",
+            PropertyType::Date => "date",
+            PropertyType::Checkbox => "checkbox",
+            PropertyType::Url => "url",
+            PropertyType::Email => "email",
+            PropertyType::PhoneNumber => "phone_number",
+            PropertyType::People => "people",
+            PropertyType::Files => "files",
+            PropertyType::Relation => "relation",
+            PropertyType::Formula => "formula",
+            PropertyType::Rollup => "rollup",
+            PropertyType::CreatedTime => "created_time",
+            PropertyType::CreatedBy => "created_by",
+            PropertyType::LastEditedTime => "last_edited_time",
+            PropertyType::LastEditedBy => "last_edited_by",
+            PropertyType::UniqueId => "unique_id",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SelectOption {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+impl SelectOption {
+    pub fn new(id: impl Into<String>, name: impl Into<String>, color: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            color: color.into(),
+            description: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StatusGroup {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+    #[serde(default)]
+    pub option_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PropertyConfig {
+    #[default]
+    None,
+    Number {
+        format: String,
+    },
+    Select {
+        options: Vec<SelectOption>,
+    },
+    MultiSelect {
+        options: Vec<SelectOption>,
+    },
+    Status {
+        default_option: Option<String>,
+        options: Vec<SelectOption>,
+        groups: Vec<StatusGroup>,
+    },
+    Relation {
+        data_source_id: String,
+        single_property: bool,
+    },
+    Formula {
+        expression: String,
+    },
+    Rollup {
+        relation_property_id: String,
+        rollup_property_id: String,
+        function: String,
+    },
+    UniqueId {
+        prefix: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Property {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    pub r#type: PropertyType,
+    #[serde(default)]
+    pub config: PropertyConfig,
+}
+
+impl Property {
+    pub fn new(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        r#type: PropertyType,
+        config: PropertyConfig,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            description: None,
+            r#type,
+            config,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DateValue {
+    pub start: String,
+    #[serde(default)]
+    pub end: Option<String>,
+    #[serde(default)]
+    pub time_zone: Option<String>,
+}
+
+impl DateValue {
+    pub fn new(start: impl Into<String>) -> Self {
+        Self {
+            start: start.into(),
+            end: None,
+            time_zone: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OptionRef {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PageRef {
+    pub id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FileRef {
+    pub name: String,
+    pub url: String,
+    #[serde(default)]
+    pub expiry_time: Option<String>,
+    #[serde(default)]
+    pub external: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FormulaResult {
+    String(Option<String>),
+    Number(Option<i64>),
+    Boolean(bool),
+    Date(Option<DateValue>),
+    Unsupported,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RollupResult {
+    Number(Option<i64>),
+    Date(Option<DateValue>),
+    Array(Vec<PropertyValue>),
+    Unsupported,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PropertyValue {
+    Title(Vec<RichText>),
+    RichText(Vec<RichText>),
+    Number(Option<i64>),
+    Select(Option<OptionRef>),
+    MultiSelect(Vec<OptionRef>),
+    Status(Option<OptionRef>),
+    Date(Option<DateValue>),
+    Checkbox(bool),
+    Url(Option<String>),
+    Email(Option<String>),
+    PhoneNumber(Option<String>),
+    People(Vec<UserRef>),
+    Files(Vec<FileRef>),
+    Relation(Vec<PageRef>),
+    Formula(FormulaResult),
+    Rollup(RollupResult),
+    CreatedTime(String),
+    CreatedBy(UserRef),
+    LastEditedTime(String),
+    LastEditedBy(UserRef),
+    UniqueId { number: u64, prefix: Option<String> },
+}
+
+impl PropertyValue {
+    /// Apply the v2 clear rule for a property type.
+    pub fn clear(kind: PropertyType) -> Self {
+        match kind {
+            PropertyType::Title => PropertyValue::Title(Vec::new()),
+            PropertyType::RichText => PropertyValue::RichText(Vec::new()),
+            PropertyType::MultiSelect => PropertyValue::MultiSelect(Vec::new()),
+            PropertyType::People => PropertyValue::People(Vec::new()),
+            PropertyType::Files => PropertyValue::Files(Vec::new()),
+            PropertyType::Relation => PropertyValue::Relation(Vec::new()),
+            PropertyType::Checkbox => PropertyValue::Checkbox(false),
+            PropertyType::Number => PropertyValue::Number(None),
+            PropertyType::Select => PropertyValue::Select(None),
+            PropertyType::Status => PropertyValue::Status(None),
+            PropertyType::Date => PropertyValue::Date(None),
+            PropertyType::Url => PropertyValue::Url(None),
+            PropertyType::Email => PropertyValue::Email(None),
+            PropertyType::PhoneNumber => PropertyValue::PhoneNumber(None),
+            PropertyType::Formula => PropertyValue::Formula(FormulaResult::Unsupported),
+            PropertyType::Rollup => PropertyValue::Rollup(RollupResult::Unsupported),
+            PropertyType::CreatedTime => PropertyValue::CreatedTime(String::new()),
+            PropertyType::CreatedBy => PropertyValue::CreatedBy(UserRef::new("")),
+            PropertyType::LastEditedTime => PropertyValue::LastEditedTime(String::new()),
+            PropertyType::LastEditedBy => PropertyValue::LastEditedBy(UserRef::new("")),
+            PropertyType::UniqueId => PropertyValue::UniqueId {
+                number: 0,
+                prefix: None,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PageProperty {
+    pub id: String,
+    pub r#type: PropertyType,
+    pub value: PropertyValue,
+}
+
+impl PageProperty {
+    pub fn new(id: impl Into<String>, r#type: PropertyType, value: PropertyValue) -> Self {
+        Self {
+            id: id.into(),
+            r#type,
+            value,
+        }
+    }
+
+    /// One item per value for list-like properties, one item otherwise.
+    pub fn items(&self) -> Vec<PageProperty> {
+        let make = |value: PropertyValue| PageProperty {
+            id: self.id.clone(),
+            r#type: self.r#type,
+            value,
+        };
+        match &self.value {
+            PropertyValue::Title(values) => values
+                .iter()
+                .map(|value| make(PropertyValue::Title(vec![value.clone()])))
+                .collect(),
+            PropertyValue::RichText(values) => values
+                .iter()
+                .map(|value| make(PropertyValue::RichText(vec![value.clone()])))
+                .collect(),
+            PropertyValue::People(values) => values
+                .iter()
+                .map(|value| make(PropertyValue::People(vec![value.clone()])))
+                .collect(),
+            PropertyValue::Relation(values) => values
+                .iter()
+                .map(|value| make(PropertyValue::Relation(vec![value.clone()])))
+                .collect(),
+            _ => vec![self.clone()],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DataSourceRef {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Database {
+    pub id: String,
+    pub title: Vec<RichText>,
+    #[serde(default)]
+    pub data_sources: Vec<DataSourceRef>,
+    pub parent: ParentDto,
+    #[serde(default)]
+    pub is_inline: bool,
+    #[serde(default)]
+    pub created_time: String,
+    #[serde(default)]
+    pub created_by: Option<UserRef>,
+    #[serde(default)]
+    pub last_edited_time: String,
+    #[serde(default)]
+    pub last_edited_by: Option<UserRef>,
+    #[serde(default)]
+    pub in_trash: bool,
+    #[serde(default)]
+    pub url: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DataSource {
+    pub id: String,
+    pub title: Vec<RichText>,
+    #[serde(default)]
+    pub properties: std::collections::BTreeMap<String, Property>,
+    pub parent: ParentDto,
+    pub database_parent: ParentDto,
+    #[serde(default)]
+    pub rows: Vec<Page>,
+    #[serde(default)]
+    pub created_time: String,
+    #[serde(default)]
+    pub created_by: Option<UserRef>,
+    #[serde(default)]
+    pub last_edited_time: String,
+    #[serde(default)]
+    pub last_edited_by: Option<UserRef>,
+    #[serde(default)]
+    pub in_trash: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct DatabaseInput {
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub parent_page_id: Option<String>,
+    #[serde(default)]
+    pub is_inline: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct DataSourceInput {
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub properties: std::collections::BTreeMap<String, Property>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct PagePropertiesInput {
+    #[serde(default)]
+    pub properties: std::collections::BTreeMap<String, PageProperty>,
 }
 
 /// One row of an inline table database.
@@ -748,6 +1134,10 @@ pub struct Page {
     pub comments: Vec<Comment>,
     pub blocks: Vec<Block>,
     pub rows: Vec<TableRow>,
+    #[serde(default)]
+    pub data_source_id: Option<String>,
+    #[serde(default)]
+    pub properties: std::collections::BTreeMap<String, PageProperty>,
     pub updated_at: String,
 }
 
@@ -769,6 +1159,8 @@ impl Page {
             archived: false,
             comments: Vec::new(),
             rows: Vec::new(),
+            data_source_id: None,
+            properties: std::collections::BTreeMap::new(),
             updated_at: now_label(),
         }
     }
@@ -868,6 +1260,10 @@ pub struct Workspace {
     pub version: u64,
     #[serde(default)]
     pub settings: WorkspaceSettings,
+    #[serde(default)]
+    pub databases: Vec<Database>,
+    #[serde(default)]
+    pub data_sources: Vec<DataSource>,
     #[serde(skip)]
     index: WorkspaceIndex,
 }
@@ -878,6 +1274,8 @@ impl PartialEq for Workspace {
             && self.pages == other.pages
             && self.version == other.version
             && self.settings == other.settings
+            && self.databases == other.databases
+            && self.data_sources == other.data_sources
     }
 }
 
@@ -890,6 +1288,10 @@ struct WorkspaceData {
     version: u64,
     #[serde(default)]
     settings: WorkspaceSettings,
+    #[serde(default)]
+    databases: Vec<Database>,
+    #[serde(default)]
+    data_sources: Vec<DataSource>,
 }
 
 impl<'de> Deserialize<'de> for Workspace {
@@ -908,6 +1310,8 @@ impl<'de> Deserialize<'de> for Workspace {
             pages,
             version: data.version,
             settings: data.settings,
+            databases: data.databases,
+            data_sources: data.data_sources,
         })
     }
 }
@@ -919,6 +1323,8 @@ impl Workspace {
             pages: Vec::new(),
             version: 0,
             settings: WorkspaceSettings::default(),
+            databases: Vec::new(),
+            data_sources: Vec::new(),
             index: WorkspaceIndex::default(),
         }
     }
@@ -993,6 +1399,211 @@ impl Workspace {
             }
         }
         None
+    }
+
+    pub fn database(&self, id: &str) -> Option<&Database> {
+        self.databases.iter().find(|database| database.id == id)
+    }
+
+    pub fn database_mut(&mut self, id: &str) -> Option<&mut Database> {
+        self.databases.iter_mut().find(|database| database.id == id)
+    }
+
+    pub fn data_source(&self, id: &str) -> Option<&DataSource> {
+        self.data_sources
+            .iter()
+            .find(|data_source| data_source.id == id)
+    }
+
+    pub fn data_source_mut(&mut self, id: &str) -> Option<&mut DataSource> {
+        self.data_sources
+            .iter_mut()
+            .find(|data_source| data_source.id == id)
+    }
+
+    /// A page in the tree or a row inside a data source.
+    pub fn page_or_row(&self, id: &str) -> Option<&Page> {
+        self.page(id).or_else(|| {
+            self.data_sources
+                .iter()
+                .flat_map(|data_source| data_source.rows.iter())
+                .find(|page| page.id == id)
+        })
+    }
+
+    pub fn page_or_row_mut(&mut self, id: &str) -> Option<&mut Page> {
+        if let Some(index) = self.pages.iter().position(|page| page.id == id) {
+            return Some(&mut self.pages[index]);
+        }
+        for data_source in &mut self.data_sources {
+            if let Some(index) = data_source.rows.iter().position(|page| page.id == id) {
+                return Some(&mut data_source.rows[index]);
+            }
+        }
+        None
+    }
+
+    /// Create a default database/data source for pages that still use the
+    /// legacy inline `TableRow` shape. Idempotent.
+    pub fn ensure_data_sources(&mut self) {
+        for page in &self.pages {
+            if page.rows.is_empty() {
+                continue;
+            }
+            let database_id = format!("db-{}", page.id);
+            let data_source_id = format!("ds-{}", page.id);
+            if self
+                .data_sources
+                .iter()
+                .any(|data_source| data_source.id == data_source_id)
+            {
+                continue;
+            }
+
+            let now = now_iso();
+            let status_options = vec![
+                SelectOption::new("opt-not-started", "Not started", "gray"),
+                SelectOption::new("opt-in-progress", "In progress", "blue"),
+                SelectOption::new("opt-done", "Done", "green"),
+            ];
+            let properties = BTreeMap::from([
+                (
+                    "title".to_string(),
+                    Property::new("title", "Name", PropertyType::Title, PropertyConfig::None),
+                ),
+                (
+                    "status".to_string(),
+                    Property::new(
+                        "status",
+                        "Status",
+                        PropertyType::Status,
+                        PropertyConfig::Status {
+                            default_option: Some("Not started".to_string()),
+                            options: status_options.clone(),
+                            groups: vec![
+                                StatusGroup {
+                                    id: "group-todo".to_string(),
+                                    name: "To-do".to_string(),
+                                    color: "gray".to_string(),
+                                    option_ids: vec!["opt-not-started".to_string()],
+                                },
+                                StatusGroup {
+                                    id: "group-progress".to_string(),
+                                    name: "In progress".to_string(),
+                                    color: "blue".to_string(),
+                                    option_ids: vec!["opt-in-progress".to_string()],
+                                },
+                                StatusGroup {
+                                    id: "group-complete".to_string(),
+                                    name: "Complete".to_string(),
+                                    color: "green".to_string(),
+                                    option_ids: vec!["opt-done".to_string()],
+                                },
+                            ],
+                        },
+                    ),
+                ),
+                (
+                    "assignee".to_string(),
+                    Property::new(
+                        "assignee",
+                        "Assignee",
+                        PropertyType::RichText,
+                        PropertyConfig::None,
+                    ),
+                ),
+                (
+                    "due".to_string(),
+                    Property::new("due", "Due", PropertyType::Date, PropertyConfig::None),
+                ),
+            ]);
+
+            let rows = page
+                .rows
+                .iter()
+                .map(|row| {
+                    let mut row_page = Page::new(format!("row-{}", row.id), row.name.clone(), "R");
+                    row_page.blocks.clear();
+                    row_page.data_source_id = Some(data_source_id.clone());
+                    let status_id = format!("opt-{}", row.status.to_lowercase().replace(' ', "-"));
+                    row_page.properties.insert(
+                        "title".to_string(),
+                        PageProperty::new(
+                            "title",
+                            PropertyType::Title,
+                            PropertyValue::Title(vec![RichText::text(row.name.clone())]),
+                        ),
+                    );
+                    row_page.properties.insert(
+                        "status".to_string(),
+                        PageProperty::new(
+                            "status",
+                            PropertyType::Status,
+                            PropertyValue::Status(Some(OptionRef {
+                                id: status_id,
+                                name: row.status.clone(),
+                                color: "blue".to_string(),
+                            })),
+                        ),
+                    );
+                    row_page.properties.insert(
+                        "assignee".to_string(),
+                        PageProperty::new(
+                            "assignee",
+                            PropertyType::RichText,
+                            PropertyValue::RichText(vec![RichText::text(row.assignee.clone())]),
+                        ),
+                    );
+                    row_page.properties.insert(
+                        "due".to_string(),
+                        PageProperty::new(
+                            "due",
+                            PropertyType::Date,
+                            PropertyValue::Date(Some(DateValue::new(row.due.clone()))),
+                        ),
+                    );
+                    row_page
+                })
+                .collect();
+
+            if self.database(&database_id).is_none() {
+                self.databases.push(Database {
+                    id: database_id.clone(),
+                    title: vec![RichText::text(page.title.clone())],
+                    data_sources: vec![DataSourceRef {
+                        id: data_source_id.clone(),
+                        name: page.title.clone(),
+                    }],
+                    parent: ParentDto::Page {
+                        page_id: page.id.clone(),
+                    },
+                    is_inline: true,
+                    created_time: now.clone(),
+                    created_by: None,
+                    last_edited_time: now.clone(),
+                    last_edited_by: None,
+                    in_trash: false,
+                    url: String::new(),
+                });
+            }
+            self.data_sources.push(DataSource {
+                id: data_source_id.clone(),
+                title: vec![RichText::text(page.title.clone())],
+                properties,
+                parent: ParentDto::Database {
+                    database_id: database_id.clone(),
+                },
+                database_parent: ParentDto::Page {
+                    page_id: page.id.clone(),
+                },
+                rows,
+                created_time: now.clone(),
+                created_by: None,
+                last_edited_time: now,
+                last_edited_by: None,
+                in_trash: false,
+            });
+        }
     }
 
     pub fn add_page(&mut self, page: Page) -> Result<(), WorkspaceError> {

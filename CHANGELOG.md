@@ -6,6 +6,24 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-033-page-properties-and-data-sources
+
+- Added property schemas (`Property`, `PropertyType`, `PropertyConfig`,
+  select/status options) and typed page values (`PageProperty`,
+  `PropertyValue`, dates, options, relations, formula/rollup results).
+- `Page` now carries `data_source_id` and typed `properties`.
+- Added `Database`, `DataSource`, `DataSourceRef`, `DatabaseInput`,
+  `DataSourceInput` and `PagePropertiesInput`; `Workspace` persists databases
+  and data sources.
+- `Workspace::ensure_data_sources` migrates legacy `TableRow` pages into a
+  default database/data source with row pages and typed title/status/assignee/
+  due values.
+- Added v2 endpoints for databases, data sources, data-source queries, page
+  property writes and paginated property items.
+- Added client methods for databases, data sources, queries and property
+  items.
+- Tests: 9 in `tests/properties.rs`; the suite is 168 tests. Docs updated.
+
 ### Tooling — reusable check scripts
 
 - Added `scripts/check-links.ps1`, `check-mermaid.ps1`, `check-tables.ps1`,

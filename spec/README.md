@@ -70,7 +70,7 @@ Status vocabulary:
 | [030](spec-030-api-v2-foundation.md) | API v2 foundation: versioning, errors, capabilities | implemented | `/api/v2`, `ApiError`, capabilities, request IDs |
 | [031](spec-031-pagination.md) | Cursor pagination and list responses | implemented | `ListResponse`, opaque cursors, client helpers |
 | [032](spec-032-rich-text-and-blocks.md) | Rich text and the block model | implemented | RichText, metadata, children, block endpoints |
-| [033](spec-033-page-properties-and-data-sources.md) | Page properties and data sources | **planned** | Depends on 032 |
+| [033](spec-033-page-properties-and-data-sources.md) | Page properties and data sources | implemented | Typed properties, databases, data sources, migration |
 | [034](spec-034-views-and-database-layouts.md) | Views and database layouts | **planned** | Depends on 033 |
 | [035](spec-035-comments-users-and-files.md) | Comments, users and files | **planned** | Depends on 030/032 |
 | [036](spec-036-webhooks-and-event-delivery.md) | Webhooks and event delivery | **planned** | Depends on 030 |
@@ -87,7 +87,7 @@ Status vocabulary:
 | v2 foundation | spec-030 | **Implemented:** versioning, errors, capabilities |
 | v2 pagination | spec-031 | **Implemented:** cursor lists |
 | v2 rich text/blocks | spec-032 | **Implemented:** rich text, metadata, children |
-| v2 properties/data sources | spec-033 | Typed schema and values |
+| v2 properties/data sources | spec-033 | **Implemented:** typed schema, values, migration |
 | v2 views | spec-034 | Table/board/calendar/list |
 | v2 comments/users/files | spec-035 | Comments, users, uploads |
 | v2 webhooks | spec-036 | Subscriptions, signatures, retries |
