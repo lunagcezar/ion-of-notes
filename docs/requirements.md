@@ -212,8 +212,8 @@
 - FR-70: The optional loopback listener serves concurrent connections without
   blocking one client behind another (implemented in `spec-021`).
 - FR-71: Settings search filters the rows inside the open section, not only the
-  navigation rail (**open**: spec-016 A9; the rail filter is implemented, the
-  row filter is not).
+  navigation rail (implemented in spec-016 A9; both the rail and row filters are
+  implemented).
 
 ### 1.12 Sharing dialog (spec-023)
 
@@ -389,7 +389,7 @@ capabilities) is implemented; the rest are planned.
 | FR-61, FR-62, NFR-11, NFR-12  | `spec-015-hardening-and-performance.md` |
 | FR-63..FR-71, NFR-13..NFR-15  | `spec-016-architecture-follow-up-and-observation.md` |
 | FR-68 (implemented)           | `spec-028-i18n-coverage.md` |
-| FR-71 (open)                  | `spec-016-architecture-follow-up-and-observation.md` A9 |
+| FR-71                         | `spec-016-architecture-follow-up-and-observation.md` A9 |
 | NFR-16 (documentation)        | `spec-029-documentation-and-contributor-guide.md` |
 | FR-78, FR-79, FR-91, FR-94, NFR-17, NFR-19 | `spec-030-api-v2-foundation.md` |
 | FR-80, NFR-19                 | `spec-031-pagination.md` |

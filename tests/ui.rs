@@ -6,7 +6,7 @@ use not_notion::server::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi
 use not_notion::ui::{
     CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan,
     is_valid_email, member_name_from_email, pages_for_view, parse_invite_emails, plan_for,
-    settings_matches, status_color,
+    rows_for, section_matches, settings_matches, status_color, visible_rows,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -51,6 +51,67 @@ fn settings_search_matches_titles_and_descriptions_case_insensitively() {
         "People",
         "Manage who can access"
     ));
+}
+
+#[test]
+fn settings_rows_filter_inside_the_open_section() {
+    let all = rows_for("Preferences");
+    assert!(!all.is_empty());
+    assert_eq!(visible_rows("Preferences", "").len(), all.len());
+    assert_eq!(visible_rows("Preferences", "   ").len(), all.len());
+
+    let language = visible_rows("Preferences", "language");
+    assert_eq!(language.len(), 1);
+    assert_eq!(language[0].id, "language");
+
+    let export = visible_rows("Sidebar", "export");
+    assert!(export.iter().any(|row| row.id == "export"));
+    assert!(export.iter().all(|row| row.section == "Export"));
+
+    assert!(visible_rows("Preferences", "no-such-setting").is_empty());
+    assert!(visible_rows("People", "zzz").is_empty());
+
+    // A row match keeps its section visible even when the section description
+    // does not contain the query.
+    assert!(section_matches(
+        "high contrast",
+        "Preferences",
+        "Appearance, input options, language and time"
+    ));
+    assert!(!section_matches(
+        "no-such-setting",
+        "Preferences",
+        "Appearance, input options, language and time"
+    ));
+}
+
+#[test]
+fn every_settings_row_is_unique_and_searchable() {
+    for page in [
+        "Preferences",
+        "General",
+        "Sidebar",
+        "Offline",
+        "People",
+        "AI assistant",
+    ] {
+        let rows = rows_for(page);
+        assert!(!rows.is_empty(), "{page} should have rows");
+        let mut ids = HashSet::new();
+        for row in rows {
+            assert!(ids.insert(row.id), "{page} has duplicate id {}", row.id);
+            assert!(!row.title.trim().is_empty());
+            assert!(!row.description.trim().is_empty());
+            assert!(!row.section.trim().is_empty());
+            assert!(
+                visible_rows(page, row.title)
+                    .iter()
+                    .any(|found| found.id == row.id),
+                "{page}:{} does not match its own title",
+                row.id
+            );
+        }
+    }
 }
 
 #[test]

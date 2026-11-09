@@ -21,9 +21,9 @@ documentation map.
 
 ## Status (2026-11-08)
 
-- **Specs:** 001–037 implemented; 007 retired; 016 is a plan with A9/B5 open;
-  029 is the documentation pass.
-- **Tests:** 210 integration tests; clippy and `cargo fmt --check` are clean.
+- **Specs:** 001–037 implemented; 007 retired; 016 is a plan with B5 open; 029
+  is the documentation pass.
+- **Tests:** 212 integration tests; clippy and `cargo fmt --check` are clean.
 - **Implemented:** workspace/page CRUD, blocks, inline table, search, theme,
   screenshot mode, members/shares/sync log, version history (50/page), export
   tree, per-page writes with 250 ms debounce, collaboration persistence,

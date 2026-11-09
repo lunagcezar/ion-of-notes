@@ -48,10 +48,11 @@ Out of scope:
   - `cargo fmt --check` is not clean (pre-existing formatting drift).
 
 > **Historical note (2026-11-08):** this evidence describes the code **before**
-> Track A. A1–A8 and A10 were implemented by specs 019–022 and 028; A9 remains
-> open. The current state is 115 tests, clippy clean, `cargo fmt --check` clean,
-> `CollabStore` persisted, per-page writes, indexed lookups and version
-> retention. See `docs/review-findings.md` for the review that confirmed it.
+> Track A. A1–A10 were implemented by specs 019–022, 028 and the A9 follow-up.
+> The current state is 212 tests, clippy clean, `cargo fmt --check` clean,
+> `CollabStore` persisted, per-page writes, indexed lookups, version retention
+> and row-level settings filtering. See `docs/review-findings.md` for the review
+> that confirmed it.
 
 ## Track A — acceptance criteria
 
@@ -296,7 +297,9 @@ spec defines the operational steps.
 - [x] A7 `ClientError::Encode` and remove `unwrap_or_default` from `client.rs`
   (`spec-021`).
 - [x] A8 concurrent `--serve` listener + concurrency test (`spec-021`).
-- [ ] A9 settings row filtering inside sections. **Still open.**
+- [x] A9 settings row filtering inside sections. **Implemented:** a per-page
+  row table in `ui/settings_search.rs`, row filtering in every settings page,
+  and a section-level no-match message.
 - [x] A10 keep `cargo fmt --check` green (`spec-021`).
 
 ### Phase B — clean-room observation
@@ -310,9 +313,9 @@ spec defines the operational steps.
   scope; it can only resume after a new scope decision.
 - [x] B4 derive/update the contract and ADR if needed. **Reviewed 2026-11-08:**
   public developer docs analyzed in `docs/public-api-analysis.md`; ADR-006
-  decides the v2 alignment; specs 030–037 drafted; specs 030–035 implemented.
-- [ ] B5 implement the broader mock server and contract suite. **Pending:**
-  follows the next v2 slices (spec-030 is implemented).
+  decides the v2 alignment; specs 030–037 are implemented.
+- [ ] B5 implement the broader mock server and contract suite. **Pending:** the
+  next Track B step now that specs 030–037 are implemented.
 - [x] B6 record the tooling choice and TLS handling (ADR-005).
 - [x] B7 maintain `docs/reverse-engineering-log.md` (ongoing; the 2026-11-08
   entry records the documentation review and phase status).

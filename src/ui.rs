@@ -34,4 +34,4 @@ pub use palette::{
     Palette, block_menu_options, install_fonts, status_color, strong_font, tab_title,
 };
 pub use search_cache::SearchCache;
-pub use settings_search::settings_matches;
+pub use settings_search::{SettingsRow, rows_for, section_matches, settings_matches, visible_rows};

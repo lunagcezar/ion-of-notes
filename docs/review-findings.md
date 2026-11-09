@@ -111,7 +111,7 @@ listed in §5; they are planned in specs 030–037.
 ### RF-D06 — Unknowns ledger reported "65 tests" and stale U-06 progress
 
 - **Severity:** medium
-- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 210.
+- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 212.
   U-06 still said version history was only planned, while spec-015 implemented
   it and spec-026 added archive/discussions.
 - **Impact:** a reader could not tell which page actions are real.
@@ -247,7 +247,7 @@ documentation pass; each needs its own spec.
 
 | # | Finding | Impact | Suggested next step |
 | - | ------- | ------ | ------------------- |
-| RF-C01 | Settings search filters the navigation rail, not the rows inside the open section (spec-016 A9). | A search can highlight a section but still show unrelated rows. | Implement A9 in a small spec; reuse `ui/settings_search.rs`. |
+| RF-C01 | ~~Settings search filters the navigation rail, not the rows inside the open section (spec-016 A9).~~ | A search can highlight a section but still show unrelated rows. | **Resolved:** per-page row table and filtered rendering (spec-016 A9). |
 | RF-C02 | Auth/sessions, password hashing and Bearer tokens are decided (ADR-003) but not implemented. | The loopback server has no authentication; it is local-only by design. | Production adapter spec; keep the port boundary. |
 | RF-C03 | The WebSocket/CRDT real-time channel is a contract (`GET /api/realtime`) but no server runs it. | "Real-time editing" is a decided target, not a working feature. | Yrs/WebSocket adapter spec after the API review. |
 | RF-C04 | Invite messages are captured in UI state but not sent (`MemberDraft` has no message field). | The optional message is silently discarded. | Add `message` to `MemberDraft` or remove the field from the UI. |
@@ -303,7 +303,7 @@ block limits, retry guidance and the operational error taxonomy).
   or settings changes.
 - **Version retention:** 50 newest snapshots per page, restore records a new
   version.
-- **Test discipline:** 210 integration tests, no `#[cfg(test)]` in `src/`,
+- **Test discipline:** 212 integration tests, no `#[cfg(test)]` in `src/`,
   shared helpers in `tests/common/mod.rs`.
 - **Quality gates:** `cargo test --all-targets`, clippy and `cargo fmt --check`
   are clean at the time of this review.
@@ -339,7 +339,7 @@ block limits, retry guidance and the operational error taxonomy).
 | Done | Comments, users and files | `spec-035` |
 | Done | Webhooks and event delivery | `spec-036` |
 | Done | Limits and retry policy | `spec-037` |
-| Next | Implement A9 settings row filtering | spec-016 |
+| Done | Settings row filtering (A9) | spec-016 |
 | Later | Persist the selected language | spec-028 follow-up |
 | Later | Send or remove the invite message | spec-023 follow-up |
 | Later | Block-anchored inline comments | spec-035 |

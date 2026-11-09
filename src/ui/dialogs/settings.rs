@@ -10,7 +10,7 @@ use super::super::icons::{
     draw_search, draw_settings,
 };
 use super::super::palette::{Palette, strong_font};
-use super::super::settings_search::settings_matches;
+use super::super::settings_search::{rows_for, section_matches, settings_matches, visible_rows};
 use super::super::view::ViewState;
 use super::super::widgets::section_label;
 use super::settings_pages::{
@@ -151,7 +151,7 @@ fn first_settings_match(query: &str) -> Option<&'static str> {
     SETTINGS_NAV
         .iter()
         .flat_map(|(_, items)| items.iter())
-        .find(|(label, description)| settings_matches(query, label, description))
+        .find(|(label, description)| section_matches(query, label, description))
         .map(|(label, _)| *label)
 }
 
@@ -250,7 +250,7 @@ pub(crate) fn render_settings(
                         let visible: Vec<_> = items
                             .iter()
                             .filter(|(label, description)| {
-                                settings_matches(&view.settings_query, label, description)
+                                section_matches(&view.settings_query, label, description)
                             })
                             .collect();
                         if visible.is_empty() {
@@ -294,13 +294,14 @@ pub(crate) fn render_settings(
                             );
                             ui.add_space(26.0);
                             let query = view.settings_query.trim();
-                            if !query.is_empty()
-                                && !settings_matches(
-                                    query,
-                                    page,
-                                    settings_description(page),
-                                )
-                            {
+                            let catalog = rows_for(page);
+                            let rows = visible_rows(page, query);
+                            let matches = if catalog.is_empty() {
+                                settings_matches(query, page, settings_description(page))
+                            } else {
+                                !rows.is_empty()
+                            };
+                            if !query.is_empty() && !matches {
                                 ui.label(
                                     egui::RichText::new(format!(
                                         "No settings match “{query}”. Try a different word."
@@ -311,22 +312,22 @@ pub(crate) fn render_settings(
                             } else {
                                 match page {
                                     "AI assistant" => {
-                                        render_ai_settings(ui, view, palette, commands)
+                                        render_ai_settings(ui, view, palette, commands, &rows)
                                     }
                                     "Preferences" => {
-                                        render_preferences(ui, view, palette, commands)
+                                        render_preferences(ui, view, palette, commands, &rows)
                                     }
-                                    "General" => {
-                                        render_workspace_settings(ui, ws, view, palette, commands)
-                                    }
+                                    "General" => render_workspace_settings(
+                                        ui, ws, view, palette, commands, &rows,
+                                    ),
                                     "Sidebar" => {
-                                        render_sidebar_settings(ui, ws, view, palette, commands)
+                                        render_sidebar_settings(ui, ws, view, palette, commands, &rows)
                                     }
                                     "Offline" => {
-                                        render_offline_settings(ui, ws, view, palette, commands)
+                                        render_offline_settings(ui, ws, palette, &rows)
                                     }
                                     "People" => {
-                                        render_people_settings(ui, ws, view, palette, commands)
+                                        render_people_settings(ui, ws, view, palette, commands, &rows)
                                     }
                                     _ => {
                                         ui.label(

@@ -53,7 +53,7 @@ Status vocabulary:
 | [013](spec-013-interaction-polish-and-modularity.md) | Interaction polish, bugs, modularity | implemented | ADR-004, `switcher`, `page_icon` |
 | [014](spec-014-bug-fixes-and-improvements.md) | Bug fixes and improvements | implemented | Batch of editor/settings/UI fixes |
 | [015](spec-015-hardening-and-performance.md) | Hardening, missing surfaces, performance | implemented | Settings filter, versions, cache, atomic save |
-| [016](spec-016-architecture-follow-up-and-observation.md) | Architecture follow-up and clean-room observation | **plan** | A9 open; B1/B2/B4 done; B3 blocked; B5 pending |
+| [016](spec-016-architecture-follow-up-and-observation.md) | Architecture follow-up and clean-room observation | **plan** | A1–A10 done; B1/B2/B4 done; B3 blocked; B5 pending |
 | [017](spec-017-ui-modularization.md) | UI modularization refactor | implemented | `ui/commands`, `view`, `input`, `apply`, `render/*`, `dialogs/*` |
 | [018](spec-018-domain-and-infrastructure-modularization.md) | Domain and infrastructure modularization | implemented | `model/*`, `collab/export.rs`, `server/http.rs` |
 | [019](spec-019-collaboration-persistence.md) | Collaboration persistence | implemented | `CollabStore`, `collab.json` |
@@ -76,13 +76,13 @@ Status vocabulary:
 | [036](spec-036-webhooks-and-event-delivery.md) | Webhooks and event delivery | implemented | Subscriptions, signatures, retries, all documented events |
 | [037](spec-037-limits-and-operations.md) | Limits, rate limiting and operations | implemented | Rate/size/block limits, retry policy, operational errors |
 
-## 3. Current open work
+## 3. Work status
 
-| Item | Where | Next step |
-| ---- | ----- | --------- |
-| A9 — settings row filtering inside the open section | spec-016 | Small implementation spec |
+| Item | Where | Status |
+| ---- | ----- | ------ |
+| B5 — broader mock server + contract suite | spec-016 | **Next:** v2 slices 030–037 are implemented |
+| A9 — settings row filtering inside the open section | spec-016 | **Implemented:** per-page row table and filtered rendering |
 | B4 — derive the contract from public API docs | spec-016 / ADR-006 | **Reviewed 2026-11-08**; specs 030–037 implemented |
-| B5 - broader mock server + contract suite | spec-016 | After the next v2 slices |
 | B3 - own-account HAR | spec-016 | **Blocked** by the strict B1 scope; needs a new decision |
 | v2 foundation | spec-030 | **Implemented:** versioning, errors, capabilities |
 | v2 pagination | spec-031 | **Implemented:** cursor lists |

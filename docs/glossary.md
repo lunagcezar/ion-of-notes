@@ -109,6 +109,7 @@ definition.
 | **Tab title** | The truncated label shown in the tab strip. | `src/ui/palette.rs` |
 | **Library view** | Recents, Favorites, Shared, Private or Archive filtering of pages. | `src/ui/library_filter.rs` |
 | **Settings matcher** | Pure title/description matcher for settings search. | `src/ui/settings_search.rs` |
+| **SettingsRow** | One searchable settings row (`id`, `section`, `title`, `description`). | spec-016 A9 |
 | **Search cache** | Query/version cache so an unchanged frame does not re-query. | `src/ui/search_cache.rs` |
 | **Onboarding** | The first-run "What is this space for?" choice. | `src/ui/dialogs/onboarding.rs` |
 | **Template** | A starter page blueprint (work, personal, school, meeting, blank). | `src/templates.rs` |

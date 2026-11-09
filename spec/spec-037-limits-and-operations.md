@@ -184,7 +184,7 @@ flowchart TD
   `429`/`529`, retries `500`/`502`/`503`/`504` only for idempotent methods,
   and never retries `public_api_request_blocked` or plan-limit `403`s.
 - Tests: 14 in `tests/limits.rs` plus one retry-policy test in
-  `tests/client.rs`; the suite is 210 tests.
+  `tests/client.rs`; the suite was 210 tests at the time (212 after spec-016 A9).
 
 ## Requirement mapping
 

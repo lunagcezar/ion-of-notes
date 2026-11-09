@@ -16,12 +16,12 @@ in what order, and which document is the source of truth for each concern.
 ## Current status (2026-11-08)
 
 - **Specs:** `spec-001` … `spec-037` implemented; `spec-007` retired;
-  `spec-016` is a plan with A9 still open; `spec-029` is the documentation
+  `spec-016` is a plan with B5 still open; `spec-029` is the documentation
   overhaul; `spec-030` is the v2 foundation; `spec-031` adds pagination;
   `spec-032` adds rich text/blocks; `spec-033` adds properties/data sources;
   `spec-034` adds views; `spec-035` adds comments/users/files; `spec-036` adds
   webhooks; `spec-037` adds limits and operations.
-- **Tests:** 210 integration tests across `tests/`; `cargo clippy --all-targets
+- **Tests:** 212 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
 - **v1 runtime:** in-process server + optional loopback HTTP adapter. There is
   no production Axum/PostgreSQL/WebSocket/auth service yet.

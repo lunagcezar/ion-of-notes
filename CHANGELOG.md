@@ -6,6 +6,16 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed — spec-016 A9 settings row filtering
+
+- Added a per-page `SettingsRow` table in `ui/settings_search.rs`; the table is
+  the single source of truth for matching and rendering.
+- Settings search now filters rows inside the open section, keeps a section in
+  the rail when one of its rows matches, and shows a section-level no-match
+  message.
+- Tests: 2 in `tests/ui.rs` for row filtering, uniqueness and section matching;
+  the suite is 212 tests. Docs updated.
+
 ### Added — spec-037-limits-and-operations
 
 - Added `src/server/limits.rs`: `Plan`, `RequestBudget`, request-size
@@ -22,7 +32,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   uses capped exponential backoff plus caller-supplied jitter and only retries
   the documented statuses.
 - Tests: 14 in `tests/limits.rs` plus one retry-policy test; the suite is
-  210 tests. Docs updated.
+  210 tests at the time (212 after spec-016 A9). Docs updated.
 
 ### Added — spec-036-webhooks-and-event-delivery
 

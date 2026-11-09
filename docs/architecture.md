@@ -101,7 +101,7 @@ src/
     switcher.rs      shared search/new-tab renderer
     page_icon.rs     page-icon catalog/picker/renderer
     search_cache.rs  query/version search cache
-    settings_search.rs settings matcher
+    settings_search.rs settings section/row matcher and row table
     invite.rs        invite email parsing/validation
     library_filter.rs Library tab filtering
     edit_queue.rs    commit plan + debounce

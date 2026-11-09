@@ -166,7 +166,7 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
     switcher.rs    one shared search / new-tab window (DRY)
     page_icon.rs   page-icon feature: catalog, picker and one renderer
     search_cache.rs pure query/version cache so redraws do not re-query
-    settings_search.rs pure settings title/description matcher
+    settings_search.rs pure settings section/row matcher and row table
 tests/
   common/mod.rs    shared test helpers (DRY; not a test target)
   model.rs         one integration-test crate per module (named after it)
@@ -507,7 +507,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (210)    |
+| `cargo test --all-targets`               | Run all integration test crates (212)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |
