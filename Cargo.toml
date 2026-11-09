@@ -22,6 +22,8 @@ tower = { version = "0.5.3", features = ["util"] }
 tower-http = { version = "0.7.1", features = ["trace", "limit"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+argon2 = "0.6.0"
+rusqlite = { version = "0.41.1", features = ["bundled"] }
 
 [profile.dev]
 opt-level = 0

@@ -242,14 +242,14 @@ flowchart TD
     P2 --> CSV[Page B_all.csv]
 ```
 
-## Target data model (v2, planned)
+## Target data model (v2, implemented)
 
 The B4 public API review (`docs/public-api-analysis.md`, ADR-006) adds a richer
-target model. It is scheduled across specs 030–038; the v1 entities above
-remain the implemented shape until each spec lands. The rich text/block side
-(spec-032), properties/data sources (spec-033), views (spec-034),
-comments/users/files (spec-035), webhooks (spec-036) and limits (spec-037) are
-implemented.
+target model. It is scheduled across specs 030–039; the v1 entities above
+remain the compatibility projection. The rich text/block side (spec-032),
+properties/data sources (spec-033), views (spec-034), comments/users/files
+(spec-035), webhooks (spec-036), limits (spec-037), the Axum adapter (spec-038)
+and accounts/sessions (spec-039) are implemented.
 
 ```mermaid
 erDiagram
@@ -268,6 +268,8 @@ erDiagram
     WORKSPACE ||--o{ WEBHOOK_SUBSCRIPTION : webhooks
     WEBHOOK_SUBSCRIPTION ||--o{ WEBHOOK_EVENT : delivers
     WEBHOOK_EVENT ||--o{ WEBHOOK_DELIVERY : attempts
+    WORKSPACE ||--o{ ACCOUNT : accounts
+    ACCOUNT ||--o{ SESSION : sessions
 ```
 
 | Entity | Key fields | Spec |
@@ -286,6 +288,8 @@ erDiagram
 | `WebhookSubscription` | `id`, `url`, `events`, `verification_token`, `status`, `created_at` | 036 |
 | `WebhookEvent` | `id`, `timestamp`, `workspace_id`, `subscription_id`, `integration_id`, `type`, `authors`, `accessible_by`, `entity`, `data`, `attempt_number` | 036 |
 | `WebhookDelivery` | `id`, `subscription_id`, `event_id`, `payload`, `attempts`, `last_status`, `last_error`, `delivered`, `next_attempt_at` | 036 |
+| `Account` | `id`, `member_id`, `email`, `password_hash` (Argon2id PHC), `created_at` | 039 |
+| `Session` | `token_hash` (SHA-256), `member_id`, `created_at`, `expires_at` | 039 |
 | `ListResponse<T>` | `object:"list"`, `type`, `results`, `has_more`, `next_cursor` | 031 |
 | `ApiError` | `object:"error"`, `status`, `code`, `message`, `request_id`, `additional_data` | 030 |
 
@@ -302,10 +306,14 @@ erDiagram
   `created_by`/`rich_text`.
 - `Member` keeps `name`/`email`/`role`; the v2 `User` adds `type`, avatar and
   bot fields.
-- `workspace.json` and `collab.json` remain the documents; data sources and
-  views live on the workspace, and webhook subscriptions and delivery records
-  persist in `collab.json` behind the existing `CollabStore` port. No separate
-  webhook file is introduced.
+- `workspace.json` and `collab.json` remain the default documents; data
+  sources and views live on the workspace, and webhook subscriptions and
+  delivery records persist in `collab.json` behind the existing `CollabStore`
+  port. No separate webhook file is introduced.
+- `--database` selects SQLite. The first slice stores the same workspace and
+  collab JSON documents in `workspace`/`collab` tables, plus normalized
+  `accounts` and `sessions` tables. An empty database imports the JSON
+  documents once; later specs can normalize pages/blocks.
 
 ## Templates and onboarding
 

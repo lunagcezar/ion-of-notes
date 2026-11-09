@@ -9,33 +9,34 @@ in what order, and which document is the source of truth for each concern.
 | -------- | ------------------ |
 | New contributor | `README.md` → `docs/architecture.md` → `docs/contributor-guide.md` → `docs/testing.md` → `docs/glossary.md` |
 | Agent starting a task | `AGENTS.md` → `spec/README.md` → `docs/architecture.md` → the relevant spec → `docs/review-findings.md` |
-| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007 |
+| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008 |
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
 ## Current status (2026-11-08)
 
-- **Specs:** `spec-001` … `spec-037` implemented; `spec-007` retired;
+- **Specs:** `spec-001` … `spec-039` implemented; `spec-007` retired;
   `spec-016` is a plan with B5 done; `spec-029` is the documentation
   overhaul; `spec-030` is the v2 foundation; `spec-031` adds pagination;
   `spec-032` adds rich text/blocks; `spec-033` adds properties/data sources;
   `spec-034` adds views; `spec-035` adds comments/users/files; `spec-036` adds
   webhooks; `spec-037` adds limits and operations; `spec-038` adds the Axum
-  web server and B5 contract suite.
-- **Tests:** 221 integration tests across `tests/`; `cargo clippy --all-targets
+  web server and B5 contract suite; `spec-039` adds sessions, Argon2id and
+  SQLite storage.
+- **Tests:** 231 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
-- **v1 runtime:** in-process server + optional loopback HTTP adapter. There is
-  no production Axum/PostgreSQL/WebSocket/auth service yet.
+- **Runtime:** in-process server + Axum HTTP adapter; `--database` selects
+  SQLite with Argon2id accounts and sessions. PostgreSQL and the WebSocket/CRDT
+  transport are still adapters to build.
 - **Collaboration:** members, shares, sync log and version snapshots persist in
-  `collab.json`; real-time CRDT transport is a decided contract, not a running
-  server.
+  `collab.json` or SQLite; real-time CRDT transport is a decided contract, not
+  a running server.
 - **Clean room:** strict public-behavior-only observation. No capture, proxy,
   Wireshark, source maps or decompilation. B3 is blocked; **B4 public docs were
   reviewed on 2026-11-08** (`docs/public-api-analysis.md`); the v2 foundation,
   pagination, rich text/blocks, properties/data sources, views,
   comments/users/files, webhooks, limits and the Axum adapter are implemented
-  (specs 030–038);
-  B5 follows.
+  (specs 030–038); sessions and SQLite are implemented (spec-039). B5 is done.
 - **Localization:** core navigation, Share, Library, page actions, comments and
   Settings are translated into `en`, `pt-BR` and `eo`; remaining strings are
   migrated incrementally.

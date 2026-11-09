@@ -4,6 +4,9 @@
 //! `WorkspaceApi` seam. `serve_once` / `serve_forever` expose the very same
 //! contract over loopback HTTP/1.1 for the optional `--serve` mode.
 
+use crate::auth::{
+    self, AuthStore, LoginInput, NoAuthStore, Session, SessionInfo, SessionResponse,
+};
 use crate::collab::{
     ChangeOp, CollabState, Member, MemberDraft, Share, export_tree, realtime_contract,
 };
@@ -171,6 +174,7 @@ pub struct WorkspaceServer {
     pub collab: CollabState,
     store: Box<dyn WorkspaceStore>,
     collab_store: Box<dyn CollabStore>,
+    auth_store: Box<dyn AuthStore>,
     connections: Vec<Connection>,
     request_log: Vec<RequestLogEntry>,
     allow_insecure_webhooks: bool,
@@ -229,6 +233,22 @@ impl WorkspaceServer {
         S: WorkspaceStore + 'static,
         C: CollabStore + 'static,
     {
+        Self::with_stores_and_auth(workspace, collab, store, collab_store, NoAuthStore)
+    }
+
+    /// Inject workspace, collaboration and auth adapters.
+    pub fn with_stores_and_auth<S, C, A>(
+        workspace: Workspace,
+        collab: CollabState,
+        store: S,
+        collab_store: C,
+        auth_store: A,
+    ) -> Self
+    where
+        S: WorkspaceStore + 'static,
+        C: CollabStore + 'static,
+        A: AuthStore + 'static,
+    {
         let owner = collab.owner_id();
         let workspace_id = workspace.settings.id.clone();
         Self {
@@ -236,6 +256,7 @@ impl WorkspaceServer {
             collab,
             store: Box::new(store),
             collab_store: Box::new(collab_store),
+            auth_store: Box::new(auth_store),
             connections: vec![Connection::owner(owner, workspace_id)],
             request_log: Vec::new(),
             allow_insecure_webhooks: false,
@@ -259,8 +280,28 @@ impl WorkspaceServer {
         self.connections.push(connection);
     }
 
-    pub fn connection_for_token(&self, token: &str) -> Option<&Connection> {
-        self.connections.iter().find(|c| c.token == token)
+    pub fn connection_for_token(&self, token: &str) -> Option<Connection> {
+        if let Some(connection) = self.connections.iter().find(|c| c.token == token) {
+            return Some(connection.clone());
+        }
+        let token_hash = auth::hash_token(token);
+        let session = self.auth_store.find_session(&token_hash).ok().flatten()?;
+        if auth::session_is_expired(&session) {
+            let _ = self.auth_store.delete_session(&token_hash);
+            return None;
+        }
+        let member = self
+            .collab
+            .members
+            .iter()
+            .find(|member| member.id == session.member_id)?;
+        Some(Connection::new(
+            format!("session-{}", member.id),
+            token,
+            member.id.clone(),
+            self.workspace.settings.id.clone(),
+            Capability::all(),
+        ))
     }
 
     /// In-memory request log for `/api/v2`; the same IDs are written to the
@@ -328,6 +369,179 @@ impl WorkspaceServer {
     /// the change was saved (`503 service_unavailable` with retry guidance).
     pub fn simulate_write_timeout(&mut self, enabled: bool) {
         self.simulate_write_timeout = enabled;
+    }
+
+    /// `POST /api/v2/auth/login`: verify an account and create a session.
+    fn login(&mut self, request: &ApiRequest, request_id: &str) -> ApiResponse {
+        let input = match parse_body::<LoginInput>(request) {
+            Ok(input) => input,
+            Err(message) => {
+                return v2_error(400, CODE_INVALID_JSON, message, request_id, None);
+            }
+        };
+        if input.email.trim().is_empty() || input.password.is_empty() {
+            return v2_error(
+                400,
+                CODE_VALIDATION_ERROR,
+                "email and password are required",
+                request_id,
+                None,
+            );
+        }
+        let email = input.email.trim().to_lowercase();
+        let _ = self.auth_store.prune_sessions(&now_iso());
+        let account = match self.auth_store.find_account(&email) {
+            Ok(Some(account)) => account,
+            Ok(None) => {
+                return v2_error(
+                    401,
+                    CODE_UNAUTHORIZED,
+                    "invalid email or password",
+                    request_id,
+                    None,
+                );
+            }
+            Err(error) => {
+                return v2_error(500, CODE_INTERNAL, error.to_string(), request_id, None);
+            }
+        };
+        if !auth::verify_password(&account.password_hash, &input.password) {
+            return v2_error(
+                401,
+                CODE_UNAUTHORIZED,
+                "invalid email or password",
+                request_id,
+                None,
+            );
+        }
+        let Some(member) = self
+            .collab
+            .members
+            .iter()
+            .find(|member| member.id == account.member_id)
+            .cloned()
+        else {
+            return v2_error(
+                401,
+                CODE_UNAUTHORIZED,
+                "account has no workspace member",
+                request_id,
+                None,
+            );
+        };
+        let token = auth::new_session_token();
+        let session = Session {
+            token_hash: auth::hash_token(&token),
+            member_id: member.id.clone(),
+            created_at: now_iso(),
+            expires_at: auth::session_expiry(),
+        };
+        if let Err(error) = self.auth_store.save_session(&session) {
+            return v2_error(500, CODE_INTERNAL, error.to_string(), request_id, None);
+        }
+        self.connections.push(Connection::new(
+            format!("session-{}", member.id),
+            token.clone(),
+            member.id.clone(),
+            self.workspace.settings.id.clone(),
+            Capability::all(),
+        ));
+        json(
+            200,
+            Envelope::ok(SessionResponse {
+                token,
+                expires_at: session.expires_at,
+                member_id: member.id,
+                email: member.email,
+                name: member.name,
+            }),
+        )
+    }
+
+    /// Session routes that need an already-resolved connection.
+    fn handle_v2_auth(
+        &mut self,
+        request: &ApiRequest,
+        path: &str,
+        request_id: &str,
+        connection: &Connection,
+    ) -> Option<ApiResponse> {
+        if path == "/api/v2/auth/logout" && request.method == Method::Post {
+            let token_hash = auth::hash_token(&connection.token);
+            if let Err(error) = self.auth_store.delete_session(&token_hash) {
+                return Some(v2_error(
+                    500,
+                    CODE_INTERNAL,
+                    error.to_string(),
+                    request_id,
+                    None,
+                ));
+            }
+            // The demo owner token is not a persisted session; keep it usable.
+            if connection.id.starts_with("session-") {
+                self.connections
+                    .retain(|existing| existing.token != connection.token);
+            }
+            return Some(json(200, Envelope::ok("logged_out".to_string())));
+        }
+        if path == "/api/v2/auth/session" && request.method == Method::Get {
+            let token_hash = auth::hash_token(&connection.token);
+            let session = match self.auth_store.find_session(&token_hash) {
+                Ok(Some(session)) => session,
+                Ok(None) => {
+                    return Some(v2_error(
+                        401,
+                        CODE_UNAUTHORIZED,
+                        "session not found",
+                        request_id,
+                        None,
+                    ));
+                }
+                Err(error) => {
+                    return Some(v2_error(
+                        500,
+                        CODE_INTERNAL,
+                        error.to_string(),
+                        request_id,
+                        None,
+                    ));
+                }
+            };
+            if auth::session_is_expired(&session) {
+                let _ = self.auth_store.delete_session(&token_hash);
+                return Some(v2_error(
+                    401,
+                    CODE_UNAUTHORIZED,
+                    "session expired",
+                    request_id,
+                    None,
+                ));
+            }
+            let Some(member) = self
+                .collab
+                .members
+                .iter()
+                .find(|member| member.id == session.member_id)
+            else {
+                return Some(v2_error(
+                    401,
+                    CODE_UNAUTHORIZED,
+                    "session member not found",
+                    request_id,
+                    None,
+                ));
+            };
+            return Some(json(
+                200,
+                Envelope::ok(SessionInfo {
+                    member_id: member.id.clone(),
+                    email: member.email.clone(),
+                    name: member.name.clone(),
+                    expires_at: session.expires_at,
+                }),
+            ));
+        }
+        None
     }
 
     /// Reject a mutating request whose `If-Match` version is stale.
@@ -542,6 +756,8 @@ fn required_capability(method: Method, path: &str) -> Option<Capability> {
         (Method::Patch | Method::Delete, p) if p.starts_with("/api/v2/databases/") => {
             Some(Capability::UpdateContent)
         }
+        (Method::Get, "/api/v2/auth/session") => Some(Capability::ReadContent),
+        (Method::Post, "/api/v2/auth/logout") => Some(Capability::ReadContent),
         (Method::Get, "/api/v2/webhooks") => Some(Capability::ReadContent),
         (Method::Post, "/api/v2/webhooks") => Some(Capability::InsertContent),
         (Method::Get, "/api/v2/webhook_deliveries") => Some(Capability::ReadContent),
@@ -661,6 +877,26 @@ impl WorkspaceServer {
             );
         }
 
+        if request.method == Method::Post && path == "/api/v2/auth/login" {
+            let decision =
+                self.rate_limiter
+                    .check("auth-login", &self.workspace.settings.id, Instant::now());
+            if !decision.allowed {
+                let reason = decision.reason.unwrap_or(REASON_CONNECTION);
+                return v2_error(
+                    429,
+                    CODE_RATE_LIMITED,
+                    format!("rate limit exceeded: {reason}"),
+                    request_id,
+                    Some(serde_json::json!({
+                        "rate_limit_reason": reason,
+                        "retry_after": decision.retry_after.to_string(),
+                    })),
+                );
+            }
+            return self.login(request, request_id);
+        }
+
         let Some(token) = request.header(AUTH_HEADER).and_then(parse_bearer) else {
             return v2_error(
                 401,
@@ -670,7 +906,7 @@ impl WorkspaceServer {
                 None,
             );
         };
-        let Some(connection) = self.connection_for_token(token).cloned() else {
+        let Some(connection) = self.connection_for_token(token) else {
             return v2_error(
                 401,
                 CODE_UNAUTHORIZED,
@@ -734,6 +970,10 @@ impl WorkspaceServer {
                 request_id,
                 Some(serde_json::json!({ "required_capability": required.as_str() })),
             );
+        }
+
+        if let Some(response) = self.handle_v2_auth(request, path, request_id, &connection) {
+            return response;
         }
 
         self.workspace.ensure_data_sources();

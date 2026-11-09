@@ -6,6 +6,22 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-039 sessions, Argon2id and SQLite storage
+
+- Added `src/auth.rs`: accounts, Argon2id password hashes, opaque session
+  tokens (SHA-256 at rest), `AuthStore` port plus null/in-memory adapters.
+- Added `src/store/sqlite.rs`: `SqliteStore` implementing `WorkspaceStore`,
+  `CollabStore` and `AuthStore`, with WAL mode and JSON-document storage.
+- `--database <path>` selects SQLite for `--serve`; an empty database migrates
+  the existing JSON workspace/collab documents once.
+- Added `POST /api/v2/auth/login`, `POST /api/v2/auth/logout` and
+  `GET /api/v2/auth/session`; sessions survive server restarts.
+- The owner account is seeded from `ION_OF_NOTES_OWNER_PASSWORD` (with a
+  documented development default).
+- Added `docs/adr-008-sessions-and-sqlite.md`.
+- Tests: 5 in `tests/auth.rs`, 3 in `tests/sqlite_store.rs` and one CLI test;
+  the suite is 231 tests. Docs updated.
+
 ### Added — spec-038 Axum web server and contract suite
 
 - Added `src/server/web.rs`: an Axum/Tokio/Tower adapter for `--serve` behind

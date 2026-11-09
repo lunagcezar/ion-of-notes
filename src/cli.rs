@@ -11,12 +11,15 @@ pub enum Mode {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Args {
     pub mode: Mode,
+    /// Optional SQLite database for `--serve`; JSON remains the fallback.
+    pub database: Option<PathBuf>,
 }
 
 impl Args {
     /// Parse an argv-like iterator (the first item is the program name).
     pub fn parse<I: IntoIterator<Item = String>>(iter: I) -> Self {
         let mut mode = Mode::Desktop { screenshot: None };
+        let mut database = None;
         let mut args = iter.into_iter();
         args.next();
         while let Some(arg) = args.next() {
@@ -33,9 +36,14 @@ impl Args {
                         mode = Mode::Serve { addr };
                     }
                 }
+                "--database" => {
+                    if let Some(path) = args.next() {
+                        database = Some(PathBuf::from(path));
+                    }
+                }
                 _ => {}
             }
         }
-        Self { mode }
+        Self { mode, database }
     }
 }

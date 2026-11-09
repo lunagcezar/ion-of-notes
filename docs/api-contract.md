@@ -345,6 +345,21 @@ v1 routes stay stable.
 - The transport body cap is 2 MB; the v2 500 KB check still returns the
   documented `400 validation_error`.
 - Ctrl+C triggers graceful shutdown.
+- `--database <path>` selects the SQLite adapter; without it the server uses
+  the JSON documents. An empty database imports the existing JSON documents.
+
+### 8.1.2 v2 authentication (implemented, spec-039)
+
+- `POST /api/v2/auth/login` takes `{email, password}` and returns
+  `{token, expires_at, member_id, email, name}`. The raw `sess_<uuid>` token is
+  returned once.
+- `POST /api/v2/auth/logout` revokes the current session.
+- `GET /api/v2/auth/session` returns the current member and expiry.
+- Passwords are Argon2id PHC strings; only the SHA-256 hash of a session token
+  is stored. Sessions last 30 days and survive a server restart.
+- The demo `owner-token` remains available when no auth store is configured
+  (desktop/tests). The SQLite server seeds the owner account from
+  `ION_OF_NOTES_OWNER_PASSWORD` (development default documented in ADR-008).
 
 | Concern | v1 today | v2 target | Spec | Status |
 | ------- | -------- | --------- | ---- | ------ |
@@ -367,6 +382,9 @@ Implemented v2 routes:
 
 | Method | Path | Required capability |
 | ------ | ---- | ------------------- |
+| `POST` | `/api/v2/auth/login` | none (version header only) |
+| `POST` | `/api/v2/auth/logout` | read content |
+| `GET` | `/api/v2/auth/session` | read content |
 | `GET` / `PUT` | `/api/v2/workspace` | read / update content |
 | `GET` / `POST` | `/api/v2/pages` | read / insert content |
 | `GET` / `PATCH` / `DELETE` | `/api/v2/pages/{id}` | read / update content |

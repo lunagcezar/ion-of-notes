@@ -11,6 +11,9 @@ use crate::collab::CollabState;
 use crate::model::Workspace;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+
+pub mod sqlite;
+pub use sqlite::SqliteStore;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};

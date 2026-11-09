@@ -318,6 +318,13 @@ capabilities) is implemented; the rest are planned.
 - FR-95: `--serve` uses an Axum/Tokio/Tower HTTP adapter behind the existing
   `WorkspaceApi` seam, with graceful shutdown, request IDs and `Retry-After`
   (implemented in `spec-038`).
+- FR-96: Accounts authenticate with Argon2id passwords; login returns an opaque
+  session token, logout revokes it, and sessions survive a server restart
+  (implemented in `spec-039`).
+- FR-97: `--database <path>` stores workspace, collaboration, accounts and
+  sessions in SQLite; an empty database migrates the existing JSON documents
+  once, and JSON remains the desktop/default fallback (implemented in
+  `spec-039`).
 
 ## 2. Non-functional requirements
 
@@ -375,6 +382,10 @@ capabilities) is implemented; the rest are planned.
   model without loss (spec-032/033).
 - NFR-21: The production HTTP adapter is infrastructure only; no framework type
   appears in the domain or application core (ADR-007, spec-038).
+- NFR-22: Passwords are never stored in plaintext; session tokens are stored
+  only as hashes and expire (ADR-008, spec-039).
+- NFR-23: SQLite is an adapter behind the existing store ports; JSON and SQLite
+  behave identically for the same snapshots (spec-039).
 
 ## 3. Requirement → spec map
 
@@ -405,6 +416,7 @@ capabilities) is implemented; the rest are planned.
 | FR-89                         | `spec-036-webhooks-and-event-delivery.md` |
 | FR-90, NFR-18                 | `spec-037-limits-and-operations.md` |
 | FR-95, NFR-21                 | `spec-038-axum-web-server-and-contract-suite.md` |
+| FR-96, FR-97, NFR-22, NFR-23  | `spec-039-sessions-and-sqlite-storage.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

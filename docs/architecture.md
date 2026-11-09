@@ -71,7 +71,10 @@ src/
   collab.rs          accounts, sharing, sync, versions, realtime DTOs
   collab/
     export.rs        markdown/CSV export tree
-  store.rs           WorkspaceStore + CollabStore ports and JSON adapters
+  auth.rs            accounts, Argon2id passwords, sessions, AuthStore port
+  store.rs           WorkspaceStore + CollabStore + AuthStore ports and JSON adapters
+  store/
+    sqlite.rs        SQLite adapter for workspace, collaboration and auth
   server.rs          WorkspaceServer, WorkspaceApi, routes
   server/
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
@@ -214,12 +217,13 @@ flowchart LR
 
 Current state:
 
-- members, shares, sync log and page versions persist in `collab.json`;
+- members, shares, sync log and page versions persist in `collab.json` by
+  default, or in SQLite with `--database` (spec-039);
 - `--serve` uses the Axum/Tokio adapter (spec-038); the hand-written loopback
   listener remains for parser tests and as a fallback;
 - v1 and v2 routes are served through the same `WorkspaceApi` seam;
-- sessions, password hashing, WebSocket and Yrs are staged behind the same
-  seams (ADR-003, ADR-007);
+- Argon2id accounts and opaque sessions are implemented (spec-039); WebSocket
+  and Yrs are staged behind the same seams (ADR-003, ADR-007, ADR-008);
 - `GET /api/realtime` returns the decided contract as data.
 
 ## 8. Design principles in practice
@@ -314,12 +318,12 @@ new stores and delivery workers.
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
 - The v2 **foundation, pagination, rich text/blocks, properties/data sources,
-  views, comments/users/files, webhooks and limits** exist (specs 030-038):
+  views, comments/users/files, webhooks and limits** exist (specs 030-039):
   `/api/v2`, version/auth/capability checks, structured errors, request IDs,
   cursor list envelopes, rich text, block metadata/children, typed properties,
   databases, data sources, views, comments, users, file uploads, signed webhook
-  delivery, the operational limits/retry contract and the Axum production HTTP
-  adapter.
+  delivery, the operational limits/retry contract, the Axum production HTTP
+  adapter and SQLite-backed accounts/sessions.
 
 ## 12. Further reading
 
@@ -330,3 +334,4 @@ new stores and delivery workers.
 - `docs/adr-003-self-hosted-collaborative-api.md` — API decision.
 - `docs/adr-004-modularization-decision.md` - modularization decision.
 - `docs/adr-007-production-web-server.md` - Axum/Tokio/Tower server decision.
+- `docs/adr-008-sessions-and-sqlite.md` - sessions, Argon2id and SQLite decision.

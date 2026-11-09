@@ -21,17 +21,18 @@ documentation map.
 
 ## Status (2026-11-08)
 
-- **Specs:** 001–038 implemented; 007 retired; 016 is a plan with B5 done; 029
+- **Specs:** 001–039 implemented; 007 retired; 016 is a plan with B5 done; 029
   is the documentation pass.
-- **Tests:** 221 integration tests; clippy and `cargo fmt --check` are clean.
+- **Tests:** 231 integration tests; clippy and `cargo fmt --check` are clean.
 - **Implemented:** workspace/page CRUD, blocks, inline table, search, theme,
   screenshot mode, members/shares/sync log, version history (50/page), export
   tree, per-page writes with 250 ms debounce, collaboration persistence,
   functional Share/Library/Settings/page-action/comment/onboarding/template
   surfaces, and en/pt-BR/eo translations for core UI copy.
-- **Web server:** `--serve` uses an Axum/Tokio/Tower HTTP adapter (spec-038);
-  sessions/password hashing, the WebSocket + Yrs CRDT channel and
-  PostgreSQL/SQLx storage are the next adapters.
+- **Web server:** `--serve` uses an Axum/Tokio/Tower HTTP adapter (spec-038).
+  `--database <path>` selects SQLite; Argon2id accounts, opaque sessions,
+  login/logout/session routes and JSON→SQLite migration are implemented
+  (spec-039). The WebSocket + Yrs CRDT channel and PostgreSQL remain next.
 - **Public API alignment (B4):** the public Notion developer docs were reviewed
   and turned into a v2 roadmap. The **foundation, pagination, rich text/blocks,
   properties/data sources, views, comments/users/files, webhooks and limits are

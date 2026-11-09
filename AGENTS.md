@@ -36,10 +36,12 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | ---------------- | ----------------------------------- | -------------------------------------------------- |
 | Language         | Rust (stable, edition 2024)         | `cargo build`, `cargo test`                        |
 | Window / UI      | eframe 0.37 + egui 0.37             | Immediate-mode UI; light and dark themes            |
-| Data model       | `serde` + `serde_json`              | JSON persistence of the whole workspace             |
+| Data model       | `serde` + `serde_json`              | JSON documents; SQLite document store for `--database` |
 | PNG output       | `image` (png feature only)          | `--screenshot` writes the rendered window           |
 | Display fonts    | Segoe UI (Windows system fonts)     | Optional bold "Strong" family; egui built-ins are the fallback |
 | Server transport | Axum 0.8 + Tokio + Tower/Tower-HTTP | Optional HTTP server for `--serve` (spec-038)        |
+| Persistence      | JSON files + `rusqlite` (bundled)   | `SqliteStore` behind the existing store ports (spec-039) |
+| Auth             | Argon2id + opaque sessions          | Hashed passwords and session tokens (spec-039)      |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
@@ -108,7 +110,10 @@ src/
     diff.rs        changed/added/removed/reordered page diff
     index.rs       derived page/children lookup index
     settings.rs    persisted workspace settings
-  store.rs         WorkspaceStore + CollabStore ports, JSON/null adapters, data_path/collab_path
+  auth.rs          accounts, Argon2id passwords, opaque sessions, AuthStore port
+  store.rs         WorkspaceStore + CollabStore + AuthStore ports, JSON/null adapters
+  store/
+    sqlite.rs      SQLite adapter for workspace, collaboration and auth (spec-039)
   server.rs        WorkspaceServer (workspace + collaboration state), WorkspaceApi trait, routes
   server/
     http.rs        legacy loopback HTTP/1.1 adapter (parse/format/tests)
@@ -195,6 +200,8 @@ tests/
   webhooks.rs      subscriptions, signatures, aggregation, delivery and retry
   limits.rs        rate/size/block limits, Retry-After, 409/503/529
   web.rs           Axum HTTP adapter contract suite
+  auth.rs          password hashing, login/logout/session, SQLite restart
+  sqlite_store.rs  SQLite round-trip, accounts/sessions, JSON migration
   integration.rs   end-to-end client/server/store scenario
 ```
 
@@ -510,13 +517,14 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (221)    |
+| `cargo test --all-targets`               | Run all integration test crates (231)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |
 | `pwsh -File scripts/check-docs.ps1`      | Links, Mermaid fences and table columns  |
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
 | `cargo run -- --serve 127.0.0.1:8787`   | Run the Axum API server                  |
+| `cargo run -- --serve 127.0.0.1:8787 --database data.db` | Run with SQLite persistence |
 
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust

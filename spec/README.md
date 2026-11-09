@@ -76,6 +76,7 @@ Status vocabulary:
 | [036](spec-036-webhooks-and-event-delivery.md) | Webhooks and event delivery | implemented | Subscriptions, signatures, retries, all documented events |
 | [037](spec-037-limits-and-operations.md) | Limits, rate limiting and operations | implemented | Rate/size/block limits, retry policy, operational errors |
 | [038](spec-038-axum-web-server-and-contract-suite.md) | Axum web server and contract suite | implemented | Axum/Tokio adapter, B5 contract suite, graceful shutdown |
+| [039](spec-039-sessions-and-sqlite-storage.md) | Sessions, Argon2id and SQLite storage | implemented | SQLite ports, login/logout/session, JSON migration |
 
 ## 3. Work status
 
@@ -96,7 +97,7 @@ Status vocabulary:
 | Persist the selected language | spec-028 follow-up | Add to `WorkspaceSettings` or local config |
 | Send or remove the invite message | spec-023 follow-up | Add `message` to `MemberDraft` or drop the UI field |
 | Block-anchored inline comments | spec-026 follow-up | Model + tests |
-| Production auth / WebSocket / PostgreSQL | ADR-003 | **Next:** spec-039 (sessions + SQLite), then spec-040/041 |
+| Production auth / WebSocket / PostgreSQL | ADR-003 | **Sessions + SQLite done (spec-039);** next: spec-040 real-time, spec-041 webhooks/rate limits |
 
 ## 4. Spec template
 

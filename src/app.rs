@@ -12,10 +12,13 @@
 //! `server -> store`. The domain never depends on this outer layer, and no
 //! egui type appears here.
 
+use crate::auth::{self, Account, AuthStore};
 use crate::client::Client;
-use crate::model::Workspace;
+use crate::collab::{CollabState, Role};
+use crate::model::{Workspace, now_iso};
 use crate::server::WorkspaceServer;
-use crate::store;
+use crate::store::{self, SqliteStore};
+use std::io;
 use std::path::{Path, PathBuf};
 
 /// Derive a collaboration path for a caller-supplied workspace path.
@@ -41,6 +44,75 @@ pub fn build_server_at(path: PathBuf) -> WorkspaceServer {
 pub fn build_server_at_paths(workspace_path: PathBuf, collab_path: PathBuf) -> WorkspaceServer {
     let workspace = store::load_or_seed(&workspace_path);
     WorkspaceServer::with_paths(workspace, workspace_path, collab_path)
+}
+
+/// Compose a server backed by SQLite, migrating the default JSON documents
+/// when the database is empty.
+pub fn build_server_sqlite(database: PathBuf) -> io::Result<WorkspaceServer> {
+    build_server_sqlite_at(database, store::data_path(), store::collab_path())
+}
+
+/// Compose a SQLite server with explicit JSON migration sources.
+pub fn build_server_sqlite_at(
+    database: PathBuf,
+    workspace_path: PathBuf,
+    collab_path: PathBuf,
+) -> io::Result<WorkspaceServer> {
+    let sqlite = SqliteStore::open(&database)?;
+    let workspace = match sqlite.load_workspace()? {
+        Some(workspace) => workspace,
+        None => {
+            let workspace = store::load_or_seed(&workspace_path);
+            sqlite.persist_workspace(&workspace)?;
+            workspace
+        }
+    };
+    let collab = match sqlite.load_collab()? {
+        Some(collab) => collab,
+        None => {
+            let collab = store::load_collab_or_seed(&collab_path);
+            sqlite.persist_collab(&collab)?;
+            collab
+        }
+    };
+    seed_owner_account(&sqlite, &collab)?;
+    Ok(WorkspaceServer::with_stores_and_auth(
+        workspace,
+        collab,
+        sqlite.clone(),
+        sqlite.clone(),
+        sqlite,
+    ))
+}
+
+fn seed_owner_account(store: &SqliteStore, collab: &CollabState) -> io::Result<()> {
+    let Some(owner) = collab
+        .members
+        .iter()
+        .find(|member| member.role == Role::Owner)
+    else {
+        return Ok(());
+    };
+    let email = owner.email.to_lowercase();
+    if store.find_account(&email)?.is_some() {
+        return Ok(());
+    }
+    let password = std::env::var("ION_OF_NOTES_OWNER_PASSWORD")
+        .unwrap_or_else(|_| auth::DEFAULT_OWNER_PASSWORD.to_string());
+    let password_hash = auth::hash_password(&password).map_err(io::Error::other)?;
+    store.upsert_account(&Account {
+        id: format!("account-{}", owner.id),
+        member_id: owner.id.clone(),
+        email,
+        password_hash,
+        created_at: now_iso(),
+    })?;
+    if std::env::var("ION_OF_NOTES_OWNER_PASSWORD").is_err() {
+        eprintln!(
+            "warning: seeded the owner account with the development password; set ION_OF_NOTES_OWNER_PASSWORD"
+        );
+    }
+    Ok(())
 }
 
 /// Compose the object graph for the desktop window.

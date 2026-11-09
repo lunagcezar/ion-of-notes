@@ -171,6 +171,9 @@ definition.
 | **Retry-After** | Seconds to wait after a 429/529 before retrying. | spec-037 |
 | **RetryPolicy** | Client decision: retryable status, delay and attempt cap. | spec-037 |
 | **Axum adapter** | Tokio/Tower HTTP transport for `--serve`; calls `WorkspaceApi`. | spec-038 |
+| **Account** | A local login record with an Argon2id password hash. | spec-039 |
+| **Session** | An opaque login token stored only as a SHA-256 hash with an expiry. | spec-039 |
+| **SqliteStore** | SQLite adapter for workspace, collaboration and auth state. | spec-039 |
 
 ## 9. Naming rules
 

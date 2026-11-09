@@ -68,7 +68,8 @@ Costs:
 
 ## Follow-up
 
-- spec-039: sessions, Argon2id, SQLite behind the store ports, JSON migration.
+- spec-039: **implemented** — sessions, Argon2id, SQLite behind the store
+  ports and JSON migration.
 - spec-040: WebSocket/CRDT transport.
 - spec-041: TLS webhook delivery and shared rate limiting.
 - Split hot paths into typed async application services when the global mutex

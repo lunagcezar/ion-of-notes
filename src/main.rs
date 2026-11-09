@@ -9,8 +9,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse(std::env::args());
     match args.mode {
         Mode::Serve { addr } => {
-            // The composition root wires the JSON adapter to the server port.
-            serve_axum(&addr, app::build_server())?;
+            // SQLite is opt-in; JSON remains the default local adapter.
+            let server = match args.database {
+                Some(database) => app::build_server_sqlite(database)?,
+                None => app::build_server(),
+            };
+            serve_axum(&addr, server)?;
             Ok(())
         }
         Mode::Desktop { screenshot } => {

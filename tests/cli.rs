@@ -37,4 +37,23 @@ fn cli_parses_serve_flag() {
 fn cli_defaults_to_plain_desktop() {
     let args = Args::parse(vec!["ion-of-notes".to_string()]);
     assert_eq!(args.mode, Mode::Desktop { screenshot: None });
+    assert_eq!(args.database, None);
+}
+
+#[test]
+fn cli_parses_a_database_path() {
+    let args = Args::parse(vec![
+        "ion-of-notes".to_string(),
+        "--serve".to_string(),
+        "127.0.0.1:8787".to_string(),
+        "--database".to_string(),
+        "data/workspace.sqlite3".to_string(),
+    ]);
+    assert_eq!(
+        args.mode,
+        Mode::Serve {
+            addr: "127.0.0.1:8787".to_string()
+        }
+    );
+    assert_eq!(args.database, Some(PathBuf::from("data/workspace.sqlite3")));
 }

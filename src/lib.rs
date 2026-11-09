@@ -15,6 +15,7 @@
 rust_i18n::i18n!("locales", fallback = "en");
 
 pub mod app;
+pub mod auth;
 pub mod cli;
 pub mod client;
 pub mod collab;
@@ -31,7 +32,12 @@ pub mod webhooks;
 
 pub use app::{
     build_desktop, build_desktop_at, build_desktop_at_paths, build_server, build_server_at,
-    build_server_at_paths,
+    build_server_at_paths, build_server_sqlite, build_server_sqlite_at,
+};
+pub use auth::{
+    Account, AuthStore, DEFAULT_OWNER_PASSWORD, LoginInput, MemoryAuthStore, NoAuthStore,
+    SESSION_DAYS, Session, SessionInfo, SessionResponse, hash_password, hash_token,
+    new_session_token, session_expiry, session_is_expired, session_is_expired_at, verify_password,
 };
 pub use client::{Client, ClientError, RetryDecision, RetryPolicy};
 pub use collab::{
