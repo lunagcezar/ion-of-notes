@@ -299,7 +299,8 @@ capabilities) is implemented; the rest are planned.
   pending/uploaded/expired/failed lifecycle and temporary URLs (implemented in
   `spec-035`).
 - FR-89: Webhook subscriptions verify an endpoint, sign payloads with
-  HMAC-SHA256 and retry failed deliveries (spec-036).
+  HMAC-SHA256, cover every documented event type and retry failed deliveries
+  (implemented in `spec-036`).
 - FR-90: The server enforces rate, request-size and workspace block limits and
   returns `429`/`529`/`503` with retry guidance (spec-037).
 - FR-91: v1 routes stay stable; v2 changes are additive unless a version bump

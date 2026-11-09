@@ -245,11 +245,11 @@ flowchart TD
 ## Target data model (v2, planned)
 
 The B4 public API review (`docs/public-api-analysis.md`, ADR-006) adds a richer
-target model. It is **planned** in specs 030–037; the v1 entities above remain
-the implemented shape until each spec lands. The rich text/block side
-(spec-032), properties/data sources (spec-033), views (spec-034) and
-comments/users/files (spec-035) are implemented; webhooks and limits remain
-planned.
+target model. It is scheduled across specs 030–037; the v1 entities above
+remain the implemented shape until each spec lands. The rich text/block side
+(spec-032), properties/data sources (spec-033), views (spec-034),
+comments/users/files (spec-035) and webhooks (spec-036) are implemented; limits
+and operations remain planned (spec-037).
 
 ```mermaid
 erDiagram
@@ -267,6 +267,7 @@ erDiagram
     PAGE ||--o{ FILE : files
     WORKSPACE ||--o{ WEBHOOK_SUBSCRIPTION : webhooks
     WEBHOOK_SUBSCRIPTION ||--o{ WEBHOOK_EVENT : delivers
+    WEBHOOK_EVENT ||--o{ WEBHOOK_DELIVERY : attempts
 ```
 
 | Entity | Key fields | Spec |
@@ -282,8 +283,9 @@ erDiagram
 | `User` | `id`, `type` (person/bot), `name`, `avatar_url`, profile/bot fields | 035 |
 | `FileObject` | `type` (file/file_upload/external), URL or upload id | 035 |
 | `FileUpload` | `id`, `status`, `filename`, `content_type`, `content_length`, URLs | 035 |
-| `WebhookSubscription` | `id`, `url`, `events`, `verification_token`, `status` | 036 |
-| `WebhookEvent` | `id`, `timestamp`, `type`, `entity`, `data`, `attempt_number` | 036 |
+| `WebhookSubscription` | `id`, `url`, `events`, `verification_token`, `status`, `created_at` | 036 |
+| `WebhookEvent` | `id`, `timestamp`, `workspace_id`, `subscription_id`, `integration_id`, `type`, `authors`, `accessible_by`, `entity`, `data`, `attempt_number` | 036 |
+| `WebhookDelivery` | `id`, `subscription_id`, `event_id`, `payload`, `attempts`, `last_status`, `last_error`, `delivered`, `next_attempt_at` | 036 |
 | `ListResponse<T>` | `object:"list"`, `type`, `results`, `has_more`, `next_cursor` | 031 |
 | `ApiError` | `object:"error"`, `status`, `code`, `message`, `request_id`, `additional_data` | 030 |
 
@@ -300,9 +302,10 @@ erDiagram
   `created_by`/`rich_text`.
 - `Member` keeps `name`/`email`/`role`; the v2 `User` adds `type`, avatar and
   bot fields.
-- `workspace.json` and `collab.json` remain the v1 documents; v2 may add
-  `data_sources.json`/`webhooks.json` or store them behind the existing
-  `CollabStore` port. A migration spec must decide before code.
+- `workspace.json` and `collab.json` remain the documents; data sources and
+  views live on the workspace, and webhook subscriptions and delivery records
+  persist in `collab.json` behind the existing `CollabStore` port. No separate
+  webhook file is introduced.
 
 ## Templates and onboarding
 

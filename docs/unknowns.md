@@ -25,7 +25,7 @@ review checked this ledger against the implementation (spec-029).
 | U-05 | The File / Edit / View / History / Window / Help menus in pictures 5–11: are these an in-app feature to reproduce? | low | Ask the person; compare with a capture of the menus open. | **Estimate (documented, not asked).** They read as operating-system application menus rather than workspace content. The rebuilt app uses the custom tab strip from picture 1 instead; a full OS-style menu bar is out of scope for this version. Recorded here rather than silently dropped. |
 | U-06 | The "more actions" popover in picture 13 lists many commands (duplicate, move, version history, …). | low | Ask the person whether the full command list is required. | **Mostly resolved.** The "…" control opens a working page-actions menu with Copy link, Copy page contents, Duplicate, Move to Trash, appearance/layout, offline/lock, **Version history** (spec-015), **Archive/restore**, **Table of contents**, **Page discussions** and an inline-comments preference (spec-026). "Move to", Updates & analytics, Suggest edits, Notify me and More are presentation-only placeholders and are not claimed to match the original. |
 | U-07 | Which API should the self-hosted client/server use? | high | The person's request to "decide the API" + the Share/People/Export pictures + the supplied workspace export. | **Resolved (decided).** ADR-003 decides REST/JSON (`/api/v1`, envelopes, accounts/sessions) + a WebSocket CRDT real-time channel, a versioned sync log, sharing/permissions DTOs, and the Notion-style export tree. `spec-011` implements a tested in-process slice of that contract today. |
-| U-08 | What exactly does the original server-side contract look like beyond the UI and ADR-003? | high | Public docs, UI behavior, exports, and a derived mock contract. | **In progress (B4 reviewed).** The public Notion developer docs were reviewed on 2026-11-08 (`docs/public-api-analysis.md`); every entry is marked **Observed (public docs)**, UI-observed, inferred, decided or unknown. No original server response has been observed. The v2 roadmap is specs 030-037; specs 030-035 are implemented; B5 follows the next v2 slices; B3 remains blocked by the strict B1 scope. |
+| U-08 | What exactly does the original server-side contract look like beyond the UI and ADR-003? | high | Public docs, UI behavior, exports, and a derived mock contract. | **In progress (B4 reviewed).** The public Notion developer docs were reviewed on 2026-11-08 (`docs/public-api-analysis.md`); every entry is marked **Observed (public docs)**, UI-observed, inferred, decided or unknown. No original server response has been observed. The v2 roadmap is specs 030-037; specs 030-036 are implemented; B5 follows the next v2 slices; B3 remains blocked by the strict B1 scope. |
 | U-09 | Do we have explicit permission to capture traffic from a third-party instance? | high | Ask the person; confirm account ownership and terms. | **Resolved (strict scope).** The person chose public behavior only; no HAR, proxy, Wireshark, source maps or decompilation. B3 is intentionally blocked unless a new scope decision is recorded (ADR-005 B1/B8). |
 
 ## Status (2026-11-08)
@@ -40,11 +40,11 @@ review checked this ledger against the implementation (spec-029).
   resolved by specs 015 and 026; U-08 is in progress (B2 done); U-09 is
   resolved as the strict public-behavior-only scope.
 - The clean-room phases are: **B1 done, B2 done, B3 blocked, B4 reviewed
-  (public docs), specs 030-035 implemented and specs 036-037 drafted, B5
-  pending the next v2 slices, B6
+  (public docs), specs 030-036 implemented and spec-037 drafted, B5 pending the
+  next v2 slices, B6
   recorded, B7 ongoing, B8 reviewed** before every source. See
   `docs/clean-room.md` and `docs/public-api-analysis.md`.
-- Verification: `cargo test --all-targets` is green with **186 tests**,
+- Verification: `cargo test --all-targets` is green with **195 tests**,
   `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` are
   clean, and `--screenshot` produces a non-blank 1322×861 PNG.
 - The documentation review (spec-029) found and fixed stale statuses; the

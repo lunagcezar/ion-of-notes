@@ -311,11 +311,11 @@ new stores and delivery workers.
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
 - The v2 **foundation, pagination, rich text/blocks, properties/data sources,
-  views and comments/users/files** exist (specs 030–035): `/api/v2`,
+  views, comments/users/files and webhooks** exist (specs 030–036): `/api/v2`,
   version/auth/capability checks, structured errors, request IDs, cursor list
   envelopes, rich text, block metadata/children, typed properties, databases,
-  data sources, views, comments, users and file uploads. Webhooks and limits
-  are still planned (specs 036–037).
+  data sources, views, comments, users, file uploads and signed webhook
+  delivery. Limits and operations remain planned (spec-037).
 
 ## 12. Further reading
 

@@ -44,9 +44,10 @@ our own self-hosted contract without copying private implementation details.
 | Emoji and icon | <https://developers.notion.com/reference/emoji-and-icon> |
 | Unfurl attribute | <https://developers.notion.com/reference/unfurl-attribute-object> |
 
-Endpoint and webhook-event reference pages were not fetched in this pass; the
-analysis below covers the object model, conventions and delivery behavior that
-those pages depend on.
+The object-model pages above were fetched in the first pass; the per-event
+webhook reference pages were fetched in the spec-036 follow-up. They confirm the
+shared delivery envelope and the documented page, database, data-source,
+comment, file-upload and view event types.
 
 ## 2. Conventions
 
@@ -454,8 +455,10 @@ flowchart TD
 capabilities, request IDs), spec-031 (`ListResponse`, opaque cursors),
 spec-032 (rich text, block metadata/children, block endpoints), spec-033
 (typed properties, databases, data sources, property items), spec-034
-(views, filters, sorts, board/calendar grouping) and spec-035 (comments,
-users, file uploads) are implemented. Specs 036–037 remain planned.
+(views, filters, sorts, board/calendar grouping), spec-035 (comments, users,
+file uploads) and spec-036 (webhook subscriptions, verification, HMAC-SHA256
+signatures, aggregation, retries and every documented event type) are
+implemented. Spec-037 (limits and operations) remains planned.
 
 ## 16. Risks and open questions
 
@@ -467,7 +470,9 @@ users, file uploads) are implemented. Specs 036–037 remain planned.
   the model, UI, export and tests. Specs 033/034 stage it.
 - **Webhook risk:** a public HTTPS endpoint, TLS, retries and signatures are
   operational features; a local self-hosted server may not be reachable.
-  Spec-036 keeps delivery behind a port and documents the limitation.
+  Spec-036 keeps delivery behind a port, allows loopback HTTP only with an
+  explicit development override, and documents that TLS delivery is not yet
+  implemented in the local adapter.
 - **Limit risk:** rate and block limits depend on plan/member count. Spec-037
   makes the policy explicit and configurable.
 - **Clean-room risk:** public API docs are allowed, but they describe the

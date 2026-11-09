@@ -15,13 +15,13 @@ in what order, and which document is the source of truth for each concern.
 
 ## Current status (2026-11-08)
 
-- **Specs:** `spec-001` … `spec-035` implemented; `spec-007` retired;
+- **Specs:** `spec-001` … `spec-036` implemented; `spec-007` retired;
   `spec-016` is a plan with A9 still open; `spec-029` is the documentation
   overhaul; `spec-030` is the v2 foundation; `spec-031` adds pagination;
   `spec-032` adds rich text/blocks; `spec-033` adds properties/data sources;
-  `spec-034` adds views; `spec-035` adds comments/users/files; `spec-036` and
-  `spec-037` are the remaining public-API alignment roadmap.
-- **Tests:** 186 integration tests across `tests/`; `cargo clippy --all-targets
+  `spec-034` adds views; `spec-035` adds comments/users/files; `spec-036` adds
+  webhooks; `spec-037` is the remaining limits/operations roadmap.
+- **Tests:** 195 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
 - **v1 runtime:** in-process server + optional loopback HTTP adapter. There is
   no production Axum/PostgreSQL/WebSocket/auth service yet.
@@ -31,9 +31,9 @@ in what order, and which document is the source of truth for each concern.
 - **Clean room:** strict public-behavior-only observation. No capture, proxy,
   Wireshark, source maps or decompilation. B3 is blocked; **B4 public docs were
   reviewed on 2026-11-08** (`docs/public-api-analysis.md`); the v2 foundation,
-  pagination, rich text/blocks, properties/data sources, views and
-  comments/users/files are implemented (specs 030–035); B5 follows the next v2
-  slices.
+  pagination, rich text/blocks, properties/data sources, views,
+  comments/users/files and webhooks are implemented (specs 030–036); B5 follows
+  the next v2 slices.
 - **Localization:** core navigation, Share, Library, page actions, comments and
   Settings are translated into `en`, `pt-BR` and `eo`; remaining strings are
   migrated incrementally.

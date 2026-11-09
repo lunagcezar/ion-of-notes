@@ -347,7 +347,7 @@ v1 routes stay stable.
 | Comments | page plain text | page/block, rich text, discussions, attachments | 035 | **implemented** |
 | Users | `Member` | person/bot, profile, workspace limits | 035 | **implemented** |
 | Files | none | file/file_upload/external + lifecycle | 035 | **implemented** |
-| Webhooks | none | subscriptions, verification, HMAC, retries | 036 | planned |
+| Webhooks | none | subscriptions, verification, HMAC, retries | 036 | **implemented** |
 | Limits | none | rate/size/block limits, 429/529/503 guidance | 037 | planned |
 
 Implemented v2 routes:
@@ -384,6 +384,11 @@ Implemented v2 routes:
 | `GET` | `/api/v2/file_uploads/{id}` | read content |
 | `POST` | `/api/v2/file_uploads/{id}/send` | insert content |
 | `POST` | `/api/v2/file_uploads/{id}/complete` | insert content |
+| `GET` / `POST` | `/api/v2/webhooks` | read / insert content |
+| `DELETE` | `/api/v2/webhooks/{id}` | update content |
+| `POST` | `/api/v2/webhooks/{id}/verify` | insert content |
+| `GET` | `/api/v2/webhook_deliveries` | read content |
+| `POST` | `/api/v2/webhook_deliveries/retry` | insert content |
 | `GET` | `/api/v2/realtime` | read content |
 
 ### 8.2 v2 list envelope (implemented)
@@ -475,6 +480,37 @@ and `href`.
   `file_upload` or `external`. Comments accept only uploaded file uploads.
 - Local upload URLs are placeholders; a production object store is a future
   adapter behind the same contract.
+
+### 8.7 v2 webhooks and event delivery (implemented)
+
+- `WebhookSubscription` has `id`, `url`, `events`, `verification_token`,
+  `status` (`pending`/`active`/`paused`/`deleted`) and `created_at`.
+- Creating a subscription stores it as `pending`; the endpoint becomes `active`
+  only after `POST /api/v2/webhooks/{id}/verify` with the matching token.
+- `WebhookEvent` carries `id`, `timestamp`, `workspace_id`, `subscription_id`,
+  `integration_id`, `type`, `authors`, `accessible_by`, `entity`, `data` and
+  `attempt_number`.
+- Documented event types are supported for pages (`created`,
+  `content_updated`, `properties_updated`, `moved`, `deleted`, `undeleted`,
+  `locked`, `unlocked`, `transcription_block_transcript_deleted`), databases
+  and data sources (`created`, `content_updated`, `schema_updated`, `moved`,
+  `deleted`, `undeleted`), comments (`created`, `updated`, `deleted`), file
+  uploads (`created`, `completed`, `expired`, `upload_failed`) and views
+  (`created`, `updated`, `deleted`).
+- Deliveries are signed with `X-Not-Notion-Signature: sha256=<hex>`, an
+  HMAC-SHA256 over the raw JSON body keyed by the verification token.
+- High-frequency page/database/data-source events are aggregated per
+  subscription and entity; comment, file-upload and view events deliver
+  immediately.
+- Failed deliveries are retried with exponential backoff up to 8 attempts; the
+  delivery log records the last status, error, attempt count and next attempt
+  time.
+- `GET /api/v2/webhook_deliveries` lists the log and
+  `POST /api/v2/webhook_deliveries/retry` processes due retries.
+- Subscription URLs must be HTTPS; loopback HTTP is accepted only when the
+  server enables the explicit development override. The local adapter does not
+  implement TLS delivery, so a production deployment supplies its own sender
+  behind the same contract.
 
 ```mermaid
 flowchart LR

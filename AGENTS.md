@@ -126,6 +126,8 @@ src/
   cli.rs           argument parsing
   i18n.rs          locale switching + dynamic key translation helper
   templates.rs     starter template catalog + page builder
+  webhooks.rs      subscriptions, event types, HMAC-SHA256 signatures,
+                   aggregation and delivery records
 locales/           en.yml, pt-BR.yml, eo.yml key tables
   ui.rs            module root: declarations + public re-exports (facade)
   ui/
@@ -187,6 +189,7 @@ tests/
   properties.rs    property schemas/values, data sources and property items
   views.rs         view CRUD, filters/sorts, board/calendar grouping
   comments.rs      comment CRUD, users, attachments and file uploads
+  webhooks.rs      subscriptions, signatures, aggregation, delivery and retry
   integration.rs   end-to-end client/server/store scenario
 ```
 
@@ -474,11 +477,12 @@ reviewed and compared with our contract. ADR-006 decides to adopt compatible
 patterns behind our own `/api/v2`, not to clone Notion. The roadmap is
 `spec-030` (versioning/errors/capabilities), `031` (pagination), `032` (rich
 text/blocks), `033` (properties/data sources), `034` (views), `035`
-(comments/users/files), `036` (webhooks) and `037` (limits). The v2
-**foundation** (spec-030) and **pagination** (spec-031) are implemented:
-`/api/v2`, required `Not-Notion-Version`, Bearer auth, `ApiError`,
-capabilities, request IDs, `ListResponse` and opaque cursors; v1 routes stay
-stable. Full analysis: `docs/public-api-analysis.md`.
+(comments/users/files), `036` (webhooks) and `037` (limits). Specs 030–036 are
+implemented: `/api/v2`, required `Not-Notion-Version`, Bearer auth, `ApiError`,
+capabilities, request IDs, `ListResponse` and opaque cursors, rich text/blocks,
+typed properties/data sources, views, comments/users/files and signed webhook
+delivery. Spec-037 (limits and operations) remains. v1 routes stay stable. Full
+analysis: `docs/public-api-analysis.md`.
 
 ## Code Conventions
 
@@ -500,7 +504,7 @@ stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (186)    |
+| `cargo test --all-targets`               | Run all integration test crates (195)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |

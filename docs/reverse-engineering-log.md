@@ -108,5 +108,15 @@ does not contain captured traffic, secrets or proprietary artifacts.
   contract; v1 stays stable.
 - **Output:** `docs/public-api-analysis.md`, the **Observed (public docs)**
   evidence level, and specs 030–037.
-- **Phase status:** B4 in progress (docs reviewed, specs drafted, spec-030
-  implemented); B5 pending the next v2 slices; B3 still blocked by B1.
+- **Phase status:** B4 in progress (docs reviewed, specs drafted, specs 030–036
+  implemented); B5 pending the next v2 slice (spec-037); B3 still blocked by B1.
+
+## 2026-11-08 - B4 webhook event reference follow-up
+
+- **Source:** the public per-event webhook reference pages for page, database,
+  data-source, comment, file-upload and view events, fetched with `webfetch`.
+- **Observed:** one shared delivery envelope (`id`, `timestamp`, `workspace_id`,
+  `subscription_id`, `integration_id`, `type`, `authors`, `accessible_by`,
+  `entity`, `data`, `attempt_number`) and the documented event names.
+- **Output:** spec-036 implemented; `docs/api-contract.md` §8.7,
+  `docs/api-observations.md`, `docs/public-api-analysis.md` and ADR-006 updated.

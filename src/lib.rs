@@ -27,6 +27,7 @@ pub mod shortcuts;
 pub mod store;
 pub mod templates;
 pub mod ui;
+pub mod webhooks;
 
 pub use app::{
     build_desktop, build_desktop_at, build_desktop_at_paths, build_server, build_server_at,
@@ -61,3 +62,8 @@ pub use server::{
 pub use shortcuts::{Action, Combo, SHORTCUT_TABLE, ShortcutDoc, lookup};
 pub use store::{CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore};
 pub use templates::{Template, catalog, find, template_for_purpose};
+pub use webhooks::{
+    ActorRef, EntityRef, SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType,
+    WebhookSubscription, WebhookSubscriptionInput, WebhookVerificationInput, aggregate_events,
+    is_allowed_url, sign, verify,
+};

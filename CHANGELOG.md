@@ -6,6 +6,19 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-036-webhooks-and-event-delivery
+
+- Added `src/webhooks.rs`: subscriptions, status, all documented page,
+  database, data-source, comment, file-upload and view event types, shared
+  event payloads, HMAC-SHA256 signatures and aggregation.
+- Subscriptions and delivery records persist in `collab.json`.
+- Added v2 webhook endpoints: create/list/delete/verify and delivery
+  list/retry; loopback HTTP requires an explicit development override.
+- Wired page, comment, file-upload and view mutations to emit events.
+- Added client methods for webhooks and deliveries.
+- Added `hmac` and `sha2` dependencies.
+- Tests: 9 in `tests/webhooks.rs`; the suite is 195 tests. Docs updated.
+
 ### Added — spec-035-comments-users-and-files
 
 - Added rich comment DTOs (`CommentDto`, `CommentInput`,

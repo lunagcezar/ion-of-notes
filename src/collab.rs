@@ -13,6 +13,7 @@
 //! "folder" markdown files that link to their sub-pages, and a `People` folder
 //! that records workspace membership and access.
 
+use crate::webhooks::{WebhookDelivery, WebhookSubscription};
 use serde::{Deserialize, Serialize};
 
 /// Keep at most this many snapshots per page (newest first).
@@ -235,6 +236,10 @@ pub struct CollabState {
     pub next_seq: u64,
     #[serde(default)]
     pub versions: Vec<PageVersion>,
+    #[serde(default)]
+    pub webhooks: Vec<WebhookSubscription>,
+    #[serde(default)]
+    pub webhook_deliveries: Vec<WebhookDelivery>,
 }
 
 impl Default for CollabState {
@@ -271,6 +276,8 @@ impl CollabState {
             changes: Vec::new(),
             next_seq: 1,
             versions: Vec::new(),
+            webhooks: Vec::new(),
+            webhook_deliveries: Vec::new(),
         }
     }
 

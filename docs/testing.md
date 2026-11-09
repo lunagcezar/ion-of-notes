@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (186 tests, 2026-11-08)
+## 3. Test-crate map (195 tests, 2026-11-08)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -57,6 +57,7 @@ flowchart TD
 | `tests/properties.rs` | 9 | property schemas/values, clear rules, row migration, databases/data sources, property items |
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
 | `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
+| `tests/webhooks.rs` | 9 | subscriptions, verification, signatures, aggregation, delivery/retry |
 | `tests/shortcuts.rs` | 8 | shortcut table, exactness, focus/modifier guard |
 | `tests/ollama.rs` | 7 | endpoint parsing, request/response decoding, chunked bodies, status |
 | `tests/collab_store.rs` | 6 | collaboration JSON round-trip, seed/corrupt fallback, restart restore, failing store |
@@ -251,7 +252,7 @@ spec-030 foundation is implemented; the rest are planned:
 | page properties, data sources, property items | `tests/properties.rs` (implemented) |
 | views, filters, sorts, queries | `tests/views.rs` (implemented) |
 | comments, users, files, uploads | `tests/comments.rs` (implemented) |
-| webhook verification, signatures, retries | `tests/webhooks.rs` |
+| webhook verification, signatures, retries | `tests/webhooks.rs` (implemented) |
 | rate/size/block limits | `tests/limits.rs` |
 
 These are written before implementation, following the same red → green rule.

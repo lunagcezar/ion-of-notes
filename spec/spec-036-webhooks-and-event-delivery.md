@@ -12,9 +12,11 @@ In scope:
 - `WebhookSubscription` (id, url, event types, verification token, status);
 - subscription create/list/delete and verification handshake;
 - `X-Not-Notion-Signature` HMAC-SHA256 over the raw body;
-- event types for pages, data sources, comments and sync;
+- event types for pages, databases, data sources, comments, file uploads and
+  views;
 - event payload shape (`id`, `timestamp`, `workspace_id`, `subscription_id`,
-  `type`, `authors`, `entity`, `data`, `attempt_number`);
+  `integration_id`, `type`, `authors`, `accessible_by`, `entity`, `data`,
+  `attempt_number`);
 - aggregated vs immediate events;
 - delivery queue with exponential backoff, up to 8 attempts over about 24h;
 - at-most-once semantics, ordering by `timestamp`, and a delivery log;
@@ -26,7 +28,7 @@ Out of scope:
 - public internet exposure and TLS termination (operator concern);
 - email/webhook UI beyond a settings list (a later UI spec);
 - exactly-once delivery (the public contract is at-most-once);
-- webhook events for features not implemented yet (views, files, agents).
+- webhook events for agent surfaces that are not implemented.
 
 ## Evidence
 
@@ -37,6 +39,17 @@ Out of scope:
   fields, event types, aggregation, ordering, retries, at-most-once.
 - <https://developers.notion.com/reference/capabilities> — comment events need
   comment-read capability.
+- Public webhook event references (page, database, data source, comment,
+  file upload and view events):
+  <https://developers.notion.com/reference/webhooks/page-created>,
+  <https://developers.notion.com/reference/webhooks/page-content-updated>,
+  <https://developers.notion.com/reference/webhooks/database-created>,
+  <https://developers.notion.com/reference/webhooks/data-source-created>,
+  <https://developers.notion.com/reference/webhooks/comment-created>,
+  <https://developers.notion.com/reference/webhooks/file-upload-created>,
+  <https://developers.notion.com/reference/webhooks/view-created>.
+  The event pages expose the same shared payload envelope described in the
+  delivery reference.
 - `docs/public-api-analysis.md` §11.
 
 Current code: `src/collab.rs` `Change`/`ChangeOp` sync log;
@@ -100,9 +113,15 @@ pub struct WebhookSubscription {
 pub enum WebhookEventType {
     PageCreated, PageContentUpdated, PagePropertiesUpdated, PageMoved,
     PageDeleted, PageUndeleted, PageLocked, PageUnlocked,
+    PageTranscriptionBlockTranscriptDeleted,
+    DatabaseCreated, DatabaseContentUpdated, DatabaseSchemaUpdated,
+    DatabaseMoved, DatabaseDeleted, DatabaseUndeleted,
     DataSourceCreated, DataSourceContentUpdated, DataSourceSchemaUpdated,
     DataSourceMoved, DataSourceDeleted, DataSourceUndeleted,
     CommentCreated, CommentUpdated, CommentDeleted,
+    FileUploadCreated, FileUploadCompleted, FileUploadExpired,
+    FileUploadUploadFailed,
+    ViewCreated, ViewUpdated, ViewDeleted,
 }
 
 pub struct WebhookEvent {
@@ -147,15 +166,30 @@ flowchart TD
 
 ## Plan / tasks
 
-- [ ] Spec + failing tests (red).
-- [ ] Subscription/event/signature types.
-- [ ] Store port and JSON adapter.
-- [ ] Verification handshake.
-- [ ] Delivery worker, retries and aggregation.
-- [ ] Capability gating and URL validation.
-- [ ] Update `docs/api-contract.md`, `docs/requirements.md`,
+- [x] Spec + failing tests (red).
+- [x] Subscription/event/signature types.
+- [x] Persist subscriptions and deliveries in `collab.json`.
+- [x] Verification handshake.
+- [x] Delivery, retries and aggregation.
+- [x] Capability gating and URL validation.
+- [x] Update `docs/api-contract.md`, `docs/requirements.md`,
   `docs/data-model.md`, `docs/clean-room.md`.
-- [ ] Build/test/clippy/fmt, commit.
+- [x] Build/test/clippy/fmt, commit.
+
+## Result
+
+- Added `src/webhooks.rs`: `WebhookEventType` (all documented page, database,
+  data source, comment, file-upload and view events), subscription/status,
+  event/actor/entity payloads, delivery records, HMAC-SHA256 signing and
+  constant-time verification, aggregation and URL policy.
+- Subscriptions and delivery records persist in `collab.json`; the server owns
+  verification, event matching, aggregation, delivery and retry.
+- Added v2 endpoints for webhook create/list/delete/verify and delivery
+  list/retry; the local adapter allows loopback HTTP only with an explicit
+  development override.
+- Wired page, comment, file-upload and view mutations to emit events.
+- Added client methods for webhook management and deliveries.
+- Tests: 9 in `tests/webhooks.rs`; the suite is 195 tests.
 
 ## Requirement mapping
 

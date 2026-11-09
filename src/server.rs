@@ -18,6 +18,11 @@ use crate::model::{
 use crate::store::{
     CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore,
 };
+use crate::webhooks::{
+    EntityRef, SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType,
+    WebhookSubscription, WebhookSubscriptionInput, WebhookVerificationInput, aggregate_events,
+    is_allowed_url, sign,
+};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -36,7 +41,10 @@ pub use contract::{
 pub use http::{format_http_response, parse_http_request, serve_forever, serve_on, serve_once};
 pub use pagination::{PageRequest, PaginationError, paginate};
 use std::collections::BTreeMap;
+use std::io::{Read, Write};
+use std::net::TcpStream;
 use std::path::PathBuf;
+use std::time::Duration;
 use url::url_decode;
 pub use url::url_encode;
 
@@ -154,6 +162,8 @@ pub struct WorkspaceServer {
     collab_store: Box<dyn CollabStore>,
     connections: Vec<Connection>,
     request_log: Vec<RequestLogEntry>,
+    allow_insecure_webhooks: bool,
+    webhook_queue: Vec<crate::webhooks::WebhookEvent>,
 }
 
 impl WorkspaceServer {
@@ -211,6 +221,8 @@ impl WorkspaceServer {
             collab_store: Box::new(collab_store),
             connections: vec![Connection::owner(owner, workspace_id)],
             request_log: Vec::new(),
+            allow_insecure_webhooks: false,
+            webhook_queue: Vec::new(),
         }
     }
 
@@ -232,6 +244,11 @@ impl WorkspaceServer {
     /// HTTP response and (in a production adapter) to structured logs.
     pub fn request_log(&self) -> &[RequestLogEntry] {
         &self.request_log
+    }
+
+    /// Allow loopback HTTP webhook URLs for local development and tests.
+    pub fn allow_insecure_webhooks(&mut self, allow: bool) {
+        self.allow_insecure_webhooks = allow;
     }
 
     /// Read-only access to accounts, permissions and the sync log.
@@ -351,6 +368,14 @@ fn required_capability(method: Method, path: &str) -> Option<Capability> {
         (Method::Patch | Method::Delete, p) if p.starts_with("/api/v2/databases/") => {
             Some(Capability::UpdateContent)
         }
+        (Method::Get, "/api/v2/webhooks") => Some(Capability::ReadContent),
+        (Method::Post, "/api/v2/webhooks") => Some(Capability::InsertContent),
+        (Method::Get, "/api/v2/webhook_deliveries") => Some(Capability::ReadContent),
+        (Method::Post, "/api/v2/webhook_deliveries/retry") => Some(Capability::InsertContent),
+        (Method::Delete, p) if p.starts_with("/api/v2/webhooks/") => {
+            Some(Capability::UpdateContent)
+        }
+        (Method::Post, p) if p.starts_with("/api/v2/webhooks/") => Some(Capability::InsertContent),
         (Method::Get, "/api/v2/comments") => Some(Capability::ReadComments),
         (Method::Post, "/api/v2/comments") => Some(Capability::InsertComments),
         (Method::Get, p) if p.starts_with("/api/v2/comments/") => Some(Capability::ReadComments),
@@ -486,6 +511,9 @@ impl WorkspaceServer {
 
         self.workspace.ensure_data_sources();
         self.workspace.ensure_views();
+        if let Some(response) = self.handle_v2_webhook(request, path, request_id) {
+            return response;
+        }
         if let Some(response) =
             self.handle_v2_comment_user_file(request, path, query, request_id, &connection)
         {
@@ -519,6 +547,272 @@ impl WorkspaceServer {
             body: v1.body,
             request_id: None,
         }
+    }
+
+    pub fn list_webhooks(&self) -> &[WebhookSubscription] {
+        &self.collab.webhooks
+    }
+
+    pub fn create_webhook(
+        &mut self,
+        input: WebhookSubscriptionInput,
+    ) -> Result<WebhookSubscription, String> {
+        if input.url.trim().is_empty() || input.events.is_empty() {
+            return Err("url and at least one event are required".to_string());
+        }
+        if !is_allowed_url(&input.url, self.allow_insecure_webhooks) {
+            return Err(
+                "webhook URL must be HTTPS (loopback HTTP requires the development override)"
+                    .to_string(),
+            );
+        }
+        let subscription = WebhookSubscription {
+            id: format!("wh-{}", uuid::Uuid::new_v4()),
+            url: input.url,
+            events: input.events,
+            verification_token: format!("secret_{}", uuid::Uuid::new_v4().simple()),
+            status: SubscriptionStatus::Pending,
+            created_at: now_iso(),
+        };
+        self.collab.webhooks.push(subscription.clone());
+        self.persist_collab().map_err(|error| error.to_string())?;
+        Ok(subscription)
+    }
+
+    pub fn verify_webhook(&mut self, id: &str, token: &str) -> Result<(), String> {
+        let Some(subscription) = self
+            .collab
+            .webhooks
+            .iter_mut()
+            .find(|subscription| subscription.id == id)
+        else {
+            return Err("webhook not found".to_string());
+        };
+        if subscription.verification_token != token {
+            return Err("verification token does not match".to_string());
+        }
+        subscription.status = SubscriptionStatus::Active;
+        self.persist_collab().map_err(|error| error.to_string())
+    }
+
+    pub fn delete_webhook(&mut self, id: &str) -> Result<(), String> {
+        let before = self.collab.webhooks.len();
+        self.collab
+            .webhooks
+            .retain(|subscription| subscription.id != id);
+        if self.collab.webhooks.len() == before {
+            return Err("webhook not found".to_string());
+        }
+        self.persist_collab().map_err(|error| error.to_string())
+    }
+
+    pub fn webhook_deliveries(&self) -> &[WebhookDelivery] {
+        &self.collab.webhook_deliveries
+    }
+
+    /// Queue or deliver an event to active subscriptions.
+    pub fn emit_webhook(
+        &mut self,
+        event_type: WebhookEventType,
+        entity_type: &str,
+        entity_id: &str,
+        data: impl Into<String>,
+    ) {
+        let data = data.into();
+        let actor = self.collab.owner_id();
+        let workspace_id = self.workspace.settings.id.clone();
+        let subscriptions: Vec<WebhookSubscription> = self
+            .collab
+            .webhooks
+            .iter()
+            .filter(|subscription| {
+                subscription.status == SubscriptionStatus::Active
+                    && subscription.events.contains(&event_type)
+            })
+            .cloned()
+            .collect();
+        for subscription in subscriptions {
+            let event = WebhookEvent::new(
+                workspace_id.clone(),
+                subscription.id.clone(),
+                event_type,
+                EntityRef {
+                    id: entity_id.to_string(),
+                    r#type: entity_type.to_string(),
+                },
+                actor.clone(),
+                data.clone(),
+            );
+            if event_type.is_aggregated() {
+                if let Some(existing) = self.webhook_queue.iter_mut().find(|existing| {
+                    existing.subscription_id == event.subscription_id
+                        && existing.entity.id == event.entity.id
+                        && existing.r#type == event.r#type
+                }) {
+                    *existing = event;
+                } else {
+                    self.webhook_queue.push(event);
+                }
+            } else {
+                self.deliver_event(&subscription, event);
+            }
+        }
+    }
+
+    /// Flush aggregated events (the production worker calls this on a timer).
+    pub fn flush_webhooks(&mut self) {
+        let queued = std::mem::take(&mut self.webhook_queue);
+        for event in aggregate_events(queued) {
+            if let Some(subscription) = self
+                .collab
+                .webhooks
+                .iter()
+                .find(|subscription| subscription.id == event.subscription_id)
+                .cloned()
+            {
+                self.deliver_event(&subscription, event);
+            }
+        }
+    }
+
+    /// Retry failed deliveries with a small exponential backoff.
+    pub fn process_webhook_deliveries(&mut self) {
+        let subscriptions: Vec<WebhookSubscription> = self.collab.webhooks.clone();
+        for delivery in &mut self.collab.webhook_deliveries {
+            if delivery.delivered || delivery.attempts >= 8 {
+                continue;
+            }
+            let Some(subscription) = subscriptions
+                .iter()
+                .find(|subscription| subscription.id == delivery.subscription_id)
+            else {
+                continue;
+            };
+            let signature = sign(&subscription.verification_token, &delivery.payload);
+            let result = send_http_post(&subscription.url, &delivery.payload, &signature);
+            delivery.attempts = delivery.attempts.saturating_add(1);
+            match result {
+                Ok(status) => {
+                    delivery.last_status = Some(status);
+                    delivery.last_error = None;
+                    delivery.delivered = (200..300).contains(&status);
+                    delivery.next_attempt_at = if delivery.delivered {
+                        None
+                    } else {
+                        Some(backoff_time(delivery.attempts))
+                    };
+                }
+                Err(error) => {
+                    delivery.last_status = None;
+                    delivery.last_error = Some(error);
+                    delivery.next_attempt_at = Some(backoff_time(delivery.attempts));
+                }
+            }
+        }
+        let _ = self.persist_collab();
+    }
+
+    fn deliver_event(&mut self, subscription: &WebhookSubscription, mut event: WebhookEvent) {
+        event.attempt_number = 1;
+        let payload = serde_json::to_string(&event).unwrap_or_default();
+        let signature = sign(&subscription.verification_token, &payload);
+        let result = send_http_post(&subscription.url, &payload, &signature);
+        let delivered = result
+            .as_ref()
+            .is_ok_and(|status| (200..300).contains(status));
+        self.collab.webhook_deliveries.push(WebhookDelivery {
+            id: format!("delivery-{}", uuid::Uuid::new_v4()),
+            subscription_id: subscription.id.clone(),
+            event_id: event.id.clone(),
+            payload,
+            attempts: 1,
+            last_status: result.as_ref().ok().copied(),
+            last_error: result.err(),
+            delivered,
+            next_attempt_at: if delivered {
+                None
+            } else {
+                Some(backoff_time(1))
+            },
+        });
+        let _ = self.persist_collab();
+    }
+
+    fn handle_v2_webhook(
+        &mut self,
+        request: &ApiRequest,
+        path: &str,
+        request_id: &str,
+    ) -> Option<ApiResponse> {
+        if path == "/api/v2/webhooks" && request.method == Method::Get {
+            return Some(json(200, Envelope::ok(self.collab.webhooks.clone())));
+        }
+        if path == "/api/v2/webhooks" && request.method == Method::Post {
+            let input = match parse_body::<WebhookSubscriptionInput>(request) {
+                Ok(input) => input,
+                Err(message) => {
+                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                }
+            };
+            return match self.create_webhook(input) {
+                Ok(subscription) => Some(json(201, Envelope::ok(subscription))),
+                Err(message) => Some(v2_error(
+                    400,
+                    CODE_VALIDATION_ERROR,
+                    message,
+                    request_id,
+                    None,
+                )),
+            };
+        }
+        if path == "/api/v2/webhook_deliveries" && request.method == Method::Get {
+            return Some(json(
+                200,
+                Envelope::ok(self.collab.webhook_deliveries.clone()),
+            ));
+        }
+        if path == "/api/v2/webhook_deliveries/retry" && request.method == Method::Post {
+            self.process_webhook_deliveries();
+            return Some(json(
+                200,
+                Envelope::ok(self.collab.webhook_deliveries.clone()),
+            ));
+        }
+        let rest = path.strip_prefix("/api/v2/webhooks/")?;
+        if let Some(id) = rest.strip_suffix("/verify") {
+            if request.method != Method::Post || id.is_empty() {
+                return Some(v2_error(
+                    404,
+                    CODE_NOT_FOUND,
+                    "webhook not found",
+                    request_id,
+                    None,
+                ));
+            }
+            let input = match parse_body::<WebhookVerificationInput>(request) {
+                Ok(input) => input,
+                Err(message) => {
+                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                }
+            };
+            return match self.verify_webhook(id, &input.verification_token) {
+                Ok(()) => Some(json(200, Envelope::ok("verified".to_string()))),
+                Err(message) => Some(v2_error(
+                    400,
+                    CODE_VALIDATION_ERROR,
+                    message,
+                    request_id,
+                    None,
+                )),
+            };
+        }
+        if request.method == Method::Delete && !rest.is_empty() && !rest.contains('/') {
+            return match self.delete_webhook(rest) {
+                Ok(()) => Some(json(200, Envelope::ok("deleted".to_string()))),
+                Err(message) => Some(v2_error(404, CODE_NOT_FOUND, message, request_id, None)),
+            };
+        }
+        None
     }
 
     fn handle_v2_comment_user_file(
@@ -659,6 +953,13 @@ impl WorkspaceServer {
                     None,
                 ));
             }
+            self.emit_webhook(
+                WebhookEventType::CommentCreated,
+                "comment",
+                &comment.id,
+                serde_json::json!({ "page_id": page_id.clone(), "parent": comment.parent.clone() })
+                    .to_string(),
+            );
             return Some(json(201, Envelope::ok(comment)));
         }
 
@@ -751,6 +1052,12 @@ impl WorkspaceServer {
                             None,
                         ));
                     }
+                    self.emit_webhook(
+                        WebhookEventType::CommentUpdated,
+                        "comment",
+                        &dto.id,
+                        serde_json::json!({ "parent": dto.parent.clone() }).to_string(),
+                    );
                     Some(json(200, Envelope::ok(dto)))
                 }
                 Method::Delete => {
@@ -774,6 +1081,12 @@ impl WorkspaceServer {
                             None,
                         ));
                     }
+                    self.emit_webhook(
+                        WebhookEventType::CommentDeleted,
+                        "comment",
+                        &comment.id,
+                        serde_json::json!({ "parent": comment.parent.clone() }).to_string(),
+                    );
                     Some(json(200, Envelope::ok(comment)))
                 }
                 _ => Some(v2_error(
@@ -883,6 +1196,12 @@ impl WorkspaceServer {
                     None,
                 ));
             }
+            self.emit_webhook(
+                WebhookEventType::FileUploadCreated,
+                "file_upload",
+                &upload.id,
+                serde_json::json!({ "status": "pending" }).to_string(),
+            );
             Some(json(201, Envelope::ok(upload)))
         } else if let Some(rest) = path.strip_prefix("/api/v2/file_uploads/") {
             if let Some(id) = rest.strip_suffix("/send") {
@@ -935,6 +1254,12 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
+                self.emit_webhook(
+                    WebhookEventType::FileUploadCompleted,
+                    "file_upload",
+                    &dto.id,
+                    serde_json::json!({ "status": "uploaded" }).to_string(),
+                );
                 return Some(json(200, Envelope::ok(dto)));
             }
             if let Some(id) = rest.strip_suffix("/complete") {
@@ -987,6 +1312,12 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
+                self.emit_webhook(
+                    WebhookEventType::FileUploadCompleted,
+                    "file_upload",
+                    &dto.id,
+                    serde_json::json!({ "status": "uploaded" }).to_string(),
+                );
                 return Some(json(200, Envelope::ok(dto)));
             }
             if request.method == Method::Get && !rest.is_empty() && !rest.contains('/') {
@@ -1133,6 +1464,12 @@ impl WorkspaceServer {
                     None,
                 ));
             }
+            self.emit_webhook(
+                WebhookEventType::ViewCreated,
+                "view",
+                &view.id,
+                serde_json::json!({ "data_source_id": view.data_source_id }).to_string(),
+            );
             return Some(json(201, Envelope::ok(view)));
         }
 
@@ -1260,6 +1597,12 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
+                self.emit_webhook(
+                    WebhookEventType::ViewUpdated,
+                    "view",
+                    &dto.id,
+                    serde_json::json!({ "data_source_id": dto.data_source_id }).to_string(),
+                );
                 Some(json(200, Envelope::ok(dto)))
             }
             Method::Delete => {
@@ -1272,6 +1615,7 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
+                let deleted_id = rest.to_string();
                 self.workspace.views.retain(|view| view.id != rest);
                 if let Err(error) = self.write(ChangeOp::Delete, "__view__") {
                     return Some(v2_error(
@@ -1282,7 +1626,13 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                Some(json(200, Envelope::ok(rest.to_string())))
+                self.emit_webhook(
+                    WebhookEventType::ViewDeleted,
+                    "view",
+                    &deleted_id,
+                    serde_json::json!({}).to_string(),
+                );
+                Some(json(200, Envelope::ok(deleted_id)))
             }
             _ => Some(v2_error(
                 404,
@@ -2162,6 +2512,12 @@ impl WorkspaceServer {
                     if let Err(error) = self.write(ChangeOp::Create, &page_id) {
                         return server_error(&error.to_string());
                     }
+                    self.emit_webhook(
+                        WebhookEventType::PageCreated,
+                        "page",
+                        &page_id,
+                        serde_json::json!({ "parent": page.parent }).to_string(),
+                    );
                     json(201, Envelope::ok(page))
                 }
                 Err(message) => bad(&message),
@@ -2240,6 +2596,11 @@ impl WorkspaceServer {
                     Method::Patch => match parse_body::<Page>(request) {
                         Ok(mut page) => {
                             page.id = id.to_string();
+                            let was_locked = self
+                                .workspace
+                                .page(id)
+                                .map(|existing| existing.locked)
+                                .unwrap_or(false);
                             match self.workspace.page_mut(id) {
                                 Some(slot) => {
                                     *slot = page.clone();
@@ -2247,6 +2608,25 @@ impl WorkspaceServer {
                                     self.collab.record_version(&page, &actor);
                                     if let Err(error) = self.write(ChangeOp::Update, id) {
                                         return server_error(&error.to_string());
+                                    }
+                                    if was_locked != page.locked {
+                                        self.emit_webhook(
+                                            if page.locked {
+                                                WebhookEventType::PageLocked
+                                            } else {
+                                                WebhookEventType::PageUnlocked
+                                            },
+                                            "page",
+                                            id,
+                                            serde_json::json!({}).to_string(),
+                                        );
+                                    } else {
+                                        self.emit_webhook(
+                                            WebhookEventType::PageContentUpdated,
+                                            "page",
+                                            id,
+                                            serde_json::json!({}).to_string(),
+                                        );
                                     }
                                     json(200, Envelope::ok(page))
                                 }
@@ -2260,6 +2640,12 @@ impl WorkspaceServer {
                             if let Err(error) = self.write(ChangeOp::Delete, id) {
                                 return server_error(&error.to_string());
                             }
+                            self.emit_webhook(
+                                WebhookEventType::PageDeleted,
+                                "page",
+                                id,
+                                serde_json::json!({}).to_string(),
+                            );
                             json(200, Envelope::ok(removed))
                         }
                         Err(e) => not_found(&e.to_string()),
@@ -2307,6 +2693,50 @@ fn user_dto(member: &Member, level: u8) -> UserDto {
         }),
         bot: None,
     }
+}
+
+fn send_http_post(url: &str, body: &str, signature: &str) -> Result<u16, String> {
+    let rest = url.strip_prefix("http://").ok_or_else(|| {
+        "TLS webhook delivery is not implemented in the local adapter".to_string()
+    })?;
+    let (authority, path) = match rest.split_once('/') {
+        Some((authority, path)) => (authority, format!("/{path}")),
+        None => (rest, "/".to_string()),
+    };
+    let address = if authority.contains(':') {
+        authority.to_string()
+    } else {
+        format!("{authority}:80")
+    };
+    let mut stream = TcpStream::connect(&address).map_err(|error| error.to_string())?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .map_err(|error| error.to_string())?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(2)))
+        .map_err(|error| error.to_string())?;
+    let request = format!(
+        "POST {path} HTTP/1.1\r\nHost: {authority}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nX-Not-Notion-Signature: {signature}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| error.to_string())?;
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .map_err(|error| error.to_string())?;
+    response
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|status| status.parse::<u16>().ok())
+        .ok_or_else(|| "invalid webhook response".to_string())
+}
+
+fn backoff_time(attempts: u8) -> String {
+    let seconds = 2u64.saturating_pow(attempts as u32).min(3600);
+    (chrono::Utc::now() + chrono::Duration::seconds(seconds as i64)).to_rfc3339()
 }
 
 fn category_for_filename(name: Option<&str>) -> String {
