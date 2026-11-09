@@ -6,6 +6,7 @@
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 
@@ -1057,6 +1058,174 @@ pub struct PagePropertiesInput {
     pub properties: std::collections::BTreeMap<String, PageProperty>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ViewType {
+    #[default]
+    Table,
+    Board,
+    Calendar,
+    List,
+    Gallery,
+    Timeline,
+    Form,
+    Chart,
+    Map,
+    Dashboard,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum SortDirection {
+    #[default]
+    Ascending,
+    Descending,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Sort {
+    pub property: String,
+    pub direction: SortDirection,
+}
+
+impl Sort {
+    pub fn new(property: impl Into<String>, direction: SortDirection) -> Self {
+        Self {
+            property: property.into(),
+            direction,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "operator", rename_all = "snake_case")]
+pub enum Filter {
+    And { filters: Vec<Filter> },
+    Or { filters: Vec<Filter> },
+    Equals { property: String, value: String },
+    NotEquals { property: String, value: String },
+    Contains { property: String, value: String },
+    IsEmpty { property: String },
+    IsNotEmpty { property: String },
+    GreaterThan { property: String, value: i64 },
+    LessThan { property: String, value: i64 },
+    Checked { property: String, value: bool },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ViewConfig {
+    #[default]
+    Table,
+    Board {
+        group_by: String,
+    },
+    Calendar {
+        date_property: String,
+    },
+    List,
+    Unsupported,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct View {
+    pub id: String,
+    pub parent: ParentDto,
+    #[serde(default)]
+    pub data_source_id: Option<String>,
+    pub name: String,
+    pub r#type: ViewType,
+    #[serde(default)]
+    pub filter: Option<Filter>,
+    #[serde(default)]
+    pub sorts: Option<Vec<Sort>>,
+    #[serde(default)]
+    pub configuration: Option<ViewConfig>,
+    #[serde(default)]
+    pub created_time: String,
+    #[serde(default)]
+    pub created_by: Option<UserRef>,
+    #[serde(default)]
+    pub last_edited_time: String,
+    #[serde(default)]
+    pub last_edited_by: Option<UserRef>,
+    #[serde(default)]
+    pub url: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ViewInput {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub data_source_id: Option<String>,
+    #[serde(default)]
+    pub r#type: ViewType,
+    #[serde(default)]
+    pub filter: Option<Filter>,
+    #[serde(default)]
+    pub sorts: Option<Vec<Sort>>,
+    #[serde(default)]
+    pub configuration: Option<ViewConfig>,
+}
+
+impl Default for ViewInput {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            data_source_id: None,
+            r#type: ViewType::Table,
+            filter: None,
+            sorts: None,
+            configuration: Some(ViewConfig::Table),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ViewQueryInput {
+    #[serde(default)]
+    pub filter: Option<Filter>,
+    #[serde(default)]
+    pub sorts: Option<Vec<Sort>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ViewGroup {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+    pub pages: Vec<Page>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ViewQueryResult {
+    pub view_id: String,
+    pub r#type: ViewType,
+    pub groups: Vec<ViewGroup>,
+    pub pages: Vec<Page>,
+    pub has_more: bool,
+    pub next_cursor: Option<String>,
+}
+
+impl ViewQueryResult {
+    pub fn new(
+        view: &View,
+        groups: Vec<ViewGroup>,
+        pages: Vec<Page>,
+        has_more: bool,
+        next_cursor: Option<String>,
+    ) -> Self {
+        Self {
+            view_id: view.id.clone(),
+            r#type: view.r#type,
+            groups,
+            pages,
+            has_more,
+            next_cursor,
+        }
+    }
+}
+
 /// One row of an inline table database.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TableRow {
@@ -1264,6 +1433,8 @@ pub struct Workspace {
     pub databases: Vec<Database>,
     #[serde(default)]
     pub data_sources: Vec<DataSource>,
+    #[serde(default)]
+    pub views: Vec<View>,
     #[serde(skip)]
     index: WorkspaceIndex,
 }
@@ -1276,6 +1447,7 @@ impl PartialEq for Workspace {
             && self.settings == other.settings
             && self.databases == other.databases
             && self.data_sources == other.data_sources
+            && self.views == other.views
     }
 }
 
@@ -1292,6 +1464,8 @@ struct WorkspaceData {
     databases: Vec<Database>,
     #[serde(default)]
     data_sources: Vec<DataSource>,
+    #[serde(default)]
+    views: Vec<View>,
 }
 
 impl<'de> Deserialize<'de> for Workspace {
@@ -1312,6 +1486,7 @@ impl<'de> Deserialize<'de> for Workspace {
             settings: data.settings,
             databases: data.databases,
             data_sources: data.data_sources,
+            views: data.views,
         })
     }
 }
@@ -1325,6 +1500,7 @@ impl Workspace {
             settings: WorkspaceSettings::default(),
             databases: Vec::new(),
             data_sources: Vec::new(),
+            views: Vec::new(),
             index: WorkspaceIndex::default(),
         }
     }
@@ -1419,6 +1595,115 @@ impl Workspace {
         self.data_sources
             .iter_mut()
             .find(|data_source| data_source.id == id)
+    }
+
+    pub fn view(&self, id: &str) -> Option<&View> {
+        self.views.iter().find(|view| view.id == id)
+    }
+
+    pub fn view_mut(&mut self, id: &str) -> Option<&mut View> {
+        self.views.iter_mut().find(|view| view.id == id)
+    }
+
+    /// Create one default table view per data source. Idempotent.
+    pub fn ensure_views(&mut self) {
+        for data_source in &self.data_sources {
+            let view_id = format!("view-{}", data_source.id);
+            if self.views.iter().any(|view| view.id == view_id) {
+                continue;
+            }
+            let now = now_iso();
+            self.views.push(View {
+                id: view_id,
+                parent: data_source.parent.clone(),
+                data_source_id: Some(data_source.id.clone()),
+                name: "Table".to_string(),
+                r#type: ViewType::Table,
+                filter: None,
+                sorts: None,
+                configuration: Some(ViewConfig::Table),
+                created_time: now.clone(),
+                created_by: None,
+                last_edited_time: now,
+                last_edited_by: None,
+                url: String::new(),
+            });
+        }
+    }
+
+    /// Apply a view's filter and sorts to its data-source rows.
+    pub fn query_view_rows(
+        &self,
+        view: &View,
+        filter: Option<&Filter>,
+        sorts: Option<&[Sort]>,
+    ) -> Vec<Page> {
+        let Some(data_source_id) = view.data_source_id.as_deref() else {
+            return Vec::new();
+        };
+        let Some(data_source) = self.data_source(data_source_id) else {
+            return Vec::new();
+        };
+        let filter = filter.or(view.filter.as_ref());
+        let sorts = sorts.or(view.sorts.as_deref());
+        let mut rows: Vec<Page> = data_source
+            .rows
+            .iter()
+            .filter(|row| filter.is_none_or(|filter| matches_filter(data_source, row, filter)))
+            .cloned()
+            .collect();
+        if let Some(sorts) = sorts {
+            rows.sort_by(|a, b| compare_pages(data_source, a, b, sorts));
+        }
+        rows
+    }
+
+    pub fn group_view_rows(&self, view: &View, rows: &[Page]) -> Vec<ViewGroup> {
+        let Some(data_source_id) = view.data_source_id.as_deref() else {
+            return Vec::new();
+        };
+        let Some(data_source) = self.data_source(data_source_id) else {
+            return Vec::new();
+        };
+        let Some(config) = view.configuration.as_ref() else {
+            return Vec::new();
+        };
+        let property_name = match config {
+            ViewConfig::Board { group_by } => group_by,
+            ViewConfig::Calendar { date_property } => date_property,
+            _ => return Vec::new(),
+        };
+        let Some(property) = resolve_property(data_source, property_name) else {
+            return Vec::new();
+        };
+        let mut groups: Vec<ViewGroup> = Vec::new();
+        for row in rows {
+            let value = row.properties.get(&property.id);
+            let (name, color) = match value {
+                Some(PageProperty {
+                    value: PropertyValue::Status(Some(option)),
+                    ..
+                })
+                | Some(PageProperty {
+                    value: PropertyValue::Select(Some(option)),
+                    ..
+                }) => (option.name.clone(), option.color.clone()),
+                Some(property) => (value_as_string(&property.value), "default".to_string()),
+                None => ("No value".to_string(), "gray".to_string()),
+            };
+            if let Some(group) = groups.iter_mut().find(|group| group.name == name) {
+                group.pages.push(row.clone());
+            } else {
+                let id = format!("{}-{}", view.id, name.to_lowercase().replace(' ', "-"));
+                groups.push(ViewGroup {
+                    id,
+                    name,
+                    color,
+                    pages: vec![row.clone()],
+                });
+            }
+        }
+        groups
     }
 
     /// A page in the tree or a row inside a data source.
@@ -1725,4 +2010,186 @@ fn find_block_in_mut<'a>(blocks: &'a mut [Block], id: &str) -> Option<&'a mut Bl
         }
     }
     None
+}
+
+fn resolve_property<'a>(data_source: &'a DataSource, key: &str) -> Option<&'a Property> {
+    data_source.properties.get(key).or_else(|| {
+        data_source
+            .properties
+            .values()
+            .find(|property| property.id == key)
+    })
+}
+
+fn value_as_string(value: &PropertyValue) -> String {
+    match value {
+        PropertyValue::Title(values) | PropertyValue::RichText(values) => values
+            .iter()
+            .map(RichText::plain_text)
+            .collect::<Vec<_>>()
+            .join(""),
+        PropertyValue::Number(value) => value.map(|n| n.to_string()).unwrap_or_default(),
+        PropertyValue::Select(option) | PropertyValue::Status(option) => option
+            .as_ref()
+            .map(|option| option.name.clone())
+            .unwrap_or_default(),
+        PropertyValue::MultiSelect(options) => options
+            .iter()
+            .map(|option| option.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+        PropertyValue::Date(date) => date
+            .as_ref()
+            .map(|date| date.start.clone())
+            .unwrap_or_default(),
+        PropertyValue::Checkbox(value) => value.to_string(),
+        PropertyValue::Url(value)
+        | PropertyValue::Email(value)
+        | PropertyValue::PhoneNumber(value) => value.clone().unwrap_or_default(),
+        PropertyValue::People(users) => users
+            .iter()
+            .map(|user| user.id.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+        PropertyValue::Files(files) => files
+            .iter()
+            .map(|file| file.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+        PropertyValue::Relation(pages) => pages
+            .iter()
+            .map(|page| page.id.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+        PropertyValue::Formula(result) => match result {
+            FormulaResult::String(value) => value.clone().unwrap_or_default(),
+            FormulaResult::Number(value) => value.map(|n| n.to_string()).unwrap_or_default(),
+            FormulaResult::Boolean(value) => value.to_string(),
+            FormulaResult::Date(value) => value
+                .as_ref()
+                .map(|date| date.start.clone())
+                .unwrap_or_default(),
+            FormulaResult::Unsupported => String::new(),
+        },
+        PropertyValue::Rollup(result) => match result {
+            RollupResult::Number(value) => value.map(|n| n.to_string()).unwrap_or_default(),
+            RollupResult::Date(value) => value
+                .as_ref()
+                .map(|date| date.start.clone())
+                .unwrap_or_default(),
+            RollupResult::Array(values) => values
+                .iter()
+                .map(value_as_string)
+                .collect::<Vec<_>>()
+                .join(", "),
+            RollupResult::Unsupported => String::new(),
+        },
+        PropertyValue::CreatedTime(value) | PropertyValue::LastEditedTime(value) => value.clone(),
+        PropertyValue::CreatedBy(user) | PropertyValue::LastEditedBy(user) => user.id.clone(),
+        PropertyValue::UniqueId { number, prefix } => {
+            format!("{}{number}", prefix.clone().unwrap_or_default())
+        }
+    }
+}
+
+fn value_is_empty(value: &PropertyValue) -> bool {
+    match value {
+        PropertyValue::Title(values) | PropertyValue::RichText(values) => values.is_empty(),
+        PropertyValue::MultiSelect(values) => values.is_empty(),
+        PropertyValue::People(values) => values.is_empty(),
+        PropertyValue::Files(values) => values.is_empty(),
+        PropertyValue::Relation(values) => values.is_empty(),
+        PropertyValue::Number(value) => value.is_none(),
+        PropertyValue::Select(value) | PropertyValue::Status(value) => value.is_none(),
+        PropertyValue::Date(value) => value.is_none(),
+        PropertyValue::Checkbox(value) => !value,
+        PropertyValue::Url(value)
+        | PropertyValue::Email(value)
+        | PropertyValue::PhoneNumber(value) => value.as_deref().is_none_or(str::is_empty),
+        PropertyValue::Formula(FormulaResult::Unsupported)
+        | PropertyValue::Rollup(RollupResult::Unsupported) => true,
+        _ => value_as_string(value).is_empty(),
+    }
+}
+
+fn value_as_number(value: &PropertyValue) -> Option<i64> {
+    match value {
+        PropertyValue::Number(value) => *value,
+        PropertyValue::Formula(FormulaResult::Number(value)) => *value,
+        PropertyValue::Rollup(RollupResult::Number(value)) => *value,
+        PropertyValue::UniqueId { number, .. } => i64::try_from(*number).ok(),
+        _ => value_as_string(value).parse().ok(),
+    }
+}
+
+fn matches_filter(data_source: &DataSource, row: &Page, filter: &Filter) -> bool {
+    match filter {
+        Filter::And { filters } => filters
+            .iter()
+            .all(|filter| matches_filter(data_source, row, filter)),
+        Filter::Or { filters } => filters
+            .iter()
+            .any(|filter| matches_filter(data_source, row, filter)),
+        Filter::Equals { property, value } => property_value(data_source, row, property)
+            .is_some_and(|actual| value_as_string(actual).eq_ignore_ascii_case(value)),
+        Filter::NotEquals { property, value } => property_value(data_source, row, property)
+            .is_none_or(|actual| !value_as_string(actual).eq_ignore_ascii_case(value)),
+        Filter::Contains { property, value } => property_value(data_source, row, property)
+            .is_some_and(|actual| {
+                value_as_string(actual)
+                    .to_lowercase()
+                    .contains(&value.to_lowercase())
+            }),
+        Filter::IsEmpty { property } => {
+            property_value(data_source, row, property).is_none_or(value_is_empty)
+        }
+        Filter::IsNotEmpty { property } => {
+            property_value(data_source, row, property).is_some_and(|actual| !value_is_empty(actual))
+        }
+        Filter::GreaterThan { property, value } => property_value(data_source, row, property)
+            .and_then(value_as_number)
+            .is_some_and(|number| number > *value),
+        Filter::LessThan { property, value } => property_value(data_source, row, property)
+            .and_then(value_as_number)
+            .is_some_and(|number| number < *value),
+        Filter::Checked { property, value } => property_value(data_source, row, property)
+            .is_some_and(
+                |actual| matches!(actual, PropertyValue::Checkbox(checked) if checked == value),
+            ),
+    }
+}
+
+fn property_value<'a>(
+    data_source: &DataSource,
+    row: &'a Page,
+    property: &str,
+) -> Option<&'a PropertyValue> {
+    let property = resolve_property(data_source, property)?;
+    row.properties
+        .get(&property.id)
+        .map(|property| &property.value)
+}
+
+fn compare_pages(data_source: &DataSource, a: &Page, b: &Page, sorts: &[Sort]) -> Ordering {
+    for sort in sorts {
+        let left = property_value(data_source, a, &sort.property);
+        let right = property_value(data_source, b, &sort.property);
+        let ordering = match (left, right) {
+            (Some(left), Some(right)) => match (value_as_number(left), value_as_number(right)) {
+                (Some(left), Some(right)) => left.cmp(&right),
+                _ => value_as_string(left).cmp(&value_as_string(right)),
+            },
+            (None, Some(_)) => Ordering::Less,
+            (Some(_), None) => Ordering::Greater,
+            (None, None) => Ordering::Equal,
+        };
+        let ordering = match sort.direction {
+            SortDirection::Ascending => ordering,
+            SortDirection::Descending => ordering.reverse(),
+        };
+        if ordering != Ordering::Equal {
+            return ordering;
+        }
+    }
+    Ordering::Equal
 }

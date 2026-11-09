@@ -6,6 +6,18 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-034-views-and-database-layouts
+
+- Added `ViewType`, `Sort`, `SortDirection`, `Filter`, `ViewConfig`, `View`,
+  `ViewInput`, `ViewQueryInput`, `ViewGroup` and `ViewQueryResult`.
+- `Workspace` persists views; `ensure_views` creates one default table view
+  per data source.
+- Added v2 view endpoints for list/create, retrieve/update/delete and query.
+- View queries filter and sort data-source rows, use cursor pagination and
+  return grouped pages for board/calendar configurations.
+- Added client methods for list/create/get/update/delete/query views.
+- Tests: 10 in `tests/views.rs`; the suite is 178 tests. Docs updated.
+
 ### Added — spec-033-page-properties-and-data-sources
 
 - Added property schemas (`Property`, `PropertyType`, `PropertyConfig`,

@@ -247,8 +247,8 @@ flowchart TD
 The B4 public API review (`docs/public-api-analysis.md`, ADR-006) adds a richer
 target model. It is **planned** in specs 030–037; the v1 entities above remain
 the implemented shape until each spec lands. The rich text/block side
-(spec-032) and properties/data sources (spec-033) are implemented; views,
-comments/users/files, webhooks and limits remain planned.
+(spec-032), properties/data sources (spec-033) and views (spec-034) are
+implemented; comments/users/files, webhooks and limits remain planned.
 
 ```mermaid
 erDiagram

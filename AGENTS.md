@@ -100,7 +100,7 @@ src/
   app.rs           composition root (bootstrap): wires workspace + collaboration adapters to ports
   lib.rs           crate root and public re-exports
   model.rs         Workspace, Page, Block, BlockKind, RichText, block DTOs,
-                   Property/PageProperty, Database/DataSource, tree helpers
+                   Property/PageProperty, Database/DataSource, View, tree helpers
   model/
     seed.rs        neutral demo workspace used on first start
     search.rs      ranked search + excerpt helper
@@ -184,6 +184,7 @@ tests/
   pagination.rs    v2 cursor pagination and list envelopes
   blocks.rs        rich text, block metadata, children and block endpoints
   properties.rs    property schemas/values, data sources and property items
+  views.rs         view CRUD, filters/sorts, board/calendar grouping
   integration.rs   end-to-end client/server/store scenario
 ```
 
@@ -497,7 +498,7 @@ stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (168)    |
+| `cargo test --all-targets`               | Run all integration test crates (178)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |

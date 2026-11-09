@@ -198,6 +198,9 @@ Database/data-source methods: `list_databases_v2`, `create_database_v2`,
 `query_data_source_page_v2`, `page_property_items_v2` and
 `page_property_items_page_v2`.
 
+View methods: `list_views_v2`, `create_view_v2`, `get_view_v2`,
+`update_view_v2`, `delete_view_v2` and `query_view_v2`.
+
 ## 6. Loopback HTTP adapter
 
 - Transport: `std::net::TcpListener`, HTTP/1.1, one request per connection.
@@ -333,7 +336,7 @@ v1 routes stay stable.
 | Page | title/icon/parent/blocks/rows | properties, icon, cover, parent, in_trash, url | 032/033 | planned |
 | Properties | `TableRow` (4 strings) | property schema + typed values + property items | 033 | **implemented** |
 | Database | inline rows | database container + data sources | 033 | **implemented** |
-| Views | table/board | view object + filters/sorts/configuration | 034 | planned |
+| Views | table/board | view object + filters/sorts/configuration | 034 | **implemented** |
 | Comments | page plain text | page/block, rich text, discussions, attachments | 035 | planned |
 | Users | `Member` | person/bot, profile, workspace limits | 035 | planned |
 | Files | none | file/file_upload/external + lifecycle | 035 | planned |
@@ -363,6 +366,9 @@ Implemented v2 routes:
 | `POST` | `/api/v2/data_sources/{id}/query` | read content |
 | `GET` / `PATCH` | `/api/v2/pages/{id}/properties` | read / update content |
 | `GET` | `/api/v2/pages/{id}/properties/{property_id}` | read content |
+| `GET` / `POST` | `/api/v2/views` | read / insert content |
+| `GET` / `PATCH` / `DELETE` | `/api/v2/views/{id}` | read / update content |
+| `POST` | `/api/v2/views/{id}/query` | read content |
 | `GET` | `/api/v2/realtime` | read content |
 
 ### 8.2 v2 list envelope (implemented)
@@ -425,6 +431,20 @@ and `href`.
   properties keep their values, arrays are replaced, and the documented clear
   rule is available through `PropertyValue::clear`.
 - Property-item reads return a paginated `ListResponse<PageProperty>`.
+
+### 8.5 v2 views (implemented)
+
+- `View` has `id`, `parent`, `data_source_id`, `name`, `type`, `filter`,
+  `sorts`, `configuration`, timestamps, users and `url`.
+- Supported query layouts: table, board, calendar and list; gallery, timeline,
+  form, chart, map and dashboard are represented but read-only/unsupported.
+- `Filter` supports `and`/`or`, equals, not-equals, contains, empty,
+  not-empty, greater/less-than and checkbox checks.
+- `Sort` is `{ property, direction }` with ascending/descending.
+- `POST /api/v2/views/{id}/query` filters/sorts the data-source rows, returns
+  `ViewQueryResult { view_id, type, groups, pages, has_more, next_cursor }`,
+  and groups board/calendar results.
+- `ensure_views` creates one default table view per data source.
 
 ```mermaid
 flowchart LR

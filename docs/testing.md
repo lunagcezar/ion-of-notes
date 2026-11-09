@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (168 tests, 2026-11-08)
+## 3. Test-crate map (178 tests, 2026-11-08)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -55,6 +55,7 @@ flowchart TD
 | `tests/pagination.rs` | 11 | list envelopes, cursor round-trip, page bounds, v2 pages/search/sync/versions |
 | `tests/blocks.rs` | 12 | rich text, block metadata, nesting, tables, unsupported types, block endpoints |
 | `tests/properties.rs` | 9 | property schemas/values, clear rules, row migration, databases/data sources, property items |
+| `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
 | `tests/shortcuts.rs` | 8 | shortcut table, exactness, focus/modifier guard |
 | `tests/ollama.rs` | 7 | endpoint parsing, request/response decoding, chunked bodies, status |
 | `tests/collab_store.rs` | 6 | collaboration JSON round-trip, seed/corrupt fallback, restart restore, failing store |
@@ -247,7 +248,7 @@ spec-030 foundation is implemented; the rest are planned:
 | pagination and list envelopes | `tests/pagination.rs` (implemented) |
 | rich text, block metadata, block children | `tests/blocks.rs` (implemented) |
 | page properties, data sources, property items | `tests/properties.rs` (implemented) |
-| views, filters, sorts, queries | `tests/model.rs`, `tests/server.rs` |
+| views, filters, sorts, queries | `tests/views.rs` (implemented) |
 | comments, users, files, uploads | `tests/model.rs`, `tests/server.rs` |
 | webhook verification, signatures, retries | `tests/webhooks.rs` |
 | rate/size/block limits | `tests/limits.rs` |

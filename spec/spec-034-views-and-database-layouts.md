@@ -130,14 +130,27 @@ flowchart LR
 
 ## Plan / tasks
 
-- [ ] Spec + failing tests (red).
-- [ ] `View`, `ViewType`, `Filter`, `Sort`, `ViewConfig`.
-- [ ] View CRUD and query endpoints.
-- [ ] Query pagination via spec-031.
-- [ ] Board/calendar/list configuration.
-- [ ] Update `docs/api-contract.md`, `docs/requirements.md`,
+- [x] Spec + failing tests (red).
+- [x] `View`, `ViewType`, `Filter`, `Sort`, `ViewConfig`.
+- [x] View CRUD and query endpoints.
+- [x] Query pagination via spec-031.
+- [x] Board/calendar/list configuration.
+- [x] Update `docs/api-contract.md`, `docs/requirements.md`,
   `docs/data-model.md`.
-- [ ] Build/test/clippy/fmt, commit.
+- [x] Build/test/clippy/fmt, commit.
+
+## Result
+
+- Added `ViewType`, `Sort`, `SortDirection`, `Filter`, `ViewConfig`, `View`,
+  `ViewInput`, `ViewQueryInput`, `ViewGroup` and `ViewQueryResult`.
+- `Workspace` persists `views`; `ensure_views` creates one default table view
+  per data source.
+- Added v2 view endpoints: list/create, retrieve/update/delete and query.
+- Query results filter and sort data-source rows and paginate through the
+  spec-031 cursor envelope; board and calendar views return grouped pages.
+- Added client methods: `list_views_v2`, `create_view_v2`, `get_view_v2`,
+  `update_view_v2`, `delete_view_v2` and `query_view_v2`.
+- Tests: 10 in `tests/views.rs`; the suite is 178 tests.
 
 ## Requirement mapping
 

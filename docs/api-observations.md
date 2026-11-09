@@ -157,7 +157,8 @@ This is the status of **our** contract, not a claim about the original:
 | Pagination/sorting | v2 lists use `ListResponse` + opaque cursors (`spec-031`); v1 lists are full snapshots |
 | Rich text/blocks | v2 `RichText`, block metadata/children and block endpoints (`spec-032`); v1 UI still edits `Block.text` |
 | Properties/data sources | v2 typed properties, databases, data sources and property items (`spec-033`); legacy `TableRow` rows migrate lazily |
-| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation (030), pagination (031), rich text/blocks (032) and properties/data sources (033) implemented; B5 pending the next v2 slice; B3 blocked |
+| Views | v2 view CRUD, filters/sorts and board/calendar grouping (`spec-034`) |
+| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation (030), pagination (031), rich text/blocks (032), properties/data sources (033) and views (034) implemented; B5 pending the next v2 slice; B3 blocked |
 
 ## What remains unknown
 

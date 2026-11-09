@@ -152,6 +152,9 @@ definition.
 | **Data source** | A table under a database, owning its schema and rows. | spec-033 |
 | **Database** | A container of one or more data sources. | spec-033 |
 | **View** | A saved table/board/calendar/list layout with filter, sorts and config. | spec-034 |
+| **Filter** | Typed predicate tree (and/or, equals, contains, empty, range, checked). | spec-034 |
+| **Sort** | `{ property, direction }` applied to a view query. | spec-034 |
+| **ViewQueryResult** | View id/type, grouped pages and a paginated page list. | spec-034 |
 | **CommentAttachment** | A file attached to a comment; max 3 per comment. | spec-035 |
 | **CommentDisplayName** | `connection`, `user` or `custom` author label. | spec-035 |
 | **FileObject** | `file` (hosted), `file_upload` (API upload) or `external` URL. | spec-035 |

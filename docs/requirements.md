@@ -289,7 +289,7 @@ capabilities) is implemented; the rest are planned.
 - FR-84: A database is a container of data sources; each data source owns its
   property schema and rows (implemented in `spec-033`).
 - FR-85: Views define table/board/calendar/list layouts with filters, sorts and
-  configuration (spec-034).
+  configuration (implemented in `spec-034`).
 - FR-86: Comments attach to pages or blocks, carry rich text, a discussion id,
   up to three attachments and an optional display name (spec-035).
 - FR-87: Users distinguish people and bots, expose optional profile fields and
@@ -305,8 +305,7 @@ capabilities) is implemented; the rest are planned.
   opaque (versioning and v1 stability in `spec-030`; cursor opacity in
   `spec-031`).
 - FR-92: Unsupported block or view types are represented explicitly instead of
-  being silently dropped (block side implemented in `spec-032`; view side in
-  spec-034).
+  being silently dropped (implemented in `spec-032` and `spec-034`).
 - FR-93: Page and callout icons use an icon object (`emoji`, `custom_emoji`,
   `icon`, `external`, `file`) rather than a bare glyph string (planned in
   spec-035).
