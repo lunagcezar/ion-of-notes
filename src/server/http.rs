@@ -57,7 +57,11 @@ pub fn format_http_response(response: &ApiResponse) -> Vec<u8> {
         401 => "Unauthorized",
         403 => "Forbidden",
         404 => "Not Found",
+        409 => "Conflict",
+        429 => "Too Many Requests",
         500 => "Internal Server Error",
+        503 => "Service Unavailable",
+        529 => "Service Overload",
         _ => "OK",
     };
     let request_id = response
@@ -65,14 +69,33 @@ pub fn format_http_response(response: &ApiResponse) -> Vec<u8> {
         .as_deref()
         .map(|id| format!("X-Request-Id: {id}\r\n"))
         .unwrap_or_default();
+    let retry_after = retry_after_header(response);
     format!(
-        "HTTP/1.1 {} {}\r\n{request_id}Content-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n{}",
+        "HTTP/1.1 {} {}\r\n{request_id}{retry_after}Content-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n{}",
         response.status,
         reason,
         response.body.len(),
         response.body
     )
     .into_bytes()
+}
+
+/// The error body is the single source of truth: when it carries
+/// `additional_data.retry_after`, the HTTP adapter also emits the standard
+/// `Retry-After` header (spec-037).
+fn retry_after_header(response: &ApiResponse) -> String {
+    if !matches!(response.status, 429 | 503 | 529) {
+        return String::new();
+    }
+    serde_json::from_str::<serde_json::Value>(&response.body)
+        .ok()
+        .and_then(|body| {
+            body.get("additional_data")?
+                .get("retry_after")?
+                .as_str()
+                .map(|seconds| format!("Retry-After: {seconds}\r\n"))
+        })
+        .unwrap_or_default()
 }
 
 fn request_complete(buffer: &[u8]) -> bool {

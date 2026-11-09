@@ -6,6 +6,24 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-037-limits-and-operations
+
+- Added `src/server/limits.rs`: `Plan`, `RequestBudget`, request-size
+  validation and the Free multi-member 1000-block policy.
+- Added `src/server/rate_limit.rs`: per-connection and shared workspace
+  fixed-window budgets with `Retry-After` seconds and `rate_limit_reason`.
+- `/api/v2` returns `429 rate_limited`, `529 service_overload`,
+  `503 service_unavailable` (with retry guidance) and `409 conflict_error`
+  (`If-Match`); the HTTP adapter emits `Retry-After`.
+- Enforced 500 KB, 1000 block elements, 2000-character rich text/URL,
+  1000-character equation, 100 array items and 200-character email/phone
+  limits before any mutation.
+- Added `RetryPolicy`/`RetryDecision` to the client: honours `Retry-After`,
+  uses capped exponential backoff plus caller-supplied jitter and only retries
+  the documented statuses.
+- Tests: 14 in `tests/limits.rs` plus one retry-policy test; the suite is
+  210 tests. Docs updated.
+
 ### Added — spec-036-webhooks-and-event-delivery
 
 - Added `src/webhooks.rs`: subscriptions, status, all documented page,

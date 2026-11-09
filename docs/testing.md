@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (195 tests, 2026-11-08)
+## 3. Test-crate map (210 tests, 2026-11-08)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -50,7 +50,7 @@ flowchart TD
 | `tests/server.rs` | 12 | routes, envelopes, status codes, HTTP parse/format, concurrent loopback |
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
 | `tests/ui.rs` | 11 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher, search cache |
-| `tests/client.rs` | 14 | typed client methods, v1/v2 error mapping, encode/decode failures |
+| `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
 | `tests/contract.rs` | 17 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/pagination.rs` | 11 | list envelopes, cursor round-trip, page bounds, v2 pages/search/sync/versions |
 | `tests/blocks.rs` | 12 | rich text, block metadata, nesting, tables, unsupported types, block endpoints |
@@ -58,6 +58,7 @@ flowchart TD
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
 | `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
 | `tests/webhooks.rs` | 9 | subscriptions, verification, signatures, aggregation, delivery/retry |
+| `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
 | `tests/shortcuts.rs` | 8 | shortcut table, exactness, focus/modifier guard |
 | `tests/ollama.rs` | 7 | endpoint parsing, request/response decoding, chunked bodies, status |
 | `tests/collab_store.rs` | 6 | collaboration JSON round-trip, seed/corrupt fallback, restart restore, failing store |
@@ -242,7 +243,7 @@ The hook is inert in normal runs and in the rebuild check.
 ## 10. v2 contract tests
 
 The public-API alignment roadmap (specs 030–037) adds new test areas. The
-spec-030 foundation is implemented; the rest are planned:
+specs 030–037 are implemented:
 
 | Area | Test crate |
 | ---- | ---------- |
@@ -253,7 +254,7 @@ spec-030 foundation is implemented; the rest are planned:
 | views, filters, sorts, queries | `tests/views.rs` (implemented) |
 | comments, users, files, uploads | `tests/comments.rs` (implemented) |
 | webhook verification, signatures, retries | `tests/webhooks.rs` (implemented) |
-| rate/size/block limits | `tests/limits.rs` |
+| rate/size/block limits | `tests/limits.rs` (implemented) |
 
 These are written before implementation, following the same red → green rule.
 Contract tests drive the real `Client` against the v2 mock, not against the

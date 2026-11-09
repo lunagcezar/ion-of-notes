@@ -164,8 +164,11 @@ definition.
 | **WebhookSubscription** | A verified HTTPS endpoint with selected event types. | spec-036 |
 | **HMAC-SHA256 signature** | `X-Not-Notion-Signature` over the raw webhook body. | spec-036 |
 | **Aggregated event** | A batched event such as `page.content_updated`. | spec-036 |
+| **Plan** | `free`/`business`/`enterprise`, used only for operational limits. | spec-037 |
+| **RequestBudget** | `{ plan, members, blocks }` inputs that derive the limits. | spec-037 |
 | **Block limit** | Free multi-member workspace lifetime block limit (1000). | spec-037 |
 | **Retry-After** | Seconds to wait after a 429/529 before retrying. | spec-037 |
+| **RetryPolicy** | Client decision: retryable status, delay and attempt cap. | spec-037 |
 
 ## 9. Naming rules
 

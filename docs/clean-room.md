@@ -116,7 +116,7 @@ flowchart TD
 | **B1** | Permission and scope gate | **Done:** public behavior only, strict clean room |
 | **B2** | Behavioral inventory | **Done:** `docs/api-observations.md` + visual inventory |
 | **B3** | Own-account HAR capture | **Blocked** by B1 |
-| **B4** | Contract derivation | **In progress:** public developer docs reviewed 2026-11-08; specs 030–037 drafted; specs 030–036 implemented (spec-037 pending) |
+| **B4** | Contract derivation | **In progress:** public developer docs reviewed 2026-11-08; specs 030–037 implemented |
 | **B5** | Mock server and contract tests | **Pending:** follows B4 |
 | **B6** | Tooling policy | **Recorded:** DevTools first; interception only on our traffic |
 | **B7** | Clean-room log | **Ongoing:** every session appends an entry |

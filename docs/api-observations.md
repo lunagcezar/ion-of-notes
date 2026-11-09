@@ -160,7 +160,8 @@ This is the status of **our** contract, not a claim about the original:
 | Views | v2 view CRUD, filters/sorts and board/calendar grouping (`spec-034`) |
 | Comments/users/files | v2 comment CRUD, person/bot users and file uploads (`spec-035`) |
 | Webhooks | v2 subscriptions, verification, HMAC-SHA256 signatures, aggregation, delivery/retry and all documented event types (`spec-036`); local adapter supports loopback HTTP only with an explicit override |
-| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation (030), pagination (031), rich text/blocks (032), properties/data sources (033), views (034), comments/users/files (035) and webhooks (036) implemented; B5 pending the next v2 slice; B3 blocked |
+| Limits/operations | v2 rate and workspace budgets, request-size/block-element validation, Free block limit, `429`/`529`/`503`/`409`, `Retry-After` and the client retry policy (`spec-037`); the limiter is in-process |
+| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation (030), pagination (031), rich text/blocks (032), properties/data sources (033), views (034), comments/users/files (035), webhooks (036) and limits (037) implemented; B5 pending; B3 blocked |
 
 ## What remains unknown
 

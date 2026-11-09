@@ -28,23 +28,32 @@ use serde::{Deserialize, Serialize};
 
 mod contract;
 mod http;
+pub mod limits;
 mod pagination;
+mod rate_limit;
 mod url;
 
 pub use contract::{
-    API_VERSION, AUTH_HEADER, ApiError, CODE_INTERNAL, CODE_INVALID_CURSOR, CODE_INVALID_JSON,
-    CODE_MISSING_VERSION, CODE_NOT_FOUND, CODE_RESTRICTED_RESOURCE, CODE_UNAUTHORIZED,
+    API_VERSION, AUTH_HEADER, ApiError, CODE_CONFLICT, CODE_INTERNAL, CODE_INVALID_CURSOR,
+    CODE_INVALID_JSON, CODE_MISSING_VERSION, CODE_NOT_FOUND, CODE_RATE_LIMITED,
+    CODE_RESTRICTED_RESOURCE, CODE_SERVICE_OVERLOAD, CODE_SERVICE_UNAVAILABLE, CODE_UNAUTHORIZED,
     CODE_UNSUPPORTED_VERSION, CODE_VALIDATION_ERROR, Capability, Connection, ListResponse,
     OWNER_TOKEN, RequestLogEntry, SUPPORTED_VERSIONS, VERSION_HEADER, new_request_id, parse_bearer,
     version_supported,
 };
 pub use http::{format_http_response, parse_http_request, serve_forever, serve_on, serve_once};
+pub use limits::{
+    FREE_MULTI_MEMBER_BLOCK_LIMIT, LimitViolation, MAX_ARRAY_ITEMS, MAX_BLOCK_ELEMENTS,
+    MAX_EMAIL_CHARS, MAX_EQUATION_CHARS, MAX_PHONE_CHARS, MAX_REQUEST_BYTES, MAX_RICH_TEXT_CHARS,
+    MAX_URL_CHARS, Plan, RequestBudget, validate_request,
+};
 pub use pagination::{PageRequest, PaginationError, paginate};
+pub use rate_limit::{REASON_CONNECTION, REASON_WORKSPACE, RateDecision, RateLimiter};
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use url::url_decode;
 pub use url::url_encode;
 
@@ -164,6 +173,12 @@ pub struct WorkspaceServer {
     request_log: Vec<RequestLogEntry>,
     allow_insecure_webhooks: bool,
     webhook_queue: Vec<crate::webhooks::WebhookEvent>,
+    plan: Plan,
+    block_count_override: Option<u64>,
+    block_count_baseline: u64,
+    overloaded: bool,
+    simulate_write_timeout: bool,
+    rate_limiter: RateLimiter,
 }
 
 impl WorkspaceServer {
@@ -223,6 +238,12 @@ impl WorkspaceServer {
             request_log: Vec::new(),
             allow_insecure_webhooks: false,
             webhook_queue: Vec::new(),
+            plan: Plan::Free,
+            block_count_override: None,
+            block_count_baseline: 0,
+            overloaded: false,
+            simulate_write_timeout: false,
+            rate_limiter: RateLimiter::for_plan(Plan::Free, Duration::from_secs(60)),
         }
     }
 
@@ -249,6 +270,132 @@ impl WorkspaceServer {
     /// Allow loopback HTTP webhook URLs for local development and tests.
     pub fn allow_insecure_webhooks(&mut self, allow: bool) {
         self.allow_insecure_webhooks = allow;
+    }
+
+    /// The workspace plan used for operational limits (not billing).
+    pub fn plan(&self) -> Plan {
+        self.plan
+    }
+
+    /// Change the plan and refresh the default rate budgets.
+    pub fn set_plan(&mut self, plan: Plan) {
+        self.plan = plan;
+        self.rate_limiter = RateLimiter::for_plan(plan, self.rate_limiter.window());
+    }
+
+    /// Override the derived block count (tests and operational tooling). Later
+    /// writes still advance the count from this baseline.
+    pub fn set_block_count(&mut self, blocks: u64) {
+        self.block_count_baseline = self.workspace.block_count();
+        self.block_count_override = Some(blocks);
+    }
+
+    /// The current workspace block count (pages count as one block each).
+    pub fn block_count(&self) -> u64 {
+        let actual = self.workspace.block_count();
+        self.block_count_override
+            .map(|base| base.saturating_add(actual.saturating_sub(self.block_count_baseline)))
+            .unwrap_or(actual)
+    }
+
+    /// The policy inputs for this request.
+    pub fn request_budget(&self) -> RequestBudget {
+        RequestBudget {
+            plan: self.plan,
+            members: self.collab.members.len(),
+            blocks: self.block_count(),
+        }
+    }
+
+    /// Replace the rate budgets (tests and deployment configuration).
+    pub fn configure_rate_limits(
+        &mut self,
+        per_connection: u32,
+        per_workspace: u32,
+        window: Duration,
+    ) {
+        self.rate_limiter = RateLimiter::new(per_connection, per_workspace, window);
+    }
+
+    /// Simulate a temporarily overloaded service (`529 service_overload`).
+    pub fn set_overloaded(&mut self, overloaded: bool) {
+        self.overloaded = overloaded;
+    }
+
+    /// Fault injection: make the next successful write report a timeout after
+    /// the change was saved (`503 service_unavailable` with retry guidance).
+    pub fn simulate_write_timeout(&mut self, enabled: bool) {
+        self.simulate_write_timeout = enabled;
+    }
+
+    /// Reject a mutating request whose `If-Match` version is stale.
+    fn conflict_response(&self, request: &ApiRequest, request_id: &str) -> Option<ApiResponse> {
+        if matches!(request.method, Method::Get) {
+            return None;
+        }
+        let expected = request
+            .header("if-match")?
+            .trim()
+            .trim_matches('"')
+            .parse::<u64>()
+            .ok()?;
+        if expected == self.workspace.version {
+            return None;
+        }
+        Some(v2_error(
+            409,
+            CODE_CONFLICT,
+            "the workspace changed since the request was prepared",
+            request_id,
+            Some(serde_json::json!({ "current_version": self.workspace.version })),
+        ))
+    }
+
+    /// Reject a write that would create blocks beyond the Free workspace limit.
+    fn block_limit_response(
+        &self,
+        request: &ApiRequest,
+        path: &str,
+        request_id: &str,
+    ) -> Option<ApiResponse> {
+        let additional = self.blocks_created_by(request, path)?;
+        if !self.request_budget().block_limit_reached(additional) {
+            return None;
+        }
+        Some(v2_error(
+            403,
+            CODE_RESTRICTED_RESOURCE,
+            "This workspace has used all of its free blocks. Upgrade its plan to create more content.",
+            request_id,
+            Some(serde_json::json!({ "block_limit": "block_creation" })),
+        ))
+    }
+
+    /// How many new blocks a request would add, or `None` when it cannot
+    /// create blocks. The page itself counts as one block.
+    fn blocks_created_by(&self, request: &ApiRequest, path: &str) -> Option<u64> {
+        match (request.method, path) {
+            (Method::Post, "/api/v2/pages") | (Method::Post, "/api/v2/databases") => Some(1),
+            (Method::Patch, p) if p.starts_with("/api/v2/blocks/") && p.ends_with("/children") => {
+                parse_body::<BlockChildrenRequest>(request)
+                    .ok()
+                    .map(|children| children.children.len() as u64)
+            }
+            (Method::Patch, p) => {
+                let rest = p.strip_prefix("/api/v2/pages/")?;
+                if rest.is_empty() || rest.contains('/') {
+                    return None;
+                }
+                let page = parse_body::<Page>(request).ok()?;
+                let previous = self
+                    .workspace
+                    .page(&page.id)
+                    .map(Page::block_count)
+                    .unwrap_or(0);
+                Some(page.block_count().saturating_sub(previous))
+            }
+            _ => None,
+        }
     }
 
     /// Read-only access to accounts, permissions and the sync log.
@@ -336,6 +483,31 @@ fn v2_error(
         }),
         request_id: None,
     }
+}
+
+/// A saved write whose response could not be built: tell the client to read
+/// the object instead of repeating the write (spec-037).
+fn write_timeout_response(response: &ApiResponse, request_id: &str) -> ApiResponse {
+    let committed = serde_json::from_str::<serde_json::Value>(&response.body)
+        .ok()
+        .and_then(|body| body.get("data")?.get("id")?.as_str().map(str::to_string));
+    let mut data = serde_json::json!({
+        "retry_after": "1",
+        "retry_guidance": [
+            "Read the object again to confirm the saved change.",
+            "Do not repeat the write."
+        ]
+    });
+    if let Some(id) = committed {
+        data["committed_resource_id"] = serde_json::json!(id);
+    }
+    v2_error(
+        503,
+        CODE_SERVICE_UNAVAILABLE,
+        "The change was saved, but the response could not be built in time. Read the object again instead of repeating the write.",
+        request_id,
+        Some(data),
+    )
 }
 
 fn map_v1_error(v1: ApiResponse, request_id: &str) -> ApiResponse {
@@ -436,7 +608,17 @@ impl WorkspaceServer {
             Some((p, q)) => (p, q),
             None => (request.path.as_str(), ""),
         };
+        let is_write = !matches!(request.method, Method::Get);
+        let timed_out = is_write && self.simulate_write_timeout;
+        if timed_out {
+            self.simulate_write_timeout = false;
+        }
         let response = self.handle_v2_inner(request, path, query, &request_id);
+        let response = if timed_out && (200..300).contains(&response.status) {
+            write_timeout_response(&response, &request_id)
+        } else {
+            response
+        };
         let status = response.status;
         let response = ApiResponse {
             request_id: Some(request_id.clone()),
@@ -495,6 +677,49 @@ impl WorkspaceServer {
                 None,
             );
         };
+
+        if self.overloaded {
+            return v2_error(
+                529,
+                CODE_SERVICE_OVERLOAD,
+                "the service is temporarily overloaded; retry after the wait",
+                request_id,
+                Some(serde_json::json!({ "retry_after": "5" })),
+            );
+        }
+        let decision =
+            self.rate_limiter
+                .check(&connection.id, &connection.workspace_id, Instant::now());
+        if !decision.allowed {
+            let reason = decision.reason.unwrap_or(REASON_CONNECTION);
+            return v2_error(
+                429,
+                CODE_RATE_LIMITED,
+                format!("rate limit exceeded: {reason}"),
+                request_id,
+                Some(serde_json::json!({
+                    "rate_limit_reason": reason,
+                    "retry_after": decision.retry_after.to_string(),
+                })),
+            );
+        }
+        if !matches!(request.method, Method::Get)
+            && let Err(violation) = limits::validate_request(request.body.as_deref())
+        {
+            return v2_error(
+                400,
+                CODE_VALIDATION_ERROR,
+                violation.message,
+                request_id,
+                Some(serde_json::json!({ "limit": violation.limit })),
+            );
+        }
+        if let Some(response) = self.conflict_response(request, request_id) {
+            return response;
+        }
+        if let Some(response) = self.block_limit_response(request, path, request_id) {
+            return response;
+        }
 
         let Some(required) = required_capability(request.method, path) else {
             return v2_error(404, CODE_NOT_FOUND, "unknown route", request_id, None);

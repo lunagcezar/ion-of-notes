@@ -74,14 +74,14 @@ Status vocabulary:
 | [034](spec-034-views-and-database-layouts.md) | Views and database layouts | implemented | View CRUD, filters/sorts, board/calendar grouping |
 | [035](spec-035-comments-users-and-files.md) | Comments, users and files | implemented | Comment CRUD, users, file uploads |
 | [036](spec-036-webhooks-and-event-delivery.md) | Webhooks and event delivery | implemented | Subscriptions, signatures, retries, all documented events |
-| [037](spec-037-limits-and-operations.md) | Limits, rate limiting and operations | **planned** | Depends on 030/031 |
+| [037](spec-037-limits-and-operations.md) | Limits, rate limiting and operations | implemented | Rate/size/block limits, retry policy, operational errors |
 
 ## 3. Current open work
 
 | Item | Where | Next step |
 | ---- | ----- | --------- |
 | A9 — settings row filtering inside the open section | spec-016 | Small implementation spec |
-| B4 — derive the contract from public API docs | spec-016 / ADR-006 | **Reviewed 2026-11-08**; specs 030–037 drafted |
+| B4 — derive the contract from public API docs | spec-016 / ADR-006 | **Reviewed 2026-11-08**; specs 030–037 implemented |
 | B5 - broader mock server + contract suite | spec-016 | After the next v2 slices |
 | B3 - own-account HAR | spec-016 | **Blocked** by the strict B1 scope; needs a new decision |
 | v2 foundation | spec-030 | **Implemented:** versioning, errors, capabilities |
@@ -91,7 +91,7 @@ Status vocabulary:
 | v2 views | spec-034 | **Implemented:** CRUD, filters/sorts, grouping |
 | v2 comments/users/files | spec-035 | **Implemented:** comments, users, uploads |
 | v2 webhooks | spec-036 | **Implemented:** subscriptions, signatures, retries, all documented events |
-| v2 limits | spec-037 | Rate/size/block limits |
+| v2 limits | spec-037 | **Implemented:** rate/size/block limits, retry policy |
 | Persist the selected language | spec-028 follow-up | Add to `WorkspaceSettings` or local config |
 | Send or remove the invite message | spec-023 follow-up | Add `message` to `MemberDraft` or drop the UI field |
 | Block-anchored inline comments | spec-026 follow-up | Model + tests |

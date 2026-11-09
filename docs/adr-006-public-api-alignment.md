@@ -1,6 +1,6 @@
 # ADR-006 — Public Notion API alignment
 
-- **Status:** Accepted (B4 review; specs 030–036 implemented, spec-037 staged)
+- **Status:** Accepted (B4 review; specs 030–037 implemented)
 - **Date:** 2026-11-08
 - **Supersedes:** none; refines ADR-003 (self-hosted collaborative API)
 - **Related:** `docs/public-api-analysis.md`, `docs/api-observations.md`,
@@ -91,7 +91,7 @@ flowchart TD
 | 034 views | **implemented** (view CRUD, filters/sorts, board/calendar grouping) |
 | 035 comments/users/files | **implemented** (comments, users, file uploads) |
 | 036 webhooks | **implemented** (subscriptions, verification, HMAC-SHA256, aggregation, retries, all documented events) |
-| 037 limits | planned |
+| 037 limits | **implemented** (rate/size/block limits, retry policy, 429/529/503/409) |
 
 ## Consequences
 

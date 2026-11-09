@@ -293,7 +293,7 @@ flowchart TD
 | Views | `model/view.rs` | filter/sort/config; query pagination |
 | Comments/users/files | `model/comment.rs`, `model/file.rs`, `model/user.rs` | attachments; `FileStore` port |
 | Webhooks | `webhooks.rs`, `server/webhooks.rs` | `WebhookStore` port; delivery worker |
-| Limits | `server/limits.rs`, `server/rate_limit.rs` | policy, not domain rules |
+| Limits | `server/limits.rs`, `server/rate_limit.rs` | policy, not domain rules; in-process limiter behind one decision type |
 
 The v2 work must not break the dependency direction: DTOs stay free of egui and
 sockets; the domain does not know HTTP or files; the composition root wires
@@ -311,11 +311,11 @@ new stores and delivery workers.
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
 - The v2 **foundation, pagination, rich text/blocks, properties/data sources,
-  views, comments/users/files and webhooks** exist (specs 030–036): `/api/v2`,
-  version/auth/capability checks, structured errors, request IDs, cursor list
-  envelopes, rich text, block metadata/children, typed properties, databases,
-  data sources, views, comments, users, file uploads and signed webhook
-  delivery. Limits and operations remain planned (spec-037).
+  views, comments/users/files, webhooks and limits** exist (specs 030–037):
+  `/api/v2`, version/auth/capability checks, structured errors, request IDs,
+  cursor list envelopes, rich text, block metadata/children, typed properties,
+  databases, data sources, views, comments, users, file uploads, signed webhook
+  delivery and the operational limits/retry contract.
 
 ## 12. Further reading
 

@@ -302,7 +302,7 @@ capabilities) is implemented; the rest are planned.
   HMAC-SHA256, cover every documented event type and retry failed deliveries
   (implemented in `spec-036`).
 - FR-90: The server enforces rate, request-size and workspace block limits and
-  returns `429`/`529`/`503` with retry guidance (spec-037).
+  returns `429`/`529`/`503` with retry guidance (implemented in `spec-037`).
 - FR-91: v1 routes stay stable; v2 changes are additive unless a version bump
   is declared; clients ignore unknown response fields and treat cursors as
   opaque (versioning and v1 stability in `spec-030`; cursor opacity in
@@ -364,7 +364,8 @@ capabilities) is implemented; the rest are planned.
   UI observation or our own decision is used; no private endpoint, capture or
   decompiled behavior is claimed as fact (ADR-006, `docs/public-api-analysis.md`).
 - NFR-18: v2 limits are explicit and testable: request size, rate, block and
-  schema limits return stable codes and retry guidance (spec-037).
+  schema limits return stable codes and retry guidance (implemented in
+  `spec-037`).
 - NFR-19: v2 is additive and backward-compatible with v1; clients ignore
   unknown fields and treat cursors as opaque (spec-030/031).
 - NFR-20: Legacy data (`Block.text`, `Page.rows`) migrates to the richer v2

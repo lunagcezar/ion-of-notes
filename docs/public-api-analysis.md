@@ -456,9 +456,10 @@ capabilities, request IDs), spec-031 (`ListResponse`, opaque cursors),
 spec-032 (rich text, block metadata/children, block endpoints), spec-033
 (typed properties, databases, data sources, property items), spec-034
 (views, filters, sorts, board/calendar grouping), spec-035 (comments, users,
-file uploads) and spec-036 (webhook subscriptions, verification, HMAC-SHA256
-signatures, aggregation, retries and every documented event type) are
-implemented. Spec-037 (limits and operations) remains planned.
+file uploads), spec-036 (webhook subscriptions, verification, HMAC-SHA256
+signatures, aggregation, retries and every documented event type) and spec-037
+(rate/size/block limits, `429`/`529`/`503`/`409` behavior, `Retry-After` and
+the client retry policy) are implemented.
 
 ## 16. Risks and open questions
 
@@ -474,7 +475,9 @@ implemented. Spec-037 (limits and operations) remains planned.
   explicit development override, and documents that TLS delivery is not yet
   implemented in the local adapter.
 - **Limit risk:** rate and block limits depend on plan/member count. Spec-037
-  makes the policy explicit and configurable.
+  makes the policy explicit and configurable; the in-process limiter is a
+  single-node adapter and a production deployment can replace it behind the
+  same `RateLimiter` decision shape.
 - **Clean-room risk:** public API docs are allowed, but they describe the
   integration surface, not the original private service. Every inference stays
   marked as such in `docs/api-observations.md`.

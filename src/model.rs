@@ -1549,6 +1549,12 @@ impl Page {
         }
     }
 
+    /// Lifetime block usage of this page: the page itself counts as one block,
+    /// plus every nested block (spec-037).
+    pub fn block_count(&self) -> u64 {
+        1 + count_blocks(&self.blocks)
+    }
+
     /// Non-empty headings, in page order (used by the table of contents).
     pub fn headings(&self) -> Vec<&Block> {
         self.blocks
@@ -1732,6 +1738,11 @@ impl Workspace {
             file_uploads: Vec::new(),
             index: WorkspaceIndex::default(),
         }
+    }
+
+    /// Lifetime block usage of the whole workspace (spec-037).
+    pub fn block_count(&self) -> u64 {
+        self.pages.iter().map(Page::block_count).sum()
     }
 
     pub fn page(&self, id: &str) -> Option<&Page> {
@@ -2215,6 +2226,13 @@ impl Workspace {
     pub fn bump_version(&mut self) {
         self.version = self.version.saturating_add(1);
     }
+}
+
+fn count_blocks(blocks: &[Block]) -> u64 {
+    blocks
+        .iter()
+        .map(|block| 1 + count_blocks(&block.children))
+        .sum()
 }
 
 fn find_block_in<'a>(blocks: &'a [Block], id: &str) -> Option<&'a Block> {

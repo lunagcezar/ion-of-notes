@@ -78,8 +78,8 @@ or, on failure:
 
 `401` and `403` are produced by the **v2 foundation** (missing/invalid token,
 missing capability); v1 has no auth middleware and does not produce them. The
-planned v2 limits add `409 conflict_error`, `429 rate_limited`,
-`503 service_unavailable` and `529 service_overload`; see
+v2 operational contract adds `409 conflict_error`, `429 rate_limited`,
+`503 service_unavailable` and `529 service_overload`; see §8.8,
 `docs/public-api-analysis.md` §3 and spec-037.
 
 ## 3. Implemented routes
@@ -324,8 +324,9 @@ v1 routes stay stable.
 - Errors are a structured `ApiError` body:
   `{object:"error",status,code,message,request_id,additional_data?}`. Stable
   codes include `missing_version`, `unsupported_version`, `invalid_json`,
-  `validation_error`, `invalid_cursor`, `unauthorized`,
-  `restricted_resource`, `object_not_found` and `internal_server_error`.
+  `validation_error`, `invalid_cursor`, `unauthorized`, `restricted_resource`,
+  `object_not_found`, `internal_server_error`, `rate_limited`,
+  `service_overload`, `service_unavailable` and `conflict_error`.
 - Capabilities: read/update/insert content, read/insert comments and user-info
   levels. The content routes enforce read/update/insert separately.
 - Success bodies still use the existing `{data,error}` envelope until the v2
@@ -348,7 +349,7 @@ v1 routes stay stable.
 | Users | `Member` | person/bot, profile, workspace limits | 035 | **implemented** |
 | Files | none | file/file_upload/external + lifecycle | 035 | **implemented** |
 | Webhooks | none | subscriptions, verification, HMAC, retries | 036 | **implemented** |
-| Limits | none | rate/size/block limits, 429/529/503 guidance | 037 | planned |
+| Limits | none | rate/size/block limits, 429/529/503 guidance | 037 | **implemented** |
 
 Implemented v2 routes:
 
@@ -512,10 +513,43 @@ and `href`.
   implement TLS delivery, so a production deployment supplies its own sender
   behind the same contract.
 
+### 8.8 v2 limits and operations (implemented)
+
+- `Plan` is `free`, `business` or `enterprise`; it configures limits only, not
+  billing. `RequestBudget { plan, members, blocks }` derives the policy.
+- Per-connection budgets are 180 requests/minute on Free and 600 on Business/
+  Enterprise. The shared workspace budget scales from that value. Both use a
+  fixed 60-second window.
+- A rejected request returns `429 rate_limited` with
+  `additional_data.rate_limit_reason` (`public_api_request_rate_limit` or
+  `public_api_space_request_rate_limit`) and `additional_data.retry_after`.
+- `529 service_overload` is returned while the server reports overload and
+  carries the same `retry_after` guidance.
+- Request-size checks run before any mutation: 500 KB body, 1000 block
+  elements, 2000-character rich text/URL, 1000-character equation, 100 items
+  per rich-text/multi-select/relation/people array, 200-character email/phone.
+  Violations return `400 validation_error` with `additional_data.limit`.
+- A Free workspace with more than one member has a 1000 lifetime-block limit.
+  The write that reaches the limit succeeds; the next block-creating request
+  returns `403 restricted_resource` with `additional_data.block_limit:
+  "block_creation"`. Reads, deletes and non-creating edits keep working.
+- `If-Match: <workspace-version>` enables optimistic concurrency: a stale value
+  returns `409 conflict_error` with `additional_data.current_version`.
+- A write that was saved but could not build its response returns
+  `503 service_unavailable` with `additional_data.retry_guidance`,
+  `retry_after` and, for creates, `committed_resource_id`. Clients read the
+  object instead of repeating the write.
+- `Retry-After` is emitted as an HTTP header from
+  `additional_data.retry_after`, so header and body agree.
+- Client `RetryPolicy` retries `429`/`529`, retries `500`/`502`/`503`/`504`
+  only for idempotent methods, honours `Retry-After`, uses capped exponential
+  backoff with caller-supplied jitter, and never retries
+  `public_api_request_blocked` or a plan-limit `403`.
+
 ```mermaid
 flowchart LR
     V1[Current /api v1] --> KEEP[Keep stable]
-    V1 --> V2[/api/v2 planned/]
+    V1 --> V2[/api/v2 implemented/]
     V2 --> F[030 versioning + errors + capabilities]
     V2 --> P[031 pagination]
     V2 --> B[032 rich text + blocks]

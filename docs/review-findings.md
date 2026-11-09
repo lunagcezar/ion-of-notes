@@ -111,7 +111,7 @@ listed in §5; they are planned in specs 030–037.
 ### RF-D06 — Unknowns ledger reported "65 tests" and stale U-06 progress
 
 - **Severity:** medium
-- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 195.
+- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 210.
   U-06 still said version history was only planned, while spec-015 implemented
   it and spec-026 added archive/discussions.
 - **Impact:** a reader could not tell which page actions are real.
@@ -285,8 +285,9 @@ opaque cursors), RF-P03 by spec-032 (rich text, block metadata/children,
 block endpoints), RF-P04 by spec-033 (typed properties, databases, data
 sources, row migration), RF-P05 by spec-034 (view CRUD, filters/sorts,
 board/calendar grouping), RF-P06–RF-P08 by spec-035 (comments, users, file
-uploads) and RF-P09 by spec-036 (webhook subscriptions, signatures, retries and
-all documented event types). RF-P10 remains planned in spec-037.
+uploads), RF-P09 by spec-036 (webhook subscriptions, signatures, retries and
+all documented event types) and RF-P10 by spec-037 (rate, request-size and
+block limits, retry guidance and the operational error taxonomy).
 
 ## 6. What the review confirmed is healthy
 
@@ -302,7 +303,7 @@ all documented event types). RF-P10 remains planned in spec-037.
   or settings changes.
 - **Version retention:** 50 newest snapshots per page, restore records a new
   version.
-- **Test discipline:** 195 integration tests, no `#[cfg(test)]` in `src/`,
+- **Test discipline:** 210 integration tests, no `#[cfg(test)]` in `src/`,
   shared helpers in `tests/common/mod.rs`.
 - **Quality gates:** `cargo test --all-targets`, clippy and `cargo fmt --check`
   are clean at the time of this review.
@@ -337,7 +338,7 @@ all documented event types). RF-P10 remains planned in spec-037.
 | Done | Views | `spec-034` |
 | Done | Comments, users and files | `spec-035` |
 | Done | Webhooks and event delivery | `spec-036` |
-| Next | Add limits and retry policy | `spec-037` |
+| Done | Limits and retry policy | `spec-037` |
 | Next | Implement A9 settings row filtering | spec-016 |
 | Later | Persist the selected language | spec-028 follow-up |
 | Later | Send or remove the invite message | spec-023 follow-up |

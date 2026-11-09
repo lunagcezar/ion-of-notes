@@ -1,8 +1,8 @@
 //! Tests for the client layer (public API only).
 
-use not_notion::client::{Client, ClientError, encode_body};
+use not_notion::client::{Client, ClientError, RetryPolicy, encode_body};
 use not_notion::model::{Page, PageDraft, Workspace};
-use not_notion::server::{ApiRequest, ApiResponse, WorkspaceApi, WorkspaceServer};
+use not_notion::server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
 use serde::Serialize;
 
 struct Stub {
@@ -179,6 +179,39 @@ fn page_versions_are_newest_first_after_updates() {
             .all(|pair| pair[0].version > pair[1].version)
     );
     assert!(versions.iter().any(|v| v.title == "Second revision"));
+}
+
+#[test]
+fn retry_policy_respects_retry_after_and_caps_attempts() {
+    let policy = RetryPolicy::default();
+
+    let limited = policy.decide(Method::Get, 429, Some("rate_limited"), Some(7), 0, 0);
+    assert!(limited.retry);
+    assert_eq!(limited.delay_millis, 7_000);
+
+    let blocked = policy.decide(
+        Method::Get,
+        429,
+        Some("public_api_request_blocked"),
+        Some(7),
+        0,
+        0,
+    );
+    assert!(!blocked.retry);
+
+    let overload = policy.decide(Method::Post, 529, Some("service_overload"), None, 0, 0);
+    assert!(overload.retry);
+    assert_eq!(overload.delay_millis, 1_000);
+
+    let write_timeout = policy.decide(Method::Post, 503, Some("service_unavailable"), None, 0, 0);
+    assert!(!write_timeout.retry);
+
+    let read_timeout = policy.decide(Method::Get, 503, None, None, 1, 250);
+    assert!(read_timeout.retry);
+    assert_eq!(read_timeout.delay_millis, 2_250);
+
+    let exhausted = policy.decide(Method::Get, 429, Some("rate_limited"), Some(1), 5, 0);
+    assert!(!exhausted.retry);
 }
 
 #[test]

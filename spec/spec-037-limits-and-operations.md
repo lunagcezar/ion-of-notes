@@ -147,16 +147,44 @@ flowchart TD
 
 ## Plan / tasks
 
-- [ ] Spec + failing tests (red).
-- [ ] `ApiError` codes and `additional_data` helpers (shared with spec-030).
-- [ ] Request-size validation.
-- [ ] Rate limiter and `Retry-After`.
-- [ ] Block-limit policy and 403 response.
-- [ ] 503/409/529 behavior and retry guidance.
-- [ ] Client retry helper.
-- [ ] Update `docs/api-contract.md`, `docs/requirements.md`,
+- [x] Spec + failing tests (red).
+- [x] `ApiError` codes and `additional_data` helpers (shared with spec-030).
+- [x] Request-size validation.
+- [x] Rate limiter and `Retry-After`.
+- [x] Block-limit policy and 403 response.
+- [x] 503/409/529 behavior and retry guidance.
+- [x] Client retry helper.
+- [x] Update `docs/api-contract.md`, `docs/requirements.md`,
   `docs/testing.md`, `docs/public-api-analysis.md`.
-- [ ] Build/test/clippy/fmt, commit.
+- [x] Build/test/clippy/fmt, commit.
+
+## Result
+
+- Added `src/server/limits.rs`: `Plan` (Free/Business/Enterprise),
+  `RequestBudget`, request-size and block-element validation, and the Free
+  multi-member 1000-block policy.
+- Added `src/server/rate_limit.rs`: in-process fixed-window limiter for the
+  per-connection and shared workspace budgets, with `Retry-After` seconds and
+  `rate_limit_reason`.
+- `/api/v2` now returns `429 rate_limited`, `529 service_overload`,
+  `503 service_unavailable` and `409 conflict_error`; the HTTP adapter emits
+  `Retry-After` from the structured error body.
+- Size limits are enforced before any mutation: 500 KB, 1000 block elements,
+  2000-character rich text/URL, 1000-character equation, 100 items per
+  rich-text/multi-select/relation/people array, 200-character email/phone.
+- A Free multi-member workspace at 1000 blocks returns
+  `403 restricted_resource` with `additional_data.block_limit:
+  "block_creation"`; reads, deletes and non-creating edits still work, and the
+  write that reaches the limit succeeds.
+- `If-Match` enables optimistic concurrency (`409 conflict_error`), and the
+  fault-injection hook documents the saved-write `503` guidance
+  (`retry_guidance`, `committed_resource_id`).
+- Added `RetryPolicy`/`RetryDecision` in `client.rs`: respects `Retry-After`,
+  uses capped exponential backoff plus caller-supplied jitter, retries
+  `429`/`529`, retries `500`/`502`/`503`/`504` only for idempotent methods,
+  and never retries `public_api_request_blocked` or plan-limit `403`s.
+- Tests: 14 in `tests/limits.rs` plus one retry-policy test in
+  `tests/client.rs`; the suite is 210 tests.
 
 ## Requirement mapping
 

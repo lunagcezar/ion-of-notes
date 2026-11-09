@@ -33,7 +33,7 @@ pub use app::{
     build_desktop, build_desktop_at, build_desktop_at_paths, build_server, build_server_at,
     build_server_at_paths,
 };
-pub use client::{Client, ClientError};
+pub use client::{Client, ClientError, RetryDecision, RetryPolicy};
 pub use collab::{
     Access, Change, ChangeOp, CollabState, ExportFile, MAX_VERSIONS_PER_PAGE, Member, MemberDraft,
     PageVersion, RealtimeContract, RealtimeEvent, RealtimeKind, Role, Share, SyncBatch,
@@ -56,8 +56,9 @@ pub use ollama::{
     parse_tags_response, service_reachable,
 };
 pub use server::{
-    API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, ListResponse, Method,
-    PageRequest, PaginationError, RequestLogEntry, WorkspaceApi, WorkspaceServer,
+    API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, LimitViolation,
+    ListResponse, Method, PageRequest, PaginationError, Plan, RateDecision, RateLimiter,
+    RequestBudget, RequestLogEntry, WorkspaceApi, WorkspaceServer,
 };
 pub use shortcuts::{Action, Combo, SHORTCUT_TABLE, ShortcutDoc, lookup};
 pub use store::{CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore};

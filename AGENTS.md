@@ -115,6 +115,8 @@ src/
     url.rs         percent-encoding/decoding shared by client and server
     contract.rs    v2 versioning, ApiError, capabilities, request IDs
     pagination.rs  v2 list envelope, opaque cursors, page_size validation
+    limits.rs      plan/request budgets, size checks, block-limit policy
+    rate_limit.rs  in-process per-connection and workspace rate limiter
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
   collab.rs        accounts/roles, sharing, sync log, realtime DTOs, CollabState
                    (version history capped at 50 snapshots per page)
@@ -190,6 +192,7 @@ tests/
   views.rs         view CRUD, filters/sorts, board/calendar grouping
   comments.rs      comment CRUD, users, attachments and file uploads
   webhooks.rs      subscriptions, signatures, aggregation, delivery and retry
+  limits.rs        rate/size/block limits, Retry-After, 409/503/529
   integration.rs   end-to-end client/server/store scenario
 ```
 
@@ -477,12 +480,12 @@ reviewed and compared with our contract. ADR-006 decides to adopt compatible
 patterns behind our own `/api/v2`, not to clone Notion. The roadmap is
 `spec-030` (versioning/errors/capabilities), `031` (pagination), `032` (rich
 text/blocks), `033` (properties/data sources), `034` (views), `035`
-(comments/users/files), `036` (webhooks) and `037` (limits). Specs 030–036 are
+(comments/users/files), `036` (webhooks) and `037` (limits). Specs 030–037 are
 implemented: `/api/v2`, required `Not-Notion-Version`, Bearer auth, `ApiError`,
 capabilities, request IDs, `ListResponse` and opaque cursors, rich text/blocks,
-typed properties/data sources, views, comments/users/files and signed webhook
-delivery. Spec-037 (limits and operations) remains. v1 routes stay stable. Full
-analysis: `docs/public-api-analysis.md`.
+typed properties/data sources, views, comments/users/files, signed webhook
+delivery and the operational rate/size/block contract with retry guidance. v1
+routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 
 ## Code Conventions
 
@@ -504,7 +507,7 @@ analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (195)    |
+| `cargo test --all-targets`               | Run all integration test crates (210)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |

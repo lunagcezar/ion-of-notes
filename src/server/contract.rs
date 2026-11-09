@@ -33,6 +33,10 @@ pub const CODE_RESTRICTED_RESOURCE: &str = "restricted_resource";
 pub const CODE_NOT_FOUND: &str = "object_not_found";
 pub const CODE_INVALID_CURSOR: &str = "invalid_cursor";
 pub const CODE_INTERNAL: &str = "internal_server_error";
+pub const CODE_RATE_LIMITED: &str = "rate_limited";
+pub const CODE_SERVICE_OVERLOAD: &str = "service_overload";
+pub const CODE_SERVICE_UNAVAILABLE: &str = "service_unavailable";
+pub const CODE_CONFLICT: &str = "conflict_error";
 
 /// Structured error body for `/api/v2` responses.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
