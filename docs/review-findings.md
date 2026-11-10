@@ -111,7 +111,7 @@ listed in §5; they are planned in specs 030–038.
 ### RF-D06 — Unknowns ledger reported "65 tests" and stale U-06 progress
 
 - **Severity:** medium
-- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 237.
+- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 240.
   U-06 still said version history was only planned, while spec-015 implemented
   it and spec-026 added archive/discussions.
 - **Impact:** a reader could not tell which page actions are real.
@@ -303,7 +303,7 @@ block limits, retry guidance and the operational error taxonomy).
   or settings changes.
 - **Version retention:** 50 newest snapshots per page, restore records a new
   version.
-- **Test discipline:** 237 integration tests, no `#[cfg(test)]` in `src/`,
+- **Test discipline:** 240 integration tests, no `#[cfg(test)]` in `src/`,
   shared helpers in `tests/common/mod.rs`.
 - **Quality gates:** `cargo test --all-targets`, clippy and `cargo fmt --check`
   are clean at the time of this review.
@@ -342,6 +342,7 @@ block limits, retry guidance and the operational error taxonomy).
 | Done | Axum web server and B5 contract suite | `spec-038` |
 | Done | Sessions, Argon2id and SQLite storage | `spec-039` |
 | Done | WebSocket change feed and presence | `spec-040` |
+| Done | TLS webhooks and shared rate limits | `spec-041` |
 | Done | Settings row filtering (A9) | spec-016 |
 | Later | Persist the selected language | spec-028 follow-up |
 | Later | Send or remove the invite message | spec-023 follow-up |

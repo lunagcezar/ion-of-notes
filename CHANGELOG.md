@@ -6,6 +6,21 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-041 TLS webhooks and shared rate limits
+
+- Added `src/server/webhook_sender.rs`: `WebhookSender` port and
+  `UreqWebhookSender` with rustls, a 5-second timeout, no redirects and
+  non-2xx statuses as values.
+- Removed the hand-written loopback TCP POST; the server now uses an injectable
+  sender (tests use a recording sender).
+- Added `RateLimitStore`/`RateLimitHit` to the store ports and a transactional
+  SQLite `rate_limits` table.
+- Added `RateLimitPolicy` and `SqliteRateLimiter`; `--database` now shares the
+  workspace budget across server instances using the same SQLite file.
+- Added `tests/shared_limits.rs` (2 tests) and an injected-sender webhook test;
+  the suite is 240 tests.
+- Added `docs/adr-010-webhook-delivery-and-shared-limits.md`.
+
 ### Added — spec-040 real-time WebSocket change feed
 
 - Added `src/server/realtime.rs`: `RealtimeHub`, `ServerMessage`,

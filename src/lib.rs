@@ -63,11 +63,15 @@ pub use ollama::{
 };
 pub use server::{
     API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, LimitViolation,
-    ListResponse, Method, PageRequest, PaginationError, Plan, RateDecision, RateLimiter,
-    RequestBudget, RequestLogEntry, WorkspaceApi, WorkspaceServer,
+    ListResponse, Method, PageRequest, PaginationError, Plan, RateDecision, RateLimitPolicy,
+    RateLimiter, RequestBudget, RequestLogEntry, SqliteRateLimiter, UreqWebhookSender,
+    WebhookSender, WorkspaceApi, WorkspaceServer,
 };
 pub use shortcuts::{Action, Combo, SHORTCUT_TABLE, ShortcutDoc, lookup};
-pub use store::{CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore};
+pub use store::{
+    CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, RateLimitHit, RateLimitStore,
+    SqliteStore, WorkspaceStore,
+};
 pub use templates::{Template, catalog, find, template_for_purpose};
 pub use webhooks::{
     ActorRef, EntityRef, SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType,

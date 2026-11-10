@@ -328,6 +328,12 @@ capabilities) is implemented; the rest are planned.
 - FR-98: `GET /ws/workspace/{id}` authenticates the socket, streams committed
   changes, replays after `?since=`, reports presence and answers ping/pong
   (implemented in `spec-040`).
+- FR-99: Webhook delivery uses a rustls HTTPS sender with timeouts and no
+  automatic redirects, behind an injectable `WebhookSender` port (implemented
+  in `spec-041`).
+- FR-100: Rate limits can use a shared SQLite store so multiple server
+  instances on one database share the workspace budget (implemented in
+  `spec-041`).
 
 ## 2. Non-functional requirements
 
@@ -391,6 +397,10 @@ capabilities) is implemented; the rest are planned.
   behave identically for the same snapshots (spec-039).
 - NFR-24: Real-time changes are ordered by the sync-log sequence, resume from a
   cursor, and never block the REST path (ADR-009, spec-040).
+- NFR-25: Webhook delivery uses rustls and never follows redirects
+  automatically (ADR-010, spec-041).
+- NFR-26: Shared rate limits are transactional and consistent across server
+  instances using the same SQLite database (ADR-010, spec-041).
 
 ## 3. Requirement → spec map
 
@@ -423,6 +433,7 @@ capabilities) is implemented; the rest are planned.
 | FR-95, NFR-21                 | `spec-038-axum-web-server-and-contract-suite.md` |
 | FR-96, FR-97, NFR-22, NFR-23  | `spec-039-sessions-and-sqlite-storage.md` |
 | FR-98, NFR-24                 | `spec-040-realtime-websocket-change-feed.md` |
+| FR-99, FR-100, NFR-25, NFR-26 | `spec-041-tls-webhooks-and-shared-limits.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

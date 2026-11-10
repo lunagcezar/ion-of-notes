@@ -9,21 +9,22 @@ in what order, and which document is the source of truth for each concern.
 | -------- | ------------------ |
 | New contributor | `README.md` → `docs/architecture.md` → `docs/contributor-guide.md` → `docs/testing.md` → `docs/glossary.md` |
 | Agent starting a task | `AGENTS.md` → `spec/README.md` → `docs/architecture.md` → the relevant spec → `docs/review-findings.md` |
-| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009 |
+| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010 |
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
 ## Current status (2026-11-08)
 
-- **Specs:** `spec-001` … `spec-040` implemented; `spec-007` retired;
+- **Specs:** `spec-001` … `spec-041` implemented; `spec-007` retired;
   `spec-016` is a plan with B5 done; `spec-029` is the documentation
   overhaul; `spec-030` is the v2 foundation; `spec-031` adds pagination;
   `spec-032` adds rich text/blocks; `spec-033` adds properties/data sources;
   `spec-034` adds views; `spec-035` adds comments/users/files; `spec-036` adds
   webhooks; `spec-037` adds limits and operations; `spec-038` adds the Axum
   web server and B5 contract suite; `spec-039` adds sessions, Argon2id and
-  SQLite storage; `spec-040` adds the WebSocket change feed and presence.
-- **Tests:** 237 integration tests across `tests/`; `cargo clippy --all-targets
+  SQLite storage; `spec-040` adds the WebSocket change feed and presence;
+  `spec-041` adds TLS webhooks and shared SQLite rate limits.
+- **Tests:** 240 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
   selects SQLite with Argon2id accounts and sessions. PostgreSQL and full CRDT
@@ -36,8 +37,9 @@ in what order, and which document is the source of truth for each concern.
   reviewed on 2026-11-08** (`docs/public-api-analysis.md`); the v2 foundation,
   pagination, rich text/blocks, properties/data sources, views,
   comments/users/files, webhooks, limits and the Axum adapter are implemented
-  (specs 030–038); sessions/SQLite (spec-039) and the WebSocket change feed
-  (spec-040) are implemented. B5 is done.
+  (specs 030–038); sessions/SQLite (spec-039), the WebSocket change feed
+  (spec-040) and TLS webhooks/shared limits (spec-041) are implemented. B5 is
+  done.
 - **Localization:** core navigation, Share, Library, page actions, comments and
   Settings are translated into `en`, `pt-BR` and `eo`; remaining strings are
   migrated incrementally.

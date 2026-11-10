@@ -80,6 +80,7 @@ src/
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
     web.rs           Axum/Tokio HTTP + WebSocket adapter for --serve
     realtime.rs      change-feed hub, protocol messages and presence
+    webhook_sender.rs WebhookSender port and ureq/rustls adapter
     url.rs           shared percent-encoding
     contract.rs      v2 versioning, ApiError, capabilities, request IDs
     pagination.rs    v2 ListResponse, opaque cursors, page_size validation
@@ -226,6 +227,8 @@ Current state:
 - Argon2id accounts and opaque sessions are implemented (spec-039);
 - `GET /ws/workspace/{id}` streams the versioned change feed with presence and
   `?since=` resume (spec-040); full Yrs/CRDT merge is staged;
+- webhook delivery uses ureq/rustls behind `WebhookSender` and SQLite can share
+  rate-limit budgets across server instances (spec-041);
 - `GET /api/realtime` returns the same contract as data.
 
 ## 8. Design principles in practice
@@ -320,12 +323,13 @@ new stores and delivery workers.
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
 - The v2 **foundation, pagination, rich text/blocks, properties/data sources,
-  views, comments/users/files, webhooks and limits** exist (specs 030-040):
+  views, comments/users/files, webhooks and limits** exist (specs 030-041):
   `/api/v2`, version/auth/capability checks, structured errors, request IDs,
   cursor list envelopes, rich text, block metadata/children, typed properties,
   databases, data sources, views, comments, users, file uploads, signed webhook
   delivery, the operational limits/retry contract, the Axum production HTTP
-  adapter, SQLite-backed accounts/sessions and the WebSocket change feed.
+  adapter, SQLite-backed accounts/sessions, the WebSocket change feed, TLS
+  webhook delivery and shared SQLite rate limits.
 
 ## 12. Further reading
 
@@ -338,3 +342,4 @@ new stores and delivery workers.
 - `docs/adr-007-production-web-server.md` - Axum/Tokio/Tower server decision.
 - `docs/adr-008-sessions-and-sqlite.md` - sessions, Argon2id and SQLite decision.
 - `docs/adr-009-realtime-transport.md` - WebSocket change feed and staged CRDT.
+- `docs/adr-010-webhook-delivery-and-shared-limits.md` - ureq/rustls and SQLite rate limits.

@@ -560,9 +560,10 @@ and `href`.
 - `GET /api/v2/webhook_deliveries` lists the log and
   `POST /api/v2/webhook_deliveries/retry` processes due retries.
 - Subscription URLs must be HTTPS; loopback HTTP is accepted only when the
-  server enables the explicit development override. The local adapter does not
-  implement TLS delivery, so a production deployment supplies its own sender
-  behind the same contract.
+  server enables the explicit development override.
+- Delivery uses the `WebhookSender` port. The default `UreqWebhookSender` uses
+  ureq + rustls, a 5-second timeout and no automatic redirects; non-2xx
+  statuses are recorded in the delivery log. Tests inject a recording sender.
 
 ### 8.8 v2 limits and operations (implemented)
 
@@ -571,6 +572,9 @@ and `href`.
 - Per-connection budgets are 180 requests/minute on Free and 600 on Business/
   Enterprise. The shared workspace budget scales from that value. Both use a
   fixed 60-second window.
+- The default limiter is in-process. `--database` also wires a SQLite
+  `rate_limits` store, so server instances sharing one database share the
+  workspace budget; `SqliteRateLimiter` implements the same decision shape.
 - A rejected request returns `429 rate_limited` with
   `additional_data.rate_limit_reason` (`public_api_request_rate_limit` or
   `public_api_space_request_rate_limit`) and `additional_data.retry_after`.

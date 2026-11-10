@@ -8,7 +8,7 @@
 use crate::auth::{Account, AuthStore, Session};
 use crate::collab::CollabState;
 use crate::model::{Workspace, now_iso};
-use crate::store::{CollabStore, WorkspaceStore};
+use crate::store::{CollabStore, RateLimitHit, RateLimitStore, WorkspaceStore};
 use rusqlite::{Connection, OptionalExtension, params};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -68,7 +68,12 @@ impl SqliteStore {
                      expires_at TEXT NOT NULL
                  );
                  CREATE INDEX IF NOT EXISTS sessions_member
-                     ON sessions(member_id);",
+                     ON sessions(member_id);
+                 CREATE TABLE IF NOT EXISTS rate_limits (
+                     key TEXT PRIMARY KEY,
+                     window_start INTEGER NOT NULL,
+                     count INTEGER NOT NULL
+                 );",
             )
             .map_err(io::Error::other)?;
         Ok(Self {
@@ -131,6 +136,66 @@ impl SqliteStore {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         operation(&connection).map_err(io::Error::other)
+    }
+
+    fn with_connection_mut<T>(
+        &self,
+        operation: impl FnOnce(&mut Connection) -> rusqlite::Result<T>,
+    ) -> io::Result<T> {
+        let mut connection = self
+            .connection
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        operation(&mut connection).map_err(io::Error::other)
+    }
+}
+
+impl RateLimitStore for SqliteStore {
+    fn check(&self, key: &str, window_secs: u64, limit: u32, now: u64) -> io::Result<RateLimitHit> {
+        if limit == 0 {
+            return Ok(RateLimitHit {
+                allowed: true,
+                retry_after: 0,
+            });
+        }
+        self.with_connection_mut(|connection| {
+            let transaction = connection.transaction()?;
+            let row: Option<(u64, u32)> = transaction
+                .query_row(
+                    "SELECT window_start, count FROM rate_limits WHERE key = ?1",
+                    params![key],
+                    |row| Ok((row.get::<_, i64>(0)? as u64, row.get::<_, i64>(1)? as u32)),
+                )
+                .optional()?;
+            let (window_start, count) = match row {
+                Some((window_start, count)) if now.saturating_sub(window_start) < window_secs => {
+                    (window_start, count)
+                }
+                _ => (now, 0),
+            };
+            if count >= limit {
+                transaction.commit()?;
+                return Ok(RateLimitHit {
+                    allowed: false,
+                    retry_after: window_secs
+                        .saturating_sub(now.saturating_sub(window_start))
+                        .max(1),
+                });
+            }
+            transaction.execute(
+                "INSERT INTO rate_limits (key, window_start, count)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT(key) DO UPDATE SET
+                     window_start = excluded.window_start,
+                     count = excluded.count",
+                params![key, window_start as i64, (count + 1) as i64],
+            )?;
+            transaction.commit()?;
+            Ok(RateLimitHit {
+                allowed: true,
+                retry_after: 0,
+            })
+        })
     }
 }
 

@@ -176,6 +176,8 @@ definition.
 | **SqliteStore** | SQLite adapter for workspace, collaboration and auth state. | spec-039 |
 | **RealtimeHub** | Tokio broadcast hub for changes and presence. | spec-040 |
 | **ServerMessage** | Typed WebSocket frame: ready, change, presence, pong or error. | spec-040 |
+| **WebhookSender** | Port for signed outbound delivery; ureq/rustls is the default. | spec-041 |
+| **RateLimitStore** | Shared fixed-window counter port; SQLite implements it. | spec-041 |
 
 ## 9. Naming rules
 

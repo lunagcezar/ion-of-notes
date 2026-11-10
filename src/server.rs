@@ -37,6 +37,7 @@ mod rate_limit;
 pub mod realtime;
 mod url;
 pub mod web;
+pub mod webhook_sender;
 
 pub use contract::{
     API_VERSION, AUTH_HEADER, ApiError, CODE_CONFLICT, CODE_INTERNAL, CODE_INVALID_CURSOR,
@@ -53,15 +54,18 @@ pub use limits::{
     MAX_URL_CHARS, Plan, RequestBudget, validate_request,
 };
 pub use pagination::{PageRequest, PaginationError, paginate};
-pub use rate_limit::{REASON_CONNECTION, REASON_WORKSPACE, RateDecision, RateLimiter};
+pub use rate_limit::{
+    REASON_CONNECTION, REASON_WORKSPACE, RateDecision, RateLimitPolicy, RateLimiter,
+    SqliteRateLimiter,
+};
 use std::collections::BTreeMap;
-use std::io::{Read, Write};
-use std::net::TcpStream;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use url::url_decode;
 pub use url::url_encode;
 pub use web::serve_axum;
+pub use webhook_sender::{UreqWebhookSender, WebhookSender};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Method {
@@ -185,8 +189,10 @@ pub struct WorkspaceServer {
     block_count_baseline: u64,
     overloaded: bool,
     simulate_write_timeout: bool,
-    rate_limiter: RateLimiter,
+    rate_limiter: Box<dyn RateLimitPolicy>,
+    shared_rate_store: Option<Arc<dyn crate::store::RateLimitStore>>,
     realtime: realtime::RealtimeHub,
+    webhook_sender: Box<dyn WebhookSender>,
 }
 
 impl WorkspaceServer {
@@ -268,8 +274,10 @@ impl WorkspaceServer {
             block_count_baseline: 0,
             overloaded: false,
             simulate_write_timeout: false,
-            rate_limiter: RateLimiter::for_plan(Plan::Free, Duration::from_secs(60)),
+            rate_limiter: Box::new(RateLimiter::for_plan(Plan::Free, Duration::from_secs(60))),
+            shared_rate_store: None,
             realtime: realtime::RealtimeHub::new(256),
+            webhook_sender: Box::new(UreqWebhookSender::new()),
         }
     }
 
@@ -330,8 +338,12 @@ impl WorkspaceServer {
 
     /// Change the plan and refresh the default rate budgets.
     pub fn set_plan(&mut self, plan: Plan) {
+        let window = self.rate_limiter.window();
         self.plan = plan;
-        self.rate_limiter = RateLimiter::for_plan(plan, self.rate_limiter.window());
+        self.rate_limiter = match &self.shared_rate_store {
+            Some(store) => Box::new(SqliteRateLimiter::for_plan(store.clone(), plan, window)),
+            None => Box::new(RateLimiter::for_plan(plan, window)),
+        };
     }
 
     /// Override the derived block count (tests and operational tooling). Later
@@ -365,7 +377,44 @@ impl WorkspaceServer {
         per_workspace: u32,
         window: Duration,
     ) {
-        self.rate_limiter = RateLimiter::new(per_connection, per_workspace, window);
+        self.shared_rate_store = None;
+        self.rate_limiter = Box::new(RateLimiter::new(per_connection, per_workspace, window));
+    }
+
+    /// Use a shared rate-limit store with the current plan defaults.
+    pub fn use_shared_rate_limits<S>(&mut self, store: Arc<S>)
+    where
+        S: crate::store::RateLimitStore + 'static,
+    {
+        let window = self.rate_limiter.window();
+        let store: Arc<dyn crate::store::RateLimitStore> = store;
+        self.shared_rate_store = Some(store.clone());
+        self.rate_limiter = Box::new(SqliteRateLimiter::for_plan(store, self.plan, window));
+    }
+
+    /// Use a shared rate-limit store with explicit budgets (tests/deployment).
+    pub fn configure_shared_rate_limits<S>(
+        &mut self,
+        store: Arc<S>,
+        per_connection: u32,
+        per_workspace: u32,
+        window: Duration,
+    ) where
+        S: crate::store::RateLimitStore + 'static,
+    {
+        let store: Arc<dyn crate::store::RateLimitStore> = store;
+        self.shared_rate_store = Some(store.clone());
+        self.rate_limiter = Box::new(SqliteRateLimiter::new(
+            store,
+            per_connection,
+            per_workspace,
+            window,
+        ));
+    }
+
+    /// Inject a custom webhook sender (tests, alternate TLS adapters).
+    pub fn set_webhook_sender(&mut self, sender: impl WebhookSender + 'static) {
+        self.webhook_sender = Box::new(sender);
     }
 
     /// Simulate a temporarily overloaded service (`529 service_overload`).
@@ -1166,7 +1215,9 @@ impl WorkspaceServer {
                 continue;
             };
             let signature = sign(&subscription.verification_token, &delivery.payload);
-            let result = send_http_post(&subscription.url, &delivery.payload, &signature);
+            let result = self
+                .webhook_sender
+                .send(&subscription.url, &delivery.payload, &signature);
             delivery.attempts = delivery.attempts.saturating_add(1);
             match result {
                 Ok(status) => {
@@ -1193,7 +1244,9 @@ impl WorkspaceServer {
         event.attempt_number = 1;
         let payload = serde_json::to_string(&event).unwrap_or_default();
         let signature = sign(&subscription.verification_token, &payload);
-        let result = send_http_post(&subscription.url, &payload, &signature);
+        let result = self
+            .webhook_sender
+            .send(&subscription.url, &payload, &signature);
         let delivered = result
             .as_ref()
             .is_ok_and(|status| (200..300).contains(status));
@@ -3170,45 +3223,6 @@ fn user_dto(member: &Member, level: u8) -> UserDto {
         }),
         bot: None,
     }
-}
-
-fn send_http_post(url: &str, body: &str, signature: &str) -> Result<u16, String> {
-    let rest = url.strip_prefix("http://").ok_or_else(|| {
-        "TLS webhook delivery is not implemented in the local adapter".to_string()
-    })?;
-    let (authority, path) = match rest.split_once('/') {
-        Some((authority, path)) => (authority, format!("/{path}")),
-        None => (rest, "/".to_string()),
-    };
-    let address = if authority.contains(':') {
-        authority.to_string()
-    } else {
-        format!("{authority}:80")
-    };
-    let mut stream = TcpStream::connect(&address).map_err(|error| error.to_string())?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
-        .map_err(|error| error.to_string())?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(2)))
-        .map_err(|error| error.to_string())?;
-    let request = format!(
-        "POST {path} HTTP/1.1\r\nHost: {authority}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nX-Ion-Of-Notes-Signature: {signature}\r\nConnection: close\r\n\r\n{body}",
-        body.len()
-    );
-    stream
-        .write_all(request.as_bytes())
-        .map_err(|error| error.to_string())?;
-    let mut response = String::new();
-    stream
-        .read_to_string(&mut response)
-        .map_err(|error| error.to_string())?;
-    response
-        .lines()
-        .next()
-        .and_then(|line| line.split_whitespace().nth(1))
-        .and_then(|status| status.parse::<u16>().ok())
-        .ok_or_else(|| "invalid webhook response".to_string())
 }
 
 fn backoff_time(attempts: u8) -> String {

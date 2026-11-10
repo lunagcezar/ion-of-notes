@@ -20,6 +20,7 @@ use crate::server::WorkspaceServer;
 use crate::store::{self, SqliteStore};
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// Derive a collaboration path for a caller-supplied workspace path.
 ///
@@ -76,13 +77,16 @@ pub fn build_server_sqlite_at(
         }
     };
     seed_owner_account(&sqlite, &collab)?;
-    Ok(WorkspaceServer::with_stores_and_auth(
+    let shared_rate_store = Arc::new(sqlite.clone());
+    let mut server = WorkspaceServer::with_stores_and_auth(
         workspace,
         collab,
         sqlite.clone(),
         sqlite.clone(),
         sqlite,
-    ))
+    );
+    server.use_shared_rate_limits(shared_rate_store);
+    Ok(server)
 }
 
 fn seed_owner_account(store: &SqliteStore, collab: &CollabState) -> io::Result<()> {

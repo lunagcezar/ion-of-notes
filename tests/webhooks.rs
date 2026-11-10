@@ -4,7 +4,7 @@ mod common;
 
 use ion_of_notes::client::Client;
 use ion_of_notes::model::Workspace;
-use ion_of_notes::server::WorkspaceServer;
+use ion_of_notes::server::{WebhookSender, WorkspaceServer};
 use ion_of_notes::webhooks::{
     SubscriptionStatus, WebhookEvent, WebhookEventType, WebhookSubscription,
     WebhookSubscriptionInput, sign, verify,
@@ -18,6 +18,20 @@ use std::thread;
 struct Received {
     body: String,
     signature: String,
+}
+
+struct RecordingSender {
+    calls: Arc<Mutex<Vec<(String, String, String)>>>,
+}
+
+impl WebhookSender for RecordingSender {
+    fn send(&self, url: &str, body: &str, signature: &str) -> Result<u16, String> {
+        self.calls
+            .lock()
+            .unwrap()
+            .push((url.to_string(), body.to_string(), signature.to_string()));
+        Ok(204)
+    }
 }
 
 fn start_receiver(fail_first: bool) -> (u16, Arc<Mutex<Vec<Received>>>) {
@@ -150,6 +164,32 @@ fn insecure_urls_require_the_development_override() {
         events: vec![WebhookEventType::PageCreated],
     };
     assert!(server.create_webhook(https).is_ok());
+}
+
+#[test]
+fn injected_webhook_sender_receives_the_delivery() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let mut server = WorkspaceServer::new(Workspace::seed("x"));
+    server.allow_insecure_webhooks(true);
+    server.set_webhook_sender(RecordingSender {
+        calls: Arc::clone(&calls),
+    });
+    subscribe(
+        &mut server,
+        "http://127.0.0.1:9/hook",
+        vec![WebhookEventType::CommentCreated],
+    );
+    server.emit_webhook(
+        WebhookEventType::CommentCreated,
+        "comment",
+        "comment-1",
+        r#"{"page_id":"p-home"}"#,
+    );
+
+    let calls = calls.lock().unwrap();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].0, "http://127.0.0.1:9/hook");
+    assert!(calls[0].2.starts_with("sha256="));
 }
 
 #[test]

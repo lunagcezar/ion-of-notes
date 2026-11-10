@@ -290,6 +290,7 @@ erDiagram
 | `WebhookDelivery` | `id`, `subscription_id`, `event_id`, `payload`, `attempts`, `last_status`, `last_error`, `delivered`, `next_attempt_at` | 036 |
 | `Account` | `id`, `member_id`, `email`, `password_hash` (Argon2id PHC), `created_at` | 039 |
 | `Session` | `token_hash` (SHA-256), `member_id`, `created_at`, `expires_at` | 039 |
+| `RateLimitEntry` | `key`, `window_start`, `count` (SQLite `rate_limits`) | 041 |
 | `ServerMessage` | `ready`, `change`, `presence`, `pong`, `error` (tagged by `type`) | 040 |
 | `ClientMessage` | `ping` | 040 |
 | `PresenceMember` | `session_id`, `member_id`, `name`, `state` | 040 |
@@ -315,8 +316,8 @@ erDiagram
   port. No separate webhook file is introduced.
 - `--database` selects SQLite. The first slice stores the same workspace and
   collab JSON documents in `workspace`/`collab` tables, plus normalized
-  `accounts` and `sessions` tables. An empty database imports the JSON
-  documents once; later specs can normalize pages/blocks.
+  `accounts`, `sessions` and `rate_limits` tables. An empty database imports
+  the JSON documents once; later specs can normalize pages/blocks.
 
 ## Templates and onboarding
 

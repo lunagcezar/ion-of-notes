@@ -53,6 +53,19 @@ pub trait CollabStore: Send + Sync {
     fn persist(&self, state: &CollabState) -> io::Result<()>;
 }
 
+/// One shared rate-limit decision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RateLimitHit {
+    pub allowed: bool,
+    pub retry_after: u64,
+}
+
+/// Shared rate-limit store (in-process or SQLite today; Redis later).
+pub trait RateLimitStore: Send + Sync {
+    /// Account for one request under `key` in a fixed `window_secs` window.
+    fn check(&self, key: &str, window_secs: u64, limit: u32, now: u64) -> io::Result<RateLimitHit>;
+}
+
 /// Null-object adapter: keeps a server purely in memory (tests, previews).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct NoStore;

@@ -159,8 +159,8 @@ This is the status of **our** contract, not a claim about the original:
 | Properties/data sources | v2 typed properties, databases, data sources and property items (`spec-033`); legacy `TableRow` rows migrate lazily |
 | Views | v2 view CRUD, filters/sorts and board/calendar grouping (`spec-034`) |
 | Comments/users/files | v2 comment CRUD, person/bot users and file uploads (`spec-035`) |
-| Webhooks | v2 subscriptions, verification, HMAC-SHA256 signatures, aggregation, delivery/retry and all documented event types (`spec-036`); local adapter supports loopback HTTP only with an explicit override |
-| Limits/operations | v2 rate and workspace budgets, request-size/block-element validation, Free block limit, `429`/`529`/`503`/`409`, `Retry-After` and the client retry policy (`spec-037`); the limiter is in-process |
+| Webhooks | v2 subscriptions, verification, HMAC-SHA256 signatures, aggregation, delivery/retry and all documented event types (`spec-036`); delivery uses ureq/rustls behind `WebhookSender` (`spec-041`) |
+| Limits/operations | v2 rate and workspace budgets, request-size/block-element validation, Free block limit, `429`/`529`/`503`/`409`, `Retry-After` and the client retry policy (`spec-037`); the limiter is in-process by default and SQLite-shared with `--database` (`spec-041`) |
 | Accounts/sessions | v2 login/logout/session, Argon2id passwords, opaque sessions and SQLite storage (`spec-039`); the demo owner token remains the no-auth-store fallback |
 | Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation (030), pagination (031), rich text/blocks (032), properties/data sources (033), views (034), comments/users/files (035), webhooks (036), limits (037), Axum adapter (038), sessions/SQLite (039) and the WebSocket change feed (040) implemented; B5 done; B3 blocked |
 
