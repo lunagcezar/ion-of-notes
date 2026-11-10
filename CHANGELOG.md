@@ -6,6 +6,20 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added - GitLab CI pipeline and CI hardening
+
+- Added `.gitlab-ci.yml`: a Linux Rust image installs the desktop build
+  dependencies and PowerShell, runs `scripts/quality.ps1` (fmt, both clippy
+  passes, core + desktop tests, Markdown checks), then builds the release
+  binary. The Cargo registry is cached by `Cargo.lock`.
+- The pipeline keeps Cargo's default job count and incremental compilation
+  (spec-048); it does not set `-j` or `CARGO_INCREMENTAL`.
+- A commented Windows-runner variant is included for self-managed runners.
+- GitHub Actions now uses read-only permissions, cancels superseded runs,
+  has a 60-minute timeout and builds the release with `--locked`.
+- Updated `README.md` and `docs/contributor-guide.md` to describe both the
+  GitHub and GitLab pipelines.
+
 ### Changed - spec-048 build performance and desktop feature seam
 
 - Added the default-on `desktop` cargo feature. `eframe`, `egui`, `image`,

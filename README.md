@@ -271,8 +271,10 @@ Screenshot mode renders about 120 frames, writes a PNG and exits:
 cargo run -- --screenshot shots/now.png
 ```
 
-CI (`.github/workflows/ci.yml`) runs formatting, clippy, tests and a release
-build on Windows.
+CI runs formatting, clippy (both feature sets), the core + desktop tests and a
+release build. GitHub uses `.github/workflows/ci.yml` on Windows; GitLab uses
+`.gitlab-ci.yml` on a Linux Rust image and runs the same
+`scripts/quality.ps1` gate.
 
 ## Project layout
 

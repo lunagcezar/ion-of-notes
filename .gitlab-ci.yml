@@ -1,0 +1,84 @@
+# GitLab CI mirrors .github/workflows/ci.yml.
+#
+# Default runner: GitLab.com Linux shared runners (Docker). The desktop stack
+# compiles headless and the tests never open a window, so no X server is
+# needed. For a Windows runner, use the commented job at the bottom instead.
+#
+# The job keeps Cargo's default job count and incremental compilation
+# (spec-048); it does not set `-j` or `CARGO_INCREMENTAL`.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+stages:
+  - check
+
+variables:
+  CARGO_TERM_COLOR: always
+  # Keep the registry cache inside the project so GitLab can cache it.
+  CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+
+default:
+  image: rust:1.99-bookworm
+  cache:
+    key:
+      files:
+        - Cargo.lock
+    paths:
+      - .cargo/registry/
+      - .cargo/git/
+  before_script:
+    - apt-get update
+    - >
+      apt-get install -y --no-install-recommends
+      build-essential pkg-config cmake perl wget ca-certificates libssl-dev
+      libfontconfig1-dev libxkbcommon-dev libxkbcommon-x11-dev
+      libwayland-dev libx11-dev libxcb1-dev libxcb-render0-dev
+      libxcb-shape0-dev libxcb-xfixes0-dev libxi-dev libxcursor-dev
+      libxrandr-dev libegl1-mesa-dev libgl1-mesa-dev
+    - wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb
+    - dpkg -i /tmp/packages-microsoft-prod.deb
+    - apt-get update
+    - apt-get install -y --no-install-recommends powershell
+    - rustup component add rustfmt clippy
+
+quality:
+  stage: check
+  timeout: 1 hour
+  interruptible: true
+  script:
+    # fmt + clippy (desktop and core) + 229 core tests + 26 desktop tests +
+    # Markdown link/Mermaid/table checks.
+    - pwsh -File scripts/quality.ps1
+    - cargo build --release --locked
+  artifacts:
+    name: "ion-of-notes-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - target/release/ion-of-notes
+    expire_in: 1 week
+
+# Windows runner alternative (self-managed or GitLab.com Windows runners).
+# Replace the `quality` job above with this one when the runner is tagged
+# `windows` and has Rust, PowerShell 7 and the MSVC build tools installed.
+# `before_script: []` cancels the Linux apt setup from `default`; on a Docker
+# Windows executor also override `image` with a Windows Rust image.
+#
+# quality:
+#   stage: check
+#   timeout: 1 hour
+#   interruptible: true
+#   tags:
+#     - windows
+#   before_script: []
+#   script:
+#     - pwsh -File scripts/quality.ps1
+#     - cargo build --release --locked
+#   artifacts:
+#     name: "ion-of-notes-$CI_COMMIT_SHORT_SHA"
+#     paths:
+#       - target/release/ion-of-notes.exe
+#     expire_in: 1 week

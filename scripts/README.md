@@ -36,4 +36,5 @@ a pre-commit hook.
 - No script caps Cargo jobs or disables incremental compilation; spec-048 keeps
   both at their defaults.
 - `quality.ps1` runs the same commands documented in `AGENTS.md` and
-  `docs/testing.md`.
+  `docs/testing.md`, and is used by both `.github/workflows/ci.yml` and
+  `.gitlab-ci.yml`.

@@ -27,7 +27,9 @@ cargo run -- --screenshot shots/now.png
 pwsh -File scripts/quality.ps1
 ```
 
-CI runs formatting, clippy, tests and a release build on Windows.
+CI runs formatting, clippy, tests and a release build. GitHub uses
+`.github/workflows/ci.yml` on Windows; GitLab uses `.gitlab-ci.yml` on Linux
+and runs the same `scripts/quality.ps1` gate.
 
 ## 3. The SDD/TDD loop
 
