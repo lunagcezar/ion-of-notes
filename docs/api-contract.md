@@ -126,7 +126,7 @@ restore, settings change and window close.
 
 ## 4. DTOs
 
-All DTOs are serde structs/enums in `src/model.rs` and `src/collab.rs`.
+All DTOs are serde structs/enums in the matching `src/model/*` module and in `src/collab.rs`.
 
 | DTO | Fields |
 | --- | ------ |
@@ -637,7 +637,7 @@ identity. The detailed acceptance criteria and test scenarios are in
 
 ## 9. Compatibility strategy
 
-1. Keep the DTOs in `src/collab.rs` and the routes in `src/server.rs`.
+1. Keep the DTOs in `src/collab.rs` or `src/model/*`, the routes in `src/server/routes/*` and the use cases in `src/server/handlers/*`.
 2. Add production adapters behind `WorkspaceApi`, `WorkspaceStore` and
    `CollabStore`; do not rewrite the domain.
 3. Derive the external contract only from public behavior (B4); record every

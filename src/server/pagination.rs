@@ -38,7 +38,7 @@ pub struct PageRequest {
 
 impl PageRequest {
     pub fn from_query(query: &str) -> Result<Self, PaginationError> {
-        let raw_size = super::query_value(query, "page_size");
+        let raw_size = super::response::query_value(query, "page_size");
         let page_size = if raw_size.is_empty() {
             100
         } else {
@@ -50,7 +50,7 @@ impl PageRequest {
             return Err(PaginationError::InvalidPageSize(raw_size));
         }
         let start_cursor = {
-            let value = super::query_value(query, "start_cursor");
+            let value = super::response::query_value(query, "start_cursor");
             if value.is_empty() { None } else { Some(value) }
         };
         Ok(Self {

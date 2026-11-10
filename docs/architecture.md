@@ -60,9 +60,18 @@ src/
   main.rs            CLI wiring only
   app.rs             composition root
   lib.rs             crate facade and re-exports
-  model.rs           entities, rich text, block DTOs, properties, databases,
-                     data sources, views, comments, users, files + tree behavior
+  model.rs           facade: declarations, re-exports and time helpers
   model/
+    rich_text.rs     rich text, mentions, annotations and equations
+    block.rs         block kinds, blocks, block DTOs and tree helpers
+    property.rs      typed properties, values and option/page refs
+    database.rs      databases, data sources, table rows
+    view.rs          views, filters, sorts and grouped queries
+    file.rs          file objects, uploads and attachments
+    comment.rs       page comments and comment DTOs
+    user.rs          people, users, bots and partial user refs
+    page.rs          pages, summaries, drafts and invariant errors
+    workspace.rs     workspace tree behavior and deserialization
     seed.rs          demo workspace
     search.rs        ranked search
     diff.rs          changed/added/removed/reordered pages
@@ -75,17 +84,26 @@ src/
   store.rs           WorkspaceStore + CollabStore + AuthStore ports and JSON adapters
   store/
     sqlite.rs        SQLite adapter for workspace, collaboration and auth
-  server.rs          WorkspaceServer, WorkspaceApi, routes
+  server.rs          facade: contract DTOs, WorkspaceApi, WorkspaceServer state,
+                     constructors, persistence and top-level dispatch
   server/
+    routes.rs        WorkspaceApi implementation and route facade
+    routes/
+      v1.rs          legacy v1 dispatch
+      v2.rs          version/auth/limit/capability pipeline
+      capabilities.rs required capability per method and path
+    handlers/        one module per v2 resource family
+    response.rs      Envelope/json/error helpers, v1 error mapping
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
     web.rs           Axum/Tokio HTTP + WebSocket adapter for --serve
     realtime.rs      change-feed hub, protocol messages and presence
     crdt.rs          Yrs per-page text documents and projection
     webhook_sender.rs WebhookSender port and ureq/rustls adapter
-  ui/crdt.rs        client Yrs session, local diff and awareness
     url.rs           shared percent-encoding
     contract.rs      v2 versioning, ApiError, capabilities, request IDs
     pagination.rs    v2 ListResponse, opaque cursors, page_size validation
+    limits.rs        plan/request budgets and size checks
+    rate_limit.rs    in-process and SQLite-backed rate limiting
   client.rs          typed client over WorkspaceApi
   remote.rs          remote REST/WebSocket transport and login
   templates.rs       starter template catalog
@@ -114,6 +132,7 @@ src/
     invite.rs        invite email parsing/validation
     library_filter.rs Library tab filtering
     edit_queue.rs    commit plan + debounce
+    crdt.rs          client Yrs session, local diff and awareness
 ```
 
 ## 4. Request lifecycle
@@ -275,9 +294,9 @@ Adapters implement the ports; the composition root wires them.
 
 | Change | Start here |
 | ------ | ---------- |
-| New page/block field | `src/model.rs` + `docs/data-model.md` + migration test |
+| New page/block field | `src/model/page.rs` or `src/model/block.rs` + `docs/data-model.md` + migration test |
 | New pure rule | `src/model/*` or `src/collab.rs` + `tests/model.rs`/`tests/collab.rs` |
-| New server route/DTO | `src/server.rs` + `src/client.rs` + `tests/server.rs`/`tests/client.rs` |
+| New server route/DTO | DTO in `src/model/*`, route in `src/server/routes/v2.rs`, handler in `src/server/handlers/`, capability in `src/server/routes/capabilities.rs`, client in `src/client.rs` |
 | New persistence backend | implement `WorkspaceStore`/`CollabStore`, wire in `src/app.rs` |
 | New UI surface | `ui/commands.rs` + `ui/view.rs` + `ui/apply.rs` + `ui/render/*` or `ui/dialogs/*` |
 | New translation | `locales/*.yml` + `i18n::t("key")` + `tests/i18n.rs` |
@@ -308,11 +327,11 @@ flowchart TD
 | ----------- | ------------- | ----- |
 | Version/errors/capabilities | `server/contract.rs`, `collab.rs` | `ApiError`, `Capability`, `Connection`; no domain dependency |
 | Pagination | `server/pagination.rs` | pure cursor codec; opaque to clients |
-| Rich text/blocks | `model/richtext.rs`, `model/block.rs` | `Block.text` migration; block endpoints |
-| Properties/data sources | `model/property.rs`, `model/database.rs` | `TableRow` migration; `DataSource` schema |
-| Views | `model/view.rs` | filter/sort/config; query pagination |
-| Comments/users/files | `model/comment.rs`, `model/file.rs`, `model/user.rs` | attachments; `FileStore` port |
-| Webhooks | `webhooks.rs`, `server/webhooks.rs` | `WebhookStore` port; delivery worker |
+| Rich text/blocks | `model/rich_text.rs`, `model/block.rs`, `server/handlers/blocks.rs` | `Block.text` migration; block endpoints |
+| Properties/data sources | `model/property.rs`, `model/database.rs`, `server/handlers/databases.rs` | `TableRow` migration; `DataSource` schema |
+| Views | `model/view.rs`, `server/handlers/views.rs` | filter/sort/config; query pagination |
+| Comments/users/files | `model/comment.rs`, `model/file.rs`, `model/user.rs`, `server/handlers/content.rs` | attachments; `FileStore` port |
+| Webhooks | `webhooks.rs`, `server/handlers/webhooks.rs` | `WebhookStore` port; delivery worker |
 | Limits | `server/limits.rs`, `server/rate_limit.rs` | policy, not domain rules; in-process limiter behind one decision type |
 
 The v2 work must not break the dependency direction: DTOs stay free of egui and
@@ -323,10 +342,16 @@ new stores and delivery workers.
 
 - The workspace is still small enough for full snapshots on structural
   changes; per-page writes and debounce reduce the common case.
-- `ui/apply.rs` is intentionally one command-application switch; split only if
-  a genuinely separate responsibility appears.
-- Real-time collaboration is a contract, not a running CRDT server.
-- Auth/sessions and production storage are not implemented.
+- `ui/apply.rs` is intentionally one command-application switch; the flush and
+  lock classifications now live on `Command`, so a new variant has one source
+  of truth. Split the switch by command family only if a second responsibility
+  appears.
+- Real-time collaboration runs through the WebSocket change feed and Yrs text
+  merge (specs 040 and 042); the desktop client uses its own Yrs session and
+  awareness cursors (spec 043).
+- Accounts, Argon2id sessions and SQLite persistence are implemented
+  (spec-039); the remote desktop transport and login UI are implemented
+  (specs 044 and 045).
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.

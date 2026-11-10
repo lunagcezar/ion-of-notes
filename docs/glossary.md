@@ -33,7 +33,7 @@ definition.
 | **Port** | A trait the core declares for something it needs (`WorkspaceApi`, `WorkspaceStore`, `CollabStore`). | `src/server.rs`, `src/store.rs` |
 | **Adapter** | A concrete implementation of a port (`JsonStore`, `JsonCollabStore`, loopback HTTP). | `src/store.rs`, `src/server/http.rs` |
 | **Composition root / bootstrap** | The one place that wires concrete adapters into the core. | `src/app.rs` |
-| **Facade** | A module root that declares private submodules and re-exports a small public surface. | `src/ui.rs`, `src/server.rs` |
+| **Facade** | A module root that declares private submodules and re-exports a small public surface. | `src/ui.rs`, `src/server.rs`, `src/model.rs` |
 | **DTO** | Data-transfer shape at a boundary, separate from a domain entity. | `src/collab.rs`, `PageDraft`, `PageSummary` |
 | **Invariant** | A rule that must always hold (unique ids, valid parents, monotonic version). | `docs/data-model.md` |
 | **Dependency inversion** | High-level code depends on abstractions, not concrete I/O. | ADR-002 |
@@ -44,21 +44,21 @@ definition.
 
 | Term | Meaning | Where |
 | ---- | ------- | ----- |
-| **Workspace** | The whole document: name, settings, pages, version. | `src/model.rs` |
-| **Page** | A titled node with an icon, optional parent, blocks, optional table rows, flags and comments. | `src/model.rs` |
-| **Block** | One editable unit of page content (paragraph, heading, list, to-do, quote, callout, code, divider). | `src/model.rs` |
-| **BlockKind** | The enum of block variants. | `src/model.rs` |
-| **TableRow** | One row of the inline database (name, status, assignee, due). | `src/model.rs` |
-| **Comment** | A page-level discussion message. | `src/model.rs` |
+| **Workspace** | The whole document: name, settings, pages, version. | `src/model/workspace.rs` |
+| **Page** | A titled node with an icon, optional parent, blocks, optional table rows, flags and comments. | `src/model/page.rs` |
+| **Block** | One editable unit of page content (paragraph, heading, list, to-do, quote, callout, code, divider). | `src/model/block.rs` |
+| **BlockKind** | The enum of block variants. | `src/model/block.rs` |
+| **TableRow** | One row of the inline database (name, status, assignee, due). | `src/model/database.rs` |
+| **Comment** | A page-level discussion message. | `src/model/comment.rs` |
 | **WorkspaceSettings** | Persisted workspace-level preferences (icon, landing page, domains, toggles). | `src/model/settings.rs` |
-| **PageDraft** | The create-page request body (`title`, `icon`, `parent`). | `src/model.rs` |
-| **PageSummary** | The sidebar/list view of a page. | `src/model.rs` |
+| **PageDraft** | The create-page request body (`title`, `icon`, `parent`). | `src/model/page.rs` |
+| **PageSummary** | The sidebar/list view of a page. | `src/model/page.rs` |
 | **PageDiff** | Pure difference between two workspaces: changed, added, removed, reordered, settings changed. | `src/model/diff.rs` |
 | **WorkspaceIndex** | Derived id/parent lookup structure; skipped by serde and rebuilt on mutation. | `src/model/index.rs` |
 | **Seed** | The neutral demo workspace created on first start. | `src/model/seed.rs` |
-| **Archive** | A page flag that hides a page from normal views while keeping it in the Library Archive view. | `src/model.rs` |
-| **Lock** | A page flag that disables editing. | `src/model.rs` |
-| **Offline** | A page flag that marks a page for the offline list. | `src/model.rs` |
+| **Archive** | A page flag that hides a page from normal views while keeping it in the Library Archive view. | `src/model/page.rs` |
+| **Lock** | A page flag that disables editing. | `src/model/page.rs` |
+| **Offline** | A page flag that marks a page for the offline list. | `src/model/page.rs` |
 
 ## 4. Collaboration
 
@@ -89,7 +89,7 @@ definition.
 | **ApiRequest / ApiResponse** | Transport-neutral request (`method`, `path`, `body`) and response (`status`, `body`). | `src/server.rs` |
 | **Loopback adapter** | The optional `--serve` HTTP/1.1 listener bound to `127.0.0.1`. | `src/server/http.rs` |
 | **PATCH path** | Single-page edit persistence (`PATCH /api/pages/{id}`). | `src/client.rs` |
-| **Full replace** | `PUT /api/workspace` for structural or settings changes. | `src/server.rs` |
+| **Full replace** | `PUT /api/workspace` for structural or settings changes. | `src/server/routes/v1.rs` |
 | **Debounce** | Wait 250 ms after the last edit before sending, with force-flush points. | `src/ui/edit_queue.rs` |
 | **Commit plan** | Pure decision: `None`, patch changed pages, or full replace. | `src/ui/edit_queue.rs` |
 | **Cursor** | The `seq` watermark used by `GET /api/sync?since=`. | `src/collab.rs` |

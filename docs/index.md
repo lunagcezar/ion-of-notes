@@ -13,9 +13,9 @@ in what order, and which document is the source of truth for each concern.
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
-## Current status (2026-11-08)
+## Current status (2026-11-10)
 
-- **Specs:** `spec-001` … `spec-045` implemented; `spec-007` retired;
+- **Specs:** `spec-001` … `spec-046` implemented; `spec-007` retired;
   `spec-016` is a plan with B5 done; `spec-029` is the documentation
   overhaul; `spec-030` is the v2 foundation; `spec-031` adds pagination;
   `spec-032` adds rich text/blocks; `spec-033` adds properties/data sources;
@@ -26,7 +26,8 @@ in what order, and which document is the source of truth for each concern.
   `spec-041` adds TLS webhooks and shared SQLite rate limits; `spec-042` adds
   Yrs CRDT text merge; `spec-043` adds the client session and awareness
   cursors; `spec-044` adds the remote HTTP/WebSocket transport; `spec-045` adds
-  the server login/settings UI.
+  the server login/settings UI; `spec-046` restores the `server` and `model`
+  module facades and centralizes command classification.
 - **Tests:** 252 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`

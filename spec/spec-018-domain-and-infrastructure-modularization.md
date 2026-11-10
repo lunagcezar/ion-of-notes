@@ -109,3 +109,7 @@ candidates if they grow, but they are still cohesive enough to keep.
 - `ui/render/content.rs` and `ui/dialogs/settings_pages.rs` remain the largest
   cohesive UI files; they are left alone until a real second responsibility
   appears.
+- 2026-11-10: later feature specs 030-045 grew `model.rs` and `server.rs`
+  again. `spec-046` re-applied this decision with `model/*`, `server/routes/*`,
+  `server/handlers/*` and `server/response.rs`; the sizes quoted above are the
+  historical state at the time of this spec.

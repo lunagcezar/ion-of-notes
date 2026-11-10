@@ -105,3 +105,21 @@ command-application switch), `ui/dialogs/settings_pages.rs` (the settings
 pages) and `ui/render/content.rs` (the page column). They are left alone until
 a genuinely separate responsibility appears; see `docs/architecture.md` §10
 for the current constraints.
+
+## Follow-up (2026-11-10)
+
+The review in `docs/review-findings.md` section 9 found that later feature
+specs had collapsed several responsibilities back into `server.rs` and
+`model.rs`; those two files, not the UI files named above, were the actual
+outliers at that point. `spec-046` restored the facades:
+
+- `server.rs` is the contract/state facade; routes live in `server/routes/*`,
+  use cases in `server/handlers/*` and response shaping in
+  `server/response.rs`;
+- `model.rs` is a facade over `model/*`, with one module per domain group;
+- the repeated command classification in `ui/apply.rs` moved onto `Command`.
+
+This does not change the decision: the remaining large files
+(`ui/apply.rs`, `ui/dialogs/settings_pages.rs`, `ui/render/content.rs`,
+`client.rs`) are still split only when a second responsibility appears, which
+is planned as spec-048.

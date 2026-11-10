@@ -223,3 +223,57 @@ pub(super) enum Command {
     DisconnectServer,
     NoOp,
 }
+
+impl Command {
+    /// A pending edit must be written before this command changes the page or
+    /// the workspace structure. One list, consumed by `apply_commands`.
+    pub(super) fn forces_flush(&self) -> bool {
+        matches!(
+            self,
+            Command::SelectPage(_)
+                | Command::SelectTab(_)
+                | Command::CloseTab(_)
+                | Command::GoBack
+                | Command::GoForward
+                | Command::OpenLibrary
+                | Command::OpenSettings
+                | Command::Reload
+                | Command::NewPage(_)
+                | Command::DeletePage(_)
+                | Command::ResetWorkspace
+                | Command::ActivateNewTab(_)
+                | Command::ActivateSelectedNewTab
+                | Command::OpenVersionHistory
+                | Command::RestoreVersion(_)
+                | Command::CloseAll
+                | Command::WindowClose
+        )
+    }
+
+    /// Commands refused while the current page is locked. One list, consumed
+    /// by `apply_commands`.
+    pub(super) fn blocked_when_locked(&self) -> bool {
+        matches!(
+            self,
+            Command::DeletePage(_)
+                | Command::ToggleFavorite(_)
+                | Command::SetTableView(_)
+                | Command::OpenSlash { .. }
+                | Command::SetBlockKind(_, _)
+                | Command::ApplyMarkdown { .. }
+                | Command::InsertBlockAfter(_)
+                | Command::AppendBlock
+                | Command::AddBlock { .. }
+                | Command::StartBlockDrag(_)
+                | Command::HoverBlockDrag(_)
+                | Command::DropBlock
+                | Command::DeleteBlock(_)
+                | Command::ToggleTodo(_)
+                | Command::CycleStatus(_)
+                | Command::AddRow
+                | Command::SetPageIcon(_)
+                | Command::DuplicatePage
+                | Command::RestoreVersion(_)
+        )
+    }
+}

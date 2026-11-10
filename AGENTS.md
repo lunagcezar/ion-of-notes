@@ -106,10 +106,18 @@ src/
   main.rs          CLI wiring only (desktop, --screenshot, --serve)
   app.rs           composition root (bootstrap): wires workspace + collaboration adapters to ports
   lib.rs           crate root and public re-exports
-  model.rs         Workspace, Page, Block, BlockKind, RichText, block DTOs,
-                   Property/PageProperty, Database/DataSource, View, comments,
-                   users, file uploads, tree helpers
+  model.rs         facade: module declarations, pub re-exports, time helpers
   model/
+    rich_text.rs   annotations, mentions, equations, RichText
+    block.rs       BlockKind, Block, block DTOs and tree helpers
+    property.rs    typed properties, values and option/page refs
+    database.rs    Database, DataSource, TableRow
+    view.rs        views, filters, sorts and grouped queries
+    file.rs        file objects, uploads and attachments
+    comment.rs     page comments and comment DTOs
+    user.rs        people, users, bots and partial user refs
+    page.rs        Page, summaries, drafts and WorkspaceError
+    workspace.rs   Workspace tree behavior and deserialization
     seed.rs        neutral demo workspace used on first start
     search.rs      ranked search + excerpt helper
     diff.rs        changed/added/removed/reordered page diff
@@ -119,8 +127,14 @@ src/
   store.rs         WorkspaceStore + CollabStore + AuthStore ports, JSON/null adapters
   store/
     sqlite.rs      SQLite adapter for workspace, collaboration and auth (spec-039)
-  server.rs        WorkspaceServer (workspace + collaboration state), WorkspaceApi trait, routes
+  server.rs        facade: contract DTOs, WorkspaceApi, WorkspaceServer state,
+                   constructors, persistence and top-level dispatch
   server/
+    routes.rs      WorkspaceApi implementation and route facade
+    routes/        v1 dispatch, v2 pipeline, capability table
+    handlers/      one module per v2 resource family (auth, crdt, webhooks,
+                   comments/users/files, views, databases, blocks, lists)
+    response.rs    Envelope/json/error helpers and v1 error mapping
     http.rs        legacy loopback HTTP/1.1 adapter (parse/format/tests)
     url.rs         percent-encoding/decoding shared by client and server
     contract.rs    v2 versioning, ApiError, capabilities, request IDs
@@ -151,7 +165,8 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
     palette.rs     colors, fonts, tab-title helper, theming (NFR-06)
     icons.rs       original shape artwork (chrome, sidebar, book, controls,
                    page icon)
-    commands.rs    Command, IconTab, FontStyle, NewTabChoice + pure builders
+    commands.rs    Command + flush/lock classification, IconTab, FontStyle,
+                   NewTabChoice and pure builders
     view.rs        ViewState snapshot passed to render functions
     input.rs       egui key events -> shortcut actions (pure input adapter)
     app.rs         NotionApp struct, new(), eframe::App shell, preview hook

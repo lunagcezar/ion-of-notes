@@ -352,3 +352,89 @@ block limits, retry guidance and the operational error taxonomy).
 | Later | Send or remove the invite message | spec-023 follow-up |
 | Later | Block-anchored inline comments | spec-035 |
 | Later | Production auth + WebSocket/CRDT adapters | ADR-003 |
+
+## 9. Modularity review (2026-11-10)
+
+This is a focused follow-up to the 2026-11-08 review. It checks one question:
+do the largest modules still hold **one coherent responsibility**, or did later
+feature specs collapse several responsibilities back into a single file? It is
+not a line-count audit; the rule from ADR-004 (split by responsibility, not by
+line count) still governs.
+
+### 9.1 Measurements
+
+| File | Lines | Responsibilities found |
+| ---- | ----: | ---------------------- |
+| `src/server.rs` | 3,458 | transport-neutral contract, v1 dispatch, v2 pipeline, CRDT/auth/webhook/comment/view/database/block/list use cases |
+| `src/model.rs` | 2,442 | rich text, blocks, properties, databases, views, files, comments, users, pages, workspace tree |
+| `src/ui/apply.rs` | 1,286 | one command loop plus workspace, page, block, sharing, settings, library, AI and tab transitions |
+| `src/ui/dialogs/settings_pages.rs` | 868 | seven independent settings pages |
+| `src/ui/render/content.rs` | 770 | breadcrumbs, page header, block rendering, block controls, remote cursors |
+| `src/client.rs` | 831 | typed API client plus retry policy |
+
+The `server.rs` + `server/` and `model.rs` + `model/` pairs are valid Rust
+module layout. The problem is the root file, not the pair: `ui.rs` is a
+55-line facade, while `server.rs` and `model.rs` are the implementation.
+
+### 9.2 Findings
+
+Resolved findings keep their original evidence and receive a dated resolution
+instead of being deleted.
+
+| # | Finding | Severity | Suggested next step |
+| - | ------- | -------- | ------------------- |
+| RF-M01 | `server.rs` no longer acts as a facade: it carries the contract, both dispatchers and eight v2 use-case families, while `server/` holds only the adapters and helpers. | High - **resolved** | `spec-046`: contract/state stays in `server.rs`; dispatch is in `server/routes/`, v2 use cases in `server/handlers/` and response helpers in `server/response.rs`. |
+| RF-M02 | `model.rs` mixes ten subdomains, although `docs/architecture.md` (section 10) already names `model/rich_text.rs`, `model/block.rs`, `model/property.rs`, `model/database.rs`, `model/view.rs`, `model/comment.rs`, `model/file.rs` and `model/user.rs`. Only `diff`, `index`, `search`, `seed` and `settings` existed. | High - **resolved** | `spec-046`: the planned modules plus `page.rs` and `workspace.rs` exist; `model.rs` is declarations, re-exports and time helpers. |
+| RF-M03 | `apply_commands` repeats command classification in the `force_flush` and `blocked` matches, so one new `Command` variant needs coordinated edits in three places. | Medium - **resolved** | `spec-046`: `Command::forces_flush()` and `Command::blocked_when_locked()` in `ui/commands.rs` are the single source; splitting command families is deferred to spec-048. |
+| RF-M04 | `ui/dialogs/settings_pages.rs` holds seven independent pages in one file; `section_heading` and `info_row` are shared by all of them. | Medium | `settings_pages/{preferences,workspace,sidebar,offline,people,ai,server}.rs` with a facade; move the two helpers to `ui/widgets.rs`. |
+| RF-M05 | `ui/render/content.rs` combines page header, block rendering, block controls and remote-cursor overlay. | Medium | `render/content/{page,blocks,cursors}.rs`, keeping `render_content` as the entry point. |
+| RF-M06 | `client.rs` is a coherent typed client, but `RetryPolicy`/`RetryDecision` is an independent policy and the v1/v2 method pairs keep growing. | Low | Extract `client/retry.rs`; do not split the thin resource wrappers until they gain separate behavior. |
+| RF-M07 | v2 dispatch reuses `handle_v1` by rewriting the path, and `required_capability` repeats route knowledge. A new route needs coordinated edits in the capability table, the v2 handler chain and the v1 fallback. | High | Extract resource use cases returning typed results; v1 and v2 become adapters. At minimum co-locate capability, route and handler, and test that every dispatched path has a capability. |
+| RF-M08 | `WorkspaceServer` has roughly 30 fields spanning persistence, auth, limits, realtime, webhooks, CRDT and metrics. File splitting alone leaves it a god object. | Medium | Group fields into cohesive sub-state (`Persistence`, `Runtime`, `Webhooks`, `Realtime`) and pass only the relevant sub-state to each handler. |
+| RF-M09 | ADR-004 says the largest files are `apply.rs`, `settings_pages.rs` and `content.rs`; at review time the largest were `server.rs` and `model.rs`. `architecture.md` (section 11) still said auth/storage were not implemented and real-time was only a contract, contradicted by specs 039-045. | Medium - **resolved** | `spec-046`: ADR-004 has a dated follow-up; `architecture.md` module map and constraints are current; historical specs keep their notes. |
+
+### 9.3 What stays as it is
+
+- `ui/apply.rs` is still one state machine at the boundary; the split must keep
+  one `apply_commands` entry point and one `Client` write path.
+- `client.rs` resource methods are thin; splitting them by noun would create
+  files without a separate reason to change.
+- `store.rs`, `auth.rs`, `collab.rs`, `app.rs` and `shortcuts.rs` remain
+  single-responsibility modules.
+- No new crate, no `domain/ application/ infrastructure/` scaffold, no
+  behavior or API-contract change.
+
+### 9.4 Proposed target shape for `spec-046`
+
+```text
+src/server.rs                 facade + Method/ApiRequest/ApiResponse/Envelope,
+                              WorkspaceApi, WorkspaceServer state/config,
+                              persistence
+src/server/routes.rs          WorkspaceApi implementation and dispatch
+src/server/routes/            v1, v2 pipeline and capability table
+src/server/handlers/          auth, crdt, webhooks, comments/users/files,
+                              views, databases, blocks, lists
+src/server/response.rs        Envelope, json/error helpers, v1 error mapping
+
+src/model.rs                  facade: declarations, re-exports, now_label/now_iso
+src/model/                    rich_text, block, property, database, view, file,
+                              comment, user, page, workspace
+src/ui/apply/                 workspace, pages, blocks, sharing, settings,
+                              library, ai, tabs behind apply_commands
+src/ui/dialogs/settings_pages/  one file per settings page
+src/ui/render/content/        page, blocks, cursors
+```
+
+The refactor is behavior-preserving and is guarded by the existing 252
+integration tests plus `--screenshot`; the red step is the compile failure
+introduced by the new module declarations.
+
+### 9.5 Follow-up queue additions
+
+| Priority | Item | Owner document |
+| -------- | ---- | -------------- |
+| Done | Server/model module split and command classification | `spec-046` |
+| Next | Use-case layer between v1 and v2, capability table test | `spec-047` |
+| Later | Settings pages and page-column render split | `spec-048` |
+| Later | Group `WorkspaceServer` state into sub-structs | `spec-047` |
+| Later | Extract `client/retry.rs` | `spec-048` |

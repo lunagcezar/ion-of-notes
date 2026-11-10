@@ -274,15 +274,18 @@ build on Windows.
 src/
   main.rs          CLI wiring only (desktop, --screenshot, --serve)
   app.rs           composition root
-  model.rs         workspace, pages, blocks, rich text, properties, views
-  model/           seed, search, diff, index, settings
+  model.rs         facade: declarations, re-exports, time helpers
+  model/           rich text, blocks, properties, databases, views, files,
+                   comments, users, pages, workspace, seed, search, diff,
+                   index, settings
   auth.rs          accounts, Argon2id, sessions
   collab.rs        roles, sharing, sync log, versions, realtime DTOs
   collab/          export tree
   store.rs         WorkspaceStore, CollabStore, AuthStore, RateLimitStore ports
   store/sqlite.rs  SQLite adapter and JSON migration
-  server.rs        WorkspaceServer, WorkspaceApi, routes
-  server/          Axum/WebSocket, realtime hub, CRDT, webhooks, limits
+  server.rs        facade: contract DTOs, WorkspaceApi, WorkspaceServer state
+  server/          routes (v1/v2/capabilities), handlers, response helpers,
+                   Axum/WebSocket, realtime hub, CRDT, webhooks, limits
   client.rs        the UI's only data access
   ui.rs            UI facade
   ui/              state, commands, rendering, dialogs, client CRDT session

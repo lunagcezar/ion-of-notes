@@ -197,7 +197,8 @@ B1 decision.
 
 1. Implement and test the **decided** contract (ADR-003) behind the existing
    `WorkspaceApi` seam.
-2. Keep every DTO in `src/collab.rs` and every route in `src/server.rs`.
+2. Keep every DTO in `src/collab.rs` or `src/model/*`, every route in
+   `src/server/routes/*` and every use case in `src/server/handlers/*`.
 3. Build a mock server and `tests/contract.rs` from the decided contract.
 4. Mark any behavior that is only inferred; do not present it as original
    behavior.

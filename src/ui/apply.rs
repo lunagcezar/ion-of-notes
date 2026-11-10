@@ -410,28 +410,7 @@ impl NotionApp {
         frame_before: Workspace,
     ) {
         let now = ctx.input(|i| i.time);
-        let force_flush = commands.iter().any(|command| {
-            matches!(
-                command,
-                Command::SelectPage(_)
-                    | Command::SelectTab(_)
-                    | Command::CloseTab(_)
-                    | Command::GoBack
-                    | Command::GoForward
-                    | Command::OpenLibrary
-                    | Command::OpenSettings
-                    | Command::Reload
-                    | Command::NewPage(_)
-                    | Command::DeletePage(_)
-                    | Command::ResetWorkspace
-                    | Command::ActivateNewTab(_)
-                    | Command::ActivateSelectedNewTab
-                    | Command::OpenVersionHistory
-                    | Command::RestoreVersion(_)
-                    | Command::CloseAll
-                    | Command::WindowClose
-            )
-        });
+        let force_flush = commands.iter().any(Command::forces_flush);
         if force_flush {
             self.commit_edits(now, true);
         }
@@ -441,29 +420,7 @@ impl NotionApp {
         while index < commands.len() {
             let command = commands[index].clone();
             let locked = self.page_locked();
-            let blocked = locked
-                && matches!(
-                    command,
-                    Command::DeletePage(_)
-                        | Command::ToggleFavorite(_)
-                        | Command::SetTableView(_)
-                        | Command::OpenSlash { .. }
-                        | Command::SetBlockKind(_, _)
-                        | Command::ApplyMarkdown { .. }
-                        | Command::InsertBlockAfter(_)
-                        | Command::AppendBlock
-                        | Command::AddBlock { .. }
-                        | Command::StartBlockDrag(_)
-                        | Command::HoverBlockDrag(_)
-                        | Command::DropBlock
-                        | Command::DeleteBlock(_)
-                        | Command::ToggleTodo(_)
-                        | Command::CycleStatus(_)
-                        | Command::AddRow
-                        | Command::SetPageIcon(_)
-                        | Command::DuplicatePage
-                        | Command::RestoreVersion(_)
-                );
+            let blocked = locked && command.blocked_when_locked();
             if blocked {
                 index += 1;
                 continue;

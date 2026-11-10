@@ -94,10 +94,10 @@ flowchart LR
 
 | Concern | Location | Test file |
 | ------- | -------- | --------- |
-| Entity/field/invariant | `src/model.rs`, `src/model/*` | `tests/model.rs` |
+| Entity/field/invariant | `src/model/*` (facade in `src/model.rs`) | `tests/model.rs` |
 | Collaboration DTO/state | `src/collab.rs` | `tests/collab.rs` |
 | Export | `src/collab/export.rs` | `tests/collab.rs` |
-| Route/use case | `src/server.rs` | `tests/server.rs` |
+| Route/use case | `src/server/routes/*`, `src/server/handlers/*` | `tests/server.rs` |
 | Typed client | `src/client.rs` | `tests/client.rs` |
 | Persistence port/adapter | `src/store.rs` | `tests/store.rs`, `tests/store_port.rs` |
 | HTTP adapter | `src/server/http.rs` | `tests/server.rs` |
@@ -113,8 +113,8 @@ flowchart LR
 
 ### 6.1 Domain field or rule
 
-1. Add the field to the entity in `src/model.rs` with a serde default for
-   backward compatibility.
+1. Add the field to the entity in the matching `src/model/*` module with a
+   serde default for backward compatibility.
 2. Update `Workspace` equality/diff if the field affects persistence.
 3. Add a test in `tests/model.rs` for defaults, round-trip and behavior.
 4. Update `docs/data-model.md`.
@@ -123,8 +123,11 @@ flowchart LR
 
 ### 6.2 Server route / DTO
 
-1. Add the DTO in `src/collab.rs` (serde, no egui/socket/file types).
-2. Add the route in `src/server.rs`; use the shared `Envelope` helpers.
+1. Add the DTO in `src/collab.rs` or the matching `src/model/*` module (serde,
+   no egui/socket/file types).
+2. Add the route in `src/server/routes/v2.rs` and the handler in
+   `src/server/handlers/`; register the capability in
+   `src/server/routes/capabilities.rs`; use the shared `Envelope` helpers.
 3. Persist through `WorkspaceServer::write` or `persist_collab`; return `500`
    on storage failure.
 4. Add a typed method in `src/client.rs`.
@@ -136,7 +139,8 @@ flowchart LR
 
 1. Add the state fields to `NotionApp` (`ui/app.rs`) and `ViewState`
    (`ui/view.rs`).
-2. Add `Command` variants in `ui/commands.rs`.
+2. Add `Command` variants and their flush/lock classification in
+   `ui/commands.rs`.
 3. Apply them in `ui/apply.rs`; keep persistence through `Client`.
 4. Render in `ui/render/*` or `ui/dialogs/*`; collect commands, never mutate
    server state directly.

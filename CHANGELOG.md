@@ -6,7 +6,23 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
-### Added — spec-045 server login and settings UI
+### Changed - spec-046 module boundaries
+
+- `src/server.rs` is now a facade over `server/routes/*` (v1 and v2 dispatch,
+  capability table), `server/handlers/*` (one module per resource family) and
+  `server/response.rs`; the file drops from 3,458 to 545 lines.
+- `src/model.rs` is now a facade over `model/{rich_text,block,property,
+  database,view,file,comment,user,page,workspace}.rs`; the file drops from
+  2,442 to 60 lines and the public `model::*` names are unchanged.
+- `Command::forces_flush` and `Command::blocked_when_locked` are the single
+  source for those classifications; `apply_commands` consumes them.
+- No behavior, protocol, persistence or visual change. The suite stays at 252
+  tests; clippy, fmt and `--screenshot` pass.
+- Updated `AGENTS.md`, `docs/architecture.md`, `docs/contributor-guide.md`,
+  `docs/api-contract.md`, `docs/glossary.md`, `docs/review-findings.md` and
+  ADR-004.
+
+### Added - spec-045 server login and settings UI
 
 - Added Settings → Server with server URL, email, masked password, Connect,
   Disconnect and status.
