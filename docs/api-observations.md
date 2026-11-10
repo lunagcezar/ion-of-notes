@@ -149,7 +149,7 @@ This is the status of **our** contract, not a claim about the original:
 | Members, shares, sync log | Implemented; persisted in `collab.json` (`spec-019`) |
 | Page version history | Implemented (`GET /api/pages/{id}/versions`, 50/page) |
 | Export tree | Implemented in memory (`src/collab/export.rs`) |
-| Realtime | WebSocket change feed + presence (`GET /ws/workspace/{id}`, spec-040) and Yrs text CRDT sync/update (spec-042); the egui editor adapter is staged. `GET /api/realtime` describes the contract |
+| Realtime | WebSocket change feed + presence (`GET /ws/workspace/{id}`, spec-040), Yrs text CRDT sync/update (spec-042) and client awareness/cursors (spec-043). `GET /api/realtime` describes the contract |
 | Per-page writes and debounce | Implemented (`spec-020`) |
 | Auth/sessions | v2 foundation has bearer-token connections; production sessions **not implemented** |
 | WebSocket/CRDT server | WebSocket change feed (spec-040) and Yrs text merge (spec-042) implemented; client editor adapter staged |

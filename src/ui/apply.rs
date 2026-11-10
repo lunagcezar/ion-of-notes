@@ -9,8 +9,11 @@ use crate::collab::{MemberDraft, Role, Share, general_access, page_markdown};
 use crate::i18n;
 use crate::model::{Block, BlockKind, Comment, Page, PageDraft, TableRow, Workspace, now_label};
 use crate::ollama;
+use crate::server::realtime::{Awareness, ServerMessage};
 use crate::shortcuts::Action;
 use crate::templates;
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use std::collections::HashSet;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -22,6 +25,20 @@ use super::invite::{is_valid_email, member_name_from_email, parse_invite_emails}
 use super::palette::apply_theme;
 use super::view::ViewState;
 
+fn set_block_text(blocks: &mut [Block], block_id: &str, text: &str) -> bool {
+    for block in blocks {
+        if block.id == block_id {
+            block.text = text.to_string();
+            block.normalize();
+            return true;
+        }
+        if set_block_text(&mut block.children, block_id, text) {
+            return true;
+        }
+    }
+    false
+}
+
 impl NotionApp {
     pub(super) fn view_state(&self) -> ViewState {
         let (available_offline, lock_page) = self
@@ -31,6 +48,7 @@ impl NotionApp {
             .unwrap_or((false, false));
         ViewState {
             current_page: self.current_page.clone(),
+            remote_cursors: self.remote_awareness.clone(),
             tabs: self.tabs.clone(),
             active_tab: self.active_tab,
             sidebar_open: self.sidebar_open,
@@ -290,6 +308,66 @@ impl NotionApp {
     }
 
     #[allow(clippy::too_many_lines)]
+    pub(super) fn sync_crdt(&mut self) {
+        if self.crdt_page != self.current_page
+            && let Some(page) = self.workspace.page(&self.current_page).cloned()
+        {
+            self.crdt_page = self.current_page.clone();
+            self.last_awareness = None;
+            self.crdt.open_empty(&self.current_page);
+            if let Ok((update, _)) = self.client.crdt_sync(&self.current_page, None)
+                && self.crdt.apply_update(&update).is_ok()
+            {
+                self.crdt.baseline_page(&page);
+                self.project_crdt_page();
+            } else {
+                self.crdt.open_page(&page);
+            }
+        }
+
+        let mut messages = Vec::new();
+        if let Some(receiver) = &mut self.crdt_rx {
+            while let Ok(message) = receiver.try_recv() {
+                messages.push(message);
+            }
+        }
+        for message in messages {
+            match message {
+                ServerMessage::CrdtUpdate { page_id, update }
+                | ServerMessage::CrdtSync {
+                    page_id, update, ..
+                } => {
+                    if page_id == self.crdt_page
+                        && let Ok(bytes) = BASE64.decode(update)
+                        && self.crdt.apply_update(&bytes).is_ok()
+                    {
+                        self.project_crdt_page();
+                    }
+                }
+                ServerMessage::Awareness { members } => {
+                    self.remote_awareness = members
+                        .into_iter()
+                        .filter(|member| member.session_id != self.awareness_session)
+                        .collect();
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn project_crdt_page(&mut self) {
+        let page_id = self.crdt_page.clone();
+        if let Some(mut page) = self.workspace.page(&page_id).cloned() {
+            self.crdt.project_page(&mut page);
+            if let Some(slot) = self.workspace.page_mut(&page_id) {
+                *slot = page.clone();
+            }
+            if let Some(committed) = self.last_committed.page_mut(&page_id) {
+                *committed = page;
+            }
+        }
+    }
+
     pub(super) fn apply_commands(
         &mut self,
         mut commands: Vec<Command>,
@@ -1072,6 +1150,44 @@ impl NotionApp {
                 Command::SetSearchSelected(index) => self.search_selected = index,
                 Command::ToggleHighlightPane => self.highlight_pane = !self.highlight_pane,
                 Command::ToggleFilters => self.filters = !self.filters,
+                Command::CrdtTextChanged {
+                    page_id,
+                    block_id,
+                    text,
+                } => {
+                    if page_id == self.crdt_page
+                        && let Ok(Some(update)) = self.crdt.local_text(&block_id, &text)
+                        && self
+                            .client
+                            .apply_crdt_update(&page_id, &update, "m-owner")
+                            .is_ok()
+                        && let Some(page) = self.last_committed.page_mut(&page_id)
+                    {
+                        set_block_text(&mut page.blocks, &block_id, &text);
+                    }
+                }
+                Command::CrdtCursor {
+                    page_id,
+                    block_id,
+                    index,
+                    selection_end,
+                } => {
+                    let state = (block_id.clone(), index, selection_end);
+                    if self.last_awareness.as_ref() != Some(&state) {
+                        self.last_awareness = Some(state);
+                        let awareness = Awareness {
+                            session_id: self.awareness_session.clone(),
+                            member_id: "m-owner".to_string(),
+                            name: "You".to_string(),
+                            color: self.awareness_color.clone(),
+                            page_id,
+                            block_id,
+                            index,
+                            selection_end,
+                        };
+                        let _ = self.client.publish_awareness(&awareness);
+                    }
+                }
                 Command::NoOp => {}
             }
             index += 1;

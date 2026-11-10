@@ -5,7 +5,9 @@ mod common;
 use futures_util::{SinkExt, StreamExt};
 use ion_of_notes::collab::{Change, ChangeOp, realtime_contract};
 use ion_of_notes::model::{Page, Workspace};
-use ion_of_notes::server::realtime::{ClientMessage, PresenceMember, RealtimeHub, ServerMessage};
+use ion_of_notes::server::realtime::{
+    Awareness, ClientMessage, PresenceMember, RealtimeHub, ServerMessage,
+};
 use ion_of_notes::server::web::{router, router_with_server};
 use ion_of_notes::server::{Method, WorkspaceApi, WorkspaceServer};
 use std::sync::{Arc, Mutex};
@@ -109,6 +111,31 @@ fn hub_broadcasts_changes_and_presence() {
         ServerMessage::Presence { members } => assert!(members.is_empty()),
         other => panic!("expected presence, got {other:?}"),
     }
+}
+
+#[test]
+fn hub_broadcasts_awareness() {
+    let hub = RealtimeHub::new(16);
+    let mut receiver = hub.subscribe();
+    hub.update_awareness(Awareness {
+        session_id: "s1".to_string(),
+        member_id: "m-owner".to_string(),
+        name: "Workspace Owner".to_string(),
+        color: "#4C8BF5".to_string(),
+        page_id: "p-home".to_string(),
+        block_id: "p-home-b0".to_string(),
+        index: 3,
+        selection_end: Some(5),
+    });
+    match receiver.try_recv().expect("awareness") {
+        ServerMessage::Awareness { members } => {
+            assert_eq!(members.len(), 1);
+            assert_eq!(members[0].index, 3);
+            assert_eq!(members[0].selection_end, Some(5));
+        }
+        other => panic!("expected awareness, got {other:?}"),
+    }
+    hub.leave("s1");
 }
 
 #[tokio::test]

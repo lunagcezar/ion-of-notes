@@ -271,6 +271,10 @@ async fn websocket_session(
                                 break;
                             }
                         }
+                        Ok(ClientMessage::Awareness { mut awareness }) => {
+                            awareness.session_id = session_id.clone();
+                            hub.update_awareness(awareness);
+                        }
                         Err(_) => {}
                     }
                 }

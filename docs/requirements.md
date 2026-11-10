@@ -337,6 +337,9 @@ capabilities) is implemented; the rest are planned.
 - FR-101: Concurrent page title/block text edits merge through Yrs state-vector
   sync and WebSocket updates, and the merged text is projected into the durable
   page snapshot (implemented in `spec-042`).
+- FR-102: The desktop editor uses a client-side Yrs session for local text
+  diffs, applies remote merges, and publishes cursor/selection awareness that
+  renders as remote carets (implemented in `spec-043`).
 
 ## 2. Non-functional requirements
 
@@ -406,6 +409,8 @@ capabilities) is implemented; the rest are planned.
   instances using the same SQLite database (ADR-010, spec-041).
 - NFR-27: CRDT updates converge, are ordered per document and never replace the
   REST-owned block structure (ADR-011, spec-042).
+- NFR-28: Client CRDT edits do not trigger whole-page REST writes that would
+  reset the server CRDT document (ADR-012, spec-043).
 
 ## 3. Requirement → spec map
 
@@ -440,6 +445,7 @@ capabilities) is implemented; the rest are planned.
 | FR-98, NFR-24                 | `spec-040-realtime-websocket-change-feed.md` |
 | FR-99, FR-100, NFR-25, NFR-26 | `spec-041-tls-webhooks-and-shared-limits.md` |
 | FR-101, NFR-27                | `spec-042-yrs-crdt-merge.md` |
+| FR-102, NFR-28                | `spec-043-client-yrs-and-awareness.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

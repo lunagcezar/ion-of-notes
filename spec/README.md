@@ -80,6 +80,7 @@ Status vocabulary:
 | [040](spec-040-realtime-websocket-change-feed.md) | Real-time WebSocket change feed and presence | implemented | WS auth, backlog resume, change broadcast, presence |
 | [041](spec-041-tls-webhooks-and-shared-limits.md) | TLS webhooks and shared rate limits | implemented | ureq/rustls sender, SQLite rate-limit store |
 | [042](spec-042-yrs-crdt-merge.md) | Yrs CRDT text merge | implemented | Per-page Yrs text, WebSocket sync/update, projection |
+| [043](spec-043-client-yrs-and-awareness.md) | Client-side Yrs and awareness | implemented | UI session, in-process CRDT, carets/selections |
 
 ## 3. Work status
 
@@ -100,7 +101,7 @@ Status vocabulary:
 | Persist the selected language | spec-028 follow-up | Add to `WorkspaceSettings` or local config |
 | Send or remove the invite message | spec-023 follow-up | Add `message` to `MemberDraft` or drop the UI field |
 | Block-anchored inline comments | spec-026 follow-up | Model + tests |
-| Production auth / WebSocket / PostgreSQL | ADR-003 | **Sessions + SQLite (039), WebSocket (040), TLS webhooks/shared limits (041) and Yrs CRDT (042) done;** next: client CRDT adapter, PostgreSQL |
+| Production auth / WebSocket / PostgreSQL | ADR-003 | **Sessions + SQLite (039), WebSocket (040), TLS webhooks/shared limits (041), Yrs CRDT (042) and client awareness (043) done;** next: remote WS client, PostgreSQL |
 
 ## 4. Spec template
 

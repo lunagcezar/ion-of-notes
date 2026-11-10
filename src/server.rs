@@ -170,6 +170,38 @@ impl<T> Envelope<T> {
 /// The seam between client and server.
 pub trait WorkspaceApi {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse;
+
+    /// CRDT sync for the in-process desktop client. Remote transports override
+    /// this through their own adapter.
+    fn crdt_sync(
+        &mut self,
+        _page_id: &str,
+        _state_vector: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>), String> {
+        Err("CRDT is not available on this transport".to_string())
+    }
+
+    /// Apply one CRDT update.
+    fn apply_crdt_update(
+        &mut self,
+        _page_id: &str,
+        _update: &[u8],
+        _actor: &str,
+    ) -> Result<Vec<u8>, String> {
+        Err("CRDT is not available on this transport".to_string())
+    }
+
+    /// Subscribe to the in-process real-time hub, when available.
+    fn subscribe_realtime(
+        &self,
+    ) -> Option<tokio::sync::broadcast::Receiver<realtime::ServerMessage>> {
+        None
+    }
+
+    /// Publish cursor/selection awareness, when available.
+    fn publish_awareness(&mut self, _awareness: realtime::Awareness) -> Result<(), String> {
+        Err("awareness is not available on this transport".to_string())
+    }
 }
 
 /// Owns all workspace state. Persistence is injected through the
@@ -3011,6 +3043,34 @@ impl WorkspaceApi for WorkspaceServer {
         } else {
             self.handle_v1(request)
         }
+    }
+
+    fn crdt_sync(
+        &mut self,
+        page_id: &str,
+        state_vector: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>), String> {
+        WorkspaceServer::crdt_sync(self, page_id, state_vector)
+    }
+
+    fn apply_crdt_update(
+        &mut self,
+        page_id: &str,
+        update: &[u8],
+        actor: &str,
+    ) -> Result<Vec<u8>, String> {
+        WorkspaceServer::apply_crdt_update(self, page_id, update, actor)
+    }
+
+    fn subscribe_realtime(
+        &self,
+    ) -> Option<tokio::sync::broadcast::Receiver<realtime::ServerMessage>> {
+        Some(self.realtime.subscribe())
+    }
+
+    fn publish_awareness(&mut self, awareness: realtime::Awareness) -> Result<(), String> {
+        self.realtime.update_awareness(awareness);
+        Ok(())
     }
 }
 

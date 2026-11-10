@@ -21,9 +21,9 @@ documentation map.
 
 ## Status (2026-11-08)
 
-- **Specs:** 001–042 implemented; 007 retired; 016 is a plan with B5 done; 029
+- **Specs:** 001–043 implemented; 007 retired; 016 is a plan with B5 done; 029
   is the documentation pass.
-- **Tests:** 243 integration tests; clippy and `cargo fmt --check` are clean.
+- **Tests:** 248 integration tests; clippy and `cargo fmt --check` are clean.
 - **Implemented:** workspace/page CRUD, blocks, inline table, search, theme,
   screenshot mode, members/shares/sync log, version history (50/page), export
   tree, per-page writes with 250 ms debounce, collaboration persistence,
@@ -35,8 +35,9 @@ documentation map.
   (spec-039). `GET /ws/workspace/{id}` streams a versioned change feed with
   presence and `?since=` resume (spec-040). Webhook delivery uses ureq/rustls
   and rate limits can share a SQLite store (spec-041). Yrs CRDT text merge is
-  implemented server-side (spec-042); the client editor adapter and PostgreSQL
-  remain next.
+  implemented server-side (spec-042); the desktop editor now uses a client-side
+  Yrs session and awareness cursors (spec-043). A remote WebSocket client and
+  PostgreSQL remain next.
 - **Public API alignment (B4):** the public Notion developer docs were reviewed
   and turned into a v2 roadmap. The **foundation, pagination, rich text/blocks,
   properties/data sources, views, comments/users/files, webhooks and limits are

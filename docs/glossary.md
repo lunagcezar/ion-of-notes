@@ -180,6 +180,8 @@ definition.
 | **RateLimitStore** | Shared fixed-window counter port; SQLite implements it. | spec-041 |
 | **CrdtStore** | In-memory Yrs documents keyed by page id. | spec-042 |
 | **State vector** | Yrs cursor describing which updates a peer already has. | spec-042 |
+| **Awareness** | A session's cursor/selection position and display color. | spec-043 |
+| **CrdtSession** | The UI's client-side Yrs document and local diff bridge. | spec-043 |
 
 ## 9. Naming rules
 

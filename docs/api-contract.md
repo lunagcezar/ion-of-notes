@@ -146,8 +146,9 @@ All DTOs are serde structs/enums in `src/model.rs` and `src/collab.rs`.
 | `SyncBatch` | `cursor`, `changes` |
 | `RealtimeEvent` | `kind`, `page_id`, `actor`, `payload` |
 | `RealtimeContract` | `transport`, `channel`, `events`, `conflict_resolution`, `resume`, `messages` |
-| `ServerMessage` | `ready`, `change`, `presence`, `crdt_sync`, `crdt_update`, `pong`, `error` (tagged by `type`) |
-| `ClientMessage` | `ping`, `crdt_sync`, `crdt_update` |
+| `ServerMessage` | `ready`, `change`, `presence`, `crdt_sync`, `crdt_update`, `awareness`, `pong`, `error` (tagged by `type`) |
+| `ClientMessage` | `ping`, `crdt_sync`, `crdt_update`, `awareness` |
+| `Awareness` | `session_id`, `member_id`, `name`, `color`, `page_id`, `block_id`, `index`, `selection_end` |
 | `PresenceMember` | `session_id`, `member_id`, `name`, `state` |
 | `ExportFile` | `path`, `content` |
 
@@ -386,6 +387,10 @@ v1 routes stay stable.
   and resets the page's CRDT document after a write.
 - CRDT history is in memory; the persisted page snapshot re-seeds after a
   restart.
+- `awareness { awareness }` carries `session_id`, `member_id`, `name`, `color`,
+  `page_id`, `block_id`, `index` and `selection_end`; the hub broadcasts the
+  current list. The desktop uses the in-process hub directly and filters its own
+  session; the WebSocket transport accepts the same message.
 
 | Concern | v1 today | v2 target | Spec | Status |
 | ------- | -------- | --------- | ---- | ------ |

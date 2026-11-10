@@ -7,6 +7,7 @@
 use super::commands::{FontStyle, IconTab};
 use crate::collab::{Access, Member, PageVersion, Role};
 use crate::model::SearchResult;
+use crate::server::realtime::Awareness;
 use egui::Pos2;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -14,6 +15,7 @@ use std::sync::Arc;
 /// A snapshot of non-workspace app state passed to pure render functions.
 pub(super) struct ViewState {
     pub(super) current_page: String,
+    pub(super) remote_cursors: Vec<Awareness>,
     pub(super) tabs: Vec<String>,
     pub(super) active_tab: usize,
     pub(super) sidebar_open: bool,

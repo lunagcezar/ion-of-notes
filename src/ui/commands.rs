@@ -203,5 +203,17 @@ pub(super) enum Command {
     // Search / new-tab window panes (spec-013).
     ToggleHighlightPane,
     ToggleFilters,
+    // Real-time CRDT and awareness.
+    CrdtTextChanged {
+        page_id: String,
+        block_id: String,
+        text: String,
+    },
+    CrdtCursor {
+        page_id: String,
+        block_id: String,
+        index: usize,
+        selection_end: Option<usize>,
+    },
     NoOp,
 }

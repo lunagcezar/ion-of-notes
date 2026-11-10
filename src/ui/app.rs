@@ -14,12 +14,14 @@ use crate::model::{SearchResult, Workspace};
 use crate::ollama::{self, OllamaConfig, OllamaStatus};
 use crate::screenshot;
 use crate::server::WorkspaceServer;
+use crate::server::realtime::{Awareness, ServerMessage};
 use egui::Pos2;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
+use super::crdt::CrdtSession;
 use super::dialogs::{
     render_app_menu, render_grid_menu, render_inbox, render_new_tab, render_onboarding,
     render_page_actions, render_search, render_settings, render_share, render_shortcuts,
@@ -121,6 +123,14 @@ pub struct NotionApp {
     pub(super) grid_menu_open: bool,
     pub(super) drag_from: Option<String>,
     pub(super) drag_to: Option<String>,
+    // Real-time CRDT and awareness.
+    pub(super) crdt: CrdtSession,
+    pub(super) crdt_page: String,
+    pub(super) crdt_rx: Option<tokio::sync::broadcast::Receiver<ServerMessage>>,
+    pub(super) remote_awareness: Vec<Awareness>,
+    pub(super) awareness_session: String,
+    pub(super) awareness_color: String,
+    pub(super) last_awareness: Option<(String, usize, Option<usize>)>,
 }
 
 impl NotionApp {
@@ -204,12 +214,25 @@ impl NotionApp {
         let onboarding_open = demo == "onboarding"
             || (workspace.pages.is_empty() && !workspace.settings.onboarding_completed);
         let templates_open = demo == "templates";
+        let mut crdt = CrdtSession::new();
+        if let Some(page) = workspace.page(&demo_current_page) {
+            crdt.open_page(page);
+        }
+        let crdt_rx = client.subscribe_realtime();
+        let awareness_session = format!("ui-{}", uuid::Uuid::new_v4());
         Self {
             client,
             last_committed: workspace.clone(),
             pending_edits: PendingEdits::new(0.25),
             workspace,
             current_page: demo_current_page.clone(),
+            crdt,
+            crdt_page: demo_current_page.clone(),
+            crdt_rx,
+            remote_awareness: Vec::new(),
+            awareness_session,
+            awareness_color: "#4C8BF5".to_string(),
+            last_awareness: None,
             tabs: vec![demo_current_page],
             active_tab: 0,
             closed_tabs: Vec::new(),
@@ -318,6 +341,7 @@ impl eframe::App for NotionApp {
             self.zoom_dirty = false;
         }
         self.poll_ai();
+        self.sync_crdt();
 
         // Snapshot before rendering: text edits mutate `workspace` directly, so
         // this is the state an Undo would restore.

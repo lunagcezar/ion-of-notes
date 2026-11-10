@@ -33,6 +33,7 @@ pub enum ClientError {
     Decode(String),
     NotFound(String),
     MissingToken,
+    Realtime(String),
 }
 
 impl fmt::Display for ClientError {
@@ -48,6 +49,7 @@ impl fmt::Display for ClientError {
             ClientError::Decode(message) => write!(f, "could not decode response: {message}"),
             ClientError::NotFound(id) => write!(f, "not found: {id}"),
             ClientError::MissingToken => write!(f, "v2 request requires a bearer token"),
+            ClientError::Realtime(message) => write!(f, "real-time error: {message}"),
         }
     }
 }
@@ -854,6 +856,46 @@ impl<A: WorkspaceApi> Client<A> {
 
     pub fn list_file_uploads_v2(&mut self) -> Result<Vec<FileUpload>, ClientError> {
         self.collect_all_v2("/api/v2/file_uploads", 100)
+    }
+
+    /// Sync the in-process CRDT document for a page.
+    pub fn crdt_sync(
+        &mut self,
+        page_id: &str,
+        state_vector: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>), ClientError> {
+        self.api
+            .crdt_sync(page_id, state_vector)
+            .map_err(ClientError::Realtime)
+    }
+
+    /// Apply a CRDT update through the in-process transport.
+    pub fn apply_crdt_update(
+        &mut self,
+        page_id: &str,
+        update: &[u8],
+        actor: &str,
+    ) -> Result<Vec<u8>, ClientError> {
+        self.api
+            .apply_crdt_update(page_id, update, actor)
+            .map_err(ClientError::Realtime)
+    }
+
+    /// Subscribe to the in-process real-time hub, if this transport has one.
+    pub fn subscribe_realtime(
+        &self,
+    ) -> Option<tokio::sync::broadcast::Receiver<crate::server::realtime::ServerMessage>> {
+        self.api.subscribe_realtime()
+    }
+
+    /// Publish cursor/selection awareness through the in-process transport.
+    pub fn publish_awareness(
+        &mut self,
+        awareness: &crate::server::realtime::Awareness,
+    ) -> Result<(), ClientError> {
+        self.api
+            .publish_awareness(awareness.clone())
+            .map_err(ClientError::Realtime)
     }
 
     pub fn list_webhooks_v2(&mut self) -> Result<Vec<WebhookSubscription>, ClientError> {

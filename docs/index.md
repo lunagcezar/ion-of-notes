@@ -9,13 +9,13 @@ in what order, and which document is the source of truth for each concern.
 | -------- | ------------------ |
 | New contributor | `README.md` → `docs/architecture.md` → `docs/contributor-guide.md` → `docs/testing.md` → `docs/glossary.md` |
 | Agent starting a task | `AGENTS.md` → `spec/README.md` → `docs/architecture.md` → the relevant spec → `docs/review-findings.md` |
-| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011 |
+| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012 |
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
 ## Current status (2026-11-08)
 
-- **Specs:** `spec-001` … `spec-042` implemented; `spec-007` retired;
+- **Specs:** `spec-001` … `spec-043` implemented; `spec-007` retired;
   `spec-016` is a plan with B5 done; `spec-029` is the documentation
   overhaul; `spec-030` is the v2 foundation; `spec-031` adds pagination;
   `spec-032` adds rich text/blocks; `spec-033` adds properties/data sources;
@@ -24,24 +24,24 @@ in what order, and which document is the source of truth for each concern.
   web server and B5 contract suite; `spec-039` adds sessions, Argon2id and
   SQLite storage; `spec-040` adds the WebSocket change feed and presence;
   `spec-041` adds TLS webhooks and shared SQLite rate limits; `spec-042` adds
-  Yrs CRDT text merge.
-- **Tests:** 243 integration tests across `tests/`; `cargo clippy --all-targets
+  Yrs CRDT text merge; `spec-043` adds the client session and awareness cursors.
+- **Tests:** 248 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
   selects SQLite with Argon2id accounts and sessions. PostgreSQL and the client
   CRDT editor adapter are still to build.
 - **Collaboration:** members, shares, sync log and version snapshots persist in
   `collab.json` or SQLite. `GET /ws/workspace/{id}` streams changes with
-  presence and resume; Yrs CRDT merges page title/block text server-side, and
-  the egui editor adapter is still staged.
+  presence and resume; Yrs CRDT merges page title/block text server-side and the
+  desktop editor uses a client Yrs session with awareness cursors.
 - **Clean room:** strict public-behavior-only observation. No capture, proxy,
   Wireshark, source maps or decompilation. B3 is blocked; **B4 public docs were
   reviewed on 2026-11-08** (`docs/public-api-analysis.md`); the v2 foundation,
   pagination, rich text/blocks, properties/data sources, views,
   comments/users/files, webhooks, limits and the Axum adapter are implemented
   (specs 030–038); sessions/SQLite (spec-039), the WebSocket change feed
-  (spec-040), TLS webhooks/shared limits (spec-041) and Yrs CRDT merge
-  (spec-042) are implemented. B5 is done.
+  (spec-040), TLS webhooks/shared limits (spec-041), Yrs CRDT merge (spec-042)
+  and client awareness (spec-043) are implemented. B5 is done.
 - **Localization:** core navigation, Share, Library, page actions, comments and
   Settings are translated into `en`, `pt-BR` and `eo`; remaining strings are
   migrated incrementally.

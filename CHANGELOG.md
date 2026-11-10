@@ -6,6 +6,23 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-043 client-side Yrs and awareness
+
+- Added `src/ui/crdt.rs`: client `CrdtSession` with local text diff, remote
+  apply, state vector and page projection.
+- Added default CRDT/realtime/awareness methods to `WorkspaceApi`; the
+  in-process `WorkspaceServer` overrides them and `Client` exposes typed
+  wrappers.
+- Added `Awareness` (cursor/selection) storage and broadcast to the realtime
+  hub; WebSocket `awareness` messages.
+- The editor sends `CrdtTextChanged`/`CrdtCursor`; the app drains realtime
+  events, projects merged text and filters its own awareness.
+- Added a remote caret/name/selection overlay in the block editor.
+- Local CRDT edits mark committed block text so the REST debounce does not reset
+  the server document.
+- Tests: 4 in `tests/ui_crdt.rs` plus a hub-awareness test; the suite is 248
+  tests. Added `docs/adr-012-client-yrs-and-awareness.md`.
+
 ### Added — spec-042 Yrs CRDT text merge
 
 - Added `src/server/crdt.rs`: one Yrs `Doc` per page with title and

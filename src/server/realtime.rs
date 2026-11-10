@@ -35,6 +35,9 @@ pub enum ServerMessage {
         page_id: String,
         update: String,
     },
+    Awareness {
+        members: Vec<Awareness>,
+    },
     Pong,
     Error {
         code: String,
@@ -56,6 +59,9 @@ pub enum ClientMessage {
         page_id: String,
         update: String,
     },
+    Awareness {
+        awareness: Awareness,
+    },
 }
 
 /// One active real-time participant.
@@ -67,11 +73,26 @@ pub struct PresenceMember {
     pub state: String,
 }
 
+/// One participant's cursor/selection awareness.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Awareness {
+    pub session_id: String,
+    pub member_id: String,
+    pub name: String,
+    pub color: String,
+    pub page_id: String,
+    pub block_id: String,
+    pub index: usize,
+    #[serde(default)]
+    pub selection_end: Option<usize>,
+}
+
 /// Broadcast hub shared by the server and every WebSocket session.
 #[derive(Clone)]
 pub struct RealtimeHub {
     sender: broadcast::Sender<ServerMessage>,
     presence: Arc<Mutex<BTreeMap<String, PresenceMember>>>,
+    awareness: Arc<Mutex<BTreeMap<String, Awareness>>>,
 }
 
 impl RealtimeHub {
@@ -80,6 +101,7 @@ impl RealtimeHub {
         Self {
             sender,
             presence: Arc::new(Mutex::new(BTreeMap::new())),
+            awareness: Arc::new(Mutex::new(BTreeMap::new())),
         }
     }
 
@@ -109,13 +131,37 @@ impl RealtimeHub {
         self.publish_presence();
     }
 
-    /// Remove a participant and broadcast the new presence list.
+    /// Remove a participant and broadcast the new presence/awareness lists.
     pub fn leave(&self, session_id: &str) {
         self.presence
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .remove(session_id);
+        self.awareness
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .remove(session_id);
         self.publish_presence();
+        self.publish_awareness();
+    }
+
+    /// Store one participant's cursor/selection and broadcast the list.
+    pub fn update_awareness(&self, awareness: Awareness) {
+        self.awareness
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .insert(awareness.session_id.clone(), awareness);
+        self.publish_awareness();
+    }
+
+    /// Current cursor/selection awareness, ordered by session id.
+    pub fn awareness(&self) -> Vec<Awareness> {
+        self.awareness
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .values()
+            .cloned()
+            .collect()
     }
 
     /// Current participants, ordered by session id.
@@ -131,5 +177,10 @@ impl RealtimeHub {
     fn publish_presence(&self) {
         let members = self.members();
         let _ = self.sender.send(ServerMessage::Presence { members });
+    }
+
+    fn publish_awareness(&self) {
+        let members = self.awareness();
+        let _ = self.sender.send(ServerMessage::Awareness { members });
     }
 }

@@ -292,6 +292,7 @@ erDiagram
 | `Session` | `token_hash` (SHA-256), `member_id`, `created_at`, `expires_at` | 039 |
 | `RateLimitEntry` | `key`, `window_start`, `count` (SQLite `rate_limits`) | 041 |
 | `CrdtDocument` | one Yrs `Doc` per page: `title` + `block:<id>` text | 042 |
+| `Awareness` | `session_id`, `member_id`, `name`, `color`, `page_id`, `block_id`, `index`, `selection_end` | 043 |
 | `ServerMessage` | `ready`, `change`, `presence`, `pong`, `error` (tagged by `type`) | 040 |
 | `ClientMessage` | `ping` | 040 |
 | `PresenceMember` | `session_id`, `member_id`, `name`, `state` | 040 |

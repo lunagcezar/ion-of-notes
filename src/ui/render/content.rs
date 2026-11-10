@@ -3,6 +3,7 @@
 
 use crate::i18n;
 use crate::model::{Block, BlockKind, Workspace};
+use crate::server::realtime::Awareness;
 use egui::{
     Align2, Color32, CornerRadius, FontFamily, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2,
 };
@@ -494,20 +495,55 @@ fn render_block(
 
         let locked = view.lock_page;
         let block_id_for_edit = block.id.clone();
-        let edit = |ui: &mut egui::Ui, text: &mut String, font: FontId, w: f32| -> egui::Response {
-            ui.add(
-                egui::TextEdit::multiline(text)
-                    .id(ui.make_persistent_id(("block_edit", &block_id_for_edit, index)))
-                    .font(font)
-                    .frame(egui::Frame::NONE)
-                    .desired_width(w)
-                    .desired_rows(1)
-                    .interactive(!locked)
-                    .text_color(palette.text),
-            )
+        let page_id_for_edit = view.current_page.clone();
+        let pending_commands = std::cell::RefCell::new(Vec::new());
+        let edit = |ui: &mut egui::Ui,
+                    text: &mut String,
+                    font: FontId,
+                    w: f32|
+         -> egui::widgets::text_edit::TextEditOutput {
+            let output = egui::TextEdit::multiline(text)
+                .id(ui.make_persistent_id(("block_edit", &block_id_for_edit, index)))
+                .font(font.clone())
+                .frame(egui::Frame::NONE)
+                .desired_width(w)
+                .desired_rows(1)
+                .interactive(!locked)
+                .text_color(palette.text)
+                .show(ui);
+            let remote: Vec<Awareness> = view
+                .remote_cursors
+                .iter()
+                .filter(|cursor| {
+                    cursor.page_id == page_id_for_edit && cursor.block_id == block_id_for_edit
+                })
+                .cloned()
+                .collect();
+            draw_remote_cursors(ui, &output.response.rect, text, &font, &remote, palette);
+            if output.response.changed() {
+                pending_commands
+                    .borrow_mut()
+                    .push(Command::CrdtTextChanged {
+                        page_id: page_id_for_edit.clone(),
+                        block_id: block_id_for_edit.clone(),
+                        text: text.clone(),
+                    });
+            }
+            if let Some(range) = output.cursor_range {
+                let index = range.primary.index.0;
+                let selection_end = (range.primary.index != range.secondary.index)
+                    .then_some(range.secondary.index.0);
+                pending_commands.borrow_mut().push(Command::CrdtCursor {
+                    page_id: page_id_for_edit.clone(),
+                    block_id: block_id_for_edit.clone(),
+                    index,
+                    selection_end,
+                });
+            }
+            output
         };
 
-        let mut edit_response: Option<egui::Response> = None;
+        let mut edit_response: Option<egui::widgets::text_edit::TextEditOutput> = None;
         match block.kind {
             BlockKind::Divider => {
                 let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 14.0), Sense::hover());
@@ -652,9 +688,11 @@ fn render_block(
             }
         }
 
+        commands.append(&mut pending_commands.into_inner());
+
         if !locked {
             if let Some(ref resp) = edit_response
-                && backspace_on_empty(ui, resp, &block.text)
+                && backspace_on_empty(ui, &resp.response, &block.text)
                 && block_count > 1
             {
                 delete_empty = true;
@@ -677,6 +715,65 @@ fn render_block(
     if delete_empty {
         commands.push(Command::DeleteBlock(block.id.clone()));
     }
+}
+
+/// Draw remote carets and selections at the best available text offset.
+///
+/// egui's multiline editor exposes a character index but not a per-line rect
+/// here, so the marker uses the first-line width. It is a clear presence cue,
+/// not a pixel-perfect multi-line caret.
+fn draw_remote_cursors(
+    ui: &mut egui::Ui,
+    rect: &Rect,
+    text: &str,
+    font: &FontId,
+    cursors: &[Awareness],
+    palette: &Palette,
+) {
+    for cursor in cursors {
+        let color = parse_hex_color(&cursor.color).unwrap_or(palette.accent);
+        if let Some(end) = cursor.selection_end {
+            let start = cursor.index.min(end);
+            let end = cursor.index.max(end);
+            let start_x = rect.min.x + text_width(ui, text, start, font, color);
+            let end_x = rect.min.x + text_width(ui, text, end, font, color);
+            ui.painter().rect_filled(
+                Rect::from_min_max(Pos2::new(start_x, rect.min.y), Pos2::new(end_x, rect.max.y)),
+                CornerRadius::same(2),
+                Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 40),
+            );
+        }
+        let x = (rect.min.x + text_width(ui, text, cursor.index, font, color))
+            .clamp(rect.min.x, rect.max.x - 2.0);
+        ui.painter()
+            .vline(x, rect.y_range(), Stroke::new(2.0, color));
+        ui.painter().text(
+            Pos2::new(x + 3.0, rect.min.y - 2.0),
+            Align2::LEFT_BOTTOM,
+            &cursor.name,
+            FontId::proportional(10.0),
+            color,
+        );
+    }
+}
+
+fn text_width(ui: &egui::Ui, text: &str, chars: usize, font: &FontId, color: Color32) -> f32 {
+    let prefix: String = text.chars().take(chars).collect();
+    ui.painter()
+        .layout_no_wrap(prefix, font.clone(), color)
+        .size()
+        .x
+}
+
+fn parse_hex_color(value: &str) -> Option<Color32> {
+    let hex = value.strip_prefix('#')?;
+    if hex.len() != 6 {
+        return None;
+    }
+    let red = u8::from_str_radix(&hex[0..2], 16).ok()?;
+    let green = u8::from_str_radix(&hex[2..4], 16).ok()?;
+    let blue = u8::from_str_radix(&hex[4..6], 16).ok()?;
+    Some(Color32::from_rgb(red, green, blue))
 }
 
 /// Leading markdown that should convert the current block (help-site shortcuts).
