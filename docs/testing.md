@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (248 tests, 2026-11-10)
+## 3. Test-crate map (251 tests, 2026-11-10)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -63,6 +63,7 @@ flowchart TD
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 4 | client Yrs diff, empty-sync baseline, projection, convergence |
+| `tests/remote.rs` | 2 | remote REST/CRDT and WebSocket change/awareness |
 | `tests/auth.rs` | 6 | Argon2id, login, logout, demo token, sessions, SQLite restart |
 | `tests/sqlite_store.rs` | 3 | workspace/collab round-trip, accounts/sessions, JSON migration |
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
@@ -268,6 +269,7 @@ specs 030–038 are implemented:
 | TLS webhook sender and shared SQLite limits | `tests/webhooks.rs`, `tests/shared_limits.rs` (implemented) |
 | Yrs CRDT text merge and WebSocket sync | `tests/crdt.rs` (implemented) |
 | client Yrs session and awareness | `tests/ui_crdt.rs`, `tests/realtime.rs` (implemented) |
+| remote REST/WebSocket transport | `tests/remote.rs` (implemented) |
 
 These are written before implementation, following the same red → green rule.
 Contract tests drive the real `Client` against the v2 mock, not against the

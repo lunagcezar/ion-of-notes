@@ -46,6 +46,7 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Webhooks         | ureq + rustls, no redirects         | Signed delivery behind a `WebhookSender` port (spec-041) |
 | Shared limits    | SQLite `rate_limits` + `RateLimitStore` | Multi-server workspace budgets (spec-041)        |
 | CRDT             | Yrs per-page text documents         | Server merge (042) + client session/awareness (043) |
+| Remote desktop   | ureq REST + tokio-tungstenite WS    | `--server`/`--token` remote mode (044)               |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
@@ -130,6 +131,7 @@ src/
     crdt.rs        Yrs per-page text documents and projection (spec-042)
     web.rs         Axum/Tokio HTTP + WebSocket adapter for --serve
     webhook_sender.rs  WebhookSender port and ureq/rustls adapter (spec-041)
+  remote.rs        remote WorkspaceApi: ureq REST + background WebSocket
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
   collab.rs        accounts/roles, sharing, sync log, realtime DTOs, CollabState
                    (version history capped at 50 snapshots per page)
@@ -211,6 +213,7 @@ tests/
   realtime.rs      WebSocket auth, ready, backlog, live change, presence
   crdt.rs          Yrs convergence, projection and WebSocket CRDT sync
   ui_crdt.rs       client Yrs diff/merge/projection
+  remote.rs        remote REST/WebSocket transport
   shared_limits.rs SQLite shared rate limits and window reset
   auth.rs          password hashing, login/logout/session, SQLite restart
   sqlite_store.rs  SQLite round-trip, accounts/sessions, JSON migration
@@ -529,7 +532,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (248)    |
+| `cargo test --all-targets`               | Run all integration test crates (251)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |

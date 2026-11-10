@@ -13,6 +13,10 @@ pub struct Args {
     pub mode: Mode,
     /// Optional SQLite database for `--serve`; JSON remains the fallback.
     pub database: Option<PathBuf>,
+    /// Optional remote server URL for the desktop (`--server`).
+    pub server: Option<String>,
+    /// Bearer token paired with `--server`.
+    pub token: Option<String>,
 }
 
 impl Args {
@@ -20,6 +24,8 @@ impl Args {
     pub fn parse<I: IntoIterator<Item = String>>(iter: I) -> Self {
         let mut mode = Mode::Desktop { screenshot: None };
         let mut database = None;
+        let mut server = None;
+        let mut token = None;
         let mut args = iter.into_iter();
         args.next();
         while let Some(arg) = args.next() {
@@ -41,9 +47,24 @@ impl Args {
                         database = Some(PathBuf::from(path));
                     }
                 }
+                "--server" => {
+                    if let Some(url) = args.next() {
+                        server = Some(url);
+                    }
+                }
+                "--token" => {
+                    if let Some(value) = args.next() {
+                        token = Some(value);
+                    }
+                }
                 _ => {}
             }
         }
-        Self { mode, database }
+        Self {
+            mode,
+            database,
+            server,
+            token,
+        }
     }
 }

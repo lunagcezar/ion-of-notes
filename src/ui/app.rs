@@ -13,7 +13,6 @@ use crate::model::Comment;
 use crate::model::{SearchResult, Workspace};
 use crate::ollama::{self, OllamaConfig, OllamaStatus};
 use crate::screenshot;
-use crate::server::WorkspaceServer;
 use crate::server::realtime::{Awareness, ServerMessage};
 use egui::Pos2;
 use std::collections::HashSet;
@@ -38,7 +37,7 @@ use super::input::collect_shortcuts;
 pub(super) use super::view::ViewState;
 
 pub struct NotionApp {
-    pub(super) client: Client<WorkspaceServer>,
+    pub(super) client: Client<app::DesktopApi>,
     pub(super) workspace: Workspace,
     pub(super) last_committed: Workspace,
     pub(super) pending_edits: PendingEdits,
@@ -135,13 +134,20 @@ pub struct NotionApp {
 
 impl NotionApp {
     pub fn new(cc: &eframe::CreationContext<'_>, screenshot: Option<PathBuf>) -> Self {
+        let (client, workspace) = app::build_desktop();
+        Self::with_client(cc, screenshot, client, workspace)
+    }
+
+    pub fn with_client(
+        cc: &eframe::CreationContext<'_>,
+        screenshot: Option<PathBuf>,
+        mut client: Client<app::DesktopApi>,
+        mut workspace: Workspace,
+    ) -> Self {
         let initial_locale =
             std::env::var("ION_OF_NOTES_LOCALE").unwrap_or_else(|_| "en".to_string());
         crate::i18n::set_locale(&initial_locale);
         let language = crate::i18n::current_locale();
-        // The composition root (app layer) wires the concrete JSON adapter to
-        // the server/client ports; the window only consumes the ready graph.
-        let (mut client, mut workspace) = app::build_desktop();
         let current_page = workspace
             .pages
             .first()

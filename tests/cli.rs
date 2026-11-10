@@ -41,6 +41,19 @@ fn cli_defaults_to_plain_desktop() {
 }
 
 #[test]
+fn cli_parses_remote_server_and_token() {
+    let args = Args::parse(vec![
+        "ion-of-notes".to_string(),
+        "--server".to_string(),
+        "http://127.0.0.1:8787".to_string(),
+        "--token".to_string(),
+        "secret-token".to_string(),
+    ]);
+    assert_eq!(args.server, Some("http://127.0.0.1:8787".to_string()));
+    assert_eq!(args.token, Some("secret-token".to_string()));
+}
+
+#[test]
 fn cli_parses_a_database_path() {
     let args = Args::parse(vec![
         "ion-of-notes".to_string(),

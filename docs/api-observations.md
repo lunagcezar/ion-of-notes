@@ -151,8 +151,9 @@ This is the status of **our** contract, not a claim about the original:
 | Export tree | Implemented in memory (`src/collab/export.rs`) |
 | Realtime | WebSocket change feed + presence (`GET /ws/workspace/{id}`, spec-040), Yrs text CRDT sync/update (spec-042) and client awareness/cursors (spec-043). `GET /api/realtime` describes the contract |
 | Per-page writes and debounce | Implemented (`spec-020`) |
-| Auth/sessions | v2 foundation has bearer-token connections; production sessions **not implemented** |
-| WebSocket/CRDT server | WebSocket change feed (spec-040) and Yrs text merge (spec-042) implemented; client editor adapter staged |
+| Auth/sessions | Argon2id accounts and opaque sessions implemented (`spec-039`); production account UI/reset still missing |
+| WebSocket/CRDT server | WebSocket change feed (spec-040), Yrs text merge (spec-042) and client Yrs/awareness (spec-043) implemented |
+| Remote desktop | `--server`/`--token` use ureq REST plus a background WebSocket with reconnect/`?since=` (`spec-044`) |
 | `/api/v1` prefix | Decided, **not served** |
 | Pagination/sorting | v2 lists use `ListResponse` + opaque cursors (`spec-031`); v1 lists are full snapshots |
 | Rich text/blocks | v2 `RichText`, block metadata/children and block endpoints (`spec-032`); v1 UI still edits `Block.text` |

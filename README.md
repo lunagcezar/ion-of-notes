@@ -65,6 +65,8 @@ Everything is written in English and built spec-first (`spec/`) and test-first
   awareness.
 - TLS webhook delivery with ureq/rustls, no automatic redirects.
 - Shared SQLite rate-limit budgets across server instances using the same file.
+- Remote desktop transport: `--server`/`--token` over REST + background
+  WebSocket, with reconnect and `?since=` resume.
 
 ### AI assistant (optional)
 
@@ -196,8 +198,19 @@ The socket matches the server workspace (`401`/`404` on failure), replays
 changes after `since`, and broadcasts committed changes, CRDT updates and
 awareness. See [`docs/api-contract.md`](docs/api-contract.md) for payloads.
 
-> The desktop currently uses the **in-process** transport. A remote WebSocket
-> client adapter is planned; the endpoint is available to external clients now.
+### Connect the desktop to a server
+
+The desktop can use the remote HTTP/WebSocket transport instead of the
+in-process server:
+
+```sh
+cargo run --release -- --server http://127.0.0.1:8787 --token <session-token>
+```
+
+`--token` is the session token returned by `/api/v2/auth/login` (or
+`owner-token` when the server has no auth store). The desktop loads the
+workspace over REST and keeps the change feed, CRDT updates and awareness on a
+background WebSocket. Without `--server`, the desktop stays fully local.
 
 ## Configuration
 
@@ -271,7 +284,7 @@ src/
   screenshot.rs    PNG output
   cli.rs           argument parsing
   i18n.rs          locale switching
-tests/             one integration-test crate per module (248 tests)
+tests/             one integration-test crate per module (251 tests)
 ```
 
 Dependency direction: `ui → client → server → model`, `server → store`; `app`
@@ -296,8 +309,10 @@ eframe, JSON files or sockets.
 
 ## Current limitations
 
-- The desktop uses the in-process server; a remote WebSocket client adapter is
-  not built yet.
+- Remote mode requires a token on the command line; there is no login or
+  server-settings UI yet.
+- REST requests in remote mode are synchronous, so a slow server briefly blocks
+  the UI thread; awareness sent while the socket is disconnected is dropped.
 - CRDT covers page title/block text. Block structure, properties and databases
   remain REST-owned.
 - The remote-caret overlay uses first-line width, so multi-line positions are

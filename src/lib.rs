@@ -22,6 +22,7 @@ pub mod collab;
 pub mod i18n;
 pub mod model;
 pub mod ollama;
+pub mod remote;
 pub mod screenshot;
 pub mod server;
 pub mod shortcuts;
@@ -31,8 +32,9 @@ pub mod ui;
 pub mod webhooks;
 
 pub use app::{
-    build_desktop, build_desktop_at, build_desktop_at_paths, build_server, build_server_at,
-    build_server_at_paths, build_server_sqlite, build_server_sqlite_at,
+    DesktopApi, build_desktop, build_desktop_at, build_desktop_at_paths, build_remote_desktop,
+    build_server, build_server_at, build_server_at_paths, build_server_sqlite,
+    build_server_sqlite_at,
 };
 pub use auth::{
     Account, AuthStore, DEFAULT_OWNER_PASSWORD, LoginInput, MemoryAuthStore, NoAuthStore,
@@ -61,6 +63,7 @@ pub use ollama::{
     generate, models, normalize_endpoint, parse_endpoint, parse_generate_response,
     parse_tags_response, service_reachable,
 };
+pub use remote::RemoteApi;
 pub use server::{
     API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, LimitViolation,
     ListResponse, Method, PageRequest, PaginationError, Plan, RateDecision, RateLimitPolicy,

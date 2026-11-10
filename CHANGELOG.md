@@ -6,6 +6,19 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-044 remote WebSocket client transport
+
+- Added `src/remote.rs`: `RemoteApi` with ureq REST and a background
+  `tokio-tungstenite` socket that reconnects with `?since=`.
+- Added REST CRDT routes `POST /api/v2/crdt/sync` and
+  `POST /api/v2/crdt/update` with base64 Yrs payloads.
+- Added `DesktopApi::{Local, Remote}`, `build_remote_desktop` and
+  `NotionApp::with_client`.
+- Added `--server` and `--token`; remote mode requires both.
+- Remote changes and awareness use the same broadcast receiver as local mode.
+- Tests: 2 in `tests/remote.rs` plus CLI parsing; the suite is 251 tests.
+- Added `docs/adr-013-remote-websocket-client.md`.
+
 ### Added — spec-043 client-side Yrs and awareness
 
 - Added `src/ui/crdt.rs`: client `CrdtSession` with local text diff, remote

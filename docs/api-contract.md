@@ -380,8 +380,11 @@ v1 routes stay stable.
 - The client may send `{"type":"ping"}`; the server replies `pong`.
 - Every successful `WorkspaceServer::write` publishes a `change` after the
   persist succeeds.
-- `crdt_sync {page_id, state_vector?}` returns a base64 Yrs update and state
-  vector; `crdt_update {page_id, update}` merges text and broadcasts the update.
+- `POST /api/v2/crdt/sync` takes `{page_id, state_vector?}` (base64) and returns
+  `{update, state_vector}`; `POST /api/v2/crdt/update` takes
+  `{page_id, update, actor?}` and returns `{update}`. Both are used by remote
+  clients; the WebSocket `crdt_sync`/`crdt_update` messages carry the same
+  payloads.
 - Yrs merges the page title and `block:<id>` text. The server projects the
   merged text into the durable page snapshot; REST remains the structure source
   and resets the page's CRDT document after a write.
@@ -414,6 +417,8 @@ Implemented v2 routes:
 | Method | Path | Required capability |
 | ------ | ---- | ------------------- |
 | `POST` | `/api/v2/auth/login` | none (version header only) |
+| `POST` | `/api/v2/crdt/sync` | read content |
+| `POST` | `/api/v2/crdt/update` | update content |
 | `POST` | `/api/v2/auth/logout` | read content |
 | `GET` | `/api/v2/auth/session` | read content |
 | `GET` / `PUT` | `/api/v2/workspace` | read / update content |

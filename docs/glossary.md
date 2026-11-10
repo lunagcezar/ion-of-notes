@@ -182,6 +182,8 @@ definition.
 | **State vector** | Yrs cursor describing which updates a peer already has. | spec-042 |
 | **Awareness** | A session's cursor/selection position and display color. | spec-043 |
 | **CrdtSession** | The UI's client-side Yrs document and local diff bridge. | spec-043 |
+| **RemoteApi** | Remote `WorkspaceApi`: ureq REST + background WebSocket. | spec-044 |
+| **DesktopApi** | Local/remote desktop transport enum behind `Client`. | spec-044 |
 
 ## 9. Naming rules
 
