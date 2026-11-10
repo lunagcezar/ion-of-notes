@@ -374,8 +374,9 @@ eframe, JSON files or sockets.
 - SQLite is single-node; PostgreSQL and Redis/shared multi-node rate limiting
   are not implemented.
 - There is no browser UI, registration, password reset or account-management UI.
-- TLS termination, reverse-proxy configuration and deployment manifests are not
-  included; run the server behind a trusted proxy for network access.
+- A Compose deployment manifest is included; TLS termination, reverse-proxy
+  configuration, backups and a production secret manager are not included. Run
+  the server behind a trusted proxy for network access.
 - Webhooks have no async queue/dead-letter store, and private CA/mTLS setup is
   not configured.
 - B3 own-account capture remains blocked by the strict clean-room scope.
