@@ -1,8 +1,8 @@
 # ion-of-notes
 
-A clean-room, self-hosted workspace for notes, pages and databases. Built in
-Rust with **eframe/egui** for the desktop window and **Axum/Tokio/Tower** for the
-optional HTTP/WebSocket server.
+A self-hosted, local-first workspace for notes, pages and databases. Built
+independently in Rust with **eframe/egui** for the desktop window and
+**Axum/Tokio/Tower** for the optional HTTP/WebSocket server.
 
 The desktop is local-first and works without a server. The same workspace
 contract is also exposed over a loopback API, with accounts, sessions, SQLite
@@ -10,6 +10,12 @@ persistence, a versioned change feed, WebSocket CRDT sync and signed webhooks.
 
 Everything is written in English and built spec-first (`spec/`) and test-first
 (`cargo test`). The documentation hub is [`docs/index.md`](docs/index.md).
+
+> **AI-assisted and independent project.** This repository was built with
+> substantial AI assistance and is not affiliated with Notion Labs, Inc. Review
+> and test it before production use. See
+> [Provenance and disclaimers](#provenance-and-disclaimers) and the full
+> [`DISCLAIMER.md`](DISCLAIMER.md).
 
 ## Features
 
@@ -309,11 +315,47 @@ eframe, JSON files or sockets.
 
 `ion-of-notes` is open source under the **MIT** license (see [`LICENSE`](LICENSE)).
 
-## Clean room
+## Provenance and disclaimers
 
-The project reconstructs public behavior only. The 98 `reference/` pictures
-(the original 29 plus the later build) are the primary visual source of truth;
-the 72 `screenshots/` pictures are local later-build evidence. No original
-program, file, asset, traffic capture, source map or decompiled code is read,
-run or copied. See [`docs/clean-room.md`](docs/clean-room.md) and
+The full legal and safety notice is in [`DISCLAIMER.md`](DISCLAIMER.md). The
+short version:
+
+### Independent implementation
+
+`ion-of-notes` is an independent workspace project. It is **not affiliated
+with, endorsed by, sponsored by, or approved by Notion Labs, Inc.** “Notion” is
+a trademark of Notion Labs, Inc. Any comparison to Notion or other workspace
+products is descriptive only and does not imply compatibility, endorsement or
+partnership.
+
+### Clean-room process
+
+The project follows a strict public-behavior-only clean-room process. The 98
+`reference/` pictures (the original 29 plus the later build) are the primary
+visual source of truth; the 72 `screenshots/` pictures are local later-build
+evidence. No original program, file, asset, traffic capture, source map or
+decompiled code is read, run or copied. This is an independent reimplementation;
+it does **not** claim wire compatibility with any third-party service. See
+[`docs/clean-room.md`](docs/clean-room.md) and
 [`docs/reverse-engineering-log.md`](docs/reverse-engineering-log.md).
+
+### AI-assisted development
+
+This repository was built with **substantial AI assistance** from a written
+request and public documentation. AI-generated code and documentation can
+contain mistakes, omissions, insecure patterns or outdated assumptions. The
+test suite, `clippy` and documentation checks are necessary but not sufficient
+for production use.
+
+Review, audit and test the code before deploying it — especially authentication,
+session handling, persistence, networking, webhook delivery and anything exposed
+to untrusted input. The software is provided under the MIT license **without
+warranty**, and you are responsible for your deployment, data, backups and
+security posture.
+
+### No production security guarantee
+
+This is a self-hosted project under active development. Do not expose the server
+directly to the public internet without TLS termination, a reverse proxy,
+backups and a security review. The development owner password must not be used
+in production; set `ION_OF_NOTES_OWNER_PASSWORD` before the first SQLite run.
