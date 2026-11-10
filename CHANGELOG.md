@@ -6,6 +6,21 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-040 real-time WebSocket change feed
+
+- Added `src/server/realtime.rs`: `RealtimeHub`, `ServerMessage`,
+  `ClientMessage` and `PresenceMember`.
+- `WorkspaceServer::write` publishes every committed change after a successful
+  persist; `WorkspaceServer::realtime()` exposes the hub.
+- Added `GET /ws/workspace/{id}` with Bearer/query auth, workspace matching,
+  `?since=` backlog replay, `ready`/`change`/`presence`/`pong` messages and
+  ping/pong.
+- Updated `RealtimeContract` with the socket URL, resume cursor, message names
+  and staged CRDT note.
+- Added `tests/realtime.rs`: 6 tests; the suite is 237 tests.
+- Added `docs/adr-009-realtime-transport.md`.
+- Full Yrs/Automerge merge remains staged.
+
 ### Added — spec-039 sessions, Argon2id and SQLite storage
 
 - Added `src/auth.rs`: accounts, Argon2id password hashes, opaque session

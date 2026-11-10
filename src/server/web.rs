@@ -9,14 +9,21 @@
 //! Tokio reactor is never blocked by workspace work.
 
 use super::http::retry_after_seconds;
-use super::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
+use super::realtime::{ClientMessage, PresenceMember, RealtimeHub, ServerMessage};
+use super::{
+    ApiRequest, ApiResponse, Connection, Method, WorkspaceApi, WorkspaceServer, parse_bearer,
+};
+use crate::collab::Change;
 use axum::Router;
 use axum::body::Body;
-use axum::extract::{DefaultBodyLimit, Request, State};
-use axum::http::{StatusCode, header};
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{DefaultBodyLimit, Path, Query, Request, State};
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use std::collections::BTreeMap;
+use axum::routing::get;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use tokio::sync::broadcast;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
@@ -35,10 +42,14 @@ struct AppState {
 /// already owns routing, versioning, auth and capabilities. The adapter only
 /// translates the transport.
 pub fn router(server: WorkspaceServer) -> Router {
-    let state = AppState {
-        server: Arc::new(Mutex::new(server)),
-    };
+    router_with_server(Arc::new(Mutex::new(server)))
+}
+
+/// Build the router around an already shared server (tests, embedding).
+pub fn router_with_server(server: Arc<Mutex<WorkspaceServer>>) -> Router {
+    let state = AppState { server };
     Router::new()
+        .route("/ws/workspace/{id}", get(ws_handler))
         .fallback(handle)
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .layer(TraceLayer::new_for_http())
@@ -114,6 +125,144 @@ async fn handle(State(state): State<AppState>, request: Request) -> Response {
         }
     };
     to_http(response)
+}
+
+async fn ws_handler(
+    State(state): State<AppState>,
+    Path(workspace_id): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+    ws: WebSocketUpgrade,
+) -> Response {
+    let token = headers
+        .get("authorization")
+        .and_then(|value| value.to_str().ok())
+        .and_then(parse_bearer)
+        .map(str::to_string)
+        .or_else(|| query.get("token").cloned());
+    let Some(token) = token else {
+        return plain_error(StatusCode::UNAUTHORIZED, "missing token");
+    };
+    let since = query
+        .get("since")
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(0);
+    let (connection, hub, backlog, seq, member_name) = {
+        let server = state
+            .server
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if server.workspace.settings.id != workspace_id {
+            return plain_error(StatusCode::NOT_FOUND, "workspace not found");
+        }
+        let Some(connection) = server.connection_for_token(&token) else {
+            return plain_error(StatusCode::UNAUTHORIZED, "invalid token");
+        };
+        let member_name = server
+            .collab
+            .members
+            .iter()
+            .find(|member| member.id == connection.member_id)
+            .map(|member| member.name.clone())
+            .unwrap_or_else(|| connection.member_id.clone());
+        let backlog = server
+            .collab
+            .changes
+            .iter()
+            .filter(|change| change.seq > since)
+            .cloned()
+            .collect::<Vec<_>>();
+        let seq = server.collab.next_seq.saturating_sub(1);
+        (connection, server.realtime(), backlog, seq, member_name)
+    };
+    ws.on_upgrade(move |socket| {
+        websocket_session(
+            socket,
+            connection,
+            hub,
+            backlog,
+            seq,
+            workspace_id,
+            member_name,
+        )
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn websocket_session(
+    mut socket: WebSocket,
+    connection: Connection,
+    hub: RealtimeHub,
+    backlog: Vec<Change>,
+    seq: u64,
+    workspace_id: String,
+    member_name: String,
+) {
+    let session_id = format!("ws-{}", uuid::Uuid::new_v4());
+    let mut receiver = hub.subscribe();
+    hub.join(PresenceMember {
+        session_id: session_id.clone(),
+        member_id: connection.member_id.clone(),
+        name: member_name,
+        state: "active".to_string(),
+    });
+    if !send_json(
+        &mut socket,
+        &ServerMessage::Ready {
+            workspace_id,
+            session_id: session_id.clone(),
+            seq,
+        },
+    )
+    .await
+    {
+        hub.leave(&session_id);
+        return;
+    }
+    for change in backlog {
+        if !send_json(&mut socket, &ServerMessage::Change { change }).await {
+            hub.leave(&session_id);
+            return;
+        }
+    }
+    loop {
+        tokio::select! {
+            event = receiver.recv() => match event {
+                Ok(message) => {
+                    if !send_json(&mut socket, &message).await {
+                        break;
+                    }
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => break,
+            },
+            incoming = socket.recv() => match incoming {
+                Some(Ok(Message::Text(text))) => {
+                    if let Ok(ClientMessage::Ping) = serde_json::from_str(text.as_str())
+                        && !send_json(&mut socket, &ServerMessage::Pong).await
+                    {
+                        break;
+                    }
+                }
+                Some(Ok(Message::Ping(payload))) => {
+                    if socket.send(Message::Pong(payload)).await.is_err() {
+                        break;
+                    }
+                }
+                Some(Ok(Message::Close(_))) | None => break,
+                Some(Ok(_)) => {}
+                Some(Err(_)) => break,
+            },
+        }
+    }
+    hub.leave(&session_id);
+}
+
+async fn send_json(socket: &mut WebSocket, message: &ServerMessage) -> bool {
+    let Ok(text) = serde_json::to_string(message) else {
+        return false;
+    };
+    socket.send(Message::Text(text.into())).await.is_ok()
 }
 
 fn api_method(method: &str) -> Option<Method> {

@@ -149,7 +149,7 @@ This is the status of **our** contract, not a claim about the original:
 | Members, shares, sync log | Implemented; persisted in `collab.json` (`spec-019`) |
 | Page version history | Implemented (`GET /api/pages/{id}/versions`, 50/page) |
 | Export tree | Implemented in memory (`src/collab/export.rs`) |
-| Realtime contract | Implemented as data (`GET /api/realtime`) |
+| Realtime | WebSocket change feed + presence (`GET /ws/workspace/{id}`, spec-040); full CRDT merge staged. `GET /api/realtime` describes the contract |
 | Per-page writes and debounce | Implemented (`spec-020`) |
 | Auth/sessions | v2 foundation has bearer-token connections; production sessions **not implemented** |
 | WebSocket/CRDT server | Decided, **not implemented** |
@@ -162,7 +162,7 @@ This is the status of **our** contract, not a claim about the original:
 | Webhooks | v2 subscriptions, verification, HMAC-SHA256 signatures, aggregation, delivery/retry and all documented event types (`spec-036`); local adapter supports loopback HTTP only with an explicit override |
 | Limits/operations | v2 rate and workspace budgets, request-size/block-element validation, Free block limit, `429`/`529`/`503`/`409`, `Retry-After` and the client retry policy (`spec-037`); the limiter is in-process |
 | Accounts/sessions | v2 login/logout/session, Argon2id passwords, opaque sessions and SQLite storage (`spec-039`); the demo owner token remains the no-auth-store fallback |
-| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation (030), pagination (031), rich text/blocks (032), properties/data sources (033), views (034), comments/users/files (035), webhooks (036), limits (037), Axum adapter (038) and sessions/SQLite (039) implemented; B5 done; B3 blocked |
+| Public API documentation review | **B4 reviewed 2026-11-08**; v2 foundation (030), pagination (031), rich text/blocks (032), properties/data sources (033), views (034), comments/users/files (035), webhooks (036), limits (037), Axum adapter (038), sessions/SQLite (039) and the WebSocket change feed (040) implemented; B5 done; B3 blocked |
 
 ## What remains unknown
 

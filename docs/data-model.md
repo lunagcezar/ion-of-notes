@@ -290,6 +290,9 @@ erDiagram
 | `WebhookDelivery` | `id`, `subscription_id`, `event_id`, `payload`, `attempts`, `last_status`, `last_error`, `delivered`, `next_attempt_at` | 036 |
 | `Account` | `id`, `member_id`, `email`, `password_hash` (Argon2id PHC), `created_at` | 039 |
 | `Session` | `token_hash` (SHA-256), `member_id`, `created_at`, `expires_at` | 039 |
+| `ServerMessage` | `ready`, `change`, `presence`, `pong`, `error` (tagged by `type`) | 040 |
+| `ClientMessage` | `ping` | 040 |
+| `PresenceMember` | `session_id`, `member_id`, `name`, `state` | 040 |
 | `ListResponse<T>` | `object:"list"`, `type`, `results`, `has_more`, `next_cursor` | 031 |
 | `ApiError` | `object:"error"`, `status`, `code`, `message`, `request_id`, `additional_data` | 030 |
 

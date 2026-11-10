@@ -162,7 +162,7 @@ Open/Closed).
 | Members, shares, sync log | Implemented; persisted in `collab.json` (`spec-019`) |
 | Page versions and restore | Implemented (`GET /api/pages/{id}/versions`, 50/page, `spec-022`) |
 | Export tree | Implemented in `src/collab/export.rs` (pure, in memory) |
-| Realtime contract | Implemented as data at `GET /api/realtime` |
+| Realtime transport | WebSocket change feed + presence at `/ws/workspace/{id}` (spec-040); CRDT merge staged |
 | Per-page writes + debounce | Implemented (`spec-020`) |
 | `/api/v1` prefix | Decided; not served |
 | Sessions/password hashing/Bearer auth | Decided; not implemented |

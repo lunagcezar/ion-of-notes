@@ -102,7 +102,8 @@ v2 operational contract adds `409 conflict_error`, `429 rate_limited`,
 | `PUT` | `/api/shares` | `Share` | `Share` | Upsert by `(page_id, subject)` |
 | `GET` | `/api/sync?since=` | — | `SyncBatch` | Changes with `seq > since`, plus cursor |
 | `GET` | `/api/export` | — | `Vec<ExportFile>` | Markdown page tree, People folder, CSV |
-| `GET` | `/api/realtime` | — | `RealtimeContract` | Decided channel/CRDT description as data |
+| `GET` | `/api/realtime` | — | `RealtimeContract` | Socket URL, messages, resume and staged CRDT description |
+| `GET` | `/ws/workspace/{id}?token=&since=` | WebSocket upgrade | `ServerMessage` frames | Real-time change feed, presence and ping/pong |
 
 Unknown routes return `404` with an error envelope. Malformed JSON returns
 `400`. A failing store returns `500`; it is never reported as success.
@@ -144,7 +145,10 @@ All DTOs are serde structs/enums in `src/model.rs` and `src/collab.rs`.
 | `PageVersion` | `version`, `page_id`, `title`, `actor`, `updated_at`, `snapshot` |
 | `SyncBatch` | `cursor`, `changes` |
 | `RealtimeEvent` | `kind`, `page_id`, `actor`, `payload` |
-| `RealtimeContract` | `transport`, `channel`, `events`, `conflict_resolution` |
+| `RealtimeContract` | `transport`, `channel`, `events`, `conflict_resolution`, `resume`, `messages` |
+| `ServerMessage` | `ready`, `change`, `presence`, `pong`, `error` (tagged by `type`) |
+| `ClientMessage` | `ping` |
+| `PresenceMember` | `session_id`, `member_id`, `name`, `state` |
 | `ExportFile` | `path`, `content` |
 
 Enums: `Role { Owner, Member, Guest }`, `Access { Full, Edit, View, None }`,
@@ -360,6 +364,23 @@ v1 routes stay stable.
 - The demo `owner-token` remains available when no auth store is configured
   (desktop/tests). The SQLite server seeds the owner account from
   `ION_OF_NOTES_OWNER_PASSWORD` (development default documented in ADR-008).
+
+### 8.1.3 WebSocket change feed (implemented, spec-040)
+
+- Connect to `GET /ws/workspace/{workspace_id}?token=<session>&since=<seq>`.
+  The `Authorization: Bearer` header is also accepted.
+- The socket must match the server workspace; missing/invalid tokens fail with
+  `401`, a wrong workspace with `404`.
+- Server messages are JSON text frames tagged by `type`:
+  `ready {workspace_id,session_id,seq}`, `change {change}`,
+  `presence {members}`, `pong`, `error {code,message}`.
+- `?since=<seq>` replays every change with a greater sequence before live
+  events. Reconnect with the last seen `seq`.
+- The client may send `{"type":"ping"}`; the server replies `pong`.
+- Every successful `WorkspaceServer::write` publishes a `change` after the
+  persist succeeds.
+- This slice is a versioned change feed + presence. Full Yrs/Automerge merge is
+  staged; use `If-Match` and page snapshots for conflict handling today.
 
 | Concern | v1 today | v2 target | Spec | Status |
 | ------- | -------- | --------- | ---- | ------ |

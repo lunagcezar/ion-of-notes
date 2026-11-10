@@ -189,6 +189,10 @@ pub struct RealtimeContract {
     pub channel: String,
     pub events: Vec<String>,
     pub conflict_resolution: String,
+    #[serde(default)]
+    pub resume: String,
+    #[serde(default)]
+    pub messages: Vec<String>,
 }
 
 /// Decided real-time API. Kept as data so the client and server share one
@@ -196,16 +200,26 @@ pub struct RealtimeContract {
 pub fn realtime_contract() -> RealtimeContract {
     RealtimeContract {
         transport: "WebSocket over TLS, behind the self-hosted reverse proxy".to_string(),
-        channel: "/ws/workspace/{workspace_id}?token=<session>".to_string(),
+        channel: "/ws/workspace/{workspace_id}?token=<session>&since=<seq>".to_string(),
         events: vec![
             "presence".to_string(),
+            "change".to_string(),
             "edit".to_string(),
             "awareness".to_string(),
             "sync".to_string(),
         ],
         conflict_resolution:
-            "CRDT (Yrs/automerge-style) per block; the server persists merged snapshots and broadcasts SyncBatch cursors"
+            "CRDT-ready: versioned change feed and If-Match today; Yrs/automerge merge is staged"
                 .to_string(),
+        resume: "Reconnect with ?since=<last seq>; the server replays changes after that cursor."
+            .to_string(),
+        messages: vec![
+            "ready".to_string(),
+            "change".to_string(),
+            "presence".to_string(),
+            "pong".to_string(),
+            "error".to_string(),
+        ],
     }
 }
 

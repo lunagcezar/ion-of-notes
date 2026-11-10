@@ -325,6 +325,9 @@ capabilities) is implemented; the rest are planned.
   sessions in SQLite; an empty database migrates the existing JSON documents
   once, and JSON remains the desktop/default fallback (implemented in
   `spec-039`).
+- FR-98: `GET /ws/workspace/{id}` authenticates the socket, streams committed
+  changes, replays after `?since=`, reports presence and answers ping/pong
+  (implemented in `spec-040`).
 
 ## 2. Non-functional requirements
 
@@ -386,6 +389,8 @@ capabilities) is implemented; the rest are planned.
   only as hashes and expire (ADR-008, spec-039).
 - NFR-23: SQLite is an adapter behind the existing store ports; JSON and SQLite
   behave identically for the same snapshots (spec-039).
+- NFR-24: Real-time changes are ordered by the sync-log sequence, resume from a
+  cursor, and never block the REST path (ADR-009, spec-040).
 
 ## 3. Requirement → spec map
 
@@ -417,6 +422,7 @@ capabilities) is implemented; the rest are planned.
 | FR-90, NFR-18                 | `spec-037-limits-and-operations.md` |
 | FR-95, NFR-21                 | `spec-038-axum-web-server-and-contract-suite.md` |
 | FR-96, FR-97, NFR-22, NFR-23  | `spec-039-sessions-and-sqlite-storage.md` |
+| FR-98, NFR-24                 | `spec-040-realtime-websocket-change-feed.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

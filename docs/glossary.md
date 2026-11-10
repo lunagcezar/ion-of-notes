@@ -174,6 +174,8 @@ definition.
 | **Account** | A local login record with an Argon2id password hash. | spec-039 |
 | **Session** | An opaque login token stored only as a SHA-256 hash with an expiry. | spec-039 |
 | **SqliteStore** | SQLite adapter for workspace, collaboration and auth state. | spec-039 |
+| **RealtimeHub** | Tokio broadcast hub for changes and presence. | spec-040 |
+| **ServerMessage** | Typed WebSocket frame: ready, change, presence, pong or error. | spec-040 |
 
 ## 9. Naming rules
 

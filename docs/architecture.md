@@ -78,7 +78,8 @@ src/
   server.rs          WorkspaceServer, WorkspaceApi, routes
   server/
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
-    web.rs           Axum/Tokio HTTP adapter for --serve
+    web.rs           Axum/Tokio HTTP + WebSocket adapter for --serve
+    realtime.rs      change-feed hub, protocol messages and presence
     url.rs           shared percent-encoding
     contract.rs      v2 versioning, ApiError, capabilities, request IDs
     pagination.rs    v2 ListResponse, opaque cursors, page_size validation
@@ -222,9 +223,10 @@ Current state:
 - `--serve` uses the Axum/Tokio adapter (spec-038); the hand-written loopback
   listener remains for parser tests and as a fallback;
 - v1 and v2 routes are served through the same `WorkspaceApi` seam;
-- Argon2id accounts and opaque sessions are implemented (spec-039); WebSocket
-  and Yrs are staged behind the same seams (ADR-003, ADR-007, ADR-008);
-- `GET /api/realtime` returns the decided contract as data.
+- Argon2id accounts and opaque sessions are implemented (spec-039);
+- `GET /ws/workspace/{id}` streams the versioned change feed with presence and
+  `?since=` resume (spec-040); full Yrs/CRDT merge is staged;
+- `GET /api/realtime` returns the same contract as data.
 
 ## 8. Design principles in practice
 
@@ -318,12 +320,12 @@ new stores and delivery workers.
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
 - The v2 **foundation, pagination, rich text/blocks, properties/data sources,
-  views, comments/users/files, webhooks and limits** exist (specs 030-039):
+  views, comments/users/files, webhooks and limits** exist (specs 030-040):
   `/api/v2`, version/auth/capability checks, structured errors, request IDs,
   cursor list envelopes, rich text, block metadata/children, typed properties,
   databases, data sources, views, comments, users, file uploads, signed webhook
   delivery, the operational limits/retry contract, the Axum production HTTP
-  adapter and SQLite-backed accounts/sessions.
+  adapter, SQLite-backed accounts/sessions and the WebSocket change feed.
 
 ## 12. Further reading
 
@@ -335,3 +337,4 @@ new stores and delivery workers.
 - `docs/adr-004-modularization-decision.md` - modularization decision.
 - `docs/adr-007-production-web-server.md` - Axum/Tokio/Tower server decision.
 - `docs/adr-008-sessions-and-sqlite.md` - sessions, Argon2id and SQLite decision.
+- `docs/adr-009-realtime-transport.md` - WebSocket change feed and staged CRDT.

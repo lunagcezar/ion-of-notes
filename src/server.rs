@@ -34,6 +34,7 @@ mod http;
 pub mod limits;
 mod pagination;
 mod rate_limit;
+pub mod realtime;
 mod url;
 pub mod web;
 
@@ -185,6 +186,7 @@ pub struct WorkspaceServer {
     overloaded: bool,
     simulate_write_timeout: bool,
     rate_limiter: RateLimiter,
+    realtime: realtime::RealtimeHub,
 }
 
 impl WorkspaceServer {
@@ -267,6 +269,7 @@ impl WorkspaceServer {
             overloaded: false,
             simulate_write_timeout: false,
             rate_limiter: RateLimiter::for_plan(Plan::Free, Duration::from_secs(60)),
+            realtime: realtime::RealtimeHub::new(256),
         }
     }
 
@@ -278,6 +281,11 @@ impl WorkspaceServer {
     /// self-hosted session layer).
     pub fn register_connection(&mut self, connection: Connection) {
         self.connections.push(connection);
+    }
+
+    /// Clone the real-time hub (the server keeps ownership).
+    pub fn realtime(&self) -> realtime::RealtimeHub {
+        self.realtime.clone()
     }
 
     pub fn connection_for_token(&self, token: &str) -> Option<Connection> {
@@ -636,8 +644,10 @@ impl WorkspaceServer {
     fn write(&mut self, op: ChangeOp, page_id: &str) -> std::io::Result<()> {
         self.workspace.bump_version();
         let actor = self.collab.owner_id();
-        self.collab.record(op, page_id, &actor);
-        self.persist()
+        let change = self.collab.record(op, page_id, &actor);
+        self.persist()?;
+        self.realtime.publish_change(change);
+        Ok(())
     }
 }
 

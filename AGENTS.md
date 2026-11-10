@@ -42,6 +42,7 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Server transport | Axum 0.8 + Tokio + Tower/Tower-HTTP | Optional HTTP server for `--serve` (spec-038)        |
 | Persistence      | JSON files + `rusqlite` (bundled)   | `SqliteStore` behind the existing store ports (spec-039) |
 | Auth             | Argon2id + opaque sessions          | Hashed passwords and session tokens (spec-039)      |
+| Real-time        | Axum WebSocket + Tokio broadcast    | Change feed, presence and resume (spec-040)          |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
@@ -122,7 +123,8 @@ src/
     pagination.rs  v2 list envelope, opaque cursors, page_size validation
     limits.rs      plan/request budgets, size checks, block-limit policy
     rate_limit.rs  in-process per-connection and workspace rate limiter
-    web.rs         Axum/Tokio HTTP adapter for --serve (spec-038)
+    realtime.rs    change-feed hub, protocol messages and presence (spec-040)
+    web.rs         Axum/Tokio HTTP + WebSocket adapter for --serve
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
   collab.rs        accounts/roles, sharing, sync log, realtime DTOs, CollabState
                    (version history capped at 50 snapshots per page)
@@ -200,6 +202,7 @@ tests/
   webhooks.rs      subscriptions, signatures, aggregation, delivery and retry
   limits.rs        rate/size/block limits, Retry-After, 409/503/529
   web.rs           Axum HTTP adapter contract suite
+  realtime.rs      WebSocket auth, ready, backlog, live change, presence
   auth.rs          password hashing, login/logout/session, SQLite restart
   sqlite_store.rs  SQLite round-trip, accounts/sessions, JSON migration
   integration.rs   end-to-end client/server/store scenario
@@ -517,7 +520,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (231)    |
+| `cargo test --all-targets`               | Run all integration test crates (237)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |
