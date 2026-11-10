@@ -9,11 +9,10 @@ use super::super::contract::{
 };
 use super::super::limits;
 use super::super::rate_limit::REASON_CONNECTION;
-use super::super::response::{map_v1_error, parse_body, v2_error, write_timeout_response};
+use super::super::response::{parse_body, v2_error, write_timeout_response};
 use super::super::{ApiRequest, ApiResponse, Method, WorkspaceServer};
-use super::capabilities::required_capability;
+use super::capabilities::route_capability;
 use crate::model::{BlockChildrenRequest, Page};
-use std::collections::BTreeMap;
 use std::time::Instant;
 
 impl WorkspaceServer {
@@ -97,9 +96,9 @@ impl WorkspaceServer {
             None => (request.path.as_str(), ""),
         };
         let is_write = !matches!(request.method, Method::Get);
-        let timed_out = is_write && self.simulate_write_timeout;
+        let timed_out = is_write && self.runtime.simulate_write_timeout;
         if timed_out {
-            self.simulate_write_timeout = false;
+            self.runtime.simulate_write_timeout = false;
         }
         let response = self.handle_v2_inner(request, path, query, &request_id);
         let response = if timed_out && (200..300).contains(&response.status) {
@@ -112,7 +111,7 @@ impl WorkspaceServer {
             request_id: Some(request_id.clone()),
             ..response
         };
-        self.request_log.push(RequestLogEntry {
+        self.runtime.request_log.push(RequestLogEntry {
             request_id,
             method: request.method.as_str().to_string(),
             path: request.path.clone(),
@@ -148,9 +147,11 @@ impl WorkspaceServer {
         }
 
         if request.method == Method::Post && path == "/api/v2/auth/login" {
-            let decision =
-                self.rate_limiter
-                    .check("auth-login", &self.workspace.settings.id, Instant::now());
+            let decision = self.runtime.rate_limiter.check(
+                "auth-login",
+                &self.workspace.settings.id,
+                Instant::now(),
+            );
             if !decision.allowed {
                 let reason = decision.reason.unwrap_or(REASON_CONNECTION);
                 return v2_error(
@@ -186,7 +187,7 @@ impl WorkspaceServer {
             );
         };
 
-        if self.overloaded {
+        if self.runtime.overloaded {
             return v2_error(
                 529,
                 CODE_SERVICE_OVERLOAD,
@@ -195,9 +196,11 @@ impl WorkspaceServer {
                 Some(serde_json::json!({ "retry_after": "5" })),
             );
         }
-        let decision =
-            self.rate_limiter
-                .check(&connection.id, &connection.workspace_id, Instant::now());
+        let decision = self.runtime.rate_limiter.check(
+            &connection.id,
+            &connection.workspace_id,
+            Instant::now(),
+        );
         if !decision.allowed {
             let reason = decision.reason.unwrap_or(REASON_CONNECTION);
             return v2_error(
@@ -229,7 +232,7 @@ impl WorkspaceServer {
             return response;
         }
 
-        let Some(required) = required_capability(request.method, path) else {
+        let Some(required) = route_capability(request.method, path) else {
             return v2_error(404, CODE_NOT_FOUND, "unknown route", request_id, None);
         };
         if !connection.has(required) {
@@ -268,24 +271,13 @@ impl WorkspaceServer {
         if let Some(response) = self.handle_v2_block(request, path, query, request_id) {
             return response;
         }
+        if let Some(response) = self.handle_v2_shared(request, path, request_id) {
+            return response;
+        }
         if let Some(response) = self.handle_v2_list(request, path, query, request_id) {
             return response;
         }
 
-        let v1_request = ApiRequest {
-            method: request.method,
-            path: request.path.replacen("/api/v2", "/api", 1),
-            body: request.body.clone(),
-            headers: BTreeMap::new(),
-        };
-        let v1 = self.handle_v1(&v1_request);
-        if v1.status >= 400 {
-            return map_v1_error(v1, request_id);
-        }
-        ApiResponse {
-            status: v1.status,
-            body: v1.body,
-            request_id: None,
-        }
+        v2_error(404, CODE_NOT_FOUND, "unknown route", request_id, None)
     }
 }

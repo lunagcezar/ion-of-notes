@@ -33,8 +33,8 @@ impl WorkspaceServer {
             );
         }
         let email = input.email.trim().to_lowercase();
-        let _ = self.auth_store.prune_sessions(&now_iso());
-        let account = match self.auth_store.find_account(&email) {
+        let _ = self.persistence.auth_store.prune_sessions(&now_iso());
+        let account = match self.persistence.auth_store.find_account(&email) {
             Ok(Some(account)) => account,
             Ok(None) => {
                 return v2_error(
@@ -80,10 +80,10 @@ impl WorkspaceServer {
             created_at: now_iso(),
             expires_at: auth::session_expiry(),
         };
-        if let Err(error) = self.auth_store.save_session(&session) {
+        if let Err(error) = self.persistence.auth_store.save_session(&session) {
             return v2_error(500, CODE_INTERNAL, error.to_string(), request_id, None);
         }
-        self.connections.push(Connection::new(
+        self.runtime.connections.push(Connection::new(
             format!("session-{}", member.id),
             token.clone(),
             member.id.clone(),
@@ -112,7 +112,7 @@ impl WorkspaceServer {
     ) -> Option<ApiResponse> {
         if path == "/api/v2/auth/logout" && request.method == Method::Post {
             let token_hash = auth::hash_token(&connection.token);
-            if let Err(error) = self.auth_store.delete_session(&token_hash) {
+            if let Err(error) = self.persistence.auth_store.delete_session(&token_hash) {
                 return Some(v2_error(
                     500,
                     CODE_INTERNAL,
@@ -123,14 +123,15 @@ impl WorkspaceServer {
             }
             // The demo owner token is not a persisted session; keep it usable.
             if connection.id.starts_with("session-") {
-                self.connections
+                self.runtime
+                    .connections
                     .retain(|existing| existing.token != connection.token);
             }
             return Some(json(200, Envelope::ok("logged_out".to_string())));
         }
         if path == "/api/v2/auth/session" && request.method == Method::Get {
             let token_hash = auth::hash_token(&connection.token);
-            let session = match self.auth_store.find_session(&token_hash) {
+            let session = match self.persistence.auth_store.find_session(&token_hash) {
                 Ok(Some(session)) => session,
                 Ok(None) => {
                     return Some(v2_error(
@@ -152,7 +153,7 @@ impl WorkspaceServer {
                 }
             };
             if auth::session_is_expired(&session) {
-                let _ = self.auth_store.delete_session(&token_hash);
+                let _ = self.persistence.auth_store.delete_session(&token_hash);
                 return Some(v2_error(
                     401,
                     CODE_UNAUTHORIZED,

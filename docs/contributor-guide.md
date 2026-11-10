@@ -97,7 +97,8 @@ flowchart LR
 | Entity/field/invariant | `src/model/*` (facade in `src/model.rs`) | `tests/model.rs` |
 | Collaboration DTO/state | `src/collab.rs` | `tests/collab.rs` |
 | Export | `src/collab/export.rs` | `tests/collab.rs` |
-| Route/use case | `src/server/routes/*`, `src/server/handlers/*` | `tests/server.rs` |
+| Use case | `src/server/usecases/*` | `tests/server.rs` |
+| Route adapter | `src/server/routes/*`, `src/server/handlers/*` | `tests/server.rs`, `tests/contract.rs` |
 | Typed client | `src/client.rs` | `tests/client.rs` |
 | Persistence port/adapter | `src/store.rs` | `tests/store.rs`, `tests/store_port.rs` |
 | HTTP adapter | `src/server/http.rs` | `tests/server.rs` |
@@ -125,9 +126,10 @@ flowchart LR
 
 1. Add the DTO in `src/collab.rs` or the matching `src/model/*` module (serde,
    no egui/socket/file types).
-2. Add the route in `src/server/routes/v2.rs` and the handler in
-   `src/server/handlers/`; register the capability in
-   `src/server/routes/capabilities.rs`; use the shared `Envelope` helpers.
+2. Add the rule to `src/server/usecases/`, then adapt it in
+   `src/server/routes/v1.rs` and `src/server/handlers/shared.rs`; register the
+   capability in `src/server/routes/capabilities.rs` and add it to the
+   `tests/contract.rs` route table.
 3. Persist through `WorkspaceServer::write` or `persist_collab`; return `500`
    on storage failure.
 4. Add a typed method in `src/client.rs`.

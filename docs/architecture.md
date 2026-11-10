@@ -44,7 +44,7 @@ flowchart TD
 | Layer | Responsibility | Main modules |
 | ----- | -------------- | ------------ |
 | Domain | entities, invariants, pure rules | `model.rs`, `model/*`, `collab.rs`, `collab/export.rs` |
-| Application | use cases, orchestration, contracts | `server.rs`, `client.rs`, `collab.rs` state methods |
+| Application | use cases, orchestration, contracts | `server/usecases/*`, `server/routes/*`, `client.rs`, `collab.rs` state methods |
 | Infrastructure | filesystem, HTTP, external AI service | `store.rs`, `server/http.rs`, `server/web.rs`, `ollama.rs` |
 | Presentation | window, commands, view state, rendering | `ui.rs`, `ui/*` |
 | Bootstrap | compose concrete adapters into the core | `app.rs` |
@@ -89,11 +89,13 @@ src/
   server/
     routes.rs        WorkspaceApi implementation and route facade
     routes/
-      v1.rs          legacy v1 dispatch
+      v1.rs          legacy v1 adapter over the use cases
       v2.rs          version/auth/limit/capability pipeline
-      capabilities.rs required capability per method and path
-    handlers/        one module per v2 resource family
-    response.rs      Envelope/json/error helpers, v1 error mapping
+      capabilities.rs public route_capability table
+    usecases/        pages, workspace and sharing use cases (typed results)
+    handlers/        one module per v2 resource family; shared.rs adapts the
+                     page/workspace/sharing use cases
+    response.rs      Envelope/json/error helpers
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
     web.rs           Axum/Tokio HTTP + WebSocket adapter for --serve
     realtime.rs      change-feed hub, protocol messages and presence
@@ -352,6 +354,9 @@ new stores and delivery workers.
 - Accounts, Argon2id sessions and SQLite persistence are implemented
   (spec-039); the remote desktop transport and login UI are implemented
   (specs 044 and 045).
+- v1 and v2 adapt the same `server/usecases` functions; v2 no longer rewrites
+  routes into v1. `route_capability` is the single capability table and is
+  covered by `tests/contract.rs` (spec-047).
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.

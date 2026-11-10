@@ -3,7 +3,7 @@
 use super::realtime;
 use super::{ApiRequest, ApiResponse, WorkspaceApi, WorkspaceServer};
 
-mod capabilities;
+pub(crate) mod capabilities;
 mod v1;
 mod v2;
 

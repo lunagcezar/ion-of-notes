@@ -1,9 +1,6 @@
 //! Shared response shaping for the v1 and v2 route adapters.
 
-use super::contract::{
-    ApiError, CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_SERVICE_UNAVAILABLE,
-    CODE_VALIDATION_ERROR,
-};
+use super::contract::{ApiError, CODE_SERVICE_UNAVAILABLE};
 use super::pagination::{PageRequest, paginate};
 use super::url::url_decode;
 use super::{ApiRequest, ApiResponse, Envelope};
@@ -93,22 +90,6 @@ pub(super) fn write_timeout_response(response: &ApiResponse, request_id: &str) -
         request_id,
         Some(data),
     )
-}
-
-pub(super) fn map_v1_error(v1: ApiResponse, request_id: &str) -> ApiResponse {
-    let message = serde_json::from_str::<Envelope<serde_json::Value>>(&v1.body)
-        .ok()
-        .and_then(|envelope| envelope.error)
-        .unwrap_or_else(|| v1.body.clone());
-    let code = match v1.status {
-        404 => CODE_NOT_FOUND,
-        500 => CODE_INTERNAL,
-        _ if message.contains("invalid JSON") || message.contains("missing request body") => {
-            CODE_INVALID_JSON
-        }
-        _ => CODE_VALIDATION_ERROR,
-    };
-    v2_error(v1.status, code, message, request_id, None)
 }
 
 pub(super) fn v2_list_response<T: Clone + Serialize>(

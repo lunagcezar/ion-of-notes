@@ -295,7 +295,7 @@ src/
   screenshot.rs    PNG output
   cli.rs           argument parsing
   i18n.rs          locale switching
-tests/             one integration-test crate per module (252 tests)
+tests/             one integration-test crate per module (253 tests)
 ```
 
 Dependency direction: `ui → client → server → model`, `server → store`; `app`

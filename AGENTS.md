@@ -127,14 +127,17 @@ src/
   store.rs         WorkspaceStore + CollabStore + AuthStore ports, JSON/null adapters
   store/
     sqlite.rs      SQLite adapter for workspace, collaboration and auth (spec-039)
-  server.rs        facade: contract DTOs, WorkspaceApi, WorkspaceServer state,
-                   constructors, persistence and top-level dispatch
+  server.rs        facade: contract DTOs, WorkspaceApi, WorkspaceServer state
+                   (Persistence, Runtime, WebhookRuntime), constructors,
+                   persistence helpers
   server/
     routes.rs      WorkspaceApi implementation and route facade
-    routes/        v1 dispatch, v2 pipeline, capability table
+    routes/        v1 adapter, v2 pipeline, public route_capability table
+    usecases/      pages, workspace and sharing use cases with typed results
     handlers/      one module per v2 resource family (auth, crdt, webhooks,
-                   comments/users/files, views, databases, blocks, lists)
-    response.rs    Envelope/json/error helpers and v1 error mapping
+                   comments/users/files, views, databases, blocks, lists,
+                   shared page/workspace/sharing adapter)
+    response.rs    Envelope/json/error helpers
     http.rs        legacy loopback HTTP/1.1 adapter (parse/format/tests)
     url.rs         percent-encoding/decoding shared by client and server
     contract.rs    v2 versioning, ApiError, capabilities, request IDs
@@ -548,7 +551,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (252)    |
+| `cargo test --all-targets`               | Run all integration test crates (253)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |

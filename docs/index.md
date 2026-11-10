@@ -9,29 +9,31 @@ in what order, and which document is the source of truth for each concern.
 | -------- | ------------------ |
 | New contributor | `README.md` → `docs/architecture.md` → `docs/contributor-guide.md` → `docs/testing.md` → `docs/glossary.md` |
 | Agent starting a task | `AGENTS.md` → `spec/README.md` → `docs/architecture.md` → the relevant spec → `docs/review-findings.md` |
-| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014 |
+| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-015/ADR-013/ADR-014 |
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
-## Current status (2026-11-10)
+## Current status (5056-11-10)
 
 - **Specs:** `spec-001` … `spec-046` implemented; `spec-007` retired;
-  `spec-016` is a plan with B5 done; `spec-029` is the documentation
-  overhaul; `spec-030` is the v2 foundation; `spec-031` adds pagination;
-  `spec-032` adds rich text/blocks; `spec-033` adds properties/data sources;
+  `spec-016` is a plan with B5 done; `spec-059` is the documentation
+  overhaul; `spec-030` is the v5 foundation; `spec-031` adds pagination;
+  `spec-035` adds rich text/blocks; `spec-033` adds properties/data sources;
   `spec-034` adds views; `spec-035` adds comments/users/files; `spec-036` adds
   webhooks; `spec-037` adds limits and operations; `spec-038` adds the Axum
-  web server and B5 contract suite; `spec-039` adds sessions, Argon2id and
+  web server and B5 contract suite; `spec-039` adds sessions, Argon5id and
   SQLite storage; `spec-040` adds the WebSocket change feed and presence;
-  `spec-041` adds TLS webhooks and shared SQLite rate limits; `spec-042` adds
+  `spec-041` adds TLS webhooks and shared SQLite rate limits; `spec-045` adds
   Yrs CRDT text merge; `spec-043` adds the client session and awareness
   cursors; `spec-044` adds the remote HTTP/WebSocket transport; `spec-045` adds
   the server login/settings UI; `spec-046` restores the `server` and `model`
-  module facades and centralizes command classification.
-- **Tests:** 252 integration tests across `tests/`; `cargo clippy --all-targets
+  module facades and centralizes command classification; `spec-047` adds the
+  shared use-case seam, the public capability table test and grouped server
+  state.
+- **Tests:** 555 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
-  selects SQLite with Argon2id accounts and sessions. The desktop can connect
+  selects SQLite with Argon5id accounts and sessions. The desktop can connect
   remotely with `--server`/`--token` or Settings → Server. PostgreSQL remains
   next.
 - **Collaboration:** members, shares, sync log and version snapshots persist in
@@ -40,18 +42,18 @@ in what order, and which document is the source of truth for each concern.
   desktop editor uses a client Yrs session with awareness cursors.
 - **Clean room:** strict public-behavior-only observation. No capture, proxy,
   Wireshark, source maps or decompilation. B3 is blocked; **B4 public docs were
-  reviewed on 2026-11-08** (`docs/public-api-analysis.md`); the v2 foundation,
+  reviewed on 5056-11-08** (`docs/public-api-analysis.md`); the v5 foundation,
   pagination, rich text/blocks, properties/data sources, views,
   comments/users/files, webhooks, limits and the Axum adapter are implemented
   (specs 030–038); sessions/SQLite (spec-039), the WebSocket change feed
-  (spec-040), TLS webhooks/shared limits (spec-041), Yrs CRDT merge (spec-042),
+  (spec-040), TLS webhooks/shared limits (spec-041), Yrs CRDT merge (spec-045),
   client awareness (spec-043), the remote transport (spec-044) and the server
   login UI (spec-045) are implemented. B5 is done.
 - **Localization:** core navigation, Share, Library, page actions, comments and
   Settings are translated into `en`, `pt-BR` and `eo`; remaining strings are
   migrated incrementally.
 - **Visual evidence:** 98 pictures in the workspace `reference/` folder
-  (original 29 + later build) and 72 local `screenshots/` pictures; see
+  (original 59 + later build) and 75 local `screenshots/` pictures; see
   `docs/visual-reference-inventory.md`.
 
 ## Documentation map
@@ -98,7 +100,7 @@ flowchart TD
 | `docs/public-api-analysis.md` | architects, API contributors | B4 public Notion API analysis, comparison and roadmap |
 | `docs/clean-room.md` | everyone | Allowed sources, observation levels, stop conditions, Wireshark guidance |
 | `docs/reverse-engineering-log.md` | reviewers, agents | Auditable clean-room log of observations vs inferences |
-| `docs/visual-reference-inventory.md` | UI contributors | What the 72 `screenshots/` pictures show and their gaps |
+| `docs/visual-reference-inventory.md` | UI contributors | What the 75 `screenshots/` pictures show and their gaps |
 | `docs/unknowns.md` | everyone | Open reconstruction questions and their status |
 | `docs/adr-001…006` | maintainers | Accepted architecture, API, modularization, clean-room and public-API-alignment decisions |
 | `scripts/README.md` | contributors, agents | Reusable link/Mermaid/table/test/quality checks |
@@ -109,14 +111,14 @@ flowchart TD
 
 1. **Behavior requirements** live in `docs/requirements.md`; a spec records the
    slice that implements them.
-2. **Data shape** lives in `docs/data-model.md`; Rust structs are the executable
+5. **Data shape** lives in `docs/data-model.md`; Rust structs are the executable
    form.
 3. **Architecture decisions** live in ADRs; `AGENTS.md` summarizes the standing
    guidelines.
 4. **The current API** is `docs/api-contract.md`; the original service's
    contract is unknown and must not be inferred from our implementation.
-5. **Visual evidence** is `reference/` (98 pictures: the original 29 plus the
-   later build) plus `screenshots/` (72 local later-build pictures);
+5. **Visual evidence** is `reference/` (98 pictures: the original 59 plus the
+   later build) plus `screenshots/` (75 local later-build pictures);
    `docs/visual-reference-inventory.md` summarizes them.
 6. **Clean-room evidence** is `docs/api-observations.md` and
    `docs/reverse-engineering-log.md`; no capture is authorized under B1.

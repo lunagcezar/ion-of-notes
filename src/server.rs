@@ -31,6 +31,7 @@ pub mod realtime;
 mod response;
 mod routes;
 mod url;
+mod usecases;
 pub mod web;
 pub mod webhook_sender;
 
@@ -54,6 +55,7 @@ pub use rate_limit::{
     REASON_CONNECTION, REASON_WORKSPACE, RateDecision, RateLimitPolicy, RateLimiter,
     SqliteRateLimiter,
 };
+pub use routes::capabilities::route_capability;
 pub use url::url_encode;
 pub use web::serve_axum;
 pub use webhook_sender::{UreqWebhookSender, WebhookSender};
@@ -227,13 +229,24 @@ pub trait WorkspaceApi {
 pub struct WorkspaceServer {
     pub workspace: Workspace,
     pub collab: CollabState,
-    store: Box<dyn WorkspaceStore>,
+    persistence: Persistence,
+    runtime: Runtime,
+    webhooks: WebhookRuntime,
+    realtime: realtime::RealtimeHub,
+    crdt: crdt::CrdtStore,
+}
+
+/// The three injected persistence ports.
+struct Persistence {
+    workspace_store: Box<dyn WorkspaceStore>,
     collab_store: Box<dyn CollabStore>,
     auth_store: Box<dyn AuthStore>,
+}
+
+/// Per-process connections, request metrics and operational limits.
+struct Runtime {
     connections: Vec<Connection>,
     request_log: Vec<RequestLogEntry>,
-    allow_insecure_webhooks: bool,
-    webhook_queue: Vec<crate::webhooks::WebhookEvent>,
     plan: Plan,
     block_count_override: Option<u64>,
     block_count_baseline: u64,
@@ -241,9 +254,13 @@ pub struct WorkspaceServer {
     simulate_write_timeout: bool,
     rate_limiter: Box<dyn RateLimitPolicy>,
     shared_rate_store: Option<Arc<dyn crate::store::RateLimitStore>>,
-    realtime: realtime::RealtimeHub,
-    webhook_sender: Box<dyn WebhookSender>,
-    crdt: crdt::CrdtStore,
+}
+
+/// Webhook delivery state, separate from the collaboration records.
+struct WebhookRuntime {
+    allow_insecure: bool,
+    queue: Vec<crate::webhooks::WebhookEvent>,
+    sender: Box<dyn WebhookSender>,
 }
 
 impl WorkspaceServer {
@@ -313,22 +330,28 @@ impl WorkspaceServer {
         Self {
             workspace,
             collab,
-            store: Box::new(store),
-            collab_store: Box::new(collab_store),
-            auth_store: Box::new(auth_store),
-            connections: vec![Connection::owner(owner, workspace_id)],
-            request_log: Vec::new(),
-            allow_insecure_webhooks: false,
-            webhook_queue: Vec::new(),
-            plan: Plan::Free,
-            block_count_override: None,
-            block_count_baseline: 0,
-            overloaded: false,
-            simulate_write_timeout: false,
-            rate_limiter: Box::new(RateLimiter::for_plan(Plan::Free, Duration::from_secs(60))),
-            shared_rate_store: None,
+            persistence: Persistence {
+                workspace_store: Box::new(store),
+                collab_store: Box::new(collab_store),
+                auth_store: Box::new(auth_store),
+            },
+            runtime: Runtime {
+                connections: vec![Connection::owner(owner, workspace_id)],
+                request_log: Vec::new(),
+                plan: Plan::Free,
+                block_count_override: None,
+                block_count_baseline: 0,
+                overloaded: false,
+                simulate_write_timeout: false,
+                rate_limiter: Box::new(RateLimiter::for_plan(Plan::Free, Duration::from_secs(60))),
+                shared_rate_store: None,
+            },
+            webhooks: WebhookRuntime {
+                allow_insecure: false,
+                queue: Vec::new(),
+                sender: Box::new(UreqWebhookSender::new()),
+            },
             realtime: realtime::RealtimeHub::new(256),
-            webhook_sender: Box::new(UreqWebhookSender::new()),
             crdt: crdt::CrdtStore::new(),
         }
     }
@@ -340,7 +363,7 @@ impl WorkspaceServer {
     /// Register an additional connection (used by tests and, later, by the
     /// self-hosted session layer).
     pub fn register_connection(&mut self, connection: Connection) {
-        self.connections.push(connection);
+        self.runtime.connections.push(connection);
     }
 
     /// Clone the real-time hub (the server keeps ownership).
@@ -349,13 +372,18 @@ impl WorkspaceServer {
     }
 
     pub fn connection_for_token(&self, token: &str) -> Option<Connection> {
-        if let Some(connection) = self.connections.iter().find(|c| c.token == token) {
+        if let Some(connection) = self.runtime.connections.iter().find(|c| c.token == token) {
             return Some(connection.clone());
         }
         let token_hash = auth::hash_token(token);
-        let session = self.auth_store.find_session(&token_hash).ok().flatten()?;
+        let session = self
+            .persistence
+            .auth_store
+            .find_session(&token_hash)
+            .ok()
+            .flatten()?;
         if auth::session_is_expired(&session) {
-            let _ = self.auth_store.delete_session(&token_hash);
+            let _ = self.persistence.auth_store.delete_session(&token_hash);
             return None;
         }
         let member = self
@@ -375,24 +403,24 @@ impl WorkspaceServer {
     /// In-memory request log for `/api/v2`; the same IDs are written to the
     /// HTTP response and (in a production adapter) to structured logs.
     pub fn request_log(&self) -> &[RequestLogEntry] {
-        &self.request_log
+        &self.runtime.request_log
     }
 
     /// Allow loopback HTTP webhook URLs for local development and tests.
     pub fn allow_insecure_webhooks(&mut self, allow: bool) {
-        self.allow_insecure_webhooks = allow;
+        self.webhooks.allow_insecure = allow;
     }
 
     /// The workspace plan used for operational limits (not billing).
     pub fn plan(&self) -> Plan {
-        self.plan
+        self.runtime.plan
     }
 
     /// Change the plan and refresh the default rate budgets.
     pub fn set_plan(&mut self, plan: Plan) {
-        let window = self.rate_limiter.window();
-        self.plan = plan;
-        self.rate_limiter = match &self.shared_rate_store {
+        let window = self.runtime.rate_limiter.window();
+        self.runtime.plan = plan;
+        self.runtime.rate_limiter = match &self.runtime.shared_rate_store {
             Some(store) => Box::new(SqliteRateLimiter::for_plan(store.clone(), plan, window)),
             None => Box::new(RateLimiter::for_plan(plan, window)),
         };
@@ -401,22 +429,25 @@ impl WorkspaceServer {
     /// Override the derived block count (tests and operational tooling). Later
     /// writes still advance the count from this baseline.
     pub fn set_block_count(&mut self, blocks: u64) {
-        self.block_count_baseline = self.workspace.block_count();
-        self.block_count_override = Some(blocks);
+        self.runtime.block_count_baseline = self.workspace.block_count();
+        self.runtime.block_count_override = Some(blocks);
     }
 
     /// The current workspace block count (pages count as one block each).
     pub fn block_count(&self) -> u64 {
         let actual = self.workspace.block_count();
-        self.block_count_override
-            .map(|base| base.saturating_add(actual.saturating_sub(self.block_count_baseline)))
+        self.runtime
+            .block_count_override
+            .map(|base| {
+                base.saturating_add(actual.saturating_sub(self.runtime.block_count_baseline))
+            })
             .unwrap_or(actual)
     }
 
     /// The policy inputs for this request.
     pub fn request_budget(&self) -> RequestBudget {
         RequestBudget {
-            plan: self.plan,
+            plan: self.runtime.plan,
             members: self.collab.members.len(),
             blocks: self.block_count(),
         }
@@ -429,8 +460,9 @@ impl WorkspaceServer {
         per_workspace: u32,
         window: Duration,
     ) {
-        self.shared_rate_store = None;
-        self.rate_limiter = Box::new(RateLimiter::new(per_connection, per_workspace, window));
+        self.runtime.shared_rate_store = None;
+        self.runtime.rate_limiter =
+            Box::new(RateLimiter::new(per_connection, per_workspace, window));
     }
 
     /// Use a shared rate-limit store with the current plan defaults.
@@ -438,10 +470,14 @@ impl WorkspaceServer {
     where
         S: crate::store::RateLimitStore + 'static,
     {
-        let window = self.rate_limiter.window();
+        let window = self.runtime.rate_limiter.window();
         let store: Arc<dyn crate::store::RateLimitStore> = store;
-        self.shared_rate_store = Some(store.clone());
-        self.rate_limiter = Box::new(SqliteRateLimiter::for_plan(store, self.plan, window));
+        self.runtime.shared_rate_store = Some(store.clone());
+        self.runtime.rate_limiter = Box::new(SqliteRateLimiter::for_plan(
+            store,
+            self.runtime.plan,
+            window,
+        ));
     }
 
     /// Use a shared rate-limit store with explicit budgets (tests/deployment).
@@ -455,8 +491,8 @@ impl WorkspaceServer {
         S: crate::store::RateLimitStore + 'static,
     {
         let store: Arc<dyn crate::store::RateLimitStore> = store;
-        self.shared_rate_store = Some(store.clone());
-        self.rate_limiter = Box::new(SqliteRateLimiter::new(
+        self.runtime.shared_rate_store = Some(store.clone());
+        self.runtime.rate_limiter = Box::new(SqliteRateLimiter::new(
             store,
             per_connection,
             per_workspace,
@@ -466,18 +502,18 @@ impl WorkspaceServer {
 
     /// Inject a custom webhook sender (tests, alternate TLS adapters).
     pub fn set_webhook_sender(&mut self, sender: impl WebhookSender + 'static) {
-        self.webhook_sender = Box::new(sender);
+        self.webhooks.sender = Box::new(sender);
     }
 
     /// Simulate a temporarily overloaded service (`529 service_overload`).
     pub fn set_overloaded(&mut self, overloaded: bool) {
-        self.overloaded = overloaded;
+        self.runtime.overloaded = overloaded;
     }
 
     /// Fault injection: make the next successful write report a timeout after
     /// the change was saved (`503 service_unavailable` with retry guidance).
     pub fn simulate_write_timeout(&mut self, enabled: bool) {
-        self.simulate_write_timeout = enabled;
+        self.runtime.simulate_write_timeout = enabled;
     }
 }
 
@@ -489,13 +525,13 @@ impl WorkspaceServer {
 
     /// Persist both documents.
     pub fn persist(&self) -> std::io::Result<()> {
-        self.store.persist(&self.workspace)?;
-        self.collab_store.persist(&self.collab)
+        self.persistence.workspace_store.persist(&self.workspace)?;
+        self.persistence.collab_store.persist(&self.collab)
     }
 
     /// Persist only the collaboration document.
     pub fn persist_collab(&self) -> std::io::Result<()> {
-        self.collab_store.persist(&self.collab)
+        self.persistence.collab_store.persist(&self.collab)
     }
 
     /// Single write path (DRY): bump the version, append one sync-log entry,

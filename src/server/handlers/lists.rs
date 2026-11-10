@@ -2,8 +2,8 @@
 
 use super::super::pagination::PageRequest;
 use super::super::response::{query_value, v2_error, v2_list_response};
+use super::super::usecases::{list_members, list_pages, list_shares, page_versions, search, sync};
 use super::super::{ApiRequest, ApiResponse, Method, WorkspaceServer};
-use crate::model::PageSummary;
 
 impl WorkspaceServer {
     pub(in crate::server) fn handle_v2_list(
@@ -41,17 +41,12 @@ impl WorkspaceServer {
         };
 
         if path == "/api/v2/pages" {
-            let items: Vec<PageSummary> = self
-                .workspace
-                .pages
-                .iter()
-                .map(|page| page.summary())
-                .collect();
+            let items = list_pages(self);
             return Some(v2_list_response(items, &page, "pages", "page", request_id));
         }
         if path == "/api/v2/members" {
             return Some(v2_list_response(
-                self.collab.members.clone(),
+                list_members(self),
                 &page,
                 "members",
                 "member",
@@ -60,17 +55,13 @@ impl WorkspaceServer {
         }
         if path == "/api/v2/shares" {
             let page_id = query_value(query, "page");
-            let shares = if page_id.is_empty() {
-                self.collab.shares.clone()
-            } else {
-                self.collab.shares_for(&page_id)
-            };
+            let shares = list_shares(self, Some(&page_id));
             let sort = format!("shares:{page_id}");
             return Some(v2_list_response(shares, &page, &sort, "share", request_id));
         }
         if path == "/api/v2/sync" {
             let since = query_value(query, "since").parse::<u64>().unwrap_or(0);
-            let changes = self.collab.changes_since(since).changes;
+            let changes = sync(self, since).changes;
             let sort = format!("sync:{since}");
             return Some(v2_list_response(
                 changes, &page, &sort, "change", request_id,
@@ -78,7 +69,7 @@ impl WorkspaceServer {
         }
         if path == "/api/v2/search" {
             let q = query_value(query, "q");
-            let results = self.workspace.search(&q);
+            let results = search(self, &q);
             let sort = format!("search:{q}");
             return Some(v2_list_response(
                 results,
@@ -92,7 +83,7 @@ impl WorkspaceServer {
             .strip_prefix("/api/v2/pages/")
             .and_then(|rest| rest.strip_suffix("/versions"))
         {
-            let versions = self.collab.versions_for(id);
+            let versions = page_versions(self, id);
             let sort = format!("versions:{id}");
             return Some(v2_list_response(
                 versions,

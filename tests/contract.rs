@@ -6,7 +6,8 @@ use common::page_draft_json;
 use ion_of_notes::model::Workspace;
 use ion_of_notes::server::{
     API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, Envelope, Method,
-    OWNER_TOKEN, WorkspaceApi, WorkspaceServer, format_http_response, parse_http_request, serve_on,
+    OWNER_TOKEN, WorkspaceApi, WorkspaceServer, format_http_response, parse_http_request,
+    route_capability, serve_on,
 };
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -306,4 +307,75 @@ fn v2_persistence_failure_is_structured() {
 
     assert_eq!(response.status, 500);
     assert_eq!(error(&response).code, "internal_server_error");
+}
+
+#[test]
+fn every_documented_v2_route_declares_a_capability() {
+    let routes = [
+        (Method::Get, "/api/v2/workspace"),
+        (Method::Put, "/api/v2/workspace"),
+        (Method::Get, "/api/v2/pages"),
+        (Method::Post, "/api/v2/pages"),
+        (Method::Get, "/api/v2/pages/page-1"),
+        (Method::Patch, "/api/v2/pages/page-1"),
+        (Method::Delete, "/api/v2/pages/page-1"),
+        (Method::Get, "/api/v2/pages/page-1/versions"),
+        (Method::Get, "/api/v2/blocks/block-1"),
+        (Method::Patch, "/api/v2/blocks/block-1"),
+        (Method::Delete, "/api/v2/blocks/block-1"),
+        (Method::Patch, "/api/v2/blocks/block-1/children"),
+        (Method::Get, "/api/v2/databases"),
+        (Method::Post, "/api/v2/databases"),
+        (Method::Get, "/api/v2/databases/db-1"),
+        (Method::Patch, "/api/v2/databases/db-1"),
+        (Method::Delete, "/api/v2/databases/db-1"),
+        (Method::Post, "/api/v2/databases/db-1/data_sources"),
+        (Method::Get, "/api/v2/data_sources/ds-1"),
+        (Method::Patch, "/api/v2/data_sources/ds-1"),
+        (Method::Post, "/api/v2/data_sources/ds-1/query"),
+        (Method::Get, "/api/v2/views"),
+        (Method::Post, "/api/v2/views"),
+        (Method::Get, "/api/v2/views/view-1"),
+        (Method::Patch, "/api/v2/views/view-1"),
+        (Method::Delete, "/api/v2/views/view-1"),
+        (Method::Post, "/api/v2/views/view-1/query"),
+        (Method::Get, "/api/v2/comments"),
+        (Method::Post, "/api/v2/comments"),
+        (Method::Get, "/api/v2/comments/comment-1"),
+        (Method::Patch, "/api/v2/comments/comment-1"),
+        (Method::Delete, "/api/v2/comments/comment-1"),
+        (Method::Get, "/api/v2/users"),
+        (Method::Get, "/api/v2/users/user-1"),
+        (Method::Get, "/api/v2/file_uploads"),
+        (Method::Post, "/api/v2/file_uploads"),
+        (Method::Get, "/api/v2/file_uploads/upload-1"),
+        (Method::Post, "/api/v2/file_uploads/upload-1"),
+        (Method::Get, "/api/v2/webhooks"),
+        (Method::Post, "/api/v2/webhooks"),
+        (Method::Get, "/api/v2/webhook_deliveries"),
+        (Method::Post, "/api/v2/webhook_deliveries/retry"),
+        (Method::Post, "/api/v2/webhooks/hook-1"),
+        (Method::Delete, "/api/v2/webhooks/hook-1"),
+        (Method::Get, "/api/v2/search"),
+        (Method::Get, "/api/v2/members"),
+        (Method::Post, "/api/v2/members"),
+        (Method::Get, "/api/v2/shares"),
+        (Method::Put, "/api/v2/shares"),
+        (Method::Get, "/api/v2/sync"),
+        (Method::Get, "/api/v2/export"),
+        (Method::Get, "/api/v2/realtime"),
+        (Method::Get, "/api/v2/auth/session"),
+        (Method::Post, "/api/v2/auth/logout"),
+        (Method::Post, "/api/v2/crdt/sync"),
+        (Method::Post, "/api/v2/crdt/update"),
+    ];
+
+    for (method, path) in routes {
+        assert!(
+            route_capability(method, path).is_some(),
+            "{} {path} has no capability",
+            method.as_str()
+        );
+    }
+    assert_eq!(route_capability(Method::Get, "/api/v2/unknown"), None);
 }

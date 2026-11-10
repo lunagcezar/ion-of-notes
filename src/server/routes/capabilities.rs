@@ -2,7 +2,7 @@
 
 use super::super::{Capability, Method};
 
-pub(super) fn required_capability(method: Method, path: &str) -> Option<Capability> {
+pub fn route_capability(method: Method, path: &str) -> Option<Capability> {
     match (method, path) {
         (Method::Get, "/api/v2/workspace") => Some(Capability::ReadContent),
         (Method::Put, "/api/v2/workspace") => Some(Capability::UpdateContent),

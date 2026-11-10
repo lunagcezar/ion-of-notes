@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (252 tests, 2026-11-10)
+## 3. Test-crate map (253 tests, 2026-11-10)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -51,7 +51,7 @@ flowchart TD
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
 | `tests/ui.rs` | 13 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
-| `tests/contract.rs` | 17 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
+| `tests/contract.rs` | 18 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/pagination.rs` | 11 | list envelopes, cursor round-trip, page bounds, v2 pages/search/sync/versions |
 | `tests/blocks.rs` | 12 | rich text, block metadata, nesting, tables, unsupported types, block endpoints |
 | `tests/properties.rs` | 9 | property schemas/values, clear rules, row migration, databases/data sources, property items |

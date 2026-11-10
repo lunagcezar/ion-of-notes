@@ -6,6 +6,23 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-047 use-case seam and server sub-state
+
+- Added `src/server/usecases/*`: page, workspace and sharing operations return
+  typed results and one `UseCaseError`; they never build an envelope.
+- v1 and v2 now adapt the same use cases. The v2 path rewrite into `handle_v1`
+  and `map_v1_error` are gone; unknown v2 routes return a structured `404`.
+- `route_capability` is public and covered by
+  `every_documented_v2_route_declares_a_capability` in `tests/contract.rs`.
+- `WorkspaceServer` groups persistence, runtime and webhook state into
+  `Persistence`, `Runtime` and `WebhookRuntime`; realtime and CRDT stay as
+  single fields.
+- No behavior, protocol, persistence or visual change; the suite is 253 tests
+  and clippy, fmt, docs and `--screenshot` pass.
+- Updated `AGENTS.md`, `README.md`, `docs/architecture.md`,
+  `docs/contributor-guide.md`, `docs/index.md`, `docs/testing.md`,
+  `docs/review-findings.md` and ADR-004.
+
 ### Changed - spec-046 module boundaries
 
 - `src/server.rs` is now a facade over `server/routes/*` (v1 and v2 dispatch,

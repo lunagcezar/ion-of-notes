@@ -7,5 +7,6 @@ mod content;
 mod crdt;
 mod databases;
 mod lists;
+mod shared;
 mod views;
 mod webhooks;

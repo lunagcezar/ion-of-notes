@@ -22,7 +22,7 @@ impl WorkspaceServer {
         if input.url.trim().is_empty() || input.events.is_empty() {
             return Err("url and at least one event are required".to_string());
         }
-        if !is_allowed_url(&input.url, self.allow_insecure_webhooks) {
+        if !is_allowed_url(&input.url, self.webhooks.allow_insecure) {
             return Err(
                 "webhook URL must be HTTPS (loopback HTTP requires the development override)"
                     .to_string(),
@@ -106,14 +106,14 @@ impl WorkspaceServer {
                 data.clone(),
             );
             if event_type.is_aggregated() {
-                if let Some(existing) = self.webhook_queue.iter_mut().find(|existing| {
+                if let Some(existing) = self.webhooks.queue.iter_mut().find(|existing| {
                     existing.subscription_id == event.subscription_id
                         && existing.entity.id == event.entity.id
                         && existing.r#type == event.r#type
                 }) {
                     *existing = event;
                 } else {
-                    self.webhook_queue.push(event);
+                    self.webhooks.queue.push(event);
                 }
             } else {
                 self.deliver_event(&subscription, event);
@@ -123,7 +123,7 @@ impl WorkspaceServer {
 
     /// Flush aggregated events (the production worker calls this on a timer).
     pub fn flush_webhooks(&mut self) {
-        let queued = std::mem::take(&mut self.webhook_queue);
+        let queued = std::mem::take(&mut self.webhooks.queue);
         for event in aggregate_events(queued) {
             if let Some(subscription) = self
                 .collab
@@ -151,9 +151,10 @@ impl WorkspaceServer {
                 continue;
             };
             let signature = sign(&subscription.verification_token, &delivery.payload);
-            let result = self
-                .webhook_sender
-                .send(&subscription.url, &delivery.payload, &signature);
+            let result =
+                self.webhooks
+                    .sender
+                    .send(&subscription.url, &delivery.payload, &signature);
             delivery.attempts = delivery.attempts.saturating_add(1);
             match result {
                 Ok(status) => {
@@ -181,7 +182,8 @@ impl WorkspaceServer {
         let payload = serde_json::to_string(&event).unwrap_or_default();
         let signature = sign(&subscription.verification_token, &payload);
         let result = self
-            .webhook_sender
+            .webhooks
+            .sender
             .send(&subscription.url, &payload, &signature);
         let delivered = result
             .as_ref()
