@@ -9,6 +9,10 @@
 //! PATH or service on a network port). High-level modules depend on traits,
 //! never on concrete I/O.
 //!
+//! The desktop stack (`ui`, `screenshot`, `eframe`, `egui`, `image`) lives
+//! behind the default-on `desktop` feature. Core tests build with
+//! `--no-default-features` so they do not compile or link the window.
+//!
 //! The project is open source (MIT). That is a license fact, not a marketing
 //! feature: the window does not advertise a "free edition".
 
@@ -23,11 +27,13 @@ pub mod i18n;
 pub mod model;
 pub mod ollama;
 pub mod remote;
+#[cfg(feature = "desktop")]
 pub mod screenshot;
 pub mod server;
 pub mod shortcuts;
 pub mod store;
 pub mod templates;
+#[cfg(feature = "desktop")]
 pub mod ui;
 pub mod webhooks;
 

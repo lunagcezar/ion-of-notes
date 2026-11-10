@@ -5,12 +5,18 @@ edition = "2024"
 license = "MIT"
 publish = false
 
+[features]
+# The desktop window is the default product; core tests opt out with
+# `--no-default-features` so they do not link eframe/egui/wgpu.
+default = ["desktop"]
+desktop = ["dep:eframe", "dep:egui", "dep:image"]
+
 [dependencies]
-eframe = "0.37"
-egui = "0.37"
+eframe = { version = "0.37", optional = true }
+egui = { version = "0.37", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-image = { version = "0.25", default-features = false, features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["png"], optional = true }
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 hmac = "0.12"
@@ -30,8 +36,21 @@ ureq = { version = "3.5.1", features = ["rustls"] }
 yrs = "0.28.1"
 base64 = "0.23.1"
 
+[[bin]]
+name = "ion-of-notes"
+path = "src/main.rs"
+required-features = ["desktop"]
+
 [profile.dev]
 opt-level = 0
+# Line tables keep useful backtraces while cutting the PDB size; incremental
+# compilation stays enabled (the default).
+debug = "line-tables-only"
+
+[profile.test]
+# Tests do not need debug info. This removes the ~250 MB PDB per test binary
+# and the memory/IO cost of writing it, while incremental stays enabled.
+debug = 0
 
 # Ship a smaller, faster binary: thin LTO lets the egui/eframe code inline
 # across crates without the build cost of full LTO.
@@ -41,3 +60,21 @@ codegen-units = 1
 
 [dev-dependencies]
 # Tests use the same WebSocket client as the remote desktop transport.
+
+# These four crates exercise the egui-based UI and the PNG writer. Keeping them
+# behind `desktop` lets the other 29 test crates build without eframe/wgpu.
+[[test]]
+name = "ui"
+required-features = ["desktop"]
+
+[[test]]
+name = "fidelity"
+required-features = ["desktop"]
+
+[[test]]
+name = "ui_crdt"
+required-features = ["desktop"]
+
+[[test]]
+name = "screenshot"
+required-features = ["desktop"]

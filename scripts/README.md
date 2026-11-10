@@ -9,8 +9,8 @@ from the repository root and do not modify files.
 | `check-mermaid.ps1` | Every Mermaid fence is closed and starts with a recognized diagram type. |
 | `check-tables.ps1` | Every Markdown table has a consistent number of columns. |
 | `check-docs.ps1` | Runs the three documentation checks above. |
-| `check-tests.ps1` | Runs `cargo test --all-targets` and prints the passing-test total. |
-| `quality.ps1` | Full gate: `cargo fmt --check`, clippy, tests and documentation checks. |
+| `check-tests.ps1` | Runs the core tests without the desktop stack, then the desktop UI tests, and prints the combined total. |
+| `quality.ps1` | Full gate: `cargo fmt --check`, clippy, core + desktop tests and documentation checks. |
 
 ## Usage
 
@@ -29,7 +29,11 @@ a pre-commit hook.
 ## Notes
 
 - The Markdown checks ignore `target/`, `.git/` and `node_modules/`.
-- `check-tests.ps1` prints only the summary by default; use `-VerboseOutput` to
+- `check-tests.ps1` runs `cargo test --all-targets --no-default-features`
+  (229 core tests) and then the four UI test crates with `--features desktop`
+  (26 tests). It prints only the summary by default; use `-VerboseOutput` to
   see the full `cargo test` output.
+- No script caps Cargo jobs or disables incremental compilation; spec-048 keeps
+  both at their defaults.
 - `quality.ps1` runs the same commands documented in `AGENTS.md` and
   `docs/testing.md`.

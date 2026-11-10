@@ -42,14 +42,14 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (253 tests, 2026-11-10)
+## 3. Test-crate map (255 tests across the two feature passes, 2026-11-10)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
 | `tests/model.rs` | 21 | entities, tree, search, diff, index, settings, comments, JSON round-trip |
 | `tests/server.rs` | 12 | routes, envelopes, status codes, HTTP parse/format, concurrent loopback |
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
-| `tests/ui.rs` | 13 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache |
+| `tests/ui.rs` | 14 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, desktop feature seam |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
 | `tests/contract.rs` | 18 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/pagination.rs` | 11 | list envelopes, cursor round-trip, page bounds, v2 pages/search/sync/versions |
@@ -75,21 +75,47 @@ flowchart TD
 | `tests/store.rs` | 4 | JSON save/load, atomic write, missing file seed |
 | `tests/cli.rs` | 3 | argument parsing for desktop, screenshot and serve |
 | `tests/templates.rs` | 3 | template catalog, stable page building, purpose mapping |
-| `tests/app.rs` | 2 | composition root wiring |
+| `tests/app.rs` | 3 | composition root wiring, core-without-desktop feature seam |
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
 | `tests/screenshot.rs` | 2 | `ColorImage` → RGBA, PNG output |
 | `tests/integration.rs` | 1 | client → server → store end to end |
 
-Run everything with:
+Run the two feature passes:
 
 ```sh
-cargo test --all-targets
+# 229 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+cargo test --all-targets --no-default-features
+
+# 26 desktop tests: the four UI crates, with the default-on desktop feature
+cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
+
 cargo clippy --all-targets -- -D warnings
+cargo clippy --all-targets --no-default-features -- -D warnings
 cargo fmt --check
 
 # Or run the full gate, including the Markdown checks:
 pwsh -File scripts/quality.ps1
 ```
+
+`cargo test --all-targets` still runs all default-feature tests (254) with the
+`desktop` feature, but it links the window into every test binary. Prefer the
+two passes above; they are the gate used by `scripts/check-tests.ps1`
+(spec-048) and cover 255 unique tests because each feature pass includes its
+own seam test.
+
+### 3.1 Build profile and feature seam
+
+- `desktop` is a default-on cargo feature; `eframe`, `egui`, `image`, `ui` and
+  `screenshot` are absent under `--no-default-features`.
+- The binary and `tests/ui.rs`, `tests/fidelity.rs`, `tests/ui_crdt.rs` and
+  `tests/screenshot.rs` declare `required-features = ["desktop"]`, so the core
+  pass skips them.
+- `[profile.test] debug = 0` removes full debug info (the old 220-270 MB PDBs);
+  the remaining per-test PDBs are about 4-15 MB.
+- `[profile.dev] debug = "line-tables-only"` keeps file/line backtraces for the
+  app while shrinking its PDB.
+- Incremental compilation stays enabled and Cargo keeps its default job count;
+  the gate does not set `-j` or `CARGO_INCREMENTAL`.
 
 ## 4. What each layer tests
 

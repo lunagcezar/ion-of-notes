@@ -3,6 +3,9 @@
 - Status: implemented (2026-11-10)
 - Related: `docs/adr-004-modularization-decision.md`,
   `docs/review-findings.md` section 9, `spec-017`, `spec-018`
+- Note (2026-11-10): the UI/client split originally queued as `spec-048` is
+  renumbered to `spec-049`; `spec-048` covers build performance and the
+  desktop feature seam.
 
 ## Purpose and scope
 

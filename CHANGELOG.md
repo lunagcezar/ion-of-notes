@@ -6,6 +6,26 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-048 build performance and desktop feature seam
+
+- Added the default-on `desktop` cargo feature. `eframe`, `egui`, `image`,
+  `ui` and `screenshot` are absent under `--no-default-features`.
+- The binary and `tests/ui.rs`, `tests/fidelity.rs`, `tests/ui_crdt.rs` and
+  `tests/screenshot.rs` declare `required-features = ["desktop"]`, so core
+  tests skip them.
+- `scripts/check-tests.ps1` now runs two passes: 229 core tests without the
+  desktop stack, then 26 desktop tests with it (255 total).
+- `[profile.test] debug = 0` removes full debug info: test PDBs drop from
+  220-270 MB to about 4-15 MB. `[profile.dev] debug = "line-tables-only"`
+  keeps file/line backtraces while shrinking the app PDB.
+- Incremental compilation and Cargo's default job count stay enabled; the gate
+  does not set `-j` or `CARGO_INCREMENTAL`.
+- No behavior, protocol, persistence or visual change. Clippy (both feature
+  sets), fmt, the two test passes and `--screenshot` pass.
+- Updated `AGENTS.md`, `README.md`, `docs/architecture.md`,
+  `docs/testing.md`, `docs/requirements.md`, `docs/review-findings.md`,
+  ADR-004, `scripts/README.md` and the spec index.
+
 ### Changed - spec-047 use-case seam and server sub-state
 
 - Added `src/server/usecases/*`: page, workspace and sharing operations return

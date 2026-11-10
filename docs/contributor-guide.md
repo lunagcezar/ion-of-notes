@@ -14,8 +14,9 @@ code belongs, and how to verify a change.
 ## 2. Commands
 
 ```sh
-cargo build                     # compile
-cargo test --all-targets        # run all integration tests
+cargo build                     # compile the desktop app
+cargo test --all-targets --no-default-features   # 229 core tests
+cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot  # 26 desktop tests
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 cargo run                       # desktop window
@@ -240,7 +241,7 @@ Normal runs never set these variables.
 
 - [ ] Spec written and linked from `spec/README.md`.
 - [ ] Tests written first and observed red (or compile-red for refactors).
-- [ ] `cargo test --all-targets` green.
+- [ ] Core and desktop test passes green (`scripts/check-tests.ps1`).
 - [ ] `cargo clippy --all-targets -- -D warnings` clean.
 - [ ] `cargo fmt --check` clean.
 - [ ] `--screenshot` checked if the UI changed.

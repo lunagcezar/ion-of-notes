@@ -421,6 +421,12 @@ capabilities) is implemented; the rest are planned.
   resumes the change feed from the last sequence (ADR-013, spec-044).
 - NFR-30: The login form never stores or logs the password; a failed login
   leaves the local workspace active (ADR-014, spec-045).
+- NFR-31: Build performance stays usable on a 16 GB machine without giving up
+  incremental compilation or Cargo's default parallelism. The desktop stack
+  (`eframe`, `egui`, `image`, `ui`, `screenshot`) sits behind the default-on
+  `desktop` feature; core tests run with `--no-default-features`, and the
+  `test` profile uses `debug = 0` while `dev` uses `line-tables-only`
+  (spec-048).
 
 ## 3. Requirement → spec map
 
@@ -458,6 +464,7 @@ capabilities) is implemented; the rest are planned.
 | FR-102, NFR-28                | `spec-043-client-yrs-and-awareness.md` |
 | FR-103, NFR-29                | `spec-044-remote-websocket-client.md` |
 | FR-104, NFR-30                | `spec-045-server-login-settings-ui.md` |
+| NFR-31                        | `spec-048-build-performance-and-desktop-feature-seam.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

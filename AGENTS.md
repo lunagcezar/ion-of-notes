@@ -35,9 +35,9 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Layer            | Technology                          | Notes                                              |
 | ---------------- | ----------------------------------- | -------------------------------------------------- |
 | Language         | Rust (stable, edition 2024)         | `cargo build`, `cargo test`                        |
-| Window / UI      | eframe 0.37 + egui 0.37             | Immediate-mode UI; light and dark themes            |
+| Window / UI      | eframe 0.37 + egui 0.37             | Immediate-mode UI; behind the default-on `desktop` feature |
 | Data model       | `serde` + `serde_json`              | JSON documents; SQLite document store for `--database` |
-| PNG output       | `image` (png feature only)          | `--screenshot` writes the rendered window           |
+| PNG output       | `image` (png feature only)          | `--screenshot`; behind the default-on `desktop` feature |
 | Display fonts    | Segoe UI (Windows system fonts)     | Optional bold "Strong" family; egui built-ins are the fallback |
 | Server transport | Axum 0.8 + Tokio + Tower/Tower-HTTP | Optional HTTP server for `--serve` (spec-038)        |
 | Persistence      | JSON files + `rusqlite` (bundled)   | `SqliteStore` behind the existing store ports (spec-039) |
@@ -156,14 +156,15 @@ src/
     export.rs      Notion-style markdown/CSV export tree
   ollama.rs        AI assistant adapter: Ollama CLI in PATH or service at host:port
   shortcuts.rs     pure keyboard-shortcut table (Combo -> Action) + docs table
-  screenshot.rs    ColorImage -> RGBA -> PNG
+  screenshot.rs    ColorImage -> RGBA -> PNG (desktop feature)
   cli.rs           argument parsing
   i18n.rs          locale switching + dynamic key translation helper
   templates.rs     starter template catalog + page builder
   webhooks.rs      subscriptions, event types, HMAC-SHA256 signatures,
                    aggregation and delivery records
 locales/           en.yml, pt-BR.yml, eo.yml key tables
-  ui.rs            module root: declarations + public re-exports (facade)
+  ui.rs            module root: declarations + public re-exports (facade,
+                   desktop feature)
   ui/
     palette.rs     colors, fonts, tab-title helper, theming (NFR-06)
     icons.rs       original shape artwork (chrome, sidebar, book, controls,
@@ -550,15 +551,25 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
-| `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (253)    |
+| `cargo build`                            | Build the desktop app (default `desktop` feature) |
+| `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
+| `cargo test --all-targets --no-default-features` | Core integration tests (229, no desktop stack) |
+| `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (26) |
+| `cargo test --all-targets`               | All default-feature tests (254; the core-only seam test is skipped) |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
-| `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |
+| `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, core + desktop tests, docs |
 | `pwsh -File scripts/check-docs.ps1`      | Links, Mermaid fences and table columns  |
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
 | `cargo run -- --serve 127.0.0.1:8787`   | Run the Axum API server                  |
 | `cargo run -- --serve 127.0.0.1:8787 --database data.db` | Run with SQLite persistence |
+
+Build profiles keep the full gate usable on memory-constrained machines:
+`[profile.dev] debug = "line-tables-only"` and `[profile.test] debug = 0`
+remove the ~250 MB PDB per test binary, while `incremental = true` and Cargo's
+default job count stay unchanged (spec-048). The `desktop` feature is on by
+default; core tests opt out with `--no-default-features`, so they never
+compile or link eframe/egui/wgpu.
 
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust

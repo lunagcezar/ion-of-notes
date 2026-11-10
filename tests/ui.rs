@@ -268,3 +268,9 @@ fn search_cache_only_refreshes_when_query_or_version_changes() {
     assert!(cache.needs_refresh("roadmap", 2));
     assert!(!cache.needs_refresh("roadmap", 2));
 }
+
+#[cfg(feature = "desktop")]
+#[test]
+fn desktop_feature_exposes_the_screenshot_writer() {
+    let _ = ion_of_notes::screenshot::color_image_to_rgba;
+}

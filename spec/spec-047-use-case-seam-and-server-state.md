@@ -3,6 +3,9 @@
 - Status: implemented (2026-11-10)
 - Related: `docs/review-findings.md` section 9 (RF-M07, RF-M08),
   `spec-046`, `docs/adr-002-architecture-guidelines.md`
+- Note (2026-11-10): the UI/client split mentioned below as `spec-048` is
+  renumbered to `spec-049`; `spec-048` covers build performance and the
+  desktop feature seam.
 
 ## Purpose and scope
 

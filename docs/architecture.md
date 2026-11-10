@@ -46,12 +46,17 @@ flowchart TD
 | Domain | entities, invariants, pure rules | `model.rs`, `model/*`, `collab.rs`, `collab/export.rs` |
 | Application | use cases, orchestration, contracts | `server/usecases/*`, `server/routes/*`, `client.rs`, `collab.rs` state methods |
 | Infrastructure | filesystem, HTTP, external AI service | `store.rs`, `server/http.rs`, `server/web.rs`, `ollama.rs` |
-| Presentation | window, commands, view state, rendering | `ui.rs`, `ui/*` |
+| Presentation | window, commands, view state, rendering | `ui.rs`, `ui/*` (`desktop` feature) |
 | Bootstrap | compose concrete adapters into the core | `app.rs` |
 
 Dependency direction: `ui → client → server → model`, `server → store`, and
 `app` wires everything. `model` and `collab` know nothing about egui, eframe,
 JSON files, sockets or the loopback listener.
+
+The presentation stack (`ui`, `screenshot`, `eframe`, `egui`, `image`) is
+behind the default-on `desktop` feature (spec-048). The binary and the four UI
+test crates declare `required-features = ["desktop"]`; the core test pass uses
+`--no-default-features`, so it compiles and links no window code.
 
 ## 3. Module map
 
@@ -111,10 +116,10 @@ src/
   templates.rs       starter template catalog
   ollama.rs          AI assistant adapter
   shortcuts.rs       pure shortcut table
-  screenshot.rs      ColorImage -> PNG
+  screenshot.rs      ColorImage -> PNG (desktop feature)
   cli.rs             argument parsing
   i18n.rs            locale switching + dynamic key helper
-  ui.rs              UI facade
+  ui.rs              UI facade (desktop feature)
   ui/
     commands.rs      Command / NewTabChoice / IconTab / FontStyle
     view.rs          ViewState

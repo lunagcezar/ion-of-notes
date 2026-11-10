@@ -122,9 +122,16 @@ outliers at that point. `spec-046` restored the facades:
 This does not change the decision: the remaining large files
 (`ui/apply.rs`, `ui/dialogs/settings_pages.rs`, `ui/render/content.rs`,
 `client.rs`) are still split only when a second responsibility appears, which
-is planned as spec-048.
+is planned as spec-049.
 
 `spec-047` applied the same rule to behavior rather than files: v1 and v2 now
 share `server/usecases/*` instead of one transport calling the other, and
 `WorkspaceServer` groups persistence, runtime and webhook state. The adapters
 still own envelopes and status codes; the use cases own rules and side effects.
+
+`spec-048` added a build seam rather than a new crate: the desktop stack
+(`eframe`, `egui`, `image`, `ui`, `screenshot`) is behind the default-on
+`desktop` feature, and core tests build with `--no-default-features`. This
+keeps the one-crate modular monolith while removing the window from 29 of the
+33 test links. It also sets `debug = 0` for tests and `line-tables-only` for
+dev; incremental compilation and Cargo's default job count remain enabled.

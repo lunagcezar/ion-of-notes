@@ -23,6 +23,14 @@ fn build_desktop_at_seeds_and_serves_the_workspace() {
     remove(&collab);
 }
 
+#[cfg(not(feature = "desktop"))]
+#[test]
+fn core_build_exposes_the_data_stack_without_the_desktop_ui() {
+    fn assert_api<T: WorkspaceApi>() {}
+    assert_api::<ion_of_notes::server::WorkspaceServer>();
+    let _ = ion_of_notes::app::build_server;
+}
+
 #[test]
 fn build_server_at_answers_health() {
     let path = temp_path("bootstrap-server", "json");

@@ -14,6 +14,10 @@ try {
     & cargo clippy --all-targets -- -D warnings
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+    Write-Host "== cargo clippy --all-targets --no-default-features -- -D warnings =="
+    & cargo clippy --all-targets --no-default-features -- -D warnings
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
     Write-Host "== tests =="
     & (Join-Path $PSScriptRoot "check-tests.ps1") -Root $Root
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

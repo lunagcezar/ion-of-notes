@@ -248,10 +248,16 @@ Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
 
 ```sh
 cargo build
-cargo test --all-targets
+# 229 core tests without eframe/egui/wgpu
+cargo test --all-targets --no-default-features
+# 26 desktop tests with the default-on desktop feature
+cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 ```
+
+`cargo test --all-targets` still runs all default-feature tests (254), but the
+two passes above avoid linking the window into the core test binaries.
 
 Full gate, including Markdown link/Mermaid/table checks:
 
@@ -287,15 +293,15 @@ src/
   server/          routes (v1/v2/capabilities), handlers, response helpers,
                    Axum/WebSocket, realtime hub, CRDT, webhooks, limits
   client.rs        the UI's only data access
-  ui.rs            UI facade
+  ui.rs            UI facade (desktop feature)
   ui/              state, commands, rendering, dialogs, client CRDT session
   templates.rs     starter templates
   ollama.rs        AI assistant adapter
   shortcuts.rs     keyboard table
-  screenshot.rs    PNG output
+  screenshot.rs    PNG output (desktop feature)
   cli.rs           argument parsing
   i18n.rs          locale switching
-tests/             one integration-test crate per module (253 tests)
+tests/             one integration-test crate per module (255 tests)
 ```
 
 Dependency direction: `ui → client → server → model`, `server → store`; `app`
