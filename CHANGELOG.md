@@ -6,6 +6,18 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-042 Yrs CRDT text merge
+
+- Added `src/server/crdt.rs`: one Yrs `Doc` per page with title and
+  `block:<id>` text, state-vector sync, update merge, projection and reset.
+- `WorkspaceServer::crdt_sync` / `apply_crdt_update` merge text, project it into
+  the workspace snapshot, record a sync change and persist.
+- WebSocket messages now include base64 `crdt_sync` and `crdt_update`; merged
+  updates broadcast to subscribers.
+- REST writes reset the page CRDT document so structure stays REST-owned.
+- Added `tests/crdt.rs`: 3 tests for convergence, projection and WebSocket sync.
+- Added `docs/adr-011-yrs-crdt-merge.md`; the suite is 243 tests.
+
 ### Added — spec-041 TLS webhooks and shared rate limits
 
 - Added `src/server/webhook_sender.rs`: `WebhookSender` port and

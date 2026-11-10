@@ -43,7 +43,7 @@ review checked this ledger against the implementation (spec-029).
   (public docs), specs 030-038 implemented, B5 done, B6
   recorded, B7 ongoing, B8 reviewed** before every source. See
   `docs/clean-room.md` and `docs/public-api-analysis.md`.
-- Verification: `cargo test --all-targets` is green with **240 tests**,
+- Verification: `cargo test --all-targets` is green with **243 tests**,
   `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` are
   clean, and `--screenshot` produces a non-blank 1322×861 PNG.
 - The documentation review (spec-029) found and fixed stale statuses; the

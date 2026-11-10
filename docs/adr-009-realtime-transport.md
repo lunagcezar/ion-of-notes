@@ -59,7 +59,8 @@ Costs:
 ## Follow-up
 
 - Add a client-side WebSocket adapter and UI presence indicators.
-- Introduce Yrs/Automerge per block with awareness payloads.
+- **Yrs per-page text is implemented (spec-042);** awareness payloads and the
+  client editor adapter remain.
 - Add Redis/NATS fan-out when multi-node deployment is required.
 - Consider short-lived WebSocket tickets instead of putting session tokens in
   the query string.

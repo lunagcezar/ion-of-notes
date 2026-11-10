@@ -21,6 +21,8 @@ use axum::extract::{DefaultBodyLimit, Path, Query, Request, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast;
@@ -175,9 +177,11 @@ async fn ws_handler(
         let seq = server.collab.next_seq.saturating_sub(1);
         (connection, server.realtime(), backlog, seq, member_name)
     };
+    let server = Arc::clone(&state.server);
     ws.on_upgrade(move |socket| {
         websocket_session(
             socket,
+            server,
             connection,
             hub,
             backlog,
@@ -191,6 +195,7 @@ async fn ws_handler(
 #[allow(clippy::too_many_arguments)]
 async fn websocket_session(
     mut socket: WebSocket,
+    server: Arc<Mutex<WorkspaceServer>>,
     connection: Connection,
     hub: RealtimeHub,
     backlog: Vec<Change>,
@@ -238,10 +243,35 @@ async fn websocket_session(
             },
             incoming = socket.recv() => match incoming {
                 Some(Ok(Message::Text(text))) => {
-                    if let Ok(ClientMessage::Ping) = serde_json::from_str(text.as_str())
-                        && !send_json(&mut socket, &ServerMessage::Pong).await
-                    {
-                        break;
+                    match serde_json::from_str::<ClientMessage>(text.as_str()) {
+                        Ok(ClientMessage::Ping) => {
+                            if !send_json(&mut socket, &ServerMessage::Pong).await {
+                                break;
+                            }
+                        }
+                        Ok(ClientMessage::CrdtSync {
+                            page_id,
+                            state_vector,
+                        }) => {
+                            if !handle_crdt_sync(&mut socket, &server, page_id, state_vector).await {
+                                break;
+                            }
+                        }
+                        Ok(ClientMessage::CrdtUpdate { page_id, update }) => {
+                            if !handle_crdt_update(
+                                &mut socket,
+                                &server,
+                                &hub,
+                                page_id,
+                                update,
+                                &connection.member_id,
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                        Err(_) => {}
                     }
                 }
                 Some(Ok(Message::Ping(payload))) => {
@@ -263,6 +293,79 @@ async fn send_json(socket: &mut WebSocket, message: &ServerMessage) -> bool {
         return false;
     };
     socket.send(Message::Text(text.into())).await.is_ok()
+}
+
+async fn send_error(socket: &mut WebSocket, code: &str, message: impl Into<String>) -> bool {
+    send_json(
+        socket,
+        &ServerMessage::Error {
+            code: code.to_string(),
+            message: message.into(),
+        },
+    )
+    .await
+}
+
+async fn handle_crdt_sync(
+    socket: &mut WebSocket,
+    server: &Arc<Mutex<WorkspaceServer>>,
+    page_id: String,
+    state_vector: Option<String>,
+) -> bool {
+    let state_vector = match state_vector {
+        Some(value) => match BASE64.decode(value) {
+            Ok(bytes) => Some(bytes),
+            Err(error) => return send_error(socket, "crdt_error", error.to_string()).await,
+        },
+        None => None,
+    };
+    let result = {
+        let mut server = server
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        server.crdt_sync(&page_id, state_vector.as_deref())
+    };
+    match result {
+        Ok((update, vector)) => {
+            send_json(
+                socket,
+                &ServerMessage::CrdtSync {
+                    page_id,
+                    update: BASE64.encode(update),
+                    state_vector: BASE64.encode(vector),
+                },
+            )
+            .await
+        }
+        Err(error) => send_error(socket, "crdt_error", error).await,
+    }
+}
+
+async fn handle_crdt_update(
+    socket: &mut WebSocket,
+    server: &Arc<Mutex<WorkspaceServer>>,
+    hub: &RealtimeHub,
+    page_id: String,
+    update: String,
+    actor: &str,
+) -> bool {
+    let update = match BASE64.decode(update) {
+        Ok(bytes) => bytes,
+        Err(error) => return send_error(socket, "crdt_error", error.to_string()).await,
+    };
+    let result = {
+        let mut server = server
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        server.apply_crdt_update(&page_id, &update, actor)
+    };
+    match result {
+        Ok(merged) => {
+            hub.publish_crdt_update(&page_id, &merged);
+            true
+        }
+        Err(error) => send_error(socket, "crdt_error", error).await,
+    }
 }
 
 fn api_method(method: &str) -> Option<Method> {

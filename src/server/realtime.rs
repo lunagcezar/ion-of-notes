@@ -4,6 +4,8 @@
 //! typed messages; tests can exercise the hub without a socket.
 
 use crate::collab::Change;
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -24,6 +26,15 @@ pub enum ServerMessage {
     Presence {
         members: Vec<PresenceMember>,
     },
+    CrdtSync {
+        page_id: String,
+        update: String,
+        state_vector: String,
+    },
+    CrdtUpdate {
+        page_id: String,
+        update: String,
+    },
     Pong,
     Error {
         code: String,
@@ -36,6 +47,15 @@ pub enum ServerMessage {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ClientMessage {
     Ping,
+    CrdtSync {
+        page_id: String,
+        #[serde(default)]
+        state_vector: Option<String>,
+    },
+    CrdtUpdate {
+        page_id: String,
+        update: String,
+    },
 }
 
 /// One active real-time participant.
@@ -70,6 +90,14 @@ impl RealtimeHub {
     /// Publish one committed change to every subscriber.
     pub fn publish_change(&self, change: Change) {
         let _ = self.sender.send(ServerMessage::Change { change });
+    }
+
+    /// Publish one merged CRDT update.
+    pub fn publish_crdt_update(&self, page_id: &str, update: &[u8]) {
+        let _ = self.sender.send(ServerMessage::CrdtUpdate {
+            page_id: page_id.to_string(),
+            update: BASE64.encode(update),
+        });
     }
 
     /// Add a participant and broadcast the new presence list.

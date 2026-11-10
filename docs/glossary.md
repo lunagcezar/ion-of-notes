@@ -178,6 +178,8 @@ definition.
 | **ServerMessage** | Typed WebSocket frame: ready, change, presence, pong or error. | spec-040 |
 | **WebhookSender** | Port for signed outbound delivery; ureq/rustls is the default. | spec-041 |
 | **RateLimitStore** | Shared fixed-window counter port; SQLite implements it. | spec-041 |
+| **CrdtStore** | In-memory Yrs documents keyed by page id. | spec-042 |
+| **State vector** | Yrs cursor describing which updates a peer already has. | spec-042 |
 
 ## 9. Naming rules
 

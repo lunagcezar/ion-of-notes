@@ -334,6 +334,9 @@ capabilities) is implemented; the rest are planned.
 - FR-100: Rate limits can use a shared SQLite store so multiple server
   instances on one database share the workspace budget (implemented in
   `spec-041`).
+- FR-101: Concurrent page title/block text edits merge through Yrs state-vector
+  sync and WebSocket updates, and the merged text is projected into the durable
+  page snapshot (implemented in `spec-042`).
 
 ## 2. Non-functional requirements
 
@@ -401,6 +404,8 @@ capabilities) is implemented; the rest are planned.
   automatically (ADR-010, spec-041).
 - NFR-26: Shared rate limits are transactional and consistent across server
   instances using the same SQLite database (ADR-010, spec-041).
+- NFR-27: CRDT updates converge, are ordered per document and never replace the
+  REST-owned block structure (ADR-011, spec-042).
 
 ## 3. Requirement → spec map
 
@@ -434,6 +439,7 @@ capabilities) is implemented; the rest are planned.
 | FR-96, FR-97, NFR-22, NFR-23  | `spec-039-sessions-and-sqlite-storage.md` |
 | FR-98, NFR-24                 | `spec-040-realtime-websocket-change-feed.md` |
 | FR-99, FR-100, NFR-25, NFR-26 | `spec-041-tls-webhooks-and-shared-limits.md` |
+| FR-101, NFR-27                | `spec-042-yrs-crdt-merge.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

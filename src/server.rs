@@ -30,6 +30,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 mod contract;
+pub mod crdt;
 mod http;
 pub mod limits;
 mod pagination;
@@ -47,6 +48,7 @@ pub use contract::{
     OWNER_TOKEN, RequestLogEntry, SUPPORTED_VERSIONS, VERSION_HEADER, new_request_id, parse_bearer,
     version_supported,
 };
+pub use crdt::CrdtStore;
 pub use http::{format_http_response, parse_http_request, serve_forever, serve_on, serve_once};
 pub use limits::{
     FREE_MULTI_MEMBER_BLOCK_LIMIT, LimitViolation, MAX_ARRAY_ITEMS, MAX_BLOCK_ELEMENTS,
@@ -193,6 +195,7 @@ pub struct WorkspaceServer {
     shared_rate_store: Option<Arc<dyn crate::store::RateLimitStore>>,
     realtime: realtime::RealtimeHub,
     webhook_sender: Box<dyn WebhookSender>,
+    crdt: crdt::CrdtStore,
 }
 
 impl WorkspaceServer {
@@ -278,6 +281,7 @@ impl WorkspaceServer {
             shared_rate_store: None,
             realtime: realtime::RealtimeHub::new(256),
             webhook_sender: Box::new(UreqWebhookSender::new()),
+            crdt: crdt::CrdtStore::new(),
         }
     }
 
@@ -695,8 +699,41 @@ impl WorkspaceServer {
         let actor = self.collab.owner_id();
         let change = self.collab.record(op, page_id, &actor);
         self.persist()?;
+        // A REST write is the structure source of truth; re-seed the CRDT text
+        // from the new snapshot instead of keeping a divergent document.
+        if page_id == "*" {
+            self.crdt.reset_all();
+        } else {
+            self.crdt.reset_page(page_id);
+        }
         self.realtime.publish_change(change);
         Ok(())
+    }
+
+    /// Sync one page's CRDT text after an optional state vector.
+    pub fn crdt_sync(
+        &mut self,
+        page_id: &str,
+        state_vector: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>), String> {
+        self.crdt.ensure_page(&self.workspace, page_id)?;
+        self.crdt.sync(&self.workspace, page_id, state_vector)
+    }
+
+    /// Apply a CRDT update, project the merged text and persist the snapshot.
+    pub fn apply_crdt_update(
+        &mut self,
+        page_id: &str,
+        update: &[u8],
+        actor: &str,
+    ) -> Result<Vec<u8>, String> {
+        self.crdt.ensure_page(&self.workspace, page_id)?;
+        let merged = self.crdt.apply_update(&self.workspace, page_id, update)?;
+        self.crdt.project(&mut self.workspace, page_id)?;
+        self.workspace.bump_version();
+        self.collab.record(ChangeOp::Update, page_id, actor);
+        self.persist().map_err(|error| error.to_string())?;
+        Ok(merged)
     }
 }
 

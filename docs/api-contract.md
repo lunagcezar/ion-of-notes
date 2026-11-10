@@ -146,8 +146,8 @@ All DTOs are serde structs/enums in `src/model.rs` and `src/collab.rs`.
 | `SyncBatch` | `cursor`, `changes` |
 | `RealtimeEvent` | `kind`, `page_id`, `actor`, `payload` |
 | `RealtimeContract` | `transport`, `channel`, `events`, `conflict_resolution`, `resume`, `messages` |
-| `ServerMessage` | `ready`, `change`, `presence`, `pong`, `error` (tagged by `type`) |
-| `ClientMessage` | `ping` |
+| `ServerMessage` | `ready`, `change`, `presence`, `crdt_sync`, `crdt_update`, `pong`, `error` (tagged by `type`) |
+| `ClientMessage` | `ping`, `crdt_sync`, `crdt_update` |
 | `PresenceMember` | `session_id`, `member_id`, `name`, `state` |
 | `ExportFile` | `path`, `content` |
 
@@ -379,8 +379,13 @@ v1 routes stay stable.
 - The client may send `{"type":"ping"}`; the server replies `pong`.
 - Every successful `WorkspaceServer::write` publishes a `change` after the
   persist succeeds.
-- This slice is a versioned change feed + presence. Full Yrs/Automerge merge is
-  staged; use `If-Match` and page snapshots for conflict handling today.
+- `crdt_sync {page_id, state_vector?}` returns a base64 Yrs update and state
+  vector; `crdt_update {page_id, update}` merges text and broadcasts the update.
+- Yrs merges the page title and `block:<id>` text. The server projects the
+  merged text into the durable page snapshot; REST remains the structure source
+  and resets the page's CRDT document after a write.
+- CRDT history is in memory; the persisted page snapshot re-seeds after a
+  restart.
 
 | Concern | v1 today | v2 target | Spec | Status |
 | ------- | -------- | --------- | ---- | ------ |

@@ -111,7 +111,7 @@ listed in §5; they are planned in specs 030–038.
 ### RF-D06 — Unknowns ledger reported "65 tests" and stale U-06 progress
 
 - **Severity:** medium
-- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 240.
+- **Evidence:** `docs/unknowns.md` ended with "65 tests"; the suite now has 243.
   U-06 still said version history was only planned, while spec-015 implemented
   it and spec-026 added archive/discussions.
 - **Impact:** a reader could not tell which page actions are real.
@@ -249,7 +249,7 @@ documentation pass; each needs its own spec.
 | - | ------- | ------ | ------------------- |
 | RF-C01 | ~~Settings search filters the navigation rail, not the rows inside the open section (spec-016 A9).~~ | A search can highlight a section but still show unrelated rows. | **Resolved:** per-page row table and filtered rendering (spec-016 A9). |
 | RF-C02 | ~~Auth/sessions, password hashing and Bearer tokens are decided (ADR-003) but not implemented.~~ | The loopback server has no authentication; it is local-only by design. | **Resolved:** Argon2id accounts, opaque sessions and SQLite (spec-039). |
-| RF-C03 | ~~The WebSocket/CRDT real-time channel is a contract (`GET /api/realtime`) but no server runs it.~~ | "Real-time editing" is a decided target, not a working feature. | **Partially resolved:** WebSocket change feed + presence (spec-040); CRDT merge staged. |
+| RF-C03 | ~~The WebSocket/CRDT real-time channel is a contract (`GET /api/realtime`) but no server runs it.~~ | "Real-time editing" is a decided target, not a working feature. | **Server-side resolved:** WebSocket feed (spec-040) and Yrs text merge (spec-042); the egui editor adapter is staged. |
 | RF-C04 | Invite messages are captured in UI state but not sent (`MemberDraft` has no message field). | The optional message is silently discarded. | Add `message` to `MemberDraft` or remove the field from the UI. |
 | RF-C05 | Inline comments persist a flag but not block anchors. | The UI must explain that anchors are not implemented. | Block-anchor model + tests. |
 | RF-C06 | Workspace deletion is disabled. | The danger-zone control is a placeholder. | Decide destructive-flow semantics before enabling. |
@@ -303,7 +303,7 @@ block limits, retry guidance and the operational error taxonomy).
   or settings changes.
 - **Version retention:** 50 newest snapshots per page, restore records a new
   version.
-- **Test discipline:** 240 integration tests, no `#[cfg(test)]` in `src/`,
+- **Test discipline:** 243 integration tests, no `#[cfg(test)]` in `src/`,
   shared helpers in `tests/common/mod.rs`.
 - **Quality gates:** `cargo test --all-targets`, clippy and `cargo fmt --check`
   are clean at the time of this review.
@@ -343,6 +343,7 @@ block limits, retry guidance and the operational error taxonomy).
 | Done | Sessions, Argon2id and SQLite storage | `spec-039` |
 | Done | WebSocket change feed and presence | `spec-040` |
 | Done | TLS webhooks and shared rate limits | `spec-041` |
+| Done | Yrs CRDT text merge | `spec-042` |
 | Done | Settings row filtering (A9) | spec-016 |
 | Later | Persist the selected language | spec-028 follow-up |
 | Later | Send or remove the invite message | spec-023 follow-up |
