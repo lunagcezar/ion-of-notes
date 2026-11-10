@@ -1,157 +1,313 @@
 # ion-of-notes
 
-A clean-room desktop workspace application: pages made of editable blocks, a
-page-tree sidebar, quick search, an inline table database, and a self-hosted
-collaboration contract. Built in Rust with eframe/egui.
+A clean-room, self-hosted workspace for notes, pages and databases. Built in
+Rust with **eframe/egui** for the desktop window and **Axum/Tokio/Tower** for the
+optional HTTP/WebSocket server.
 
-The system has two sides:
-
-- **Client** — the desktop window and `Client<A: WorkspaceApi>`.
-- **Server** — `WorkspaceServer`, which owns all state and exposes the same
-  contract in-process and through an optional loopback HTTP listener.
-
-The target is a **self-hosted server with accounts, document sync, sharing and
-real-time editing**. The loopback slice is real and tested today; the
-production auth/WebSocket/PostgreSQL adapters are decided but not built
-(ADR-003). All state lives on the server; the client never mutates it directly.
+The desktop is local-first and works without a server. The same workspace
+contract is also exposed over a loopback API, with accounts, sessions, SQLite
+persistence, a versioned change feed, WebSocket CRDT sync and signed webhooks.
 
 Everything is written in English and built spec-first (`spec/`) and test-first
-(`cargo test`). Start with [`docs/index.md`](docs/index.md) for the full
-documentation map.
+(`cargo test`). The documentation hub is [`docs/index.md`](docs/index.md).
 
-## Status (2026-11-08)
+## Features
 
-- **Specs:** 001–043 implemented; 007 retired; 016 is a plan with B5 done; 029
-  is the documentation pass.
-- **Tests:** 248 integration tests; clippy and `cargo fmt --check` are clean.
-- **Implemented:** workspace/page CRUD, blocks, inline table, search, theme,
-  screenshot mode, members/shares/sync log, version history (50/page), export
-  tree, per-page writes with 250 ms debounce, collaboration persistence,
-  functional Share/Library/Settings/page-action/comment/onboarding/template
-  surfaces, and en/pt-BR/eo translations for core UI copy.
-- **Web server:** `--serve` uses an Axum/Tokio/Tower HTTP adapter (spec-038).
-  `--database <path>` selects SQLite; Argon2id accounts, opaque sessions,
-  login/logout/session routes and JSON→SQLite migration are implemented
-  (spec-039). `GET /ws/workspace/{id}` streams a versioned change feed with
-  presence and `?since=` resume (spec-040). Webhook delivery uses ureq/rustls
-  and rate limits can share a SQLite store (spec-041). Yrs CRDT text merge is
-  implemented server-side (spec-042); the desktop editor now uses a client-side
-  Yrs session and awareness cursors (spec-043). A remote WebSocket client and
-  PostgreSQL remain next.
-- **Public API alignment (B4):** the public Notion developer docs were reviewed
-  and turned into a v2 roadmap. The **foundation, pagination, rich text/blocks,
-  properties/data sources, views, comments/users/files, webhooks and limits are
-  implemented** (specs 030–038): `/api/v2`, `Ion-Of-Notes-Version`, Bearer auth,
-  structured `ApiError`, capabilities, request IDs, `ListResponse`, opaque
-  cursors, rich text, block children, typed properties, databases, data
-  sources, views, comments, users, file uploads, signed webhooks and the
-  operational rate/size/block contract. v1 stays stable. See
-  [`docs/public-api-analysis.md`](docs/public-api-analysis.md) and
-  [`docs/adr-006-public-api-alignment.md`](docs/adr-006-public-api-alignment.md).
-- **Clean room:** strict public-behavior-only observation. No capture, proxy,
-  Wireshark, source maps or decompilation. See
-  [`docs/clean-room.md`](docs/clean-room.md).
+### Desktop workspace
 
-## Architecture at a glance
+- Page tree, favorites, tabs, breadcrumbs, navigation history and quick search
+  (`Ctrl+K`).
+- Block editor: headings, paragraphs, bullets, numbered lists, to-dos, quotes,
+  callouts, code, dividers, tables, toggles, child pages, column lists and
+  unsupported-block placeholders.
+- Drag-to-reorder, block handles, slash menu, markdown shortcuts, undo/redo,
+  multi-block selection and table row actions.
+- Page actions: icons, cover-style callouts, lock, archive, table of contents,
+  discussions and inline-comment preferences.
+- Library table/board views, filters, sharing dialog, Inbox, version history
+  (newest 50 snapshots per page) and export tree.
+- Light/dark themes, full-width and small-text modes, zoom, page icons and
+  starter templates.
+- Localization: English, Brazilian Portuguese and Esperanto for core UI copy.
+- Screenshot mode for reproducible visual checks.
 
-```mermaid
-flowchart LR
-    User --> Window[egui desktop window]
-    Window --> Client[Client of WorkspaceApi]
-    Client --> API[WorkspaceApi]
-    API --> Server[WorkspaceServer]
-    Server --> W[(workspace.json)]
-    Server --> C[(collab.json)]
-    Server --> Export[Export tree]
-```
+### Collaboration and sharing
 
-- `model.rs` + `model/*` — entities, tree behavior, search, diff, index,
-  settings, seed.
-- `collab.rs` + `collab/export.rs` — accounts, roles, shares, sync log,
-  versions, realtime DTOs, export tree.
-- `server.rs` + `server/*` — routes, `WorkspaceApi`, loopback HTTP adapter,
-  URL encoding.
-- `client.rs` — the only data access the UI may use.
-- `store.rs` — `WorkspaceStore` and `CollabStore` ports with JSON/null
-  adapters.
-- `app.rs` — composition root; `main.rs` is CLI wiring only.
-- `ui.rs` + `ui/*` — commands, view state, input, apply, render, dialogs,
-  widgets, switcher, page icon, edit queue, filters, caches.
-- `templates.rs`, `ollama.rs`, `shortcuts.rs`, `screenshot.rs`, `cli.rs`,
-  `i18n.rs` — focused adapters/helpers.
+- Accounts, roles (owner/member/guest), sharing grants and a people directory.
+- Versioned sync log and page snapshots.
+- Page and block comments with attachments (up to three) and display names.
+- Export to a Notion-style markdown tree plus People markdown/CSV.
+- Real-time change feed with presence, `?since=` resume and ping/pong.
+- Yrs CRDT merge for page title and block text, with client-side awareness
+  cursors and selections.
 
-Dependency direction: `ui → client → server → model`, `server → store`, and
-`app` wires the concrete adapters. `model` and `collab` know nothing about
-egui, eframe, JSON files or sockets.
+### API and server
 
-## Documentation
+- Stable v1 routes and a versioned `/api/v2` contract.
+- `Ion-Of-Notes-Version` header, Bearer auth, structured `ApiError`,
+  capabilities and request IDs.
+- Cursor pagination with `ListResponse`, opaque cursors and `page_size`.
+- Rich text, block metadata/children, typed properties, databases, data
+  sources and views.
+- Comments, users, file uploads and attachments.
+- Webhook subscriptions, HMAC-SHA256 signatures, aggregation and retries.
+- Rate limits, request-size/block limits and `Retry-After` guidance.
+- Axum/Tokio/Tower HTTP adapter with graceful shutdown.
+- SQLite persistence (`--database`), Argon2id accounts, opaque sessions and
+  JSON→SQLite migration.
+- WebSocket `/ws/workspace/{id}` change feed, presence, CRDT sync/update and
+  awareness.
+- TLS webhook delivery with ureq/rustls, no automatic redirects.
+- Shared SQLite rate-limit budgets across server instances using the same file.
 
-| Read                                                         | Why                                               |
-| ------------------------------------------------------------ | ------------------------------------------------- |
-| [`docs/index.md`](docs/index.md)                             | Reading order and source-of-truth rules           |
-| [`docs/architecture.md`](docs/architecture.md)               | Layers, modules, request/persistence flows        |
-| [`docs/contributor-guide.md`](docs/contributor-guide.md)     | SDD/TDD workflow and where code belongs           |
-| [`docs/testing.md`](docs/testing.md)                         | Test strategy, 17 test crates, fakes              |
-| [`docs/glossary.md`](docs/glossary.md)                       | Shared vocabulary                                 |
-| [`docs/api-contract.md`](docs/api-contract.md)               | Implemented loopback API vs decided `/api/v1`/v2  |
-| [`docs/public-api-analysis.md`](docs/public-api-analysis.md) | B4 public Notion API analysis and v2 roadmap      |
-| [`docs/clean-room.md`](docs/clean-room.md)                   | Allowed sources, evidence levels, stop conditions |
-| [`docs/review-findings.md`](docs/review-findings.md)         | Review findings and follow-ups                    |
-| [`spec/README.md`](spec/README.md)                           | Spec index and status                             |
-| [`AGENTS.md`](AGENTS.md)                                     | Working rules for agents and contributors         |
+### AI assistant (optional)
 
-## Build and run
+- Ollama integration through the `ollama` CLI in `PATH` or an HTTP service at
+  `OLLAMA_HOST` (default `127.0.0.1:11434`).
+- Settings → AI assistant can check connectivity, choose a model and ask a
+  test question.
+
+## Requirements
+
+- A recent **stable Rust** toolchain (edition 2024).
+- A C compiler for bundled SQLite:
+  - Windows: Visual Studio Build Tools with the MSVC C++ workload.
+  - Linux: `build-essential` or equivalent.
+  - macOS: Xcode Command Line Tools.
+- PowerShell 7 (`pwsh`) for the optional quality scripts. On Linux/macOS,
+  install PowerShell or run the underlying `cargo` commands directly.
+- No Node.js, browser engine or web view is required.
+- Optional: Ollama for the AI assistant.
+
+## Quick start (desktop)
 
 ```sh
-cargo build
-cargo test --all-targets
-cargo run
+git clone <your-repository-url> ion-of-notes
+cd ion-of-notes
+cargo run --release
 ```
 
-For the full gate (formatting, clippy, tests and Markdown checks):
+The window opens at 1322×861 logical points. On first start a neutral demo
+workspace is created.
+
+Data locations:
+
+- Windows: `%LOCALAPPDATA%\ion-of-notes\workspace.json` and `collab.json`
+- macOS/Linux: `$HOME/ion-of-notes/workspace.json` and `collab.json`
+
+`workspace.json` and `collab.json` are separate documents, so a corrupt
+collaboration file cannot destroy pages.
+
+## Run the API server
+
+The server is optional. Without `--database` it uses the JSON documents; with
+`--database` it uses SQLite.
 
 ```sh
-pwsh -File scripts/quality.ps1
+# JSON persistence (same documents as the desktop)
+cargo run --release -- --serve 127.0.0.1:8787
+
+# SQLite persistence; an empty database imports the JSON documents once
+cargo run --release -- --serve 127.0.0.1:8787 --database data/ion-of-notes.sqlite3
 ```
 
-CI (`.github/workflows/ci.yml`) runs formatting, clippy, tests and a release
-build on Windows.
+Stop with `Ctrl+C`; the Axum adapter shuts down gracefully.
 
-### Other modes
+Health check:
 
 ```sh
-# Save a picture of the window after ~120 frames and exit:
-cargo run -- --screenshot shots/now.png
-
-# Serve the workspace API on loopback (Ctrl+C to stop):
-cargo run -- --serve 127.0.0.1:8787
+curl http://127.0.0.1:8787/health
 ```
 
-The workspace is saved as JSON in the app data directory. On first start a
-small neutral demo workspace is created. `workspace.json` and `collab.json`
-are separate documents so a corrupt collaboration file cannot destroy pages.
+### First SQLite run and the owner account
 
-### Previewing the pictured states
+The first SQLite run seeds the owner account from
+`ION_OF_NOTES_OWNER_PASSWORD`:
 
-The window follows the dark-theme reference pictures in `reference/` (98
-pictures: the original 29 plus the later build) and the 72 local
-`screenshots/` pictures: a top tab strip, a sidebar, a breadcrumb bar, a
-centered page column, and the Library, Share, Inbox and Settings opened states.
-Set `ION_OF_NOTES_SHOW` to capture one state:
+```sh
+# PowerShell
+$env:ION_OF_NOTES_OWNER_PASSWORD = "choose-a-strong-password"
+cargo run --release -- --serve 127.0.0.1:8787 --database data/ion-of-notes.sqlite3
+```
+
+```bash
+# bash
+export ION_OF_NOTES_OWNER_PASSWORD="choose-a-strong-password"
+cargo run --release -- --serve 127.0.0.1:8787 --database data/ion-of-notes.sqlite3
+```
+
+If the variable is not set, the development default `change-me-now` is used and
+a warning is printed. The account is seeded **once**; changing the variable
+later does not change an existing password (there is no password-reset flow
+yet).
+
+### Log in and call v2
+
+```powershell
+# PowerShell
+$body = @{ email = "owner@workspace.local"; password = $env:ION_OF_NOTES_OWNER_PASSWORD } | ConvertTo-Json
+$session = Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8787/api/v2/auth/login `
+  -Headers @{ "Ion-Of-Notes-Version" = "2026-11-08"; "Content-Type" = "application/json" } `
+  -Body $body
+
+$token = $session.data.token
+Invoke-RestMethod -Uri http://127.0.0.1:8787/api/v2/workspace `
+  -Headers @{ "Ion-Of-Notes-Version" = "2026-11-08"; "Authorization" = "Bearer $token" }
+```
+
+```bash
+# bash
+TOKEN=$(curl -s http://127.0.0.1:8787/api/v2/auth/login \
+  -H 'Ion-Of-Notes-Version: 2026-11-08' \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"owner@workspace.local","password":"change-me-now"}' \
+  | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+curl -s http://127.0.0.1:8787/api/v2/workspace \
+  -H 'Ion-Of-Notes-Version: 2026-11-08' \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+v1 routes (`/api/workspace`, `/api/pages`, …) stay stable and do not require
+the v2 version header. v2 routes require both the version header and a Bearer
+token, except login.
+
+### WebSocket endpoint
+
+```text
+ws://127.0.0.1:8787/ws/workspace/{workspace_id}?token={session}&since={seq}
+```
+
+The `Authorization: Bearer` header is also accepted. Messages are JSON text
+frames tagged by `type`:
+
+- Server → client: `ready`, `change`, `presence`, `crdt_sync`, `crdt_update`,
+  `awareness`, `pong`, `error`.
+- Client → server: `ping`, `crdt_sync`, `crdt_update`, `awareness`.
+
+The socket matches the server workspace (`401`/`404` on failure), replays
+changes after `since`, and broadcasts committed changes, CRDT updates and
+awareness. See [`docs/api-contract.md`](docs/api-contract.md) for payloads.
+
+> The desktop currently uses the **in-process** transport. A remote WebSocket
+> client adapter is planned; the endpoint is available to external clients now.
+
+## Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ION_OF_NOTES_OWNER_PASSWORD` | `change-me-now` | Password for the seeded owner on the first SQLite run |
+| `ION_OF_NOTES_SHOW` | unset | Open one pictured UI state for screenshots |
+| `ION_OF_NOTES_LOCALE` | `en` | Initial locale (`en`, `pt-BR`, `eo`) |
+| `ION_OF_NOTES_OLLAMA_MODEL` | `llama3.2` / detected | Preferred Ollama model |
+| `OLLAMA_HOST` | `127.0.0.1:11434` | Ollama service host and port |
+| `RUST_LOG` | `info,tower_http=info` | Server tracing filter |
+
+### Preview states
+
+Set `ION_OF_NOTES_SHOW` to capture one pictured state:
 
 ```sh
 ION_OF_NOTES_SHOW=settings-general cargo run -- --screenshot shots/settings.png
 ```
 
-Accepted values: `library`, `share`, `inbox`, `settings`,
-`settings-general`, `settings-sidebar`, `settings-people`,
-`settings-offline`, `search`, `tasks`, `newtab`, `ai`, `shortcuts`,
-`iconpicker`, `pageactions`, `discussions`, `onboarding`, `templates`.
-Normal runs never set this variable.
+Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
+`settings-sidebar`, `settings-people`, `settings-offline`, `search`, `tasks`,
+`newtab`, `ai`, `shortcuts`, `iconpicker`, `pageactions`, `discussions`,
+`onboarding`, `templates`.
+
+## Development
+
+```sh
+cargo build
+cargo test --all-targets
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
+```
+
+Full gate, including Markdown link/Mermaid/table checks:
+
+```sh
+pwsh -File scripts/quality.ps1
+```
+
+Screenshot mode renders about 120 frames, writes a PNG and exits:
+
+```sh
+cargo run -- --screenshot shots/now.png
+```
+
+CI (`.github/workflows/ci.yml`) runs formatting, clippy, tests and a release
+build on Windows.
+
+## Project layout
+
+```text
+src/
+  main.rs          CLI wiring only (desktop, --screenshot, --serve)
+  app.rs           composition root
+  model.rs         workspace, pages, blocks, rich text, properties, views
+  model/           seed, search, diff, index, settings
+  auth.rs          accounts, Argon2id, sessions
+  collab.rs        roles, sharing, sync log, versions, realtime DTOs
+  collab/          export tree
+  store.rs         WorkspaceStore, CollabStore, AuthStore, RateLimitStore ports
+  store/sqlite.rs  SQLite adapter and JSON migration
+  server.rs        WorkspaceServer, WorkspaceApi, routes
+  server/          Axum/WebSocket, realtime hub, CRDT, webhooks, limits
+  client.rs        the UI's only data access
+  ui.rs            UI facade
+  ui/              state, commands, rendering, dialogs, client CRDT session
+  templates.rs     starter templates
+  ollama.rs        AI assistant adapter
+  shortcuts.rs     keyboard table
+  screenshot.rs    PNG output
+  cli.rs           argument parsing
+  i18n.rs          locale switching
+tests/             one integration-test crate per module (248 tests)
+```
+
+Dependency direction: `ui → client → server → model`, `server → store`; `app`
+wires the concrete adapters. `model` and `collab` know nothing about egui,
+eframe, JSON files or sockets.
+
+## Documentation
+
+| Read | Why |
+| --- | --- |
+| [`docs/index.md`](docs/index.md) | Reading order and source-of-truth rules |
+| [`docs/architecture.md`](docs/architecture.md) | Layers, modules, request/persistence flows |
+| [`docs/contributor-guide.md`](docs/contributor-guide.md) | SDD/TDD workflow and where code belongs |
+| [`docs/testing.md`](docs/testing.md) | Test strategy, crates and fakes |
+| [`docs/glossary.md`](docs/glossary.md) | Shared vocabulary |
+| [`docs/api-contract.md`](docs/api-contract.md) | Implemented v1/v2 routes and WebSocket messages |
+| [`docs/public-api-analysis.md`](docs/public-api-analysis.md) | Public API analysis and v2 roadmap |
+| [`docs/clean-room.md`](docs/clean-room.md) | Allowed sources, evidence levels, stop conditions |
+| [`docs/review-findings.md`](docs/review-findings.md) | Review findings and follow-ups |
+| [`spec/README.md`](spec/README.md) | Spec index and status |
+| [`AGENTS.md`](AGENTS.md) | Working rules for agents and contributors |
+
+## Current limitations
+
+- The desktop uses the in-process server; a remote WebSocket client adapter is
+  not built yet.
+- CRDT covers page title/block text. Block structure, properties and databases
+  remain REST-owned.
+- The remote-caret overlay uses first-line width, so multi-line positions are
+  approximate.
+- SQLite is single-node; PostgreSQL and Redis/shared multi-node rate limiting
+  are not implemented.
+- There is no browser UI, registration, password reset or account-management UI.
+- TLS termination, reverse-proxy configuration and deployment manifests are not
+  included; run the server behind a trusted proxy for network access.
+- Webhooks have no async queue/dead-letter store, and private CA/mTLS setup is
+  not configured.
+- B3 own-account capture remains blocked by the strict clean-room scope.
 
 ## Open source
 
-`ion-of-notes` is open source under the **MIT** license (see `LICENSE`).
+`ion-of-notes` is open source under the **MIT** license (see [`LICENSE`](LICENSE)).
 
 ## Clean room
 
@@ -159,6 +315,5 @@ The project reconstructs public behavior only. The 98 `reference/` pictures
 (the original 29 plus the later build) are the primary visual source of truth;
 the 72 `screenshots/` pictures are local later-build evidence. No original
 program, file, asset, traffic capture, source map or decompiled code is read,
-run or copied. See
-[`docs/clean-room.md`](docs/clean-room.md) and
+run or copied. See [`docs/clean-room.md`](docs/clean-room.md) and
 [`docs/reverse-engineering-log.md`](docs/reverse-engineering-log.md).
