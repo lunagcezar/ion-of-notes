@@ -47,6 +47,7 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Shared limits    | SQLite `rate_limits` + `RateLimitStore` | Multi-server workspace budgets (spec-041)        |
 | CRDT             | Yrs per-page text documents         | Server merge (042) + client session/awareness (043) |
 | Remote desktop   | ureq REST + tokio-tungstenite WS    | `--server`/`--token` remote mode (044)               |
+| Deployment       | Docker multi-stage + Compose        | `ion-of-notes-server`, `ion-data` volume (spec-050) |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
@@ -104,6 +105,8 @@ set at the time.
 ```
 src/
   main.rs          CLI wiring only (desktop, --screenshot, --serve)
+  bin/
+    ion-of-notes-server.rs  server-only entry point (no desktop feature)
   app.rs           composition root (bootstrap): wires workspace + collaboration adapters to ports
   lib.rs           crate root and public re-exports
   model.rs         facade: module declarations, pub re-exports, time helpers
@@ -238,6 +241,10 @@ tests/
   auth.rs          password hashing, login/logout/session, SQLite restart
   sqlite_store.rs  SQLite round-trip, accounts/sessions, JSON migration
   integration.rs   end-to-end client/server/store scenario
+Dockerfile         multi-stage server-only image
+compose.yml        self-hosted server stack with the ion-data volume
+.env.example       Compose password and port template
+.dockerignore      build-context exclusions
 ```
 
 Dependency direction: `ui -> client -> server -> model`, `server -> store`,
@@ -553,6 +560,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
+| `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
 | `cargo test --all-targets --no-default-features` | Core integration tests (229, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (26) |
 | `cargo test --all-targets`               | All default-feature tests (254; the core-only seam test is skipped) |
@@ -563,6 +571,8 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
 | `cargo run -- --serve 127.0.0.1:8787`   | Run the Axum API server                  |
 | `cargo run -- --serve 127.0.0.1:8787 --database data.db` | Run with SQLite persistence |
+| `docker compose up --build`              | Build and run the self-hosted server stack |
+| `docker compose down`                    | Stop the stack; the `ion-data` volume stays |
 
 Build profiles keep the full gate usable on memory-constrained machines:
 `[profile.dev] debug = "line-tables-only"` and `[profile.test] debug = 0`
@@ -570,6 +580,12 @@ remove the ~250 MB PDB per test binary, while `incremental = true` and Cargo's
 default job count stay unchanged (spec-048). The `desktop` feature is on by
 default; core tests opt out with `--no-default-features`, so they never
 compile or link eframe/egui/wgpu.
+
+The headless `ion-of-notes-server` binary is built with
+`--no-default-features` and shares `app::serve` with the desktop `--serve`
+path. `Dockerfile` produces a slim Debian runtime image, and `compose.yml`
+runs it with the `ion-data` volume, a required owner password and the
+`/health` healthcheck (spec-050).
 
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust

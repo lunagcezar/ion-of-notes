@@ -101,6 +101,18 @@ pub fn build_server_at_paths(workspace_path: PathBuf, collab_path: PathBuf) -> W
     WorkspaceServer::with_paths(workspace, workspace_path, collab_path)
 }
 
+/// Compose and run the Axum API server for `--serve`.
+///
+/// The desktop binary and the server-only binary share this wiring, so the
+/// JSON/SQLite choice and the listener startup exist once.
+pub fn serve(addr: &str, database: Option<PathBuf>) -> io::Result<()> {
+    let server = match database {
+        Some(database) => build_server_sqlite(database)?,
+        None => build_server(),
+    };
+    crate::server::serve_axum(addr, server)
+}
+
 /// Compose a server backed by SQLite, migrating the default JSON documents
 /// when the database is empty.
 pub fn build_server_sqlite(database: PathBuf) -> io::Result<WorkspaceServer> {

@@ -63,6 +63,8 @@ test crates declare `required-features = ["desktop"]`; the core test pass uses
 ```text
 src/
   main.rs            CLI wiring only
+  bin/
+    ion-of-notes-server.rs  server-only entry point (no desktop feature)
   app.rs             composition root
   lib.rs             crate facade and re-exports
   model.rs           facade: declarations, re-exports and time helpers
@@ -141,6 +143,10 @@ src/
     edit_queue.rs    commit plan + debounce
     crdt.rs          client Yrs session, local diff and awareness
 ```
+
+Deployment files live at the repository root: `Dockerfile` (multi-stage,
+server-only build), `compose.yml` (server + `ion-data` volume),
+`.dockerignore` and `.env.example` (spec-050).
 
 ## 4. Request lifecycle
 
@@ -362,6 +368,10 @@ new stores and delivery workers.
 - v1 and v2 adapt the same `server/usecases` functions; v2 no longer rewrites
   routes into v1. `route_capability` is the single capability table and is
   covered by `tests/contract.rs` (spec-047).
+- The container runs the server-only `ion-of-notes-server` binary built with
+  `--no-default-features`; the desktop binary is not containerized. The
+  `ion-data` volume holds the SQLite state, and `SIGTERM` is a graceful
+  shutdown (spec-050).
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.

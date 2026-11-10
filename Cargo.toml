@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 publish = false
+default-run = "ion-of-notes"
 
 [features]
 # The desktop window is the default product; core tests opt out with
@@ -40,6 +41,12 @@ base64 = "0.23.1"
 name = "ion-of-notes"
 path = "src/main.rs"
 required-features = ["desktop"]
+
+# Headless server entry point for containers and self-hosted deployments.
+# Build it with `--no-default-features` to omit eframe/egui/wgpu.
+[[bin]]
+name = "ion-of-notes-server"
+path = "src/bin/ion-of-notes-server.rs"
 
 [profile.dev]
 opt-level = 0

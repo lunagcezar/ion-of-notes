@@ -121,7 +121,36 @@ cargo run --release -- --serve 127.0.0.1:8787
 cargo run --release -- --serve 127.0.0.1:8787 --database data/ion-of-notes.sqlite3
 ```
 
-Stop with `Ctrl+C`; the Axum adapter shuts down gracefully.
+Stop with `Ctrl+C`; the Axum adapter shuts down gracefully. In a container,
+`SIGTERM` from `docker stop`/`docker compose down` also shuts it down cleanly.
+
+### Server-only binary
+
+For a headless build without eframe/egui/wgpu:
+
+```sh
+cargo build --release --no-default-features --bin ion-of-notes-server
+./target/release/ion-of-notes-server --serve 0.0.0.0:8787 --database data/ion-of-notes.sqlite3
+```
+
+The desktop binary (`cargo run`) and the server binary share the same
+`app::serve` composition path; only the desktop binary needs the `desktop`
+feature.
+
+### Docker Compose
+
+```sh
+cp .env.example .env
+# edit .env and set a strong ION_OF_NOTES_OWNER_PASSWORD
+docker compose up --build
+curl http://127.0.0.1:8787/health
+```
+
+The `ion-data` volume keeps the SQLite workspace and collaboration state across
+container recreation. `docker compose down` keeps the volume; add `-v` to
+remove it. Compose refuses to start while `ION_OF_NOTES_OWNER_PASSWORD` is
+unset. The container runs as a non-root user, exposes port 8787 and uses the
+image healthcheck.
 
 Health check:
 
@@ -224,6 +253,7 @@ successful login; the session token is not persisted across restarts.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `ION_OF_NOTES_OWNER_PASSWORD` | `change-me-now` | Password for the seeded owner on the first SQLite run |
+| `ION_OF_NOTES_PORT` | `8787` | Host port published by `compose.yml` |
 | `ION_OF_NOTES_SHOW` | unset | Open one pictured UI state for screenshots |
 | `ION_OF_NOTES_LOCALE` | `en` | Initial locale (`en`, `pt-BR`, `eo`) |
 | `ION_OF_NOTES_OLLAMA_MODEL` | `llama3.2` / detected | Preferred Ollama model |
@@ -281,6 +311,8 @@ release build. GitHub uses `.github/workflows/ci.yml` on Windows; GitLab uses
 ```text
 src/
   main.rs          CLI wiring only (desktop, --screenshot, --serve)
+  bin/
+    ion-of-notes-server.rs  server-only entry point (no desktop feature)
   app.rs           composition root
   model.rs         facade: declarations, re-exports, time helpers
   model/           rich text, blocks, properties, databases, views, files,
@@ -304,6 +336,9 @@ src/
   cli.rs           argument parsing
   i18n.rs          locale switching
 tests/             one integration-test crate per module (255 tests)
+Dockerfile         multi-stage server-only image
+compose.yml        self-hosted server stack with the ion-data volume
+.env.example       Compose password and port template
 ```
 
 Dependency direction: `ui → client → server → model`, `server → store`; `app`

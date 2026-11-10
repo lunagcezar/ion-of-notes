@@ -2,7 +2,6 @@
 
 use ion_of_notes::app;
 use ion_of_notes::cli::{Args, Mode};
-use ion_of_notes::server::serve_axum;
 use ion_of_notes::ui::NotionApp;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -12,11 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match args.mode {
         Mode::Serve { addr } => {
             // SQLite is opt-in; JSON remains the default local adapter.
-            let server = match args.database {
-                Some(database) => app::build_server_sqlite(database)?,
-                None => app::build_server(),
-            };
-            serve_axum(&addr, server)?;
+            app::serve(&addr, args.database)?;
             Ok(())
         }
         Mode::Desktop { screenshot } => {

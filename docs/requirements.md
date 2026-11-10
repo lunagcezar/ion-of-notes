@@ -427,6 +427,12 @@ capabilities) is implemented; the rest are planned.
   `desktop` feature; core tests run with `--no-default-features`, and the
   `test` profile uses `debug = 0` while `dev` uses `line-tables-only`
   (spec-048).
+- NFR-32: The server can be built and deployed without the desktop stack.
+  `ion-of-notes-server` is built with `--no-default-features`, shares
+  `app::serve` with the desktop `--serve` path, runs as a non-root container
+  user, persists SQLite state in a named volume, exposes `/health` and shuts
+  down gracefully on `SIGTERM`; Compose requires an owner password
+  (spec-050).
 
 ## 3. Requirement → spec map
 
@@ -465,6 +471,7 @@ capabilities) is implemented; the rest are planned.
 | FR-103, NFR-29                | `spec-044-remote-websocket-client.md` |
 | FR-104, NFR-30                | `spec-045-server-login-settings-ui.md` |
 | NFR-31                        | `spec-048-build-performance-and-desktop-feature-seam.md` |
+| NFR-32                        | `spec-050-server-container-and-compose.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

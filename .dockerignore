@@ -1,0 +1,11 @@
+target/
+.git/
+.github/
+.gitlab-ci.yml
+docs/
+spec/
+screenshots/
+shots/
+.env
+.env.*
+*.md

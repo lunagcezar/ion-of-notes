@@ -9,6 +9,7 @@ code belongs, and how to verify a change.
 - Rust stable (edition 2024), `cargo`.
 - Windows is the primary desktop target; the code is otherwise portable.
 - No database, web server or Node.js toolchain is required.
+- Docker + Compose are optional, only for the server container.
 - Ollama is optional (AI assistant only).
 
 ## 2. Commands
@@ -22,6 +23,8 @@ cargo fmt --check
 cargo run                       # desktop window
 cargo run -- --serve 127.0.0.1:8787
 cargo run -- --screenshot shots/now.png
+cargo build --release --no-default-features --bin ion-of-notes-server  # headless server
+docker compose up --build       # server + ion-data volume
 
 # One command for fmt + clippy + tests + Markdown checks:
 pwsh -File scripts/quality.ps1

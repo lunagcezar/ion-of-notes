@@ -117,6 +117,34 @@ own seam test.
 - Incremental compilation stays enabled and Cargo keeps its default job count;
   the gate does not set `-j` or `CARGO_INCREMENTAL`.
 
+### 3.2 Server container smoke test
+
+The Rust suite does not build Docker images, so run this smoke test when the
+server binary, `Dockerfile` or `compose.yml` changes (spec-050):
+
+```sh
+cargo build --release --no-default-features --bin ion-of-notes-server
+docker build -t ion-of-notes-server:test .
+docker run -d --name ion-test -p 18787:8787 \
+  -e ION_OF_NOTES_OWNER_PASSWORD=test-password \
+  -v ion-test-data:/data ion-of-notes-server:test
+curl http://127.0.0.1:18787/health          # {"data":"ok","error":null}
+curl -s -X POST http://127.0.0.1:18787/api/pages \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Container test","icon":"box","parent":null}'
+docker stop ion-test                       # exits promptly on SIGTERM
+docker run -d --name ion-test2 -p 18787:8787 \
+  -e ION_OF_NOTES_OWNER_PASSWORD=test-password \
+  -v ion-test-data:/data ion-of-notes-server:test
+curl http://127.0.0.1:18787/api/pages      # contains "Container test"
+docker rm -f ion-test2
+docker volume rm ion-test-data
+ION_OF_NOTES_OWNER_PASSWORD=test docker compose config
+```
+
+`docker compose up --build` must become healthy on `/health`; without
+`ION_OF_NOTES_OWNER_PASSWORD`, `docker compose config` must fail.
+
 ## 4. What each layer tests
 
 ```mermaid

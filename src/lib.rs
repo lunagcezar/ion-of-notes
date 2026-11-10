@@ -40,7 +40,7 @@ pub mod webhooks;
 pub use app::{
     DesktopApi, build_desktop, build_desktop_at, build_desktop_at_paths, build_remote_desktop,
     build_server, build_server_at, build_server_at_paths, build_server_sqlite,
-    build_server_sqlite_at,
+    build_server_sqlite_at, serve,
 };
 pub use auth::{
     Account, AuthStore, DEFAULT_OWNER_PASSWORD, LoginInput, MemoryAuthStore, NoAuthStore,

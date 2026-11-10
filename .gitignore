@@ -14,3 +14,7 @@ Thumbs.db
 # Screenshots
 shots/
 screenshots/
+
+# Local server data and Compose secrets
+/data/
+/.env

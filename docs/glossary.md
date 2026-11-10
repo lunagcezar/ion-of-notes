@@ -39,6 +39,8 @@ definition.
 | **Dependency inversion** | High-level code depends on abstractions, not concrete I/O. | ADR-002 |
 | **Open/Closed** | Add a new adapter without editing the server. | ADR-002 |
 | **Null object** | `NoStore` / `NoCollabStore` implement a port by doing nothing. | `src/store.rs` |
+| **Server-only binary** | `ion-of-notes-server`, built with `--no-default-features`; serves the API without eframe/egui/wgpu. | `src/bin/ion-of-notes-server.rs` |
+| **Compose stack** | `compose.yml` service with the `ion-data` volume, healthcheck and required owner password. | `compose.yml`, `Dockerfile` |
 
 ## 3. Domain
 

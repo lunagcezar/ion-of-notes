@@ -1,0 +1,21 @@
+# Self-hosted server stack. Copy `.env.example` to `.env`, set a strong
+# `ION_OF_NOTES_OWNER_PASSWORD`, then run `docker compose up --build`.
+#
+# The image healthcheck probes `/health`; the named volume keeps the SQLite
+# workspace and collaboration state across container recreation.
+services:
+  ion-of-notes:
+    build:
+      context: .
+    image: ion-of-notes-server:local
+    restart: unless-stopped
+    ports:
+      - "${ION_OF_NOTES_PORT:-8787}:8787"
+    environment:
+      ION_OF_NOTES_OWNER_PASSWORD: ${ION_OF_NOTES_OWNER_PASSWORD:?set ION_OF_NOTES_OWNER_PASSWORD in .env}
+      RUST_LOG: ${RUST_LOG:-info,tower_http=info}
+    volumes:
+      - ion-data:/data
+
+volumes:
+  ion-data:

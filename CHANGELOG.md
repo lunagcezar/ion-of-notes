@@ -6,6 +6,28 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added - spec-050 server-only binary and Compose deployment
+
+- Added `src/bin/ion-of-notes-server.rs`, built with
+  `--no-default-features`; the image links no eframe/egui/wgpu.
+- Extracted `app::serve(addr, database)`; the desktop `--serve` path and the
+  server binary share one composition path.
+- The Axum adapter now handles `SIGTERM` on Unix as well as Ctrl+C, so
+  `docker stop` and `docker compose down` are graceful.
+- Added a multi-stage `Dockerfile`, `.dockerignore`, `compose.yml`,
+  `.env.example` and `.gitignore` entries for `data/` and `.env`.
+- Compose requires `ION_OF_NOTES_OWNER_PASSWORD`, publishes
+  `${ION_OF_NOTES_PORT:-8787}`, mounts the `ion-data` volume and inherits the
+  `/health` healthcheck.
+- Added `default-run = "ion-of-notes"` so `cargo run` keeps opening the desktop
+  after the second binary was added.
+- Smoke-tested the image: `/health` returns `200`, a created page survives a
+  container restart on the same volume, and `docker stop` exits in about 0.5 s.
+- The Rust suite stays at 255 tests; fmt, both clippy passes, core + desktop
+  tests and `--screenshot` pass.
+- Updated `AGENTS.md`, README, architecture, testing, requirements, glossary,
+  spec index and the contributor guide.
+
 ### Added - GitLab CI pipeline and CI hardening
 
 - Added `.gitlab-ci.yml`: a Linux Rust image installs the desktop build
