@@ -87,6 +87,7 @@ src/
     contract.rs      v2 versioning, ApiError, capabilities, request IDs
     pagination.rs    v2 ListResponse, opaque cursors, page_size validation
   client.rs          typed client over WorkspaceApi
+  remote.rs          remote REST/WebSocket transport and login
   templates.rs       starter template catalog
   ollama.rs          AI assistant adapter
   shortcuts.rs       pure shortcut table
@@ -234,8 +235,8 @@ Current state:
 - Yrs merges page title/block text server-side and projects it into the durable
   snapshot (spec-042); the desktop editor uses a client Yrs session and
   awareness cursors (spec-043);
-- the desktop can use the same contract remotely with `--server`/`--token`
-  (spec-044); local mode remains the default;
+- the desktop can use the same contract remotely with `--server`/`--token` or
+  Settings → Server (spec-044/045); local mode remains the default;
 - `GET /api/realtime` returns the same contract as data.
 
 ## 8. Design principles in practice
@@ -330,14 +331,15 @@ new stores and delivery workers.
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
 - The v2 **foundation, pagination, rich text/blocks, properties/data sources,
-  views, comments/users/files, webhooks and limits** exist (specs 030-044):
+  views, comments/users/files, webhooks and limits** exist (specs 030-045):
   `/api/v2`, version/auth/capability checks, structured errors, request IDs,
   cursor list envelopes, rich text, block metadata/children, typed properties,
   databases, data sources, views, comments, users, file uploads, signed webhook
   delivery, the operational limits/retry contract, the Axum production HTTP
   adapter, SQLite-backed accounts/sessions, the WebSocket change feed, TLS
   webhook delivery, shared SQLite rate limits, Yrs CRDT text merge,
-  client-side awareness cursors and the remote desktop transport.
+  client-side awareness cursors, the remote desktop transport and the server
+  login UI.
 
 ## 12. Further reading
 
@@ -354,3 +356,4 @@ new stores and delivery workers.
 - `docs/adr-011-yrs-crdt-merge.md` - Yrs per-page text CRDT and projection.
 - `docs/adr-012-client-yrs-and-awareness.md` - client session and carets.
 - `docs/adr-013-remote-websocket-client.md` - remote REST/WebSocket transport.
+- `docs/adr-014-server-login-settings-ui.md` - server login/settings page.

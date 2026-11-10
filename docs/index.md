@@ -9,13 +9,13 @@ in what order, and which document is the source of truth for each concern.
 | -------- | ------------------ |
 | New contributor | `README.md` → `docs/architecture.md` → `docs/contributor-guide.md` → `docs/testing.md` → `docs/glossary.md` |
 | Agent starting a task | `AGENTS.md` → `spec/README.md` → `docs/architecture.md` → the relevant spec → `docs/review-findings.md` |
-| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013 |
+| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014 |
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
 ## Current status (2026-11-08)
 
-- **Specs:** `spec-001` … `spec-044` implemented; `spec-007` retired;
+- **Specs:** `spec-001` … `spec-045` implemented; `spec-007` retired;
   `spec-016` is a plan with B5 done; `spec-029` is the documentation
   overhaul; `spec-030` is the v2 foundation; `spec-031` adds pagination;
   `spec-032` adds rich text/blocks; `spec-033` adds properties/data sources;
@@ -25,12 +25,14 @@ in what order, and which document is the source of truth for each concern.
   SQLite storage; `spec-040` adds the WebSocket change feed and presence;
   `spec-041` adds TLS webhooks and shared SQLite rate limits; `spec-042` adds
   Yrs CRDT text merge; `spec-043` adds the client session and awareness
-  cursors; `spec-044` adds the remote HTTP/WebSocket transport.
-- **Tests:** 251 integration tests across `tests/`; `cargo clippy --all-targets
+  cursors; `spec-044` adds the remote HTTP/WebSocket transport; `spec-045` adds
+  the server login/settings UI.
+- **Tests:** 252 integration tests across `tests/`; `cargo clippy --all-targets
   -- -D warnings` and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
   selects SQLite with Argon2id accounts and sessions. The desktop can connect
-  remotely with `--server`/`--token`. PostgreSQL remains next.
+  remotely with `--server`/`--token` or Settings → Server. PostgreSQL remains
+  next.
 - **Collaboration:** members, shares, sync log and version snapshots persist in
   `collab.json` or SQLite. `GET /ws/workspace/{id}` streams changes with
   presence and resume; Yrs CRDT merges page title/block text server-side and the
@@ -42,8 +44,8 @@ in what order, and which document is the source of truth for each concern.
   comments/users/files, webhooks, limits and the Axum adapter are implemented
   (specs 030–038); sessions/SQLite (spec-039), the WebSocket change feed
   (spec-040), TLS webhooks/shared limits (spec-041), Yrs CRDT merge (spec-042),
-  client awareness (spec-043) and the remote transport (spec-044) are
-  implemented. B5 is done.
+  client awareness (spec-043), the remote transport (spec-044) and the server
+  login UI (spec-045) are implemented. B5 is done.
 - **Localization:** core navigation, Share, Library, page actions, comments and
   Settings are translated into `en`, `pt-BR` and `eo`; remaining strings are
   migrated incrementally.

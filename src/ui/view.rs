@@ -16,6 +16,11 @@ use std::sync::Arc;
 pub(super) struct ViewState {
     pub(super) current_page: String,
     pub(super) remote_cursors: Vec<Awareness>,
+    pub(super) server_url: String,
+    pub(super) server_email: String,
+    pub(super) server_password: String,
+    pub(super) server_status: Option<String>,
+    pub(super) server_connected: bool,
     pub(super) tabs: Vec<String>,
     pub(super) active_tab: usize,
     pub(super) sidebar_open: bool,

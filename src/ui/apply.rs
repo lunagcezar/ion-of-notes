@@ -5,6 +5,7 @@
 //! Splitting it from the struct/eframe shell keeps `ui::app` small (SRP,
 //! spec-017).
 
+use crate::client::Client;
 use crate::collab::{MemberDraft, Role, Share, general_access, page_markdown};
 use crate::i18n;
 use crate::model::{Block, BlockKind, Comment, Page, PageDraft, TableRow, Workspace, now_label};
@@ -20,7 +21,8 @@ use uuid::Uuid;
 
 use super::app::NotionApp;
 use super::commands::{Command, IconTab, NewTabChoice, new_tab_choices};
-use super::edit_queue::{execute_plan, plan_for};
+use super::crdt::CrdtSession;
+use super::edit_queue::{PendingEdits, execute_plan, plan_for};
 use super::invite::{is_valid_email, member_name_from_email, parse_invite_emails};
 use super::palette::apply_theme;
 use super::view::ViewState;
@@ -49,6 +51,11 @@ impl NotionApp {
         ViewState {
             current_page: self.current_page.clone(),
             remote_cursors: self.remote_awareness.clone(),
+            server_url: self.server_url.clone(),
+            server_email: self.server_email.clone(),
+            server_password: self.server_password.clone(),
+            server_status: self.server_status.clone(),
+            server_connected: self.server_connected,
             tabs: self.tabs.clone(),
             active_tab: self.active_tab,
             sidebar_open: self.sidebar_open,
@@ -353,6 +360,34 @@ impl NotionApp {
                 _ => {}
             }
         }
+    }
+
+    fn replace_client(&mut self, client: Client<crate::app::DesktopApi>, workspace: Workspace) {
+        self.client = client;
+        self.workspace = workspace;
+        self.last_committed = self.workspace.clone();
+        self.current_page = self
+            .workspace
+            .pages
+            .first()
+            .map(|page| page.id.clone())
+            .unwrap_or_default();
+        self.tabs = if self.current_page.is_empty() {
+            Vec::new()
+        } else {
+            vec![self.current_page.clone()]
+        };
+        self.active_tab = 0;
+        self.closed_tabs.clear();
+        self.nav_history = self.tabs.clone();
+        self.nav_pos = 0;
+        self.pending_edits = PendingEdits::new(0.25);
+        self.crdt = CrdtSession::new();
+        self.crdt_page.clear();
+        self.crdt_rx = self.client.subscribe_realtime();
+        self.remote_awareness.clear();
+        self.last_awareness = None;
+        self.server_password.clear();
     }
 
     fn project_crdt_page(&mut self) {
@@ -1187,6 +1222,53 @@ impl NotionApp {
                         };
                         let _ = self.client.publish_awareness(&awareness);
                     }
+                }
+                Command::SetServerUrl(value) => {
+                    self.server_url = value;
+                    self.server_status = None;
+                }
+                Command::SetServerEmail(value) => {
+                    self.server_email = value;
+                    self.server_status = None;
+                }
+                Command::SetServerPassword(value) => {
+                    self.server_password = value;
+                    self.server_status = None;
+                }
+                Command::ConnectServer => {
+                    let url = self.server_url.trim().trim_end_matches('/').to_string();
+                    let email = self.server_email.trim().to_string();
+                    let password = self.server_password.clone();
+                    if url.is_empty() || email.is_empty() || password.is_empty() {
+                        self.server_status =
+                            Some("Server, email and password are required.".to_string());
+                    } else {
+                        match crate::remote::login(&url, &email, &password) {
+                            Ok(session) => {
+                                match crate::app::build_remote_desktop(&url, &session.token) {
+                                    Ok((client, workspace)) => {
+                                        self.replace_client(client, workspace);
+                                        self.server_connected = true;
+                                        self.server_password.clear();
+                                        self.server_status = Some(format!("Connected to {url}"));
+                                    }
+                                    Err(error) => {
+                                        self.server_status = Some(error);
+                                    }
+                                }
+                            }
+                            Err(error) => {
+                                self.server_status = Some(error);
+                            }
+                        }
+                    }
+                }
+                Command::DisconnectServer => {
+                    let (client, workspace) = crate::app::build_desktop();
+                    self.replace_client(client, workspace);
+                    self.server_connected = false;
+                    self.server_password.clear();
+                    self.server_status = Some("Using the local workspace.".to_string());
                 }
                 Command::NoOp => {}
             }

@@ -184,6 +184,7 @@ definition.
 | **CrdtSession** | The UI's client-side Yrs document and local diff bridge. | spec-043 |
 | **RemoteApi** | Remote `WorkspaceApi`: ureq REST + background WebSocket. | spec-044 |
 | **DesktopApi** | Local/remote desktop transport enum behind `Client`. | spec-044 |
+| **Server settings page** | Settings → Server login form for URL/email/password. | spec-045 |
 
 ## 9. Naming rules
 

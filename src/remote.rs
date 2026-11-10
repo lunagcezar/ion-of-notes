@@ -4,6 +4,7 @@
 //! thread owns the WebSocket, reconnects with `?since=` and forwards typed
 //! `ServerMessage`s to the UI through a Tokio broadcast channel.
 
+use crate::auth::{LoginInput, SessionResponse};
 use crate::model::Workspace;
 use crate::server::realtime::{Awareness, ClientMessage, ServerMessage};
 use crate::server::{
@@ -23,6 +24,37 @@ use tokio_tungstenite::tungstenite::Message;
 
 enum WsCommand {
     Awareness(Awareness),
+}
+
+/// Log in to a remote server and return the session token.
+pub fn login(base_url: &str, email: &str, password: &str) -> Result<SessionResponse, String> {
+    let base = base_url.trim_end_matches('/');
+    let body = serde_json::to_string(&LoginInput {
+        email: email.to_string(),
+        password: password.to_string(),
+    })
+    .map_err(|error| error.to_string())?;
+    let mut response = agent()
+        .post(format!("{base}/api/v2/auth/login"))
+        .header(VERSION_HEADER, API_VERSION)
+        .header("Content-Type", "application/json")
+        .send(&body)
+        .map_err(|error| error.to_string())?;
+    let status = response.status().as_u16();
+    let text = response
+        .body_mut()
+        .read_to_string()
+        .map_err(|error| error.to_string())?;
+    if !(200..300).contains(&status) {
+        return Err(text);
+    }
+    let envelope: Envelope<SessionResponse> =
+        serde_json::from_str(&text).map_err(|error| error.to_string())?;
+    envelope.data.ok_or_else(|| {
+        envelope
+            .error
+            .unwrap_or_else(|| "empty response".to_string())
+    })
 }
 
 /// Remote transport used by the desktop when `--server` is set.

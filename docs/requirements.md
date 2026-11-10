@@ -343,6 +343,9 @@ capabilities) is implemented; the rest are planned.
 - FR-103: The desktop can connect to a running server with `--server`/`--token`
   over REST and a background WebSocket, with reconnect and `?since=` resume
   (implemented in `spec-044`).
+- FR-104: Settings → Server asks for the server URL, email and password, logs
+  in, switches between local and remote workspaces and reports status
+  (implemented in `spec-045`).
 
 ## 2. Non-functional requirements
 
@@ -416,6 +419,8 @@ capabilities) is implemented; the rest are planned.
   reset the server CRDT document (ADR-012, spec-043).
 - NFR-29: Remote mode preserves the local `Client`/`WorkspaceApi` behavior and
   resumes the change feed from the last sequence (ADR-013, spec-044).
+- NFR-30: The login form never stores or logs the password; a failed login
+  leaves the local workspace active (ADR-014, spec-045).
 
 ## 3. Requirement → spec map
 
@@ -452,6 +457,7 @@ capabilities) is implemented; the rest are planned.
 | FR-101, NFR-27                | `spec-042-yrs-crdt-merge.md` |
 | FR-102, NFR-28                | `spec-043-client-yrs-and-awareness.md` |
 | FR-103, NFR-29                | `spec-044-remote-websocket-client.md` |
+| FR-104, NFR-30                | `spec-045-server-login-settings-ui.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

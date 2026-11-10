@@ -15,7 +15,7 @@ use super::super::view::ViewState;
 use super::super::widgets::section_label;
 use super::settings_pages::{
     render_ai_settings, render_offline_settings, render_people_settings, render_preferences,
-    render_sidebar_settings, render_workspace_settings,
+    render_server_settings, render_sidebar_settings, render_workspace_settings,
 };
 
 /// A settings navigation row with a leading glyph, as in the reference
@@ -65,7 +65,7 @@ fn settings_icon(label: &str) -> fn(&egui::Painter, Rect, Color32) {
         "Analytics" => draw_grid,
         "Import" | "Offline" => draw_note,
         "AI assistant" => draw_help,
-        "Connections" | "Automation" => draw_link,
+        "Connections" | "Automation" | "Server" => draw_link,
         _ => draw_page,
     }
 }
@@ -121,6 +121,7 @@ const SETTINGS_NAV: &[(&str, &[(&str, &str)])] = &[
                 "Appearance, input options, language and time",
             ),
             ("Notifications", "Inbox and notification preferences"),
+            ("Server", "Self-hosted server, login and session"),
         ],
     ),
     (
@@ -328,6 +329,9 @@ pub(crate) fn render_settings(
                                     }
                                     "People" => {
                                         render_people_settings(ui, ws, view, palette, commands, &rows)
+                                    }
+                                    "Server" => {
+                                        render_server_settings(ui, view, palette, commands)
                                     }
                                     _ => {
                                         ui.label(

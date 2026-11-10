@@ -67,6 +67,8 @@ Everything is written in English and built spec-first (`spec/`) and test-first
 - Shared SQLite rate-limit budgets across server instances using the same file.
 - Remote desktop transport: `--server`/`--token` over REST + background
   WebSocket, with reconnect and `?since=` resume.
+- Settings → Server login form: server URL, email, masked password,
+  connect/disconnect and live local/remote switching.
 
 ### AI assistant (optional)
 
@@ -212,6 +214,11 @@ cargo run --release -- --server http://127.0.0.1:8787 --token <session-token>
 workspace over REST and keeps the change feed, CRDT updates and awareness on a
 background WebSocket. Without `--server`, the desktop stays fully local.
 
+You can also connect from **Settings → Server** by entering the server URL,
+email and password. Starting with `--server` but no `--token` opens that page
+automatically. The password is sent only to the server and is cleared after a
+successful login; the session token is not persisted across restarts.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -232,7 +239,8 @@ ION_OF_NOTES_SHOW=settings-general cargo run -- --screenshot shots/settings.png
 ```
 
 Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
-`settings-sidebar`, `settings-people`, `settings-offline`, `search`, `tasks`,
+`settings-sidebar`, `settings-people`, `settings-offline`, `settings-server`,
+`search`, `tasks`,
 `newtab`, `ai`, `shortcuts`, `iconpicker`, `pageactions`, `discussions`,
 `onboarding`, `templates`.
 
@@ -284,7 +292,7 @@ src/
   screenshot.rs    PNG output
   cli.rs           argument parsing
   i18n.rs          locale switching
-tests/             one integration-test crate per module (251 tests)
+tests/             one integration-test crate per module (252 tests)
 ```
 
 Dependency direction: `ui → client → server → model`, `server → store`; `app`
@@ -309,8 +317,8 @@ eframe, JSON files or sockets.
 
 ## Current limitations
 
-- Remote mode requires a token on the command line; there is no login or
-  server-settings UI yet.
+- Remote mode can log in through Settings → Server, but the token is not
+  persisted; users log in again after restart.
 - REST requests in remote mode are synchronous, so a slow server briefly blocks
   the UI thread; awareness sent while the socket is disconnected is dropped.
 - CRDT covers page title/block text. Block structure, properties and databases

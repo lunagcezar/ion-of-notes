@@ -190,7 +190,7 @@ listeners left behind.
 
 ```text
 library | share | inbox | settings | settings-general | settings-sidebar |
-settings-people | settings-offline | search | tasks | newtab | ai |
+settings-people | settings-offline | settings-server | search | tasks | newtab | ai |
 shortcuts | iconpicker | pageactions | discussions | onboarding | templates
 ```
 

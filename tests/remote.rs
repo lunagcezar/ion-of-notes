@@ -3,19 +3,24 @@
 mod common;
 
 use ion_of_notes::app::DesktopApi;
+use ion_of_notes::auth::{Account, AuthStore, MemoryAuthStore, hash_password};
 use ion_of_notes::client::Client;
-use ion_of_notes::collab::ChangeOp;
-use ion_of_notes::model::{PageDraft, Workspace};
-use ion_of_notes::remote::RemoteApi;
+use ion_of_notes::collab::{ChangeOp, CollabState, Role};
+use ion_of_notes::model::{PageDraft, Workspace, now_iso};
+use ion_of_notes::remote::{RemoteApi, login};
 use ion_of_notes::server::WorkspaceServer;
 use ion_of_notes::server::realtime::{Awareness, ServerMessage};
 use ion_of_notes::server::web::router;
+use ion_of_notes::store::{NoCollabStore, NoStore};
 use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 
 async fn start() -> (String, JoinHandle<()>) {
-    let server = WorkspaceServer::new(Workspace::seed("remote-tests"));
+    start_server(WorkspaceServer::new(Workspace::seed("remote-tests"))).await
+}
+
+async fn start_server(server: WorkspaceServer) -> (String, JoinHandle<()>) {
     let app = router(server);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -28,6 +33,35 @@ async fn start() -> (String, JoinHandle<()>) {
 fn remote_client(base: &str) -> Client<DesktopApi> {
     let remote = RemoteApi::connect(base, "owner-token").expect("remote connect");
     Client::with_token(DesktopApi::Remote(remote), "owner-token")
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn login_returns_a_session_token() {
+    let workspace = Workspace::seed("remote-tests");
+    let collab = CollabState::new();
+    let owner = collab
+        .members
+        .iter()
+        .find(|member| member.role == Role::Owner)
+        .expect("owner");
+    let auth = MemoryAuthStore::default();
+    auth.upsert_account(&Account {
+        id: "account-owner".to_string(),
+        member_id: owner.id.clone(),
+        email: owner.email.clone(),
+        password_hash: hash_password("secret").expect("hash"),
+        created_at: now_iso(),
+    })
+    .expect("account");
+    let server =
+        WorkspaceServer::with_stores_and_auth(workspace, collab, NoStore, NoCollabStore, auth);
+    let (base, handle) = start_server(server).await;
+
+    let session = login(&base, "owner@workspace.local", "secret").expect("login");
+    assert!(session.token.starts_with("sess_"));
+    assert!(login(&base, "owner@workspace.local", "wrong").is_err());
+
+    handle.abort();
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

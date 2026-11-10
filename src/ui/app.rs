@@ -130,12 +130,33 @@ pub struct NotionApp {
     pub(super) awareness_session: String,
     pub(super) awareness_color: String,
     pub(super) last_awareness: Option<(String, usize, Option<usize>)>,
+    // Server login/settings.
+    pub(super) server_url: String,
+    pub(super) server_email: String,
+    pub(super) server_password: String,
+    pub(super) server_status: Option<String>,
+    pub(super) server_connected: bool,
 }
 
 impl NotionApp {
     pub fn new(cc: &eframe::CreationContext<'_>, screenshot: Option<PathBuf>) -> Self {
         let (client, workspace) = app::build_desktop();
         Self::with_client(cc, screenshot, client, workspace)
+    }
+
+    /// Open the Server settings page with a prefilled URL (startup prompt).
+    pub fn open_server_login(&mut self, server: String) {
+        self.server_url = server;
+        self.settings_open = true;
+        self.settings_page = "Server".to_string();
+        self.server_status = Some("Enter your account and password.".to_string());
+    }
+
+    /// Mark the current transport as a connected remote server.
+    pub fn mark_server_connected(&mut self, server: String) {
+        self.server_url = server.clone();
+        self.server_connected = true;
+        self.server_status = Some(format!("Connected to {server}"));
     }
 
     pub fn with_client(
@@ -239,6 +260,11 @@ impl NotionApp {
             awareness_session,
             awareness_color: "#4C8BF5".to_string(),
             last_awareness: None,
+            server_url: "http://127.0.0.1:8787".to_string(),
+            server_email: "owner@workspace.local".to_string(),
+            server_password: String::new(),
+            server_status: None,
+            server_connected: false,
             tabs: vec![demo_current_page],
             active_tab: 0,
             closed_tabs: Vec::new(),
@@ -256,6 +282,7 @@ impl NotionApp {
                     | "settings-sidebar"
                     | "settings-people"
                     | "settings-offline"
+                    | "settings-server"
             ),
             onboarding_open,
             templates_open,
@@ -265,6 +292,7 @@ impl NotionApp {
                 "settings-sidebar" => "Sidebar".to_string(),
                 "settings-people" => "People".to_string(),
                 "settings-offline" => "Offline".to_string(),
+                "settings-server" => "Server".to_string(),
                 _ => "Preferences".to_string(),
             },
             settings_query: String::new(),

@@ -37,10 +37,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         (Some(server), Some(token)) => {
                             let (client, workspace) = app::build_remote_desktop(server, token)
                                 .map_err(std::io::Error::other)?;
-                            Box::new(NotionApp::with_client(cc, screenshot, client, workspace))
+                            let mut app = NotionApp::with_client(cc, screenshot, client, workspace);
+                            app.mark_server_connected(server.to_string());
+                            Box::new(app)
                         }
-                        (Some(_), None) => {
-                            return Err(std::io::Error::other("--server requires --token").into());
+                        (Some(server), None) => {
+                            let mut app = NotionApp::new(cc, screenshot);
+                            app.open_server_login(server.to_string());
+                            Box::new(app)
+                        }
+                        (None, Some(_)) => {
+                            return Err(std::io::Error::other("--token requires --server").into());
                         }
                         _ => Box::new(NotionApp::new(cc, screenshot)),
                     };

@@ -181,6 +181,7 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
     switcher.rs    one shared search / new-tab window (DRY)
     page_icon.rs   page-icon feature: catalog, picker and one renderer
     crdt.rs        client Yrs session, local diff and projection (spec-043)
+    dialogs/settings.rs  Settings → Server login form (spec-045)
     search_cache.rs pure query/version cache so redraws do not re-query
     settings_search.rs pure settings section/row matcher and row table
 tests/
@@ -213,7 +214,7 @@ tests/
   realtime.rs      WebSocket auth, ready, backlog, live change, presence
   crdt.rs          Yrs convergence, projection and WebSocket CRDT sync
   ui_crdt.rs       client Yrs diff/merge/projection
-  remote.rs        remote REST/WebSocket transport
+  remote.rs        remote REST/WebSocket transport and login
   shared_limits.rs SQLite shared rate limits and window reset
   auth.rs          password hashing, login/logout/session, SQLite restart
   sqlite_store.rs  SQLite round-trip, accounts/sessions, JSON migration
@@ -532,7 +533,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | Command                                  | Purpose                                  |
 | ---------------------------------------- | ---------------------------------------- |
 | `cargo build`                            | Build the desktop app                    |
-| `cargo test --all-targets`               | Run all integration test crates (251)    |
+| `cargo test --all-targets`               | Run all integration test crates (252)    |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, tests, docs      |
@@ -544,7 +545,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust
 tab strip is the only window frame and doubles as a drag handle.
-`ION_OF_NOTES_SHOW=library|share|inbox|settings|settings-general|settings-sidebar|settings-people|settings-offline|search|tasks|newtab|ai|shortcuts|iconpicker|pageactions|discussions|onboarding|templates`
+`ION_OF_NOTES_SHOW=library|share|inbox|settings|settings-general|settings-sidebar|settings-people|settings-offline|settings-server|search|tasks|newtab|ai|shortcuts|iconpicker|pageactions|discussions|onboarding|templates`
 is a harmless preview hook: it opens one pictured state on startup so it can be
 captured with `--screenshot`. Normal runs (and the rebuild check) never set it.
 

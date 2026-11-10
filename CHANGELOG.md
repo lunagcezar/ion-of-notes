@@ -6,6 +6,20 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added — spec-045 server login and settings UI
+
+- Added Settings → Server with server URL, email, masked password, Connect,
+  Disconnect and status.
+- Added `remote::login` using `/api/v2/auth/login`.
+- Connecting swaps `DesktopApi` to the remote transport and reloads workspace,
+  tabs, history, pending edits, CRDT and realtime state.
+- Disconnecting reloads the local workspace.
+- `--server` without `--token` opens the Server page prefilled; `--token`
+  without `--server` errors.
+- The password is cleared after a successful connect.
+- Tests: remote login success/failure; the suite is 252 tests.
+- Added `docs/adr-014-server-login-settings-ui.md`.
+
 ### Added — spec-044 remote WebSocket client transport
 
 - Added `src/remote.rs`: `RemoteApi` with ureq REST and a background

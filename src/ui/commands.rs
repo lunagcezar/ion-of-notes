@@ -215,5 +215,11 @@ pub(super) enum Command {
         index: usize,
         selection_end: Option<usize>,
     },
+    // Server login/settings.
+    SetServerUrl(String),
+    SetServerEmail(String),
+    SetServerPassword(String),
+    ConnectServer,
+    DisconnectServer,
     NoOp,
 }
