@@ -85,6 +85,8 @@ impl NotionApp {
             settings_query: self.settings_query.clone(),
             settings_status: self.settings_status.clone(),
             language: self.language.clone(),
+            number_format: self.workspace.settings.number_format,
+            time_format: self.workspace.settings.time_format,
             dark: self.dark,
             table_view: self.table_view,
             library_open: self.library_open,

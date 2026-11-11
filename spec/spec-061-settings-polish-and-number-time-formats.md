@@ -1,6 +1,6 @@
 # spec-061 - Settings polish and number/time formats
 
-- Status: plan (2026-11-11)
+- Status: implemented (2026-11-11)
 - Related: `spec-013`, `spec-015`, `spec-017`, `spec-057`
 - Reference: `reference/picture-15.png` .. `reference/picture-29.png`
   (preferences window), `reference/share.png` (dialog spacing)
@@ -149,12 +149,12 @@ unimplemented menu.
 
 ## Plan / tasks
 
-- [ ] Add the settings fields, enums and serde defaults.
-- [ ] Add the pure formatter module and tests.
-- [ ] Apply the formatter to Library, version history, offline and comments.
-- [ ] Fix the close/rail/scrollbar padding with constants.
-- [ ] Add preview states and screenshots.
-- [ ] Update data model/requirements and run the full gate.
+- [x] Add the settings fields, enums and serde defaults.
+- [x] Add the pure formatter module and tests.
+- [x] Apply the formatter to Library, version history, offline and comments.
+- [x] Fix the close/rail/scrollbar padding with constants.
+- [x] Add preview states and screenshots.
+- [x] Update data model/requirements and run the full gate.
 
 ## Decisions and open questions
 

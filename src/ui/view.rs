@@ -37,6 +37,8 @@ pub(super) struct ViewState {
     pub(super) settings_query: String,
     pub(super) settings_status: Option<String>,
     pub(super) language: String,
+    pub(super) number_format: crate::model::NumberFormat,
+    pub(super) time_format: crate::model::TimeFormat,
     pub(super) dark: bool,
     pub(super) table_view: bool,
     pub(super) library_open: bool,

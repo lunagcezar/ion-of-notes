@@ -6,7 +6,7 @@
 //! in `ui::app` (SRP, spec-017).
 
 use crate::collab::{Access, Role};
-use crate::model::{BlockKind, Workspace};
+use crate::model::{BlockKind, NumberFormat, TimeFormat, Workspace};
 use egui::Pos2;
 
 /// Tabs of the page-icon picker (spec-013).
@@ -187,6 +187,8 @@ pub(super) enum Command {
     ExportWorkspace,
     ExportMembers,
     SetLanguage(String),
+    SetNumberFormat(NumberFormat),
+    SetTimeFormat(TimeFormat),
     OpenShortcuts,
     CloseShortcuts,
     ZoomIn,
@@ -412,6 +414,8 @@ impl Command {
             | Command::ExportWorkspace
             | Command::ExportMembers
             | Command::SetLanguage(_)
+            | Command::SetNumberFormat(_)
+            | Command::SetTimeFormat(_)
             | Command::OpenShortcuts
             | Command::CloseShortcuts
             | Command::ZoomIn

@@ -41,7 +41,7 @@ pub use property::{
     PropertyType, PropertyValue, RollupResult, SelectOption, StatusGroup,
 };
 pub use rich_text::{Annotations, Equation, Mention, RichText, TextContent, TextLink};
-pub use settings::WorkspaceSettings;
+pub use settings::{NumberFormat, TimeFormat, WorkspaceSettings};
 pub use user::{Bot, BotOwner, Person, UserDto, UserRef, UserType, WorkspaceLimits};
 pub use view::{
     Filter, Sort, SortDirection, View, ViewConfig, ViewGroup, ViewInput, ViewQueryInput,

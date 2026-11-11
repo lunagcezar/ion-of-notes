@@ -1,12 +1,13 @@
 //! Tests for the UI's public visual helpers (public API only).
 
 use ion_of_notes::client::Client;
-use ion_of_notes::model::{BlockKind, Page, PageDiff, Workspace};
+use ion_of_notes::model::{BlockKind, NumberFormat, Page, PageDiff, TimeFormat, Workspace};
 use ion_of_notes::server::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi};
 use ion_of_notes::ui::{
     CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan,
-    is_valid_email, member_name_from_email, pages_for_view, parse_invite_emails, plan_for,
-    rows_for, section_matches, settings_matches, status_color, visible_rows,
+    format_number, format_timestamp, is_valid_email, member_name_from_email, pages_for_view,
+    parse_invite_emails, plan_for, rows_for, section_matches, settings_matches, status_color,
+    visible_rows,
 };
 use ion_of_notes::ui::{EMOJI, ICONS, catalog_matches, glyph_visual_offset};
 use std::collections::HashSet;
@@ -50,6 +51,37 @@ fn glyphs_are_lifted_in_proportion_to_their_font_size() {
     assert!(glyph_visual_offset(20.0) > 0.0);
     assert!(glyph_visual_offset(40.0) > glyph_visual_offset(20.0));
     assert_eq!(glyph_visual_offset(0.0), 0.0);
+}
+
+#[test]
+fn number_formats_group_thousands_and_decimals() {
+    assert_eq!(format_number(0.0, NumberFormat::CommaThousands), "0");
+    assert_eq!(format_number(1234.0, NumberFormat::CommaThousands), "1,234");
+    assert_eq!(
+        format_number(1234.5, NumberFormat::CommaThousands),
+        "1,234.5"
+    );
+    assert_eq!(format_number(1234.5, NumberFormat::DotThousands), "1.234,5");
+    assert_eq!(
+        format_number(-1234.5, NumberFormat::CommaThousands),
+        "-1,234.5"
+    );
+}
+
+#[test]
+fn time_formats_convert_between_24_and_12_hour_clocks() {
+    assert_eq!(
+        format_timestamp("Nov 09, 2026 15:05", TimeFormat::Hour24),
+        "Nov 09, 2026 15:05"
+    );
+    assert_eq!(
+        format_timestamp("Nov 09, 2026 15:05", TimeFormat::Hour12),
+        "Nov 09, 2026 3:05 PM"
+    );
+    assert_eq!(
+        format_timestamp("not a date", TimeFormat::Hour12),
+        "not a date"
+    );
 }
 
 #[test]

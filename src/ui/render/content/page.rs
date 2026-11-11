@@ -5,6 +5,7 @@ use crate::model::{BlockKind, Workspace};
 use egui::{Align2, CornerRadius, FontFamily, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::super::super::commands::{Command, FontStyle};
+use super::super::super::format::format_timestamp;
 use super::super::super::icons::{
     draw_ellipsis, draw_lines, draw_link, draw_page_icon, draw_pen, draw_plus, draw_share,
     draw_star, glyph_button, icon_button,
@@ -342,9 +343,12 @@ fn render_page(
                                 .color(palette.text),
                         );
                         ui.label(
-                            egui::RichText::new(&comment.created_at)
-                                .size(10.5)
-                                .color(palette.muted),
+                            egui::RichText::new(format_timestamp(
+                                &comment.created_at,
+                                view.time_format,
+                            ))
+                            .size(10.5)
+                            .color(palette.muted),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.small_button(i18n::t("delete")).clicked() {

@@ -6,6 +6,18 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-061 settings polish and formats
+
+- Added explicit settings padding constants: the close control sits inside the
+  top-right padding, the rail has symmetric top/bottom padding, and the content
+  scroll area keeps a visible right margin before the dialog border.
+- Added persisted `NumberFormat` and `TimeFormat` settings. The Preferences
+  rows cycle Automatic/1.234,5/1,234.5 and 24-hour/12-hour, and a pure formatter
+  applies them to Library dates, version history, offline pages, comments and
+  numeric row counts.
+- Read-only preferences remain plain values; no fake dropdown chevrons.
+- Added number/time formatter tests; suite: 265 tests.
+
 ### Changed - spec-060 editor, picker and AI responsiveness
 
 - Block drag now drops on pointer release anywhere in the editor and cancels

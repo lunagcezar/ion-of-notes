@@ -10,7 +10,7 @@ use crate::app;
 use crate::client::Client;
 use crate::collab::{Access, Member, PageVersion, Role, general_access};
 use crate::model::Comment;
-use crate::model::{SearchResult, Workspace};
+use crate::model::{NumberFormat, SearchResult, TimeFormat, Workspace};
 use crate::ollama::{self, OllamaConfig, OllamaStatus};
 use crate::screenshot;
 use crate::server::realtime::{Awareness, ServerMessage};
@@ -196,6 +196,12 @@ impl NotionApp {
         // states from the reference pictures is shown on startup. Normal runs
         // (and the rebuild check) never set it.
         let demo = std::env::var("ION_OF_NOTES_SHOW").unwrap_or_default();
+        if demo == "settings-12h" {
+            workspace.settings.time_format = TimeFormat::Hour12;
+        }
+        if demo == "settings-comma" {
+            workspace.settings.number_format = NumberFormat::CommaThousands;
+        }
         let demo_current_page = if demo == "tasks" {
             workspace
                 .page("p-tasks")
@@ -326,6 +332,8 @@ impl NotionApp {
                 "settings"
                     | "ai"
                     | "ai-error"
+                    | "settings-12h"
+                    | "settings-comma"
                     | "settings-general"
                     | "settings-sidebar"
                     | "settings-people"

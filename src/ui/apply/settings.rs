@@ -37,6 +37,12 @@ impl NotionApp {
                 crate::i18n::set_locale(&locale);
                 self.language = locale;
             }
+            Command::SetNumberFormat(format) => {
+                self.workspace.settings.number_format = format;
+            }
+            Command::SetTimeFormat(format) => {
+                self.workspace.settings.time_format = format;
+            }
             Command::OpenShortcuts => {
                 self.close_overlays();
                 self.shortcuts_open = true;

@@ -7,6 +7,7 @@ use crate::model::Workspace;
 use egui::{Align2, Color32, CornerRadius, FontId, Rect, Sense, Stroke, Vec2};
 
 use super::super::commands::Command;
+use super::super::format::format_timestamp;
 use super::super::icons::draw_page;
 use super::super::library_filter::pages_for_view;
 use super::super::palette::{Palette, strong_font};
@@ -174,7 +175,7 @@ pub(super) fn render_library(
                 ui.painter().text(
                     rect.min + Vec2::new(name_w + created_w + source_w + 12.0, 17.0),
                     Align2::LEFT_CENTER,
-                    &page.updated_at,
+                    format_timestamp(&page.updated_at, view.time_format),
                     FontId::proportional(12.0),
                     palette.muted,
                 );

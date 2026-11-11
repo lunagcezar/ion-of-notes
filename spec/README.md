@@ -98,7 +98,7 @@ Status vocabulary:
 | [058](spec-058-multi-workspace-persistence.md) | Multi-workspace persistence | plan | Catalog, JSON/SQLite, API, switcher, create/rename/delete/switch |
 | [059](spec-059-app-bar-app-menu-and-sidebar-animation.md) | App bar, app menu and sidebar animation | plan | Sidebar-width container, notification/compose, sectioned menu, animated sidebar |
 | [060](spec-060-editor-picker-and-ai-responsiveness.md) | Editor, picker and AI responsiveness | implemented | Release-based drop, virtualized emoji grid, centered icons, async AI |
-| [061](spec-061-settings-polish-and-number-time-formats.md) | Settings polish and number/time formats | plan | Close/rail/scrollbar padding, working number and time formats |
+| [061](spec-061-settings-polish-and-number-time-formats.md) | Settings polish and number/time formats | implemented | Close/rail/scrollbar padding, working number and time formats |
 | [062](spec-062-customizable-sidebar-sections.md) | Customizable sidebar sections and shortcuts | plan | Row settings/exclude/drag, Add shortcut/section menus, sidebar tabs |
 
 ## 3. Work status

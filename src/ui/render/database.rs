@@ -4,6 +4,7 @@ use crate::model::Page;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Rect, Sense, Vec2};
 
 use super::super::commands::Command;
+use super::super::format::format_number;
 use super::super::palette::{Palette, status_color};
 use super::super::view::ViewState;
 
@@ -43,9 +44,12 @@ pub(super) fn render_database(
         }
         ui.add_space(12.0);
         ui.label(
-            egui::RichText::new(format!("{} rows", page.rows.len()))
-                .size(12.0)
-                .color(palette.muted),
+            egui::RichText::new(format!(
+                "{} rows",
+                format_number(page.rows.len() as f64, view.number_format)
+            ))
+            .size(12.0)
+            .color(palette.muted),
         );
     });
     ui.add_space(8.0);

@@ -8,6 +8,7 @@ use crate::model::{Page, Workspace};
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
 use super::super::commands::{Command, FontStyle};
+use super::super::format::format_timestamp;
 use super::super::palette::{Palette, strong_font};
 use super::super::view::ViewState;
 use super::super::widgets::{menu_button, toggle_button};
@@ -349,7 +350,11 @@ pub(crate) fn render_version_history(
                         ui.painter().text(
                             rect.min + Vec2::new(10.0, 32.0),
                             Align2::LEFT_CENTER,
-                            format!("{} · {}", version.actor, version.updated_at),
+                            format!(
+                                "{} · {}",
+                                version.actor,
+                                format_timestamp(&version.updated_at, view.time_format)
+                            ),
                             FontId::proportional(11.0),
                             palette.muted,
                         );

@@ -14,6 +14,25 @@ fn default_true() -> bool {
     true
 }
 
+/// How numeric values group thousands and mark the decimal separator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum NumberFormat {
+    #[default]
+    Automatic,
+    DotThousands,
+    CommaThousands,
+}
+
+/// How timestamps show the clock.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum TimeFormat {
+    #[default]
+    Hour24,
+    Hour12,
+}
+
 /// Settings shown in the General / Sidebar / People / Offline pages.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkspaceSettings {
@@ -55,6 +74,10 @@ pub struct WorkspaceSettings {
     pub recent_activity: bool,
     #[serde(default = "default_true")]
     pub hover_cards: bool,
+    #[serde(default)]
+    pub number_format: NumberFormat,
+    #[serde(default)]
+    pub time_format: TimeFormat,
 }
 
 impl Default for WorkspaceSettings {
@@ -79,6 +102,8 @@ impl Default for WorkspaceSettings {
             people_directory: true,
             recent_activity: true,
             hover_cards: true,
+            number_format: NumberFormat::Automatic,
+            time_format: TimeFormat::Hour24,
         }
     }
 }

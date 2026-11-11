@@ -8,6 +8,70 @@ use super::super::super::palette::Palette;
 use super::super::super::settings_search::SettingsRow;
 use super::super::super::view::ViewState;
 use super::{display_row, info_row, section_heading};
+fn format_label(format: crate::model::NumberFormat) -> &'static str {
+    match format {
+        crate::model::NumberFormat::Automatic => "Automatic",
+        crate::model::NumberFormat::DotThousands => "1.234,5",
+        crate::model::NumberFormat::CommaThousands => "1,234.5",
+    }
+}
+
+fn time_label(format: crate::model::TimeFormat) -> &'static str {
+    match format {
+        crate::model::TimeFormat::Hour24 => "24-hour",
+        crate::model::TimeFormat::Hour12 => "12-hour",
+    }
+}
+
+/// A preference row whose value chip cycles on click. Shared by the number
+/// and time format rows so their layout matches the language row.
+fn choice_row(
+    ui: &mut egui::Ui,
+    title: &str,
+    description: &str,
+    value: &str,
+    palette: &Palette,
+) -> bool {
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), 46.0), Sense::click());
+    if response.hovered() {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(6), palette.hover);
+    }
+    ui.painter().text(
+        rect.min + Vec2::new(0.0, 14.0),
+        Align2::LEFT_CENTER,
+        title,
+        FontId::proportional(12.5),
+        palette.text,
+    );
+    ui.painter().text(
+        rect.min + Vec2::new(0.0, 32.0),
+        Align2::LEFT_CENTER,
+        description,
+        FontId::proportional(11.0),
+        palette.muted,
+    );
+    let chip = Rect::from_min_size(
+        Pos2::new(rect.max.x - 150.0, rect.min.y + 9.0),
+        Vec2::new(150.0, 26.0),
+    );
+    ui.painter().rect_stroke(
+        chip,
+        CornerRadius::same(6),
+        Stroke::new(1.0, palette.border),
+        egui::StrokeKind::Inside,
+    );
+    ui.painter().text(
+        chip.center(),
+        Align2::CENTER_CENTER,
+        format!("{value} ⌄"),
+        FontId::proportional(12.0),
+        palette.text,
+    );
+    response.clicked()
+}
+
 pub(in crate::ui::dialogs) fn render_preferences(
     ui: &mut egui::Ui,
     view: &ViewState,
@@ -94,8 +158,43 @@ pub(in crate::ui::dialogs) fn render_preferences(
                     commands.push(Command::SetLanguage(next.to_string()));
                 }
             }
-            "number_format" => display_row(ui, row.title, row.description, "Automatic", palette),
-            "time_format" => display_row(ui, row.title, row.description, "24-hour", palette),
+            "number_format" => {
+                if choice_row(
+                    ui,
+                    row.title,
+                    row.description,
+                    format_label(view.number_format),
+                    palette,
+                ) {
+                    let next = match view.number_format {
+                        crate::model::NumberFormat::Automatic => {
+                            crate::model::NumberFormat::DotThousands
+                        }
+                        crate::model::NumberFormat::DotThousands => {
+                            crate::model::NumberFormat::CommaThousands
+                        }
+                        crate::model::NumberFormat::CommaThousands => {
+                            crate::model::NumberFormat::Automatic
+                        }
+                    };
+                    commands.push(Command::SetNumberFormat(next));
+                }
+            }
+            "time_format" => {
+                if choice_row(
+                    ui,
+                    row.title,
+                    row.description,
+                    time_label(view.time_format),
+                    palette,
+                ) {
+                    let next = match view.time_format {
+                        crate::model::TimeFormat::Hour24 => crate::model::TimeFormat::Hour12,
+                        crate::model::TimeFormat::Hour12 => crate::model::TimeFormat::Hour24,
+                    };
+                    commands.push(Command::SetTimeFormat(next));
+                }
+            }
             "server" => {
                 let state = if view.server_connected {
                     "connected"

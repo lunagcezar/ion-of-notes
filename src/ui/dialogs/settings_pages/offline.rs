@@ -3,6 +3,7 @@
 use crate::i18n;
 use crate::model::Workspace;
 
+use super::super::super::format::format_timestamp;
 use super::super::super::palette::Palette;
 use super::super::super::settings_search::SettingsRow;
 use super::super::super::widgets::toggle_button;
@@ -53,9 +54,12 @@ pub(in crate::ui::dialogs) fn render_offline_settings(
                         ui.label(egui::RichText::new(&page.title).color(palette.text));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             ui.label(
-                                egui::RichText::new(&page.updated_at)
-                                    .size(11.0)
-                                    .color(palette.muted),
+                                egui::RichText::new(format_timestamp(
+                                    &page.updated_at,
+                                    ws.settings.time_format,
+                                ))
+                                .size(11.0)
+                                .color(palette.muted),
                             );
                         });
                     });

@@ -18,6 +18,12 @@ use super::settings_pages::{
     render_server_settings, render_sidebar_settings, render_workspace_settings,
 };
 
+/// Dialog spacing constants shared by the rail, the content pane and the
+/// close control so they cannot drift (spec-061).
+const SETTINGS_PADDING: f32 = 20.0;
+const SETTINGS_RAIL_PADDING_Y: f32 = 18.0;
+const SETTINGS_SCROLLBAR_MARGIN: f32 = 72.0;
+
 /// A settings navigation row with a leading glyph, as in the reference
 /// pictures (preferences window layout).
 fn nav_item(
@@ -219,7 +225,7 @@ pub(crate) fn render_settings(
                 // implemented, so it is not offered in the rail.
                 ui.vertical(|ui| {
                     ui.set_width(268.0);
-                    ui.add_space(18.0);
+                    ui.add_space(SETTINGS_RAIL_PADDING_Y);
                     let (search, _) =
                         ui.allocate_exact_size(Vec2::new(268.0, 30.0), Sense::hover());
                     ui.painter().rect_filled(search, CornerRadius::same(6), palette.hover);
@@ -264,6 +270,7 @@ pub(crate) fn render_settings(
                         }
                         ui.add_space(14.0);
                     }
+                    ui.add_space(SETTINGS_RAIL_PADDING_Y);
                 });
 
                 ui.add_space(40.0);
@@ -271,8 +278,15 @@ pub(crate) fn render_settings(
                 // Right content column. The right margin keeps the content
                 // clear of the fixed close control in the header corner.
                 ui.vertical(|ui| {
-                    ui.set_width((ui.available_width() - 96.0).max(320.0));
+                    ui.set_width(
+                        (ui.available_width() - SETTINGS_SCROLLBAR_MARGIN).max(320.0),
+                    );
+                    let content_height = (ui.available_height() - 24.0).max(120.0);
                     egui::ScrollArea::vertical()
+                        .scroll_bar_visibility(
+                            egui::scroll_area::ScrollBarVisibility::AlwaysVisible,
+                        )
+                        .max_height(content_height)
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
                             ui.add_space(24.0);
@@ -356,7 +370,10 @@ pub(crate) fn render_settings(
             // NOT a button on the heading row. It stays put while content
             // scrolls, and sits in a subtle rounded hover well.
             let close_rect = Rect::from_center_size(
-                Pos2::new(whole.right() - 58.0, whole.top() + 34.0),
+                Pos2::new(
+                    whole.right() - SETTINGS_PADDING - 40.0,
+                    whole.top() + SETTINGS_PADDING + 14.0,
+                ),
                 Vec2::splat(28.0),
             );
             ui.painter().rect_filled(
