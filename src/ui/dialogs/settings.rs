@@ -27,8 +27,8 @@ fn nav_item(
     palette: &Palette,
     draw: fn(&egui::Painter, Rect, Color32),
 ) -> egui::Response {
-    let (rect, response) =
-        ui.allocate_exact_size(Vec2::new(ui.available_width(), 30.0), Sense::click());
+    let width = ui.available_width().max(120.0);
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 30.0), Sense::click());
     let fill = if selected {
         palette.selected
     } else if response.hovered() {
@@ -214,13 +214,14 @@ pub(crate) fn render_settings(
 
             ui.horizontal_top(|ui| {
                 ui.spacing_mut().item_spacing.x = 0.0;
+                ui.add_space(16.0);
                 // Left navigation column. Mail & Calendar is intentionally not
                 // implemented, so it is not offered in the rail.
                 ui.vertical(|ui| {
-                    ui.set_width(288.0);
+                    ui.set_width(268.0);
                     ui.add_space(18.0);
                     let (search, _) =
-                        ui.allocate_exact_size(Vec2::new(264.0, 30.0), Sense::hover());
+                        ui.allocate_exact_size(Vec2::new(268.0, 30.0), Sense::hover());
                     ui.painter().rect_filled(search, CornerRadius::same(6), palette.hover);
                     draw_search(
                         ui.painter(),
@@ -229,7 +230,7 @@ pub(crate) fn render_settings(
                     );
                     let mut query = view.settings_query.clone();
                     let edit = ui.put(
-                        Rect::from_min_size(search.min + Vec2::new(28.0, 2.0), Vec2::new(228.0, 26.0)),
+                        Rect::from_min_size(search.min + Vec2::new(28.0, 4.0), Vec2::new(232.0, 22.0)),
                         egui::TextEdit::singleline(&mut query)
                             .frame(egui::Frame::NONE)
                             .hint_text("Search settings")
@@ -265,11 +266,12 @@ pub(crate) fn render_settings(
                     }
                 });
 
-                ui.add_space(12.0);
+                ui.add_space(40.0);
 
-                // Right content column.
+                // Right content column. The right margin keeps the content
+                // clear of the fixed close control in the header corner.
                 ui.vertical(|ui| {
-                    ui.set_width(856.0);
+                    ui.set_width((ui.available_width() - 96.0).max(320.0));
                     egui::ScrollArea::vertical()
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
@@ -354,7 +356,7 @@ pub(crate) fn render_settings(
             // NOT a button on the heading row. It stays put while content
             // scrolls, and sits in a subtle rounded hover well.
             let close_rect = Rect::from_center_size(
-                Pos2::new(whole.right() - 32.0, whole.top() + 34.0),
+                Pos2::new(whole.right() - 58.0, whole.top() + 34.0),
                 Vec2::splat(28.0),
             );
             ui.painter().rect_filled(

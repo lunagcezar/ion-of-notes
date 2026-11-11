@@ -77,7 +77,7 @@ pub(crate) fn render_sidebar(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    let width = ui.available_width() - 20.0;
+    let width = ui.available_width();
     ui.add_space(12.0);
 
     // Search box with the Ctrl+K hint.

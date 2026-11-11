@@ -244,6 +244,28 @@ pub(super) fn draw_person(painter: &egui::Painter, rect: Rect, color: Color32) {
     );
 }
 
+/// A small padlock used by the sharing panel's general-access row.
+pub(super) fn draw_lock(painter: &egui::Painter, rect: Rect, color: Color32) {
+    let c = rect.center();
+    let stroke = Stroke::new(1.2, color);
+    painter.rect_stroke(
+        Rect::from_center_size(c + Vec2::new(0.0, 2.0), Vec2::new(11.0, 9.0)),
+        CornerRadius::same(2),
+        stroke,
+        egui::StrokeKind::Inside,
+    );
+    painter.line(
+        vec![
+            c + Vec2::new(-3.5, -1.0),
+            c + Vec2::new(-3.5, -4.0),
+            c + Vec2::new(0.0, -5.5),
+            c + Vec2::new(3.5, -4.0),
+            c + Vec2::new(3.5, -1.0),
+        ],
+        stroke,
+    );
+}
+
 pub(super) fn draw_arrow_left(painter: &egui::Painter, rect: Rect, color: Color32) {
     let c = rect.center();
     let s = Stroke::new(1.4, color);
@@ -504,8 +526,10 @@ pub(super) fn draw_page_icon(
     } else {
         icon
     };
+    // Emoji and symbol fonts sit slightly below the geometric center; a small
+    // optical lift keeps the glyph centered in the icon well.
     painter.text(
-        rect.center(),
+        rect.center() - Vec2::new(0.0, rect.height() * 0.03),
         egui::Align2::CENTER_CENTER,
         label,
         egui::FontId::proportional(rect.height() * if large { 0.60 } else { 0.72 }),

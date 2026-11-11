@@ -1,7 +1,7 @@
 //! Custom window chrome: the compact tab strip and window controls.
 
 use crate::model::Workspace;
-use egui::{Align2, CornerRadius, FontId, Rect, Sense, Vec2};
+use egui::{Align2, CornerRadius, FontId, Pos2, Rect, Sense, Vec2};
 
 use super::super::commands::Command;
 use super::super::icons::{
@@ -82,7 +82,33 @@ pub(crate) fn render_title_bar(
                 FontId::proportional(13.0),
                 palette.text,
             );
-            if response.clicked() && !active {
+            let close_rect = Rect::from_center_size(
+                Pos2::new(tab_rect.right() - 14.0, tab_rect.center().y),
+                Vec2::splat(18.0),
+            );
+            let close = ui.interact(
+                close_rect,
+                ui.scope_id().with(("close_tab", i)),
+                Sense::click(),
+            );
+            if close.hovered() {
+                ui.painter()
+                    .rect_filled(close_rect, CornerRadius::same(4), palette.selected);
+            }
+            ui.painter().text(
+                close_rect.center(),
+                Align2::CENTER_CENTER,
+                "×",
+                FontId::proportional(13.0),
+                if close.hovered() {
+                    palette.text
+                } else {
+                    palette.muted
+                },
+            );
+            if close.clicked() {
+                commands.push(Command::CloseTab(i));
+            } else if response.clicked() && !active {
                 commands.push(Command::SelectTab(i));
             }
             ui.add_space(6.0);

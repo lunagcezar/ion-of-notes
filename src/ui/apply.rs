@@ -88,8 +88,6 @@ impl NotionApp {
             share_open: self.share_open,
             share_members: Arc::clone(&self.share_members),
             invite_input: self.invite_input.clone(),
-            invite_role: self.invite_role,
-            invite_message: self.invite_message.clone(),
             invite_error: self.invite_error.clone(),
             invite_status: self.invite_status.clone(),
             share_general_access: self.share_general_access,

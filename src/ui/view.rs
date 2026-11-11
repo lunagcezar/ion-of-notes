@@ -5,7 +5,7 @@
 //! independent of command handling (SRP, spec-017).
 
 use super::commands::{FontStyle, IconTab};
-use crate::collab::{Access, Member, PageVersion, Role};
+use crate::collab::{Access, Member, PageVersion};
 use crate::model::SearchResult;
 use crate::server::realtime::Awareness;
 use egui::Pos2;
@@ -45,8 +45,6 @@ pub(super) struct ViewState {
     pub(super) share_open: bool,
     pub(super) share_members: Arc<Vec<Member>>,
     pub(super) invite_input: String,
-    pub(super) invite_role: Role,
-    pub(super) invite_message: String,
     pub(super) invite_error: Option<String>,
     pub(super) invite_status: Option<String>,
     pub(super) share_general_access: Access,

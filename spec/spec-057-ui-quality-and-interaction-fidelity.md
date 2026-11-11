@@ -124,10 +124,9 @@ C1. **Given** the Emoji tab, **when** the picker opens, **then** it shows a
 complete, real emoji catalog (not replacement characters) and the filter
 matches emoji names/keywords.
 
-C2. **Given** the Icons tab, **when** it opens, **then** it shows only
-monochrome icons from the chosen pack (decision: Phosphor via
-`egui-phosphor`, or Lucide if the dependency review prefers it), and the
-filter matches icon names.
+C2. **Given** the Icons tab, **when** it opens, **then** it shows only the
+monochrome icons already bundled in `ui/icons.rs` (no external icon pack), and
+the filter matches the icon names.
 
 C3. **Given** the picker, **when** a tab is active, **then** there is no stray
 blue underline; selection uses the normal hover/selected background.
@@ -193,9 +192,9 @@ actual status/error; a successful response renders the answer.
   text in the block, use the text after `/` as the query and anchor the menu
   below the caret; Escape/Close preserves the text.
 - **C:** replace the corrupted constants with a real emoji table
-  (`glyph`, `name`, `keywords`) and a monochrome icon table backed by the chosen
-  icon pack; filter by name/keywords. Remove the manual underline and use the
-  normal selected background.
+  (`glyph`, `name`, `keywords`) and a monochrome icon table backed by the
+  existing `ui/icons.rs` shape artwork; filter by name/keywords. Remove the
+  manual underline and use the normal selected background.
 - **D:** add a `sidebar_customize` UI mode and the smallest settings model for
   shortcuts/sections. Build the workspace switcher as an anchored popover, not
   a free-floating window, and keep help/four-point outside its bounds. Add the
@@ -208,7 +207,7 @@ actual status/error; a successful response renders the answer.
 
 ## Plan / tasks
 
-- [ ] Phase A: sidebar padding, tab close, share layout, page-icon centering,
+- [x] Phase A: sidebar padding, tab close, share layout, page-icon centering,
       settings content/rail/search/close padding.
 - [ ] Phase B: selection model + Ctrl+A/mouse/Ctrl+C, drag ghost and six-dot
       behavior, slash menu.

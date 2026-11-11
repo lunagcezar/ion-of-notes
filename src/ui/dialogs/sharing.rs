@@ -7,7 +7,7 @@ use crate::i18n;
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::super::commands::Command;
-use super::super::icons::{draw_inbox, draw_person};
+use super::super::icons::{draw_inbox, draw_lock, draw_settings};
 use super::super::palette::{Palette, strong_font};
 use super::super::view::ViewState;
 use super::super::widgets::{popover_frame, section_label};
@@ -40,27 +40,23 @@ pub(crate) fn render_share(
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_size(Vec2::new(480.0, 560.0))
-        .fixed_pos(Pos2::new(screen.right() - 500.0, screen.top() + 82.0))
+        .fixed_size(Vec2::new(460.0, 372.0))
+        .fixed_pos(Pos2::new(screen.right() - 480.0, screen.top() + 82.0))
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
+            // Header: the two tabs on the left, the help hint and the close
+            // control on the right (reference/share.png).
             ui.horizontal(|ui| {
-                ui.add(
-                    egui::Button::new(
-                        egui::RichText::new(i18n::t("share"))
-                            .size(13.0)
-                            .strong()
-                            .color(palette.text),
-                    )
-                    .frame(false),
+                ui.label(
+                    egui::RichText::new(i18n::t("share"))
+                        .font(strong_font(14.0))
+                        .color(palette.text),
                 );
-                ui.add(
-                    egui::Button::new(
-                        egui::RichText::new(i18n::t("publish"))
-                            .size(13.0)
-                            .color(palette.muted),
-                    )
-                    .frame(false),
+                ui.add_space(14.0);
+                ui.label(
+                    egui::RichText::new(i18n::t("publish"))
+                        .size(13.0)
+                        .color(palette.muted),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui
@@ -74,17 +70,25 @@ pub(crate) fn render_share(
                     {
                         commands.push(Command::CloseShare);
                     }
+                    ui.add_space(10.0);
+                    ui.label(
+                        egui::RichText::new(i18n::t("learn_about_sharing"))
+                            .size(11.0)
+                            .color(palette.muted),
+                    );
                 });
             });
-            ui.add_space(8.0);
+            ui.add_space(10.0);
             ui.separator();
-            ui.add_space(12.0);
+            ui.add_space(14.0);
 
+            // Invite row: the field grows, the accent button keeps its width.
             let mut invite = view.invite_input.clone();
             ui.horizontal(|ui| {
+                let width = (ui.available_width() - 78.0).max(220.0);
                 let edit = ui.add(
                     egui::TextEdit::singleline(&mut invite)
-                        .desired_width(300.0)
+                        .desired_width(width)
                         .hint_text(i18n::t("email_commas"))
                         .text_color(palette.text),
                 );
@@ -106,47 +110,6 @@ pub(crate) fn render_share(
                     commands.push(Command::SendInvites);
                 }
             });
-            ui.add_space(6.0);
-            ui.horizontal(|ui| {
-                ui.label(
-                    egui::RichText::new(i18n::t("role"))
-                        .size(11.0)
-                        .color(palette.muted),
-                );
-                for role in [Role::Guest, Role::Member] {
-                    let active = view.invite_role == role;
-                    if ui
-                        .add(
-                            egui::Button::new(
-                                egui::RichText::new(role_label(role))
-                                    .size(11.0)
-                                    .color(if active { palette.text } else { palette.muted }),
-                            )
-                            .fill(if active {
-                                palette.selected
-                            } else {
-                                Color32::TRANSPARENT
-                            })
-                            .corner_radius(CornerRadius::same(5)),
-                        )
-                        .clicked()
-                    {
-                        commands.push(Command::SetInviteRole(role));
-                    }
-                }
-            });
-            ui.add_space(6.0);
-            let mut message = view.invite_message.clone();
-            let message_edit = ui.add(
-                egui::TextEdit::multiline(&mut message)
-                    .desired_rows(2)
-                    .desired_width(f32::INFINITY)
-                    .hint_text(i18n::t("invite_note"))
-                    .text_color(palette.text),
-            );
-            if message_edit.changed() {
-                commands.push(Command::SetInviteMessage(message));
-            }
             if let Some(error) = &view.invite_error {
                 ui.label(
                     egui::RichText::new(error)
@@ -158,66 +121,88 @@ pub(crate) fn render_share(
                 ui.label(egui::RichText::new(status).size(11.0).color(palette.accent));
             }
             ui.add_space(10.0);
-            ui.separator();
-            ui.add_space(8.0);
 
-            egui::ScrollArea::vertical()
-                .auto_shrink([false, false])
-                .max_height(180.0)
-                .show(ui, |ui| {
-                    for member in view.share_members.iter() {
-                        let (row, _) = ui.allocate_exact_size(
-                            Vec2::new(ui.available_width(), 44.0),
-                            Sense::hover(),
-                        );
-                        draw_person(
-                            ui.painter(),
-                            Rect::from_min_size(row.min + Vec2::new(2.0, 12.0), Vec2::splat(20.0)),
-                            palette.muted,
-                        );
-                        ui.painter().text(
-                            row.min + Vec2::new(32.0, 16.0),
-                            Align2::LEFT_CENTER,
-                            &member.name,
-                            FontId::proportional(13.0),
-                            palette.text,
-                        );
-                        ui.painter().text(
-                            row.min + Vec2::new(32.0, 32.0),
-                            Align2::LEFT_CENTER,
-                            &member.email,
-                            FontId::proportional(11.0),
-                            palette.muted,
-                        );
-                        ui.painter().text(
-                            row.max + Vec2::new(-4.0, -22.0),
-                            Align2::RIGHT_CENTER,
-                            member.role.label(),
-                            FontId::proportional(12.0),
-                            palette.muted,
-                        );
-                    }
-                });
-
-            ui.add_space(8.0);
-            section_label(ui, &i18n::t("general_access"), palette);
-            let (general, response) =
-                ui.allocate_exact_size(Vec2::new(ui.available_width(), 32.0), Sense::click());
-            if response.hovered() {
+            // People with access: avatar, name, address and role.
+            for member in view.share_members.iter() {
+                let (row, _) =
+                    ui.allocate_exact_size(Vec2::new(ui.available_width(), 46.0), Sense::hover());
+                let avatar = Rect::from_center_size(
+                    Pos2::new(row.left() + 18.0, row.center().y),
+                    Vec2::splat(28.0),
+                );
                 ui.painter()
-                    .rect_filled(general, CornerRadius::same(5), palette.hover);
+                    .circle_filled(avatar.center(), 14.0, palette.hover);
+                let initial = member
+                    .name
+                    .chars()
+                    .next()
+                    .map(|c| c.to_uppercase().to_string())
+                    .unwrap_or_default();
+                ui.painter().text(
+                    avatar.center(),
+                    Align2::CENTER_CENTER,
+                    initial,
+                    FontId::proportional(12.0),
+                    palette.text,
+                );
+                ui.painter().text(
+                    Pos2::new(row.left() + 44.0, row.center().y - 8.0),
+                    Align2::LEFT_CENTER,
+                    &member.name,
+                    FontId::proportional(13.0),
+                    palette.text,
+                );
+                ui.painter().text(
+                    Pos2::new(row.left() + 44.0, row.center().y + 9.0),
+                    Align2::LEFT_CENTER,
+                    &member.email,
+                    FontId::proportional(11.0),
+                    palette.muted,
+                );
+                ui.painter().text(
+                    Pos2::new(row.right() - 4.0, row.center().y),
+                    Align2::RIGHT_CENTER,
+                    format!("{} ⌄", role_label(member.role)),
+                    FontId::proportional(12.0),
+                    palette.muted,
+                );
             }
+
+            ui.add_space(10.0);
+            section_label(ui, &i18n::t("general_access"), palette);
+            ui.add_space(4.0);
+            let (general, response) =
+                ui.allocate_exact_size(Vec2::new(ui.available_width(), 40.0), Sense::click());
+            ui.painter().rect(
+                general,
+                CornerRadius::same(6),
+                if response.hovered() {
+                    palette.hover
+                } else {
+                    Color32::TRANSPARENT
+                },
+                Stroke::new(1.0, palette.border),
+                egui::StrokeKind::Inside,
+            );
+            draw_lock(
+                ui.painter(),
+                Rect::from_center_size(
+                    Pos2::new(general.left() + 20.0, general.center().y),
+                    Vec2::splat(16.0),
+                ),
+                palette.muted,
+            );
             ui.painter().text(
-                general.min + Vec2::new(4.0, 16.0),
+                Pos2::new(general.left() + 40.0, general.center().y),
                 Align2::LEFT_CENTER,
                 i18n::t("everyone_workspace"),
                 FontId::proportional(13.0),
                 palette.text,
             );
             ui.painter().text(
-                general.max + Vec2::new(-4.0, -16.0),
+                Pos2::new(general.right() - 14.0, general.center().y),
                 Align2::RIGHT_CENTER,
-                access_label(view.share_general_access),
+                format!("{} ⌄", access_label(view.share_general_access)),
                 FontId::proportional(12.0),
                 palette.muted,
             );
@@ -230,10 +215,14 @@ pub(crate) fn render_share(
                 };
                 commands.push(Command::SetGeneralAccess(next));
             }
-            ui.add_space(10.0);
+
+            ui.add_space(14.0);
             ui.separator();
             ui.add_space(10.0);
             ui.horizontal(|ui| {
+                let (glyph, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
+                draw_settings(ui.painter(), glyph, palette.muted);
+                ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(i18n::t("advanced"))
                         .size(13.0)
@@ -244,10 +233,12 @@ pub(crate) fn render_share(
                         .add(
                             egui::Button::new(
                                 egui::RichText::new(i18n::t("copy_link"))
-                                    .size(13.0)
+                                    .size(12.5)
                                     .color(palette.text),
                             )
-                            .frame(false),
+                            .fill(Color32::TRANSPARENT)
+                            .stroke(Stroke::new(1.0, palette.border))
+                            .corner_radius(CornerRadius::same(6)),
                         )
                         .clicked()
                     {
@@ -268,7 +259,6 @@ pub(crate) fn render_share(
         commands.push(Command::CloseShare);
     }
 }
-
 pub(crate) fn render_inbox(
     ctx: &egui::Context,
     view: &ViewState,
