@@ -24,7 +24,8 @@ use super::crdt::CrdtSession;
 use super::dialogs::{
     render_app_menu, render_grid_menu, render_inbox, render_new_tab, render_onboarding,
     render_page_actions, render_search, render_settings, render_share, render_shortcuts,
-    render_slash, render_templates, render_version_history, render_workspace_menu,
+    render_sidebar_menu, render_slash, render_templates, render_version_history,
+    render_workspace_menu,
 };
 use super::edit_queue::PendingEdits;
 use super::page_icon::render_icon_picker;
@@ -32,7 +33,7 @@ use super::palette::{Palette, apply_theme};
 use super::render::{TITLE_BAR_HEIGHT, render_content, render_sidebar, render_title_bar};
 use super::search_cache::SearchCache;
 
-pub(super) use super::commands::{Command, FontStyle, IconTab, NewTabChoice};
+pub(super) use super::commands::{Command, FontStyle, IconTab, NewTabChoice, SidebarMenu};
 use super::input::collect_shortcuts;
 pub(super) use super::view::ViewState;
 
@@ -83,6 +84,8 @@ pub struct NotionApp {
     pub(super) slash_pos: Pos2,
     pub(super) slash_query: String,
     pub(super) slash_dismissed: Option<String>,
+    pub(super) sidebar_customize: bool,
+    pub(super) sidebar_menu: Option<SidebarMenu>,
     pub(super) pending_reload: bool,
     pub(super) screenshot: Option<PathBuf>,
     pub(super) frames: u32,
@@ -266,6 +269,7 @@ impl NotionApp {
         let ai_config = OllamaConfig::from_env();
         let ai_status = ollama::detect(&ai_config);
         let onboarding_open = demo == "onboarding"
+            || demo == "new-workspace"
             || (workspace.pages.is_empty() && !workspace.settings.onboarding_completed);
         let templates_open = demo == "templates";
         let mut crdt = CrdtSession::new();
@@ -353,6 +357,12 @@ impl NotionApp {
                 String::new()
             },
             slash_dismissed: None,
+            sidebar_customize: matches!(demo.as_str(), "customize-sidebar" | "customize-shortcut"),
+            sidebar_menu: if demo == "customize-shortcut" {
+                Some(SidebarMenu::Shortcut)
+            } else {
+                None
+            },
             pending_reload: false,
             screenshot,
             frames: 0,
@@ -400,7 +410,7 @@ impl NotionApp {
             font_style: FontStyle::Default,
             full_width: false,
             small_text: false,
-            workspace_menu_open: false,
+            workspace_menu_open: demo == "workspace-switcher",
             app_menu_open: false,
             grid_menu_open: false,
             drag_from: None,
@@ -569,6 +579,9 @@ impl eframe::App for NotionApp {
         }
         if view.workspace_menu_open {
             render_workspace_menu(&ctx, &palette, &mut commands);
+        }
+        if let Some(menu) = view.sidebar_menu {
+            render_sidebar_menu(&ctx, menu, &self.workspace, &view, &palette, &mut commands);
         }
         if view.grid_menu_open {
             render_grid_menu(&ctx, &palette, &mut commands);

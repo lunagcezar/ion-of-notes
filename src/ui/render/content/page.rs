@@ -55,7 +55,9 @@ pub(crate) fn render_content(
                 {
                     commands.push(Command::OpenPageActions);
                 }
-                if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_star).clicked() {
+                if !view.library_open
+                    && glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_star).clicked()
+                {
                     commands.push(Command::ToggleFavorite(view.current_page.clone()));
                 }
                 if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_link).clicked() {

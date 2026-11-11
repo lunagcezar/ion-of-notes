@@ -4,7 +4,7 @@
 //! read it. Keeping the shape separate from the state machine keeps rendering
 //! independent of command handling (SRP, spec-017).
 
-use super::commands::{FontStyle, IconTab};
+use super::commands::{FontStyle, IconTab, SidebarMenu};
 use crate::collab::{Access, Member, PageVersion};
 use crate::model::SearchResult;
 use crate::server::realtime::Awareness;
@@ -54,6 +54,8 @@ pub(super) struct ViewState {
     pub(super) slash_pos: Pos2,
     pub(super) slash_query: String,
     pub(super) slash_dismissed: Option<String>,
+    pub(super) sidebar_customize: bool,
+    pub(super) sidebar_menu: Option<SidebarMenu>,
     pub(super) new_tab_open: bool,
     pub(super) new_tab_query: String,
     pub(super) new_tab_selected: usize,

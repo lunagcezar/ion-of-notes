@@ -102,6 +102,8 @@ impl NotionApp {
             slash_pos: self.slash_pos,
             slash_query: self.slash_query.clone(),
             slash_dismissed: self.slash_dismissed.clone(),
+            sidebar_customize: self.sidebar_customize,
+            sidebar_menu: self.sidebar_menu,
             new_tab_open: self.new_tab_open,
             new_tab_query: self.new_tab_query.clone(),
             new_tab_selected: self.new_tab_selected,

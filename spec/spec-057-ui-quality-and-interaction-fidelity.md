@@ -152,6 +152,12 @@ D4. **Given** the Library or another dynamic view, **when** the favorite
 control is used, **then** it does not favorite the last visited static page;
 the target is the visible page or the control is disabled in a non-page view.
 
+Implementation note (2026-11-11): the current store keeps a single workspace,
+so "Create new workspace" opens the purpose dialog from
+`reference/new-workspace.png` and applies the chosen starter template. True
+multi-workspace persistence is deferred to a follow-up spec rather than hidden
+inside the dialog.
+
 ### Phase E - settings behavior and Ollama
 
 E1. **Given** each settings row, **when** it is changed, **then** the value is
@@ -213,7 +219,7 @@ actual status/error; a successful response renders the answer.
       behavior, slash menu.
 - [x] Phase C: real emoji catalog/search, monochrome icon pack, remove blue
       underline.
-- [ ] Phase D: customize-sidebar mode, new-workspace dialog, workspace switcher,
+- [x] Phase D: customize-sidebar mode, new-workspace dialog, workspace switcher,
       favorite target.
 - [ ] Phase E: settings persistence/placeholders, Ollama test state.
 - [ ] Add the new preview states and screenshot checks.

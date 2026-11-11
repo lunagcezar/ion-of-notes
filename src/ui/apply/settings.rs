@@ -60,6 +60,12 @@ impl NotionApp {
                 self.workspace_menu_open = open;
             }
             Command::CloseWorkspaceMenu => self.workspace_menu_open = false,
+            Command::SetSidebarCustomize(on) => {
+                self.sidebar_customize = on;
+                self.sidebar_menu = None;
+            }
+            Command::OpenSidebarMenu(menu) => self.sidebar_menu = Some(menu),
+            Command::CloseSidebarMenu => self.sidebar_menu = None,
             Command::OpenAppMenu => {
                 let open = !self.app_menu_open;
                 self.close_overlays();

@@ -2,13 +2,13 @@
 
 //! App, workspace, grid and slash menus.
 
-use egui::{Align2, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
+use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
-use super::super::commands::Command;
+use super::super::commands::{Command, SidebarMenu};
 use super::super::palette::Palette;
 use super::super::view::ViewState;
 use super::super::widgets::{menu_button, popover_frame};
-use crate::model::BlockKind;
+use crate::model::{BlockKind, Workspace};
 
 #[allow(clippy::too_many_arguments)]
 fn popup_menu(
@@ -112,8 +112,8 @@ pub(crate) fn render_workspace_menu(
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_pos(Pos2::new(screen.left() + 12.0, screen.bottom() - 250.0))
-        .default_width(240.0)
+        .fixed_pos(Pos2::new(screen.left() + 12.0, screen.bottom() - 336.0))
+        .default_width(250.0)
         .frame(
             egui::Frame::NONE
                 .fill(palette.content)
@@ -122,31 +122,68 @@ pub(crate) fn render_workspace_menu(
                 .stroke(Stroke::new(1.0, palette.border)),
         )
         .show(ctx, |ui| {
-            let items: &[(&str, Command, Option<&str>)] = &[
-                ("Workspace settings", Command::OpenSettings, Some("General")),
-                ("Invite members", Command::OpenShare, None),
-                ("Add account", Command::OpenSettings, Some("People")),
-                ("---", Command::NoOp, None),
-                ("Switch workspace", Command::OpenLibrary, None),
-                (
-                    "Create new workspace",
-                    Command::OpenSettings,
-                    Some("General"),
-                ),
-            ];
-            for (label, cmd, page) in items {
-                if *label == "---" {
-                    ui.separator();
-                    continue;
-                }
-                let r = menu_button(ui, label, "", palette);
-                if r.clicked() {
-                    if let Some(p) = page {
-                        commands.push(Command::SetSettingsPage((*p).to_string()));
+            // Account header.
+            ui.horizontal(|ui| {
+                let (avatar, _) = ui.allocate_exact_size(Vec2::splat(30.0), Sense::hover());
+                ui.painter()
+                    .circle_filled(avatar.center(), 13.0, palette.accent);
+                ui.painter().text(
+                    avatar.center(),
+                    Align2::CENTER_CENTER,
+                    "N",
+                    FontId::proportional(12.0),
+                    Color32::WHITE,
+                );
+                ui.vertical(|ui| {
+                    ui.label(
+                        egui::RichText::new("Local workspace")
+                            .size(13.0)
+                            .color(palette.text),
+                    );
+                    ui.label(
+                        egui::RichText::new("owner@workspace.local")
+                            .size(10.5)
+                            .color(palette.muted),
+                    );
+                });
+            });
+            ui.add_space(4.0);
+            ui.separator();
+            ui.add_space(2.0);
+            for (label, page, cmd) in [
+                ("Workspace settings", Some("General"), Command::OpenSettings),
+                ("Invite members", None, Command::OpenShare),
+                ("Add account", Some("People"), Command::OpenSettings),
+            ] {
+                if menu_button(ui, label, "", palette).clicked() {
+                    if let Some(page) = page {
+                        commands.push(Command::SetSettingsPage(page.to_string()));
                     }
-                    commands.push(cmd.clone());
+                    commands.push(cmd);
                     commands.push(Command::CloseWorkspaceMenu);
                 }
+            }
+            ui.add_space(4.0);
+            ui.separator();
+            ui.add_space(2.0);
+            ui.label(
+                egui::RichText::new("Workspaces")
+                    .size(10.5)
+                    .color(palette.muted),
+            );
+            if menu_button(ui, "Local workspace", "✓", palette).clicked() {
+                commands.push(Command::CloseWorkspaceMenu);
+            }
+            if menu_button(ui, "Create new workspace", "", palette).clicked() {
+                commands.push(Command::OpenOnboarding);
+                commands.push(Command::CloseWorkspaceMenu);
+            }
+            ui.add_space(4.0);
+            ui.separator();
+            ui.add_space(2.0);
+            if menu_button(ui, "Log out", "", palette).clicked() {
+                commands.push(Command::DisconnectServer);
+                commands.push(Command::CloseWorkspaceMenu);
             }
         });
     if let Some(inner) = resp
@@ -158,6 +195,81 @@ pub(crate) fn render_workspace_menu(
         })
     {
         commands.push(Command::CloseWorkspaceMenu);
+    }
+}
+
+/// The Add shortcut / Add section popover used by customize-sidebar mode.
+pub(crate) fn render_sidebar_menu(
+    ctx: &egui::Context,
+    menu: SidebarMenu,
+    ws: &Workspace,
+    _view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    let screen = ctx.viewport_rect();
+    let y = match menu {
+        SidebarMenu::Shortcut => screen.top() + 300.0,
+        SidebarMenu::Section => screen.top() + 470.0,
+    };
+    let resp = egui::Window::new("sidebar_menu")
+        .title_bar(false)
+        .collapsible(false)
+        .resizable(false)
+        .fixed_pos(Pos2::new(screen.left() + 12.0, y))
+        .default_width(250.0)
+        .frame(popover_frame(palette))
+        .show(ctx, |ui| {
+            let title = match menu {
+                SidebarMenu::Shortcut => "Add shortcut",
+                SidebarMenu::Section => "Add section",
+            };
+            ui.label(
+                egui::RichText::new(title)
+                    .size(12.0)
+                    .strong()
+                    .color(palette.text),
+            );
+            ui.add_space(4.0);
+            match menu {
+                SidebarMenu::Shortcut => {
+                    for page in ws.pages.iter().take(10) {
+                        let hint = if page.favorite { "✓" } else { "" };
+                        if menu_button(ui, &page.title, hint, palette).clicked() {
+                            commands.push(Command::ToggleFavorite(page.id.clone()));
+                            commands.push(Command::CloseSidebarMenu);
+                        }
+                    }
+                    ui.separator();
+                    if menu_button(ui, "New page", "", palette).clicked() {
+                        commands.push(Command::NewPage(None));
+                        commands.push(Command::CloseSidebarMenu);
+                    }
+                }
+                SidebarMenu::Section => {
+                    for label in ["Favorites", "Private", "Shared"] {
+                        if menu_button(ui, label, "", palette).clicked() {
+                            commands.push(Command::CloseSidebarMenu);
+                        }
+                    }
+                    ui.add_space(4.0);
+                    ui.label(
+                        egui::RichText::new("Sections group shortcuts in the sidebar.")
+                            .size(10.5)
+                            .color(palette.muted),
+                    );
+                }
+            }
+        });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| {
+            i.pointer
+                .interact_pos()
+                .is_some_and(|p| !inner.response.rect.contains(p))
+        })
+    {
+        commands.push(Command::CloseSidebarMenu);
     }
 }
 

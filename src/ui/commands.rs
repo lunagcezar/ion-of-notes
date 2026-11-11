@@ -25,6 +25,13 @@ pub(super) enum FontStyle {
     Mono,
 }
 
+/// The popover opened from the customize-sidebar rows (spec-057).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum SidebarMenu {
+    Shortcut,
+    Section,
+}
+
 /// One entry in the "Open in new tab…" switcher opened by the tab-strip `+`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum NewTabChoice {
@@ -217,6 +224,9 @@ pub(super) enum Command {
     RestoreVersion(usize),
     ToggleWorkspaceMenu,
     CloseWorkspaceMenu,
+    SetSidebarCustomize(bool),
+    OpenSidebarMenu(SidebarMenu),
+    CloseSidebarMenu,
     OpenAppMenu,
     CloseAppMenu,
     ToggleGridMenu,
@@ -407,6 +417,9 @@ impl Command {
             | Command::ZoomReset
             | Command::ToggleWorkspaceMenu
             | Command::CloseWorkspaceMenu
+            | Command::SetSidebarCustomize(_)
+            | Command::OpenSidebarMenu(_)
+            | Command::CloseSidebarMenu
             | Command::OpenAppMenu
             | Command::CloseAppMenu
             | Command::ToggleGridMenu
