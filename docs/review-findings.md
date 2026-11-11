@@ -385,10 +385,10 @@ instead of being deleted.
 | - | ------- | -------- | ------------------- |
 | RF-M01 | `server.rs` no longer acts as a facade: it carries the contract, both dispatchers and eight v2 use-case families, while `server/` holds only the adapters and helpers. | High - **resolved** | `spec-046`: contract/state stays in `server.rs`; dispatch is in `server/routes/`, v2 use cases in `server/handlers/` and response helpers in `server/response.rs`. |
 | RF-M02 | `model.rs` mixes ten subdomains, although `docs/architecture.md` (section 10) already names `model/rich_text.rs`, `model/block.rs`, `model/property.rs`, `model/database.rs`, `model/view.rs`, `model/comment.rs`, `model/file.rs` and `model/user.rs`. Only `diff`, `index`, `search`, `seed` and `settings` existed. | High - **resolved** | `spec-046`: the planned modules plus `page.rs` and `workspace.rs` exist; `model.rs` is declarations, re-exports and time helpers. |
-| RF-M03 | `apply_commands` repeats command classification in the `force_flush` and `blocked` matches, so one new `Command` variant needs coordinated edits in three places. | Medium - **resolved** | `spec-046`: `Command::forces_flush()` and `Command::blocked_when_locked()` in `ui/commands.rs` are the single source; splitting command families is deferred to spec-049. |
-| RF-M04 | `ui/dialogs/settings_pages.rs` holds seven independent pages in one file; `section_heading` and `info_row` are shared by all of them. | Medium | `settings_pages/{preferences,workspace,sidebar,offline,people,ai,server}.rs` with a facade; move the two helpers to `ui/widgets.rs`. |
-| RF-M05 | `ui/render/content.rs` combines page header, block rendering, block controls and remote-cursor overlay. | Medium | `render/content/{page,blocks,cursors}.rs`, keeping `render_content` as the entry point. |
-| RF-M06 | `client.rs` is a coherent typed client, but `RetryPolicy`/`RetryDecision` is an independent policy and the v1/v2 method pairs keep growing. | Low | Extract `client/retry.rs`; do not split the thin resource wrappers until they gain separate behavior. |
+| RF-M03 | `apply_commands` repeats command classification in the `force_flush` and `blocked` matches, so one new `Command` variant needs coordinated edits in three places. | Medium - **resolved** | `spec-046` centralized `forces_flush`/`blocked_when_locked`; `spec-049` added `CommandFamily` and split the state machine into `ui/apply/*` family modules behind one `apply_commands` entry point. |
+| RF-M04 | `ui/dialogs/settings_pages.rs` holds seven independent pages in one file; `section_heading` and `info_row` are shared by all of them. | Medium - **resolved** | `spec-049`: one module per page under `ui/dialogs/settings_pages/`; the two helpers moved to `ui/widgets.rs`. |
+| RF-M05 | `ui/render/content.rs` combines page header, block rendering, block controls and remote-cursor overlay. | Medium - **resolved** | `spec-049`: `render/content/{page,blocks,cursors}.rs`, keeping `render_content` as the entry point. |
+| RF-M06 | `client.rs` is a coherent typed client, but `RetryPolicy`/`RetryDecision` is an independent policy and the v1/v2 method pairs keep growing. | Low - **resolved** | `spec-049`: extracted `client/retry.rs`; the thin resource wrappers stay in `client.rs`. |
 | RF-M07 | v2 dispatch reused `handle_v1` by rewriting the path, and `required_capability` repeated route knowledge. A new route needed coordinated edits in the capability table, the v2 handler chain and the v1 fallback. | High - **resolved** | `spec-047`: v1 and v2 call shared `server::usecases`; the v1 fallback is gone; `route_capability` is public and every documented v2 route has a contract test. |
 | RF-M08 | `WorkspaceServer` had roughly 30 fields spanning persistence, auth, limits, realtime, webhooks, CRDT and metrics. File splitting alone left it a god object. | Medium - **resolved** | `spec-047`: persistence, runtime limits and webhook state are grouped into `Persistence`, `Runtime` and `WebhookRuntime`; realtime and CRDT stay as single fields. |
 | RF-M09 | ADR-004 says the largest files are `apply.rs`, `settings_pages.rs` and `content.rs`; at review time the largest were `server.rs` and `model.rs`. `architecture.md` (section 11) still said auth/storage were not implemented and real-time was only a contract, contradicted by specs 039-045. | Medium - **resolved** | `spec-046`: ADR-004 has a dated follow-up; `architecture.md` module map and constraints are current; historical specs keep their notes. |
@@ -396,8 +396,8 @@ instead of being deleted.
 
 ### 9.3 What stays as it is
 
-- `ui/apply.rs` is still one state machine at the boundary; the split must keep
-  one `apply_commands` entry point and one `Client` write path.
+- `ui/apply.rs` remains the one `apply_commands` entry point and one `Client`
+  write path; the `ui/apply/*` family modules own the transitions.
 - `client.rs` resource methods are thin; splitting them by noun would create
   files without a separate reason to change.
 - `store.rs`, `auth.rs`, `collab.rs`, `app.rs` and `shortcuts.rs` remain
@@ -437,6 +437,6 @@ introduced by the new module declarations.
 | Done | Server/model module split and command classification | `spec-046` |
 | Done | Use-case layer between v1 and v2, capability table test | `spec-047` |
 | Done | Desktop feature seam, test build profile and two-pass gate | `spec-048` |
-| Next | Settings pages and page-column render split | `spec-049` |
+| Done | Settings pages, page-column render, command families and retry split | `spec-049` |
 | Done | Group `WorkspaceServer` state into sub-structs | `spec-047` |
-| Later | Extract `client/retry.rs` | `spec-049` |
+| Done | Extract `client/retry.rs` | `spec-049` |

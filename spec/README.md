@@ -86,7 +86,7 @@ Status vocabulary:
 | [046](spec-046-module-boundary-refactor.md) | Module boundaries for server, model and command metadata | implemented | Facades, `server/routes`, `server/handlers`, `model/*` |
 | [047](spec-047-use-case-seam-and-server-state.md) | Use-case seam, capability metadata and server sub-state | implemented | Shared `server/usecases`, `route_capability`, grouped state |
 | [048](spec-048-build-performance-and-desktop-feature-seam.md) | Build performance and the desktop feature seam | implemented | Default-on `desktop` feature, core/desktop test passes, lean debug info |
-| 049 | UI/client split (planned) | plan | Reserved; not yet written |
+| [049](spec-049-ui-client-modularization.md) | UI and client modularization | implemented | Command families, settings pages, content split, client retry |
 | [050](spec-050-server-container-and-compose.md) | Server-only binary and Compose deployment | implemented | `ion-of-notes-server`, Dockerfile, `compose.yml` |
 | [051](spec-051-container-hardening-and-deployment-operations.md) | Container hardening and deployment operations | implemented | Loopback bind, read-only root, Caddy example, deployment guide |
 

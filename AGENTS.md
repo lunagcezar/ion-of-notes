@@ -153,6 +153,8 @@ src/
     webhook_sender.rs  WebhookSender port and ureq/rustls adapter (spec-041)
   remote.rs        remote WorkspaceApi: ureq REST + background WebSocket
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
+  client/
+    retry.rs       RetryPolicy + RetryDecision
   collab.rs        accounts/roles, sharing, sync log, realtime DTOs, CollabState
                    (version history capped at 50 snapshots per page)
   collab/
@@ -177,18 +179,23 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
     view.rs        ViewState snapshot passed to render functions
     input.rs       egui key events -> shortcut actions (pure input adapter)
     app.rs         NotionApp struct, new(), eframe::App shell, preview hook
-    apply.rs       command application and state transitions
+    apply.rs       facade: apply_commands + shared helpers
+    apply/         navigation, library, sharing, blocks, workspace, tabs, ai,
+                   settings, page_actions, crdt, server
     render.rs      facade for the render submodules
     render/
       chrome.rs    tab strip and window controls
       sidebar.rs   search, Library/Settings/Inbox, favorites, tree, bottom group
-      content.rs   breadcrumbs, page header, blocks, floating controls
+      content.rs   facade: render_content entry point
+      content/     page, blocks, cursors
       library.rs   Library table and tabs
       database.rs  inline table / board database
     dialogs.rs     facade for the dialog submodules
     dialogs/
       settings.rs       settings window, rail, search filtering
-      settings_pages.rs Preferences / Workspace / Sidebar / Offline / People / AI
+      settings_pages.rs  facade
+      settings_pages/    preferences, workspace, sidebar, offline, people, ai,
+                         server
       sharing.rs        Share popover and Inbox
       page_actions.rs   page actions and version history
       menus.rs          app / workspace / grid / slash menus

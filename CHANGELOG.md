@@ -6,6 +6,26 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-049 UI and client modularization
+
+- Split `ui/apply.rs` into command-family modules under `ui/apply/`
+  (navigation, library, sharing, blocks, workspace, tabs, ai, settings,
+  page actions, CRDT, server) behind the single `apply_commands` entry point.
+- Added `CommandFamily` in `ui/commands.rs` as the routing table; the flush and
+  lock classifications stay on `Command`.
+- Split `ui/dialogs/settings_pages.rs` into one module per settings page and
+  moved `section_heading`/`info_row` to `ui/widgets.rs`.
+- Split `ui/render/content.rs` into `content/{page,blocks,cursors}.rs` while
+  keeping `render_content` as the entry point.
+- Extracted `RetryPolicy`/`RetryDecision` into `client/retry.rs` and re-exported
+  them from `client.rs`; the public API is unchanged.
+- No behavior, protocol, persistence, DTO or visual change. The suite stays at
+  255 tests; both clippy passes, fmt, docs and the preview screenshots pass.
+- Made the SQLite migration test deterministic by removing stale temporary
+  artifacts before use (found by the full gate).
+- Updated `AGENTS.md`, README, architecture, review findings, docs hub, spec
+  index, ADR-004 and the changelog.
+
 ### Changed - spec-051 container hardening and deployment operations
 
 - Compose now binds to `127.0.0.1` by default (`ION_OF_NOTES_BIND` overrides),

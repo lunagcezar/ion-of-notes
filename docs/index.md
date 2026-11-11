@@ -16,8 +16,7 @@ in what order, and which document is the source of truth for each concern.
 
 ## Current status (2026-11-11)
 
-- **Specs:** `spec-001` .. `spec-048`, `spec-050` and `spec-051` implemented;
-  `spec-049` is reserved for the UI/client split; `spec-007` retired;
+- **Specs:** `spec-001` .. `spec-051` implemented; `spec-007` retired;
   `spec-016` is a plan with B5 done. The v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
@@ -25,8 +24,9 @@ in what order, and which document is the source of truth for each concern.
   (spec-041), Yrs CRDT merge (spec-042), client awareness (spec-043), the
   remote transport (spec-044), the server login UI (spec-045), module
   boundaries (spec-046), the use-case seam (spec-047), the desktop feature
-  seam/build profile (spec-048), the server container/Compose stack (spec-050)
-  and container hardening/deployment operations (spec-051) are implemented.
+  seam/build profile (spec-048), the UI/client split (spec-049), the server
+  container/Compose stack (spec-050) and container hardening/deployment
+  operations (spec-051) are implemented.
 - **Tests:** 255 tests across the core and desktop passes (229 + 26); both
   clippy feature passes and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`

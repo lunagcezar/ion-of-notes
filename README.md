@@ -329,8 +329,12 @@ src/
   server/          routes (v1/v2/capabilities), handlers, response helpers,
                    Axum/WebSocket, realtime hub, CRDT, webhooks, limits
   client.rs        the UI's only data access
+  client/retry.rs  retry policy
   ui.rs            UI facade (desktop feature)
   ui/              state, commands, rendering, dialogs, client CRDT session
+  ui/apply/        command families behind apply_commands
+  ui/render/content/ page, blocks, cursors
+  ui/dialogs/settings_pages/ one module per settings page
   templates.rs     starter templates
   ollama.rs        AI assistant adapter
   shortcuts.rs     keyboard table

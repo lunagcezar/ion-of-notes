@@ -6,7 +6,37 @@
 
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
 
-use super::palette::Palette;
+use super::palette::{Palette, strong_font};
+
+/// A section heading inside a settings page. Rows sharing a section are
+/// grouped under one heading, so filtering never leaves an empty heading.
+pub(super) fn section_heading(ui: &mut egui::Ui, title: &str, palette: &Palette) {
+    ui.add_space(20.0);
+    ui.label(
+        egui::RichText::new(title)
+            .font(strong_font(17.0))
+            .color(palette.text),
+    );
+    ui.add_space(10.0);
+    ui.separator();
+    ui.add_space(10.0);
+}
+
+/// A compact label/value row used by the workspace summary.
+pub(super) fn info_row(ui: &mut egui::Ui, label: &str, value: &str, palette: &Palette) {
+    ui.horizontal(|ui| {
+        ui.label(
+            egui::RichText::new(label)
+                .size(12.0)
+                .strong()
+                .color(palette.text),
+        );
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.label(egui::RichText::new(value).size(11.0).color(palette.muted));
+        });
+    });
+    ui.add_space(6.0);
+}
 
 /// A compact window frame shared by the popovers.
 pub(super) fn popover_frame(palette: &Palette) -> egui::Frame {

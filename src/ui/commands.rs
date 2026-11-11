@@ -49,6 +49,25 @@ pub(super) fn new_tab_choices(ws: &Workspace, query: &str) -> Vec<NewTabChoice> 
     choices
 }
 
+/// The command family that owns the transition. `apply_commands` uses this
+/// classification to route one command to one `ui::apply/*` module, so the
+/// state machine is not one giant switch (spec-049).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum CommandFamily {
+    Navigation,
+    Library,
+    Sharing,
+    Blocks,
+    Workspace,
+    Tabs,
+    Ai,
+    Settings,
+    PageActions,
+    Crdt,
+    Server,
+    NoOp,
+}
+
 /// Every user-visible state change is collected as a `Command` and applied
 /// through the `Client`, so the UI never mutates server state directly.
 #[allow(dead_code)]
@@ -275,5 +294,143 @@ impl Command {
                 | Command::DuplicatePage
                 | Command::RestoreVersion(_)
         )
+    }
+
+    /// Route a command to the module that owns its transition.
+    pub(super) fn family(&self) -> CommandFamily {
+        use CommandFamily::*;
+        match self {
+            Command::SelectPage(_)
+            | Command::NewPage(_)
+            | Command::DeletePage(_)
+            | Command::ToggleExpand(_)
+            | Command::ToggleFavorite(_)
+            | Command::OpenSearch
+            | Command::ToggleSearch
+            | Command::CloseSearch
+            | Command::SetSearchQuery(_)
+            | Command::OpenSettings
+            | Command::CloseSettings
+            | Command::OpenOnboarding
+            | Command::CloseOnboarding
+            | Command::CompleteOnboarding(_)
+            | Command::OpenTemplates
+            | Command::CloseTemplates
+            | Command::ApplyTemplate(_)
+            | Command::ToggleTheme
+            | Command::ToggleSidebar
+            | Command::SetTableView(_)
+            | Command::GoBack
+            | Command::GoForward
+            | Command::GoUpLevel
+            | Command::WindowMinimize
+            | Command::WindowMaximize
+            | Command::WindowClose
+            | Command::ToggleFullscreen
+            | Command::SetSearchSelected(_)
+            | Command::ToggleHighlightPane
+            | Command::ToggleFilters => Navigation,
+            Command::OpenLibrary | Command::CloseLibrary | Command::SetLibraryTab(_) => Library,
+            Command::OpenShare
+            | Command::CloseShare
+            | Command::SetInviteInput(_)
+            | Command::SetInviteRole(_)
+            | Command::SetInviteMessage(_)
+            | Command::SendInvites
+            | Command::SetGeneralAccess(_)
+            | Command::OpenInbox
+            | Command::CloseInbox => Sharing,
+            Command::OpenSlash { .. }
+            | Command::CloseSlash
+            | Command::SetBlockKind(_, _)
+            | Command::ApplyMarkdown { .. }
+            | Command::InsertBlockAfter(_)
+            | Command::AppendBlock
+            | Command::AddBlock { .. }
+            | Command::StartBlockDrag(_)
+            | Command::HoverBlockDrag(_)
+            | Command::DropBlock
+            | Command::DeleteBlock(_)
+            | Command::ToggleTodo(_)
+            | Command::CycleStatus(_)
+            | Command::AddRow => Blocks,
+            Command::ResetWorkspace
+            | Command::Undo
+            | Command::Redo
+            | Command::DuplicatePage
+            | Command::Reload
+            | Command::CopyLink
+            | Command::CopyPageName
+            | Command::CloseAll => Workspace,
+            Command::OpenNewTab
+            | Command::CloseNewTab
+            | Command::SetNewTabQuery(_)
+            | Command::SetNewTabSelected(_)
+            | Command::MoveNewTabSelection(_)
+            | Command::ActivateNewTab(_)
+            | Command::ActivateSelectedNewTab
+            | Command::SelectTab(_)
+            | Command::CloseTab(_)
+            | Command::PreviousTab
+            | Command::NextTab
+            | Command::ReopenClosedTab => Tabs,
+            Command::OpenAiChat
+            | Command::SetAiQuery(_)
+            | Command::AskAi(_)
+            | Command::ClearAi
+            | Command::SetAiEndpoint(_)
+            | Command::SetAiModel(_)
+            | Command::ToggleAiCli
+            | Command::RefreshAiStatus => Ai,
+            Command::SetSettingsPage(_)
+            | Command::SetSettingsQuery(_)
+            | Command::SetSettingsStatus(_)
+            | Command::ExportWorkspace
+            | Command::ExportMembers
+            | Command::SetLanguage(_)
+            | Command::OpenShortcuts
+            | Command::CloseShortcuts
+            | Command::ZoomIn
+            | Command::ZoomOut
+            | Command::ZoomReset
+            | Command::ToggleWorkspaceMenu
+            | Command::CloseWorkspaceMenu
+            | Command::OpenAppMenu
+            | Command::CloseAppMenu
+            | Command::ToggleGridMenu
+            | Command::CloseGridMenu
+            | Command::ToggleFullWidth
+            | Command::ToggleSmallText
+            | Command::SetFontStyle(_) => Settings,
+            Command::OpenIconPicker
+            | Command::CloseIconPicker
+            | Command::SetIconTab(_)
+            | Command::SetIconQuery(_)
+            | Command::SetPageIcon(_)
+            | Command::OpenPageActions
+            | Command::ClosePageActions
+            | Command::CopyPageContents
+            | Command::TogglePageToc
+            | Command::TogglePageDiscussions
+            | Command::TogglePageInlineComments
+            | Command::TogglePageArchive
+            | Command::SetCommentInput(_)
+            | Command::AddPageComment
+            | Command::DeletePageComment(_)
+            | Command::SetPageStatus(_)
+            | Command::OpenVersionHistory
+            | Command::CloseVersionHistory
+            | Command::SetVersionSelected(_)
+            | Command::RestoreVersion(_)
+            | Command::ToggleAvailableOffline
+            | Command::ToggleLockPage => PageActions,
+            Command::CrdtTextChanged { .. } | Command::CrdtCursor { .. } => Crdt,
+            Command::SetServerUrl(_)
+            | Command::SetServerEmail(_)
+            | Command::SetServerPassword(_)
+            | Command::ConnectServer
+            | Command::DisconnectServer => Server,
+            Command::NoOp => NoOp,
+        }
     }
 }

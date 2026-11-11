@@ -88,6 +88,11 @@ fn empty_sqlite_database_migrates_json_documents() {
     let db = common::temp_path("migration", "sqlite3");
     let workspace_path = common::temp_path("migration-workspace", "json");
     let collab_path = common::temp_path("migration-collab", "json");
+    // A reused process id can collide with an artifact from an earlier run;
+    // start from a clean database so the migration assertion is deterministic.
+    common::remove(&db);
+    common::remove(&workspace_path);
+    common::remove(&collab_path);
     let workspace = Workspace::seed("migrated");
     let collab = CollabState::new();
     save(&workspace_path, &workspace).expect("save workspace");

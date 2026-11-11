@@ -114,6 +114,8 @@ src/
     limits.rs        plan/request budgets and size checks
     rate_limit.rs    in-process and SQLite-backed rate limiting
   client.rs          typed client over WorkspaceApi
+  client/
+    retry.rs         RetryPolicy + RetryDecision
   remote.rs          remote REST/WebSocket transport and login
   templates.rs       starter template catalog
   ollama.rs          AI assistant adapter
@@ -127,12 +129,17 @@ src/
     view.rs          ViewState
     input.rs         egui keys -> shortcut actions
     app.rs           NotionApp shell + eframe::App
-    apply.rs         command application / state transitions
+    apply.rs         facade: apply_commands + shared helpers
+    apply/           navigation, library, sharing, blocks, workspace, tabs,
+                     ai, settings, page_actions, crdt, server
     render.rs        render facade
     render/          chrome, sidebar, content, library, database
+    render/content/  page, blocks, cursors
     dialogs.rs       dialog facade
     dialogs/         settings, sharing, page actions, menus, help,
                      search window, onboarding, templates
+    dialogs/settings_pages/ preferences, workspace, sidebar, offline,
+                     people, ai, server
     widgets.rs       shared popover/menu/toggle/label primitives
     switcher.rs      shared search/new-tab renderer
     page_icon.rs     page-icon catalog/picker/renderer
@@ -233,8 +240,9 @@ flowchart TD
 ```
 
 `ui.rs` is a facade. `ui/app.rs` owns the state shell and eframe lifecycle;
-`ui/apply.rs` owns transitions; render/dialog modules only read `ViewState` and
-push `Command`s.
+`ui/apply.rs` owns the `apply_commands` entry point; the `ui/apply/*` family
+modules own transitions; render/dialog modules only read `ViewState` and push
+`Command`s.
 
 ## 7. Collaboration target
 
@@ -312,7 +320,7 @@ Adapters implement the ports; the composition root wires them.
 | New pure rule | `src/model/*` or `src/collab.rs` + `tests/model.rs`/`tests/collab.rs` |
 | New server route/DTO | DTO in `src/model/*`, route in `src/server/routes/v2.rs`, handler in `src/server/handlers/`, capability in `src/server/routes/capabilities.rs`, client in `src/client.rs` |
 | New persistence backend | implement `WorkspaceStore`/`CollabStore`, wire in `src/app.rs` |
-| New UI surface | `ui/commands.rs` + `ui/view.rs` + `ui/apply.rs` + `ui/render/*` or `ui/dialogs/*` |
+| New UI surface | `ui/commands.rs` + `ui/view.rs` + `ui/apply/<family>.rs` + `ui/render/*` or `ui/dialogs/*` |
 | New translation | `locales/*.yml` + `i18n::t("key")` + `tests/i18n.rs` |
 | New starter template | `src/templates.rs` + `tests/templates.rs` |
 | New visual state | `ION_OF_NOTES_SHOW` preview hook + `--screenshot` |
@@ -356,10 +364,10 @@ new stores and delivery workers.
 
 - The workspace is still small enough for full snapshots on structural
   changes; per-page writes and debounce reduce the common case.
-- `ui/apply.rs` is intentionally one command-application switch; the flush and
-  lock classifications now live on `Command`, so a new variant has one source
-  of truth. Split the switch by command family only if a second responsibility
-  appears.
+- `ui/apply.rs` is the single `apply_commands` entry point; the command
+  families live in `ui/apply/*` and `CommandFamily` is the routing table. The
+  flush and lock classifications remain on `Command`, so a new variant has one
+  source of truth.
 - Real-time collaboration runs through the WebSocket change feed and Yrs text
   merge (specs 040 and 042); the desktop client uses its own Yrs session and
   awareness cursors (spec 043).

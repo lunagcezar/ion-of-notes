@@ -121,8 +121,10 @@ outliers at that point. `spec-046` restored the facades:
 
 This does not change the decision: the remaining large files
 (`ui/apply.rs`, `ui/dialogs/settings_pages.rs`, `ui/render/content.rs`,
-`client.rs`) are still split only when a second responsibility appears, which
-is planned as spec-049.
+`client.rs`) were split only when a second responsibility appeared. `spec-049`
+did exactly that: command families, settings pages, page/blocks/cursors and the
+retry policy now have their own modules, while `apply_commands`, `client.rs`,
+`render_content` and the settings facade remain the entry points.
 
 `spec-047` applied the same rule to behavior rather than files: v1 and v2 now
 share `server/usecases/*` instead of one transport calling the other, and

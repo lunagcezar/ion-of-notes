@@ -43,6 +43,7 @@ definition.
 | **Compose stack** | `compose.yml` service with the `ion-data` volume, healthcheck and required owner password. | `compose.yml`, `Dockerfile` |
 | **Hardened stack** | Loopback bind, read-only root, `/tmp` tmpfs, dropped capabilities, `no-new-privileges`, `init`, stop grace period and log rotation. | `compose.yml`, `docs/deployment.md` |
 | **Caddy example** | Reverse proxy and automatic TLS configuration for the server. | `deploy/Caddyfile.example` |
+| **CommandFamily** | Routing classification for `Command` into the `ui/apply/*` family modules. | `src/ui/commands.rs` |
 
 ## 3. Domain
 
