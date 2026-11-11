@@ -22,15 +22,17 @@ use std::sync::{Arc, Mutex};
 
 use super::crdt::CrdtSession;
 use super::dialogs::{
-    render_app_menu, render_grid_menu, render_inbox, render_new_tab, render_onboarding,
-    render_page_actions, render_search, render_settings, render_share, render_shortcuts,
-    render_sidebar_menu, render_slash, render_templates, render_version_history,
+    render_app_menu, render_compose_menu, render_grid_menu, render_inbox, render_new_tab,
+    render_onboarding, render_page_actions, render_search, render_settings, render_share,
+    render_shortcuts, render_sidebar_menu, render_slash, render_templates, render_version_history,
     render_workspace_menu,
 };
 use super::edit_queue::PendingEdits;
 use super::page_icon::render_icon_picker;
 use super::palette::{Palette, apply_theme};
-use super::render::{TITLE_BAR_HEIGHT, render_content, render_sidebar, render_title_bar};
+use super::render::{
+    SIDEBAR_WIDTH, TITLE_BAR_HEIGHT, render_content, render_sidebar, render_title_bar,
+};
 use super::search_cache::SearchCache;
 
 pub(super) use super::commands::{Command, FontStyle, IconTab, NewTabChoice, SidebarMenu};
@@ -130,6 +132,7 @@ pub struct NotionApp {
     pub(super) small_text: bool,
     pub(super) workspace_menu_open: bool,
     pub(super) app_menu_open: bool,
+    pub(super) compose_menu_open: bool,
     pub(super) grid_menu_open: bool,
     pub(super) drag_from: Option<String>,
     pub(super) drag_to: Option<String>,
@@ -201,6 +204,11 @@ impl NotionApp {
         }
         if demo == "settings-comma" {
             workspace.settings.number_format = NumberFormat::CommaThousands;
+        }
+        if demo == "app-menu-view" {
+            cc.egui_ctx.data_mut(|data| {
+                data.insert_temp(egui::Id::unique("app_menu_active"), 2_usize);
+            });
         }
         let demo_current_page = if demo == "tasks" {
             workspace
@@ -321,7 +329,7 @@ impl NotionApp {
             tabs: vec![demo_current_page],
             active_tab: 0,
             closed_tabs: Vec::new(),
-            sidebar_open: true,
+            sidebar_open: demo != "appbar-closed",
             expanded: HashSet::new(),
             search_open: demo == "search",
             search_query: String::new(),
@@ -445,7 +453,8 @@ impl NotionApp {
             full_width: false,
             small_text: false,
             workspace_menu_open: demo == "workspace-switcher",
-            app_menu_open: false,
+            app_menu_open: demo == "app-menu-file" || demo == "app-menu-view",
+            compose_menu_open: demo == "compose-menu",
             grid_menu_open: false,
             drag_from: None,
             drag_to: None,
@@ -532,6 +541,13 @@ impl eframe::App for NotionApp {
 
         let palette = Palette::for_theme(self.dark);
         let view = self.view_state();
+        let sidebar_t = ctx.animate_bool_with_time(
+            egui::Id::unique("sidebar_open_anim"),
+            self.sidebar_open,
+            0.15,
+        );
+        let sidebar_width = SIDEBAR_WIDTH * sidebar_t;
+        let app_bar_left = super::render::app_bar_left_width(SIDEBAR_WIDTH, sidebar_t);
 
         // Full-width custom window chrome (tabs + window controls). The OS
         // decorations are off, so the whole strip is a drag handle.
@@ -550,12 +566,19 @@ impl eframe::App for NotionApp {
                 if drag.drag_started() {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
                 }
-                render_title_bar(ui, &self.workspace, &view, &palette, &mut commands);
+                render_title_bar(
+                    ui,
+                    &self.workspace,
+                    &view,
+                    &palette,
+                    &mut commands,
+                    app_bar_left,
+                );
             });
 
-        if view.sidebar_open {
+        if view.sidebar_open || sidebar_width > 0.5 {
             egui::Panel::left("sidebar")
-                .exact_size(266.0)
+                .exact_size(sidebar_width)
                 .resizable(false)
                 .show_separator_line(false)
                 .frame(
@@ -628,6 +651,9 @@ impl eframe::App for NotionApp {
         }
         if view.app_menu_open {
             render_app_menu(&ctx, &palette, &mut commands);
+        }
+        if view.compose_menu_open {
+            render_compose_menu(&ctx, &palette, &mut commands);
         }
         if view.workspace_menu_open {
             render_workspace_menu(&ctx, &palette, &mut commands);

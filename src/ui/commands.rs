@@ -232,6 +232,8 @@ pub(super) enum Command {
     CloseSidebarMenu,
     OpenAppMenu,
     CloseAppMenu,
+    ToggleComposeMenu,
+    CloseComposeMenu,
     ToggleGridMenu,
     CloseGridMenu,
     ToggleFullWidth,
@@ -428,6 +430,8 @@ impl Command {
             | Command::CloseSidebarMenu
             | Command::OpenAppMenu
             | Command::CloseAppMenu
+            | Command::ToggleComposeMenu
+            | Command::CloseComposeMenu
             | Command::ToggleGridMenu
             | Command::CloseGridMenu
             | Command::ToggleFullWidth

@@ -78,6 +78,12 @@ impl NotionApp {
                 self.app_menu_open = open;
             }
             Command::CloseAppMenu => self.app_menu_open = false,
+            Command::ToggleComposeMenu => {
+                let open = !self.compose_menu_open;
+                self.close_overlays();
+                self.compose_menu_open = open;
+            }
+            Command::CloseComposeMenu => self.compose_menu_open = false,
             Command::ToggleGridMenu => {
                 let open = !self.grid_menu_open;
                 self.close_overlays();

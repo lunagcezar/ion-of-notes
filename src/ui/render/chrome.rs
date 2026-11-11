@@ -1,12 +1,17 @@
 //! Custom window chrome: the compact tab strip and window controls.
+//!
+//! The left container is exactly as wide as the sidebar, so the tab strip and
+//! back/forward controls start where the content pane starts. The app menu,
+//! sidebar toggle, notifications and compose action live inside that container
+//! (spec-059).
 
 use crate::model::Workspace;
 use egui::{Align2, CornerRadius, FontId, Pos2, Rect, Sense, Vec2};
 
 use super::super::commands::Command;
 use super::super::icons::{
-    draw_arrow_left, draw_arrow_right, draw_close, draw_menu, draw_minus, draw_page_icon,
-    draw_panel, draw_plus, draw_square, glyph_button,
+    draw_arrow_left, draw_arrow_right, draw_close, draw_inbox, draw_menu, draw_minus,
+    draw_page_icon, draw_panel, draw_pen, draw_plus, draw_square, glyph_button,
 };
 use super::super::palette::{Palette, tab_title};
 use super::super::view::ViewState;
@@ -15,35 +20,89 @@ use super::super::view::ViewState;
 /// sits directly below it, so the whole top chrome stays small.
 pub(crate) const TITLE_BAR_HEIGHT: f32 = 36.0;
 
+/// The open sidebar width and the compact app-bar width when it is closed.
+pub(crate) const SIDEBAR_WIDTH: f32 = 266.0;
+pub(crate) const APP_BAR_COMPACT_WIDTH: f32 = 92.0;
+
+/// The animated app-bar container width: it follows the sidebar while open and
+/// never drops below the compact width that holds the menu and toggle.
+pub fn app_bar_left_width(sidebar_width: f32, animation: f32) -> f32 {
+    (sidebar_width * animation.clamp(0.0, 1.0)).max(APP_BAR_COMPACT_WIDTH)
+}
+
 pub(crate) fn render_title_bar(
     ui: &mut egui::Ui,
     ws: &Workspace,
     view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
+    left_width: f32,
 ) {
     let h = TITLE_BAR_HEIGHT;
+    let left = left_width.max(APP_BAR_COMPACT_WIDTH);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
-        ui.add_space(6.0);
 
-        // Compact show/hide sidebar (Ctrl+\\).
-        let panel = glyph_button(ui, Vec2::new(26.0, h - 6.0), palette, draw_panel)
-            .on_hover_text("Show / hide sidebar (Ctrl+\\)");
-        if panel.clicked() {
-            commands.push(Command::ToggleSidebar);
-        }
-        // App menu: File, Edit, View, History, Window, Help.
-        let menu =
-            glyph_button(ui, Vec2::new(26.0, h - 6.0), palette, draw_menu).on_hover_text("Menu");
-        if menu.clicked() {
-            commands.push(Command::OpenAppMenu);
-        }
+        // Sidebar-width container: app menu, toggle, then notifications and
+        // compose pinned to its right edge.
+        ui.allocate_ui_with_layout(
+            Vec2::new(left, h),
+            egui::Layout::left_to_right(egui::Align::Center),
+            |ui| {
+                ui.set_min_width(left);
+                ui.add_space(6.0);
+                let menu = glyph_button(ui, Vec2::new(26.0, h - 6.0), palette, draw_menu)
+                    .on_hover_text("Menu");
+                if menu.clicked() {
+                    commands.push(Command::OpenAppMenu);
+                }
+                let panel = glyph_button(ui, Vec2::new(26.0, h - 6.0), palette, draw_panel)
+                    .on_hover_text("Show / hide sidebar (Ctrl+\\)");
+                if panel.clicked() {
+                    commands.push(Command::ToggleSidebar);
+                }
+                let controls = 26.0 + 26.0 + 6.0;
+                let show_extras = left >= 150.0;
+                let spacer = if show_extras {
+                    (left - 6.0 - 26.0 - 26.0 - controls - 8.0).max(0.0)
+                } else {
+                    0.0
+                };
+                ui.add_space(spacer);
+                if show_extras {
+                    let inbox = glyph_button(ui, Vec2::new(26.0, h - 6.0), palette, draw_inbox)
+                        .on_hover_text("Inbox");
+                    if view.inbox_unread > 0 {
+                        let badge = Rect::from_center_size(
+                            Pos2::new(inbox.rect.right() - 5.0, inbox.rect.top() + 5.0),
+                            Vec2::splat(12.0),
+                        );
+                        ui.painter().circle_filled(
+                            badge.center(),
+                            6.0,
+                            egui::Color32::from_rgb(224, 108, 108),
+                        );
+                        ui.painter().text(
+                            badge.center(),
+                            Align2::CENTER_CENTER,
+                            view.inbox_unread.min(9).to_string(),
+                            FontId::proportional(8.5),
+                            egui::Color32::WHITE,
+                        );
+                    }
+                    if inbox.clicked() {
+                        commands.push(Command::OpenInbox);
+                    }
+                    let compose = glyph_button(ui, Vec2::new(26.0, h - 6.0), palette, draw_pen)
+                        .on_hover_text("New page, chat, meeting note or database");
+                    if compose.clicked() {
+                        commands.push(Command::ToggleComposeMenu);
+                    }
+                }
+            },
+        );
 
-        // A compact strip: no person/settings control (the reference top bar
-        // has none — Settings lives in the sidebar), just back/forward, the
-        // tab(s), the "+" and the window controls.
-        ui.add_space(186.0);
+        // Outside the sidebar container: back/forward, the tab strip and "+".
         if glyph_button(ui, Vec2::new(26.0, h), palette, draw_arrow_left).clicked() {
             commands.push(Command::GoBack);
         }

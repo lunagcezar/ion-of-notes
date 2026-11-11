@@ -11,6 +11,7 @@ mod database;
 mod library;
 mod sidebar;
 
-pub(crate) use chrome::{TITLE_BAR_HEIGHT, render_title_bar};
+pub use chrome::app_bar_left_width;
+pub(crate) use chrome::{SIDEBAR_WIDTH, TITLE_BAR_HEIGHT, render_title_bar};
 pub(crate) use content::render_content;
 pub(crate) use sidebar::render_sidebar;

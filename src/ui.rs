@@ -40,5 +40,6 @@ pub use library_filter::pages_for_view;
 pub use palette::{
     Palette, block_menu_options, install_fonts, status_color, strong_font, tab_title,
 };
+pub use render::app_bar_left_width;
 pub use search_cache::SearchCache;
 pub use settings_search::{SettingsRow, rows_for, section_matches, settings_matches, visible_rows};

@@ -59,49 +59,172 @@ fn popup_menu(
     }
 }
 
+/// One app-menu section: title plus label/hint/command rows.
+type AppMenuSection = (&'static str, Vec<(&'static str, &'static str, Command)>);
+
 pub(crate) fn render_app_menu(ctx: &egui::Context, palette: &Palette, commands: &mut Vec<Command>) {
     let screen = ctx.viewport_rect();
-    let items = vec![
-        ("File", "", Command::NoOp),
-        ("  New page", "Ctrl+N", Command::NewPage(None)),
-        ("  New tab", "Ctrl+T", Command::OpenNewTab),
-        ("  Close tab", "Ctrl+W", Command::CloseTab(usize::MAX)),
-        ("---", "", Command::NoOp),
-        ("Edit", "", Command::NoOp),
-        ("  Undo", "Ctrl+Z", Command::Undo),
-        ("  Redo", "Ctrl+Shift+Z", Command::Redo),
-        ("  Copy link", "Ctrl+L", Command::CopyLink),
-        ("---", "", Command::NoOp),
-        ("View", "", Command::NoOp),
-        ("  Toggle sidebar", "Ctrl+\\", Command::ToggleSidebar),
-        ("  Zoom in", "Ctrl++", Command::ZoomIn),
-        ("  Zoom out", "Ctrl+-", Command::ZoomOut),
-        ("  Full screen", "F11", Command::ToggleFullscreen),
-        ("---", "", Command::NoOp),
-        ("History", "", Command::NoOp),
-        ("  Back", "Ctrl+[", Command::GoBack),
-        ("  Forward", "Ctrl+]", Command::GoForward),
-        ("---", "", Command::NoOp),
-        ("Window", "", Command::NoOp),
-        ("  Minimize", "", Command::WindowMinimize),
-        ("  Next tab", "Ctrl+Tab", Command::NextTab),
-        ("---", "", Command::NoOp),
-        ("Help", "", Command::NoOp),
-        ("  Keyboard shortcuts", "F1", Command::OpenShortcuts),
-        ("  Settings", "Ctrl+,", Command::OpenSettings),
+    let sections: Vec<AppMenuSection> = vec![
+        (
+            "File",
+            vec![
+                ("New Tab", "Ctrl+T", Command::OpenNewTab),
+                ("New Window", "Ctrl+Shift+N", Command::NoOp),
+                (
+                    "Reopen Last Closed Tab",
+                    "Ctrl+Shift+T",
+                    Command::ReopenClosedTab,
+                ),
+                ("Close Tab", "Ctrl+W", Command::CloseTab(usize::MAX)),
+                ("---", "", Command::NoOp),
+                ("Print…", "", Command::NoOp),
+                ("Restart to Apply Update", "", Command::NoOp),
+                ("---", "", Command::NoOp),
+                ("Exit Without Saving Tabs", "Ctrl+Shift+Q", Command::NoOp),
+                ("Exit", "", Command::WindowClose),
+            ],
+        ),
+        (
+            "Edit",
+            vec![
+                ("Undo", "Ctrl+Z", Command::Undo),
+                ("Redo", "Ctrl+Shift+Z", Command::Redo),
+                ("---", "", Command::NoOp),
+                ("Copy link", "Ctrl+L", Command::CopyLink),
+                ("Copy page name", "", Command::CopyPageName),
+            ],
+        ),
+        (
+            "View",
+            vec![
+                ("Toggle sidebar", "Ctrl+\\", Command::ToggleSidebar),
+                ("Zoom in", "Ctrl++", Command::ZoomIn),
+                ("Zoom out", "Ctrl+-", Command::ZoomOut),
+                ("Toggle theme", "Ctrl+Shift+L", Command::ToggleTheme),
+                ("Full screen", "F11", Command::ToggleFullscreen),
+            ],
+        ),
+        (
+            "History",
+            vec![
+                ("Back", "Ctrl+[", Command::GoBack),
+                ("Forward", "Ctrl+]", Command::GoForward),
+                ("Version history", "", Command::OpenVersionHistory),
+            ],
+        ),
+        (
+            "Window",
+            vec![
+                ("Minimize", "", Command::WindowMinimize),
+                ("Maximize", "", Command::WindowMaximize),
+                ("Next tab", "Ctrl+Tab", Command::NextTab),
+                ("Previous tab", "Ctrl+Shift+Tab", Command::PreviousTab),
+            ],
+        ),
+        (
+            "Help",
+            vec![
+                ("Keyboard shortcuts", "F1", Command::OpenShortcuts),
+                ("Settings", "Ctrl+,", Command::OpenSettings),
+            ],
+        ),
     ];
-    popup_menu(
-        ctx,
-        "app_menu",
-        Pos2::new(screen.left() + 38.0, screen.top() + 42.0),
-        260.0,
-        palette,
-        &items,
-        commands,
-        Command::CloseAppMenu,
-    );
+    let active_id = egui::Id::unique("app_menu_active");
+    let mut active = ctx
+        .data(|data| data.get_temp::<usize>(active_id))
+        .unwrap_or(0)
+        .min(sections.len().saturating_sub(1));
+    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        commands.push(Command::CloseAppMenu);
+        return;
+    }
+    let resp = egui::Window::new("app_menu")
+        .title_bar(false)
+        .collapsible(false)
+        .resizable(false)
+        .fixed_pos(Pos2::new(screen.left() + 38.0, screen.top() + 42.0))
+        .default_width(430.0)
+        .frame(popover_frame(palette))
+        .show(ctx, |ui| {
+            ui.horizontal_top(|ui| {
+                ui.vertical(|ui| {
+                    ui.set_width(150.0);
+                    for (index, (title, _)) in sections.iter().enumerate() {
+                        let hint = if index == active { "›" } else { "" };
+                        let response = menu_button(ui, title, hint, palette);
+                        if response.hovered() || response.clicked() {
+                            active = index;
+                            ctx.data_mut(|data| data.insert_temp(active_id, index));
+                        }
+                    }
+                });
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.set_width(250.0);
+                    for (label, hint, cmd) in &sections[active].1 {
+                        if *label == "---" {
+                            ui.separator();
+                            continue;
+                        }
+                        if menu_button(ui, label, hint, palette).clicked() {
+                            commands.push(cmd.clone());
+                            commands.push(Command::CloseAppMenu);
+                        }
+                    }
+                });
+            });
+        });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| {
+            i.pointer
+                .interact_pos()
+                .is_some_and(|p| !inner.response.rect.contains(p))
+        })
+    {
+        commands.push(Command::CloseAppMenu);
+    }
 }
 
+/// The compose control in the app bar: new page/chat/meeting note/database.
+pub(crate) fn render_compose_menu(
+    ctx: &egui::Context,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    let screen = ctx.viewport_rect();
+    let items: &[(&str, &str, Command)] = &[
+        ("New page", "Ctrl+N", Command::NewPage(None)),
+        ("New chat", "soon", Command::NoOp),
+        ("New meeting note", "soon", Command::NoOp),
+        ("New database", "soon", Command::NoOp),
+    ];
+    let resp = egui::Window::new("compose_menu")
+        .title_bar(false)
+        .collapsible(false)
+        .resizable(false)
+        .fixed_pos(Pos2::new(screen.left() + 150.0, screen.top() + 42.0))
+        .default_width(230.0)
+        .frame(popover_frame(palette))
+        .show(ctx, |ui| {
+            for (label, hint, cmd) in items {
+                if menu_button(ui, label, hint, palette).clicked() {
+                    commands.push(cmd.clone());
+                    commands.push(Command::CloseComposeMenu);
+                }
+            }
+        });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| {
+            i.pointer
+                .interact_pos()
+                .is_some_and(|p| !inner.response.rect.contains(p))
+        })
+    {
+        commands.push(Command::CloseComposeMenu);
+    }
+}
 pub(crate) fn render_workspace_menu(
     ctx: &egui::Context,
     palette: &Palette,

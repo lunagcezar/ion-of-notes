@@ -100,6 +100,12 @@ impl NotionApp {
             invite_status: self.invite_status.clone(),
             share_general_access: self.share_general_access,
             inbox_open: self.inbox_open,
+            inbox_unread: self
+                .workspace
+                .pages
+                .iter()
+                .map(|page| page.comments.len())
+                .sum(),
             slash_for: self.slash_for.clone(),
             slash_pos: self.slash_pos,
             slash_query: self.slash_query.clone(),
@@ -139,6 +145,7 @@ impl NotionApp {
             lock_page,
             workspace_menu_open: self.workspace_menu_open,
             app_menu_open: self.app_menu_open,
+            compose_menu_open: self.compose_menu_open,
             grid_menu_open: self.grid_menu_open,
             drag_from: self.drag_from.clone(),
             drag_to: self.drag_to.clone(),
@@ -177,6 +184,7 @@ impl NotionApp {
         self.drag_to = None;
         self.page_selection.clear();
         self.block_selecting = false;
+        self.compose_menu_open = false;
     }
 
     /// Add `id` as a new active tab (the "+" / Ctrl+T / Ctrl+Enter behaviour).

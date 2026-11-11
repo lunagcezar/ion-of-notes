@@ -6,6 +6,19 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-059 app bar, app menu and sidebar animation
+
+- Split the title bar into a sidebar-width container (app menu, toggle,
+  notification badge, compose) and the outside region (back/forward, tabs,
+  plus, window controls).
+- Added the compose menu (new page/chat/meeting note/database) and an inbox
+  badge based on the current page comments.
+- Rebuilt the app menu as one surface with File/Edit/View/History/Window/Help
+  sections and hover/click submenus, matching `reference/app-menu.png`.
+- The sidebar now animates open and closed over 150 ms and the app-bar container
+  follows the same value while keeping a compact width.
+- Added an `app_bar_left_width` pure test and preview states; suite: 266 tests.
+
 ### Changed - spec-061 settings polish and formats
 
 - Added explicit settings padding constants: the close control sits inside the

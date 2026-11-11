@@ -1,6 +1,6 @@
 # spec-059 - App bar, app menu and sidebar animation
 
-- Status: plan (2026-11-11)
+- Status: implemented (2026-11-11)
 - Related: `spec-013`, `spec-017`, `spec-057`
 - Reference: `reference/app-bar.png`, `reference/app-menu.png`,
   `reference/customize-sidebar.png`
@@ -163,13 +163,13 @@ the section column.
 
 ## Plan / tasks
 
-- [ ] Extract `app_bar_layout` and the width constants with tests.
-- [ ] Rebuild `render_title_bar` into the sidebar container + outside region.
-- [ ] Add notification and compose controls.
-- [ ] Animate the sidebar and keep content state across the transition.
-- [ ] Rebuild `render_app_menu` with sections and submenus.
-- [ ] Add preview states and screenshots.
-- [ ] Run the full gate and update the changelog.
+- [x] Extract `app_bar_layout` and the width constants with tests.
+- [x] Rebuild `render_title_bar` into the sidebar container + outside region.
+- [x] Add notification and compose controls.
+- [x] Animate the sidebar and keep content state across the transition.
+- [x] Rebuild `render_app_menu` with sections and submenus.
+- [x] Add preview states and screenshots.
+- [x] Run the full gate and update the changelog.
 
 ## Decisions and open questions
 

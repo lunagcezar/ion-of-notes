@@ -17,7 +17,8 @@ mod templates;
 
 pub(super) use help::render_shortcuts;
 pub(super) use menus::{
-    render_app_menu, render_grid_menu, render_sidebar_menu, render_slash, render_workspace_menu,
+    render_app_menu, render_compose_menu, render_grid_menu, render_sidebar_menu, render_slash,
+    render_workspace_menu,
 };
 pub(super) use onboarding::render_onboarding;
 pub(super) use page_actions::{render_page_actions, render_version_history};
