@@ -5,6 +5,7 @@ target/
 docs/
 spec/
 screenshots/
+reference/
 shots/
 .env
 .env.*
