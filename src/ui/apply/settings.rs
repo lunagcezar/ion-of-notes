@@ -3,7 +3,7 @@
 use crate::i18n;
 
 use super::super::app::NotionApp;
-use super::super::commands::Command;
+use super::super::commands::{Command, WorkspaceDialogMode};
 impl NotionApp {
     pub(super) fn apply_settings(&mut self, command: Command) {
         match command {
@@ -180,6 +180,45 @@ impl NotionApp {
                 }
                 _ => {}
             },
+            Command::OpenWorkspaceCreate => {
+                self.workspace_dialog = Some(WorkspaceDialogMode::Create);
+                self.workspace_name.clear();
+                self.workspace_icon = "N".to_string();
+                self.workspace_menu_open = false;
+            }
+            Command::OpenWorkspaceRename => {
+                self.workspace_dialog = Some(WorkspaceDialogMode::Rename);
+                self.workspace_name = self.workspace.name.clone();
+                self.workspace_icon = self.workspace.settings.icon.clone();
+                self.workspace_menu_open = false;
+            }
+            Command::CloseWorkspaceDialog => self.workspace_dialog = None,
+            Command::SetWorkspaceName(name) => self.workspace_name = name,
+            Command::SetWorkspaceIcon(icon) => self.workspace_icon = icon,
+            Command::ConfirmWorkspaceDialog => {
+                let name = self.workspace_name.trim().to_string();
+                let icon = self.workspace_icon.clone();
+                if !name.is_empty() {
+                    match self.workspace_dialog {
+                        Some(WorkspaceDialogMode::Create) => {
+                            self.create_workspace(&name, &icon);
+                        }
+                        Some(WorkspaceDialogMode::Rename) => {
+                            self.rename_workspace(&name, &icon);
+                        }
+                        None => {}
+                    }
+                }
+                self.workspace_dialog = None;
+            }
+            Command::SwitchWorkspace(id) => {
+                self.switch_workspace(&id);
+                self.workspace_menu_open = false;
+            }
+            Command::DeleteWorkspace(id) => {
+                self.delete_workspace(&id);
+                self.workspace_menu_open = false;
+            }
             Command::OpenAppMenu => {
                 let open = !self.app_menu_open;
                 self.close_overlays();

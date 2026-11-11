@@ -118,7 +118,9 @@ impl NotionApp {
             }
             Command::DisconnectServer => {
                 let _ = crate::remote::clear_session();
-                let (client, workspace) = crate::app::build_desktop();
+                let (client, workspace, catalog) = crate::app::build_desktop_catalog();
+                self.catalog = catalog;
+                self.catalog_path = Some(crate::store::catalog_path());
                 self.replace_client(client, workspace);
                 self.server_busy = false;
                 self.server_connected = false;

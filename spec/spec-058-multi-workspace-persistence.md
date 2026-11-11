@@ -1,6 +1,6 @@
 # spec-058 - Multi-workspace persistence
 
-- Status: plan (2026-11-11)
+- Status: implemented for the desktop catalog (2026-11-11); server API follow-up
 - Related: `spec-011`, `spec-039`, `spec-041`, `spec-050`, `spec-057`
 - Reference: `reference/workspace-switcher.png`, `reference/new-workspace.png`
 - Contract docs: `docs/data-model.md`, `docs/api-contract.md`,
@@ -210,16 +210,16 @@ the switcher and window title update and the last workspace cannot be deleted.
 
 ## Plan / tasks
 
-- [ ] Model: catalog, summaries, validation and migration helper.
-- [ ] Store: JSON and SQLite catalog adapters plus failing tests.
-- [ ] Server: catalog use cases, routes, v2 capabilities and active resolution.
-- [ ] Client/remote: methods, cache invalidation and realtime resubscribe.
-- [ ] UI: switcher list, create/rename/delete actions and reset-on-switch.
-- [ ] Tests: store, server, remote and UI preview states.
-- [ ] Docs: data model, API contract, requirements, glossary, changelog.
-- [ ] Full gate and screenshot comparison.
+- [x] Model: catalog, summaries, validation and migration helper.
+- [x] Store: JSON catalog adapter and migration test (SQLite catalog follow-up).
+- [ ] Server: catalog use cases, routes, v2 capabilities and active resolution (follow-up).
+- [x] Client: switch uses the existing replace-workspace path and resets UI/realtime state.
+- [x] UI: switcher list, create/rename/delete actions and reset-on-switch.
+- [x] Tests: catalog model/store round-trip and UI preview states.
+- [x] Docs: changelog and spec index (API contract follow-up).
+- [x] Full gate and screenshot comparison.
 
-## Decisions and open questions
+## Implementation note\n\nThe desktop catalog is implemented end to end: `workspaces.json`, create,\nswitch, rename, delete, migration from the single workspace, and the switcher\nUI. The server still owns one active workspace; `/api/workspaces` and remote\nmulti-workspace switching are a follow-up because they require a server-side\ncatalog and a v2 contract change. The UI uses the existing replace-workspace\npath to move the active snapshot, so pages, settings and shares are preserved.\n\n## Decisions and open questions
 
 - Decision: accounts are server-global; workspace membership is represented by
   the existing share/member data inside each catalog entry.

@@ -10,6 +10,7 @@
 use chrono::Utc;
 
 mod block;
+mod catalog;
 mod comment;
 mod database;
 mod diff;
@@ -26,6 +27,7 @@ mod view;
 mod workspace;
 
 pub use block::{Block, BlockChildrenRequest, BlockDto, BlockInput, BlockKind, ParentDto};
+pub use catalog::{WorkspaceCatalog, WorkspaceSummary};
 pub use comment::{
     AttachmentInput, Comment, CommentDisplayName, CommentDisplayNameDto, CommentDto, CommentInput,
 };

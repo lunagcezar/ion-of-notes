@@ -203,6 +203,39 @@ pub fn build_desktop() -> (Client<DesktopApi>, Workspace) {
     build_desktop_at_paths(store::data_path(), store::collab_path())
 }
 
+/// Compose the desktop client plus the persisted workspace catalog (spec-058).
+pub fn build_desktop_catalog() -> (
+    Client<DesktopApi>,
+    Workspace,
+    crate::model::WorkspaceCatalog,
+) {
+    build_desktop_catalog_at_paths(store::data_path(), store::collab_path())
+}
+
+/// Compose the desktop client and catalog from explicit paths.
+pub fn build_desktop_catalog_at_paths(
+    workspace_path: PathBuf,
+    collab_path: PathBuf,
+) -> (
+    Client<DesktopApi>,
+    Workspace,
+    crate::model::WorkspaceCatalog,
+) {
+    let catalog_path = workspace_path.with_file_name("workspaces.json");
+    let catalog = store::load_catalog_or_seed(&catalog_path, &workspace_path);
+    let active = catalog
+        .active()
+        .cloned()
+        .unwrap_or_else(|| store::load_or_seed(&workspace_path));
+    let mut client = Client::new(DesktopApi::Local(Box::new(WorkspaceServer::with_paths(
+        active.clone(),
+        workspace_path,
+        collab_path,
+    ))));
+    let workspace = client.workspace().unwrap_or(active);
+    (client, workspace, catalog)
+}
+
 /// Compose a remote desktop client over HTTP and WebSocket.
 pub fn build_remote_desktop(
     base_url: &str,

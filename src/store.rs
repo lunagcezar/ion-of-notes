@@ -38,6 +38,11 @@ pub fn collab_path() -> PathBuf {
     data_path().with_file_name("collab.json")
 }
 
+/// The default location of the multi-workspace catalog (spec-058).
+pub fn catalog_path() -> PathBuf {
+    data_path().with_file_name("workspaces.json")
+}
+
 /// Persistence port for workspace snapshots.
 ///
 /// The trait is deliberately small (Interface Segregation): the core only
@@ -184,6 +189,25 @@ pub fn load_or_seed(path: &Path) -> Workspace {
             workspace
         }
     }
+}
+
+/// Load the workspace catalog, migrating the current single workspace when the
+/// catalog file does not exist yet (spec-058).
+pub fn load_catalog_or_seed(path: &Path, workspace_path: &Path) -> crate::model::WorkspaceCatalog {
+    match read_json::<crate::model::WorkspaceCatalog>(path) {
+        Ok(catalog) if !catalog.workspaces.is_empty() => catalog,
+        _ => {
+            let workspace = load_or_seed(workspace_path);
+            let catalog = crate::model::WorkspaceCatalog::new(workspace);
+            let _ = save_catalog(path, &catalog);
+            catalog
+        }
+    }
+}
+
+/// Write the workspace catalog as pretty-printed JSON.
+pub fn save_catalog(path: &Path, catalog: &crate::model::WorkspaceCatalog) -> io::Result<()> {
+    write_json(path, catalog)
 }
 
 /// Write a collaboration snapshot as pretty-printed JSON.

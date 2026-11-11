@@ -33,6 +33,7 @@ mod tabs;
 mod workspace;
 use super::crdt::CrdtSession;
 use super::edit_queue::{PendingEdits, execute_plan, plan_for};
+use super::search_cache::SearchCache;
 use super::view::ViewState;
 
 pub(super) fn set_block_text(blocks: &mut [Block], block_id: &str, text: &str) -> bool {
@@ -113,6 +114,11 @@ impl NotionApp {
             sidebar_customize: self.sidebar_customize,
             sidebar_menu: self.sidebar_menu.clone(),
             sidebar_layout: self.workspace.settings.sidebar_layout.clone(),
+            workspaces: self.catalog.summaries(),
+            active_workspace: self.workspace.settings.id.clone(),
+            workspace_dialog: self.workspace_dialog,
+            workspace_name: self.workspace_name.clone(),
+            workspace_icon: self.workspace_icon.clone(),
             new_tab_open: self.new_tab_open,
             new_tab_query: self.new_tab_query.clone(),
             new_tab_selected: self.new_tab_selected,
@@ -372,6 +378,7 @@ impl NotionApp {
         if sent {
             self.last_committed = self.workspace.clone();
             self.pending_edits.flushed();
+            self.persist_catalog();
         } else {
             // Keep the diff but wait another debounce window before retrying.
             self.pending_edits.mark(now);
@@ -452,6 +459,103 @@ impl NotionApp {
         self.remote_awareness.clear();
         self.last_awareness = None;
         self.server_password.clear();
+    }
+
+    /// Save the active workspace snapshot and catalog to disk (spec-058).
+    fn persist_catalog(&mut self) {
+        self.catalog.replace(self.workspace.clone());
+        self.catalog.active_id = self.workspace.settings.id.clone();
+        if let Some(path) = &self.catalog_path {
+            let _ = crate::store::save_catalog(path, &self.catalog);
+        }
+    }
+
+    /// Replace the visible workspace and reset every per-workspace UI state.
+    fn show_workspace(&mut self, target: Workspace) {
+        let _ = self.client.replace_workspace(&target);
+        self.workspace = target.clone();
+        self.last_committed = target.clone();
+        self.current_page = target
+            .pages
+            .first()
+            .map(|page| page.id.clone())
+            .unwrap_or_default();
+        self.tabs = if self.current_page.is_empty() {
+            Vec::new()
+        } else {
+            vec![self.current_page.clone()]
+        };
+        self.active_tab = 0;
+        self.closed_tabs.clear();
+        self.nav_history = self.tabs.clone();
+        self.nav_pos = 0;
+        self.library_open = false;
+        self.search_open = false;
+        self.settings_open = false;
+        self.share_open = false;
+        self.inbox_open = false;
+        self.slash_for = None;
+        self.page_selection.clear();
+        self.block_selecting = false;
+        self.pending_edits = PendingEdits::new(0.25);
+        self.crdt = CrdtSession::new();
+        self.crdt_page.clear();
+        self.crdt_rx = self.client.subscribe_realtime();
+        self.remote_awareness.clear();
+        self.last_awareness = None;
+        self.search_cache = SearchCache::default();
+        self.search_results = Arc::new(Vec::new());
+    }
+
+    /// Persist the current workspace, activate `id` and show it.
+    fn switch_workspace(&mut self, id: &str) {
+        self.persist_catalog();
+        if self.catalog.switch(id)
+            && let Some(target) = self.catalog.active().cloned()
+        {
+            self.show_workspace(target);
+        }
+        self.persist_catalog();
+    }
+
+    fn create_workspace(&mut self, name: &str, icon: &str) {
+        let mut workspace = Workspace::seed(name);
+        workspace.name = name.to_string();
+        workspace.settings.id = Uuid::new_v4().to_string();
+        workspace.settings.icon = icon.to_string();
+        let id = workspace.settings.id.clone();
+        self.catalog.add(workspace.clone());
+        self.catalog.switch(&id);
+        self.show_workspace(workspace);
+        self.persist_catalog();
+    }
+
+    fn rename_workspace(&mut self, name: &str, icon: &str) {
+        let id = self.workspace.settings.id.clone();
+        if let Some(slot) = self
+            .catalog
+            .workspaces
+            .iter_mut()
+            .find(|workspace| workspace.settings.id == id)
+        {
+            slot.name = name.to_string();
+            slot.settings.icon = icon.to_string();
+        }
+        self.workspace.name = name.to_string();
+        self.workspace.settings.icon = icon.to_string();
+        self.persist_catalog();
+    }
+
+    fn delete_workspace(&mut self, id: &str) {
+        self.persist_catalog();
+        let was_active = self.workspace.settings.id == id;
+        if !self.catalog.remove(id) {
+            return;
+        }
+        if was_active && let Some(target) = self.catalog.active().cloned() {
+            self.show_workspace(target);
+        }
+        self.persist_catalog();
     }
 
     fn project_crdt_page(&mut self) {

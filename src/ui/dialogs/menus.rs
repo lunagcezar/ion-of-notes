@@ -227,6 +227,7 @@ pub(crate) fn render_compose_menu(
 }
 pub(crate) fn render_workspace_menu(
     ctx: &egui::Context,
+    view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
@@ -235,7 +236,7 @@ pub(crate) fn render_workspace_menu(
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_pos(Pos2::new(screen.left() + 12.0, screen.bottom() - 336.0))
+        .fixed_pos(Pos2::new(screen.left() + 12.0, screen.bottom() - 430.0))
         .default_width(250.0)
         .frame(
             egui::Frame::NONE
@@ -245,7 +246,12 @@ pub(crate) fn render_workspace_menu(
                 .stroke(Stroke::new(1.0, palette.border)),
         )
         .show(ctx, |ui| {
-            // Account header.
+            let active_name = view
+                .workspaces
+                .iter()
+                .find(|workspace| workspace.active)
+                .map(|workspace| workspace.name.clone())
+                .unwrap_or_else(|| "Workspace".to_string());
             ui.horizontal(|ui| {
                 let (avatar, _) = ui.allocate_exact_size(Vec2::splat(30.0), Sense::hover());
                 ui.painter()
@@ -259,7 +265,7 @@ pub(crate) fn render_workspace_menu(
                 );
                 ui.vertical(|ui| {
                     ui.label(
-                        egui::RichText::new("Local workspace")
+                        egui::RichText::new(active_name)
                             .size(13.0)
                             .color(palette.text),
                     );
@@ -294,12 +300,22 @@ pub(crate) fn render_workspace_menu(
                     .size(10.5)
                     .color(palette.muted),
             );
-            if menu_button(ui, "Local workspace", "✓", palette).clicked() {
-                commands.push(Command::CloseWorkspaceMenu);
+            for workspace in &view.workspaces {
+                let hint = if workspace.active { "✓" } else { "" };
+                if menu_button(ui, &workspace.name, hint, palette).clicked() {
+                    commands.push(Command::SwitchWorkspace(workspace.id.clone()));
+                }
             }
             if menu_button(ui, "Create new workspace", "", palette).clicked() {
-                commands.push(Command::OpenOnboarding);
-                commands.push(Command::CloseWorkspaceMenu);
+                commands.push(Command::OpenWorkspaceCreate);
+            }
+            if menu_button(ui, "Rename workspace", "", palette).clicked() {
+                commands.push(Command::OpenWorkspaceRename);
+            }
+            if view.workspaces.len() > 1
+                && menu_button(ui, "Delete workspace", "", palette).clicked()
+            {
+                commands.push(Command::DeleteWorkspace(view.active_workspace.clone()));
             }
             ui.add_space(4.0);
             ui.separator();
@@ -320,7 +336,6 @@ pub(crate) fn render_workspace_menu(
         commands.push(Command::CloseWorkspaceMenu);
     }
 }
-
 /// The Add shortcut / Add section / row-settings popover used by customize
 /// sidebar mode (spec-062).
 pub(crate) fn render_sidebar_menu(

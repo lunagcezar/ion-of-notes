@@ -6,6 +6,19 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-058 multi-workspace persistence
+
+- Added a persisted `WorkspaceCatalog` (`workspaces.json`) with migration from
+  the existing single `workspace.json`.
+- The workspace switcher lists every workspace, marks the active one, and
+  supports switch, create, rename and delete (the last workspace is protected).
+- Create/rename uses a centered dialog with name and icon; switching resets
+  tabs, history, search, CRDT, awareness and the pending edit queue.
+- Catalog snapshots are saved after edits and switches; the desktop catalog is
+  implemented end to end. Server `/api/workspaces` and remote multi-workspace
+  switching are recorded as a follow-up.
+- Added catalog model/store tests; suite: 270 tests.
+
 ### Changed - spec-062 customizable sidebar sections
 
 - Added a persisted `SidebarLayout` with Favorites, Private and any number of

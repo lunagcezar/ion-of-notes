@@ -25,7 +25,7 @@ use super::dialogs::{
     render_app_menu, render_compose_menu, render_grid_menu, render_inbox, render_new_tab,
     render_onboarding, render_page_actions, render_search, render_settings, render_share,
     render_shortcuts, render_sidebar_menu, render_slash, render_templates, render_version_history,
-    render_workspace_menu,
+    render_workspace_dialog, render_workspace_menu,
 };
 use super::edit_queue::PendingEdits;
 use super::page_icon::render_icon_picker;
@@ -35,7 +35,9 @@ use super::render::{
 };
 use super::search_cache::SearchCache;
 
-pub(super) use super::commands::{Command, FontStyle, IconTab, NewTabChoice, SidebarMenu};
+pub(super) use super::commands::{
+    Command, FontStyle, IconTab, NewTabChoice, SidebarMenu, WorkspaceDialogMode,
+};
 use super::input::collect_shortcuts;
 pub(super) use super::view::ViewState;
 
@@ -133,6 +135,11 @@ pub struct NotionApp {
     pub(super) workspace_menu_open: bool,
     pub(super) app_menu_open: bool,
     pub(super) compose_menu_open: bool,
+    pub(super) catalog: crate::model::WorkspaceCatalog,
+    pub(super) catalog_path: Option<PathBuf>,
+    pub(super) workspace_dialog: Option<WorkspaceDialogMode>,
+    pub(super) workspace_name: String,
+    pub(super) workspace_icon: String,
     pub(super) grid_menu_open: bool,
     pub(super) drag_from: Option<String>,
     pub(super) drag_to: Option<String>,
@@ -158,8 +165,15 @@ pub struct NotionApp {
 
 impl NotionApp {
     pub fn new(cc: &eframe::CreationContext<'_>, screenshot: Option<PathBuf>) -> Self {
-        let (client, workspace) = app::build_desktop();
-        Self::with_client(cc, screenshot, client, workspace)
+        let (client, workspace, catalog) = app::build_desktop_catalog();
+        Self::with_client_catalog(
+            cc,
+            screenshot,
+            client,
+            workspace,
+            Some(catalog),
+            Some(crate::store::catalog_path()),
+        )
     }
 
     /// Open the Server settings page with a prefilled URL (startup prompt).
@@ -182,8 +196,19 @@ impl NotionApp {
     pub fn with_client(
         cc: &eframe::CreationContext<'_>,
         screenshot: Option<PathBuf>,
+        client: Client<app::DesktopApi>,
+        workspace: Workspace,
+    ) -> Self {
+        Self::with_client_catalog(cc, screenshot, client, workspace, None, None)
+    }
+
+    pub fn with_client_catalog(
+        cc: &eframe::CreationContext<'_>,
+        screenshot: Option<PathBuf>,
         mut client: Client<app::DesktopApi>,
         mut workspace: Workspace,
+        catalog: Option<crate::model::WorkspaceCatalog>,
+        catalog_path: Option<PathBuf>,
     ) -> Self {
         let initial_locale =
             std::env::var("ION_OF_NOTES_LOCALE").unwrap_or_else(|_| "en".to_string());
@@ -317,6 +342,27 @@ impl NotionApp {
         }
         let crdt_rx = client.subscribe_realtime();
         let awareness_session = format!("ui-{}", uuid::Uuid::new_v4());
+        let catalog =
+            catalog.unwrap_or_else(|| crate::model::WorkspaceCatalog::new(workspace.clone()));
+        let mut catalog = catalog;
+        if demo == "workspace-switcher" && catalog.workspaces.len() == 1 {
+            let mut extra = Workspace::seed("Second workspace");
+            extra.settings.id = "second-workspace".to_string();
+            let active = workspace.settings.id.clone();
+            catalog.add(extra);
+            catalog.switch(&active);
+        }
+        let workspace_dialog = match demo.as_str() {
+            "workspace-create" => Some(WorkspaceDialogMode::Create),
+            "workspace-rename" => Some(WorkspaceDialogMode::Rename),
+            _ => None,
+        };
+        let workspace_name = if demo == "workspace-create" {
+            "My workspace".to_string()
+        } else {
+            workspace.name.clone()
+        };
+        let workspace_icon = workspace.settings.icon.clone();
         Self {
             client,
             last_committed: workspace.clone(),
@@ -476,6 +522,11 @@ impl NotionApp {
             workspace_menu_open: demo == "workspace-switcher",
             app_menu_open: demo == "app-menu-file" || demo == "app-menu-view",
             compose_menu_open: demo == "compose-menu",
+            catalog,
+            catalog_path,
+            workspace_dialog,
+            workspace_name,
+            workspace_icon,
             grid_menu_open: false,
             drag_from: None,
             drag_to: None,
@@ -676,8 +727,11 @@ impl eframe::App for NotionApp {
         if view.compose_menu_open {
             render_compose_menu(&ctx, &palette, &mut commands);
         }
+        if view.workspace_dialog.is_some() {
+            render_workspace_dialog(&ctx, &view, &palette, &mut commands);
+        }
         if view.workspace_menu_open {
-            render_workspace_menu(&ctx, &palette, &mut commands);
+            render_workspace_menu(&ctx, &view, &palette, &mut commands);
         }
         if let Some(ref menu) = view.sidebar_menu {
             render_sidebar_menu(&ctx, menu, &self.workspace, &view, &palette, &mut commands);

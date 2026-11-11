@@ -3,8 +3,26 @@
 mod common;
 
 use common::{remove, temp_path};
-use ion_of_notes::model::Workspace;
+use ion_of_notes::model::{Workspace, WorkspaceCatalog};
 use ion_of_notes::store;
+
+#[test]
+fn workspace_catalog_roundtrip_keeps_the_active_workspace() {
+    let workspace_path = temp_path("catalog-workspace", "json");
+    let catalog_path = temp_path("catalog", "json");
+    let mut first = Workspace::seed("First");
+    first.settings.id = "first".to_string();
+    let mut second = Workspace::seed("Second");
+    second.settings.id = "second".to_string();
+    let mut catalog = WorkspaceCatalog::new(first);
+    catalog.add(second);
+    store::save_catalog(&catalog_path, &catalog).unwrap();
+    let loaded = store::load_catalog_or_seed(&catalog_path, &workspace_path);
+    assert_eq!(loaded.summaries().len(), 2);
+    assert_eq!(loaded.active_id, "second");
+    remove(&catalog_path);
+    remove(&workspace_path);
+}
 
 #[test]
 fn save_and_load_roundtrip() {

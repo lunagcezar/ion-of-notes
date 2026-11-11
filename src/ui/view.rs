@@ -4,9 +4,9 @@
 //! read it. Keeping the shape separate from the state machine keeps rendering
 //! independent of command handling (SRP, spec-017).
 
-use super::commands::{FontStyle, IconTab, SidebarMenu};
+use super::commands::{FontStyle, IconTab, SidebarMenu, WorkspaceDialogMode};
 use crate::collab::{Access, Member, PageVersion};
-use crate::model::SearchResult;
+use crate::model::{SearchResult, WorkspaceSummary};
 use crate::server::realtime::Awareness;
 use egui::Pos2;
 use std::collections::HashSet;
@@ -60,6 +60,11 @@ pub(super) struct ViewState {
     pub(super) sidebar_customize: bool,
     pub(super) sidebar_menu: Option<SidebarMenu>,
     pub(super) sidebar_layout: crate::model::SidebarLayout,
+    pub(super) workspaces: Vec<WorkspaceSummary>,
+    pub(super) active_workspace: String,
+    pub(super) workspace_dialog: Option<WorkspaceDialogMode>,
+    pub(super) workspace_name: String,
+    pub(super) workspace_icon: String,
     pub(super) new_tab_open: bool,
     pub(super) new_tab_query: String,
     pub(super) new_tab_selected: usize,

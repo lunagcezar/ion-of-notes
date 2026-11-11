@@ -36,6 +36,13 @@ pub(super) enum SidebarMenu {
     },
 }
 
+/// Create or rename dialog for the workspace catalog (spec-058).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum WorkspaceDialogMode {
+    Create,
+    Rename,
+}
+
 /// One entry in the "Open in new tab…" switcher opened by the tab-strip `+`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum NewTabChoice {
@@ -246,6 +253,14 @@ pub(super) enum Command {
     MoveSidebarShortcut(String, String, String),
     SetSidebarShowExcluded(bool),
     ToggleSidebarNav(String),
+    OpenWorkspaceCreate,
+    OpenWorkspaceRename,
+    CloseWorkspaceDialog,
+    SetWorkspaceName(String),
+    SetWorkspaceIcon(String),
+    ConfirmWorkspaceDialog,
+    SwitchWorkspace(String),
+    DeleteWorkspace(String),
     OpenAppMenu,
     CloseAppMenu,
     ToggleComposeMenu,
@@ -456,6 +471,14 @@ impl Command {
             | Command::MoveSidebarShortcut(_, _, _)
             | Command::SetSidebarShowExcluded(_)
             | Command::ToggleSidebarNav(_)
+            | Command::OpenWorkspaceCreate
+            | Command::OpenWorkspaceRename
+            | Command::CloseWorkspaceDialog
+            | Command::SetWorkspaceName(_)
+            | Command::SetWorkspaceIcon(_)
+            | Command::ConfirmWorkspaceDialog
+            | Command::SwitchWorkspace(_)
+            | Command::DeleteWorkspace(_)
             | Command::OpenAppMenu
             | Command::CloseAppMenu
             | Command::ToggleComposeMenu

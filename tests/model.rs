@@ -355,3 +355,25 @@ fn sidebar_layout_starts_with_favorites_and_private_and_accepts_shortcuts() {
             .any(|section| section.title == "Reading")
     );
 }
+
+#[test]
+fn workspace_catalog_adds_switches_and_refuses_to_remove_the_last_workspace() {
+    let mut first = Workspace::seed("First");
+    first.settings.id = "first".to_string();
+    let mut catalog = ion_of_notes::model::WorkspaceCatalog::new(first);
+    assert_eq!(catalog.active_id, "first");
+    assert_eq!(catalog.summaries().len(), 1);
+    assert!(catalog.summaries()[0].active);
+
+    let mut second = Workspace::seed("Second");
+    second.settings.id = "second".to_string();
+    assert!(catalog.add(second));
+    assert_eq!(catalog.active_id, "second");
+    assert_eq!(catalog.summaries().len(), 2);
+    assert!(catalog.switch("first"));
+    assert_eq!(catalog.active_id, "first");
+
+    assert!(catalog.remove("second"));
+    assert_eq!(catalog.summaries().len(), 1);
+    assert!(!catalog.remove("first"));
+}

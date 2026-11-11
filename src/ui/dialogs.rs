@@ -14,6 +14,7 @@ mod settings;
 mod settings_pages;
 mod sharing;
 mod templates;
+mod workspace;
 
 pub(super) use help::render_shortcuts;
 pub(super) use menus::{
@@ -26,3 +27,4 @@ pub(super) use search_window::{render_new_tab, render_search};
 pub(super) use settings::render_settings;
 pub(super) use sharing::{render_inbox, render_share};
 pub(super) use templates::render_templates;
+pub(super) use workspace::render_workspace_dialog;

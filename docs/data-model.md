@@ -35,9 +35,37 @@ deserialization and after add/remove, and ignored by equality (spec-022).
 | `people_directory` | `bool` | Enable the People directory |
 | `recent_activity` | `bool` | Show recent activity on profiles |
 | `hover_cards` | `bool` | Show profile hover cards |
+| `number_format` | `NumberFormat` | `automatic`, `dot_thousands` or `comma_thousands` (spec-061) |
+| `time_format` | `TimeFormat` | `hour_24` or `hour_12` (spec-061) |
+| `sidebar_layout` | `SidebarLayout` | Persisted sidebar sections and shortcuts (spec-062) |
 
 `Workspace.settings` is serialized with the workspace document and defaults
 are supplied for older files (spec-025).
+
+## Entity: WorkspaceCatalog
+
+The desktop catalog is persisted in `workspaces.json` beside `workspace.json`
+(spec-058).
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `active_id` | `String` | `WorkspaceSettings.id` of the visible workspace |
+| `workspaces` | `Vec<Workspace>` | Full snapshots of every known workspace |
+
+`WorkspaceSummary` is the switcher row: `id`, `name`, `icon`, `active` and
+`page_count`. The last workspace cannot be removed; deleting the active one
+activates the first remaining entry.
+
+## Entity: SidebarLayout
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `sections` | `Vec<SidebarSection>` | Ordered sidebar tabs/sections |
+
+`SidebarSection` has `id`, `title`, `source` (`favorites`, `private` or
+`custom`), `shortcuts`, and `hidden`. `SidebarShortcut` has `id`, `page_id`,
+`label` and `hidden`. The default layout contains Favorites and Private; a
+custom section owns an explicit shortcut list (spec-062).
 
 ## Entity: Page
 

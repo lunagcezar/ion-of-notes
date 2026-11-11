@@ -23,6 +23,24 @@ fn build_desktop_at_seeds_and_serves_the_workspace() {
     remove(&collab);
 }
 
+#[test]
+fn replace_workspace_moves_the_local_server_to_the_new_snapshot() {
+    let path = temp_path("bootstrap-replace", "json");
+    let collab = path.with_extension("collab.json");
+    remove(&path);
+    remove(&collab);
+    let (mut client, workspace) = build_desktop_at(path.clone());
+    let mut second = ion_of_notes::model::Workspace::seed("Second");
+    second.settings.id = "second".to_string();
+    client.replace_workspace(&second).unwrap();
+    let loaded = client.workspace().unwrap();
+    assert_eq!(loaded.name, "Second");
+    assert_eq!(loaded.settings.id, "second");
+    assert_ne!(workspace.name, loaded.name);
+    remove(&path);
+    remove(&collab);
+}
+
 #[cfg(not(feature = "desktop"))]
 #[test]
 fn core_build_exposes_the_data_stack_without_the_desktop_ui() {
