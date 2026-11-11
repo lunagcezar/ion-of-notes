@@ -166,6 +166,21 @@ curl http://127.0.0.1:8787/ready
 curl http://127.0.0.1:8787/metrics
 ```
 
+### Production stack with Caddy TLS
+
+```sh
+cp .env.prod.example .env.prod
+# set ION_OF_NOTES_DOMAIN and point DNS at the host
+cp secrets/owner_password.txt.example secrets/owner_password.txt
+docker compose -f compose.prod.yml --env-file .env.prod up -d --build
+```
+
+Caddy publishes 80/443 and obtains certificates automatically; the app is only
+reachable on the internal Compose network. Add `--profile backup` for a daily
+online SQLite backup with retention. For a local HTTPS test, use
+`deploy/Caddyfile.local` with `ION_OF_NOTES_CADDYFILE` and
+`ION_OF_NOTES_DOMAIN=localhost`.
+
 ### First SQLite run and the owner account
 
 The first SQLite run seeds the owner account from
@@ -355,8 +370,10 @@ src/
   i18n.rs          locale switching
 tests/             one integration-test crate per module (261 tests)
 Dockerfile         multi-stage server-only image
-compose.yml        self-hosted server stack with the ion-data volume
+compose.yml        development/self-hosted server stack
+compose.prod.yml   production app + Caddy TLS + optional backup profile
 .env.example       Compose bind/port/log template
+.env.prod.example  Production domain/image/backup template
 docker-bake.hcl    linux/amd64 + linux/arm64 build target
 rust-toolchain.toml pinned Rust 1.99.1 + rustfmt/clippy
 renovate.json      Cargo, GitHub Actions and Docker updates
@@ -364,6 +381,8 @@ renovate.json      Cargo, GitHub Actions and Docker updates
 secrets/
   owner_password.txt.example  Docker secret template
 deploy/
+  Caddyfile          Production Caddyfile
+  Caddyfile.local    Local tls internal test
   Caddyfile.example  TLS reverse-proxy example
 ```
 
@@ -403,10 +422,9 @@ eframe, JSON files or sockets.
 - SQLite is single-node; PostgreSQL and Redis/shared multi-node rate limiting
   are not implemented.
 - There is no browser UI, registration, password reset or account-management UI.
-- A Compose deployment manifest and an operations guide are included; TLS
-  termination, reverse-proxy configuration and automatic backups are not. Run
-  the server behind a trusted proxy and follow `docs/deployment.md` for
-  backups, secrets and upgrades.
+- A development Compose stack and a production `compose.prod.yml` with Caddy
+  TLS are included; automatic backups are optional via the `backup` profile.
+  See `docs/deployment.md` for DNS, secrets, backups and upgrades.
 - Webhooks use a persistent outbox, background retry worker and dead-letter
   store; an external queue and private CA/mTLS setup are not included.
 - B3 own-account capture remains blocked by the strict clean-room scope.

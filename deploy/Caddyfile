@@ -1,0 +1,12 @@
+# Production Caddyfile: automatic public TLS for the domain in
+# ION_OF_NOTES_DOMAIN. Caddy proxies WebSocket upgrades automatically.
+{$ION_OF_NOTES_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy ion-of-notes:8787
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+}

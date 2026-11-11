@@ -149,7 +149,10 @@ ION_OF_NOTES_OWNER_PASSWORD=test docker compose config
 show `127.0.0.1:8787:8787`, `read_only: true`, `cap_drop: [ALL]`,
 `no-new-privileges` and the `owner_password` secret in `docker compose config`.
 `/ready` and `/metrics` must respond; see `docs/deployment.md` for backups,
-TLS and upgrade checks.
+TLS and upgrade checks. For the production manifest,
+`ION_OF_NOTES_DOMAIN=notes.example.com docker compose -f compose.prod.yml config`
+must show Caddy on 80/443 and no host port on the app; the `--profile backup`
+config must include the backup service.
 
 ### 3.3 Supply-chain checks
 

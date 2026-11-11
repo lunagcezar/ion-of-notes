@@ -455,6 +455,9 @@ capabilities) is implemented; the rest are planned.
   login/connect in the background, clears it on disconnect or failed restore,
   and keeps individual CRUD REST calls synchronous with the existing timeout
   (spec-055).
+- NFR-38: `compose.prod.yml` runs the app behind Caddy with automatic TLS,
+  publishes only 80/443, keeps the app on the internal network, and offers an
+  opt-in daily SQLite backup profile with retention (spec-056).
 
 ## 3. Requirement → spec map
 
@@ -499,6 +502,7 @@ capabilities) is implemented; the rest are planned.
 | NFR-35                        | `spec-053-supply-chain-and-tooling.md` |
 | NFR-36                        | `spec-054-webhook-reliability.md` |
 | NFR-37                        | `spec-055-remote-mode-ux.md` |
+| NFR-38                        | `spec-056-production-compose-and-tls.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

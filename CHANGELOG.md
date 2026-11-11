@@ -6,6 +6,20 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-056 production Compose and TLS manifest
+
+- Added `compose.prod.yml`: app + Caddy TLS, app reachable only on the internal
+  network, Caddy publishing 80/443, certificate/config volumes and the same app
+  hardening as the development stack.
+- Added `deploy/Caddyfile` (public ACME TLS) and `deploy/Caddyfile.local`
+  (`tls internal` for local HTTPS tests), plus `.env.prod.example`.
+- Added an opt-in `backup` profile that performs a daily online SQLite
+  `.backup` and prunes archives after `ION_OF_NOTES_BACKUP_RETENTION_DAYS`.
+- Documented the production flow, local TLS test and nginx alternative.
+- No Rust code or test-count change (261 tests).
+- Updated README, architecture, deployment, requirements, glossary, spec index
+  and changelog.
+
 ### Changed - spec-055 remote-mode UX
 
 - Persisted the remote session (`base_url`, `email`, `token`) in

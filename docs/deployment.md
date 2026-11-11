@@ -55,6 +55,32 @@ ION_OF_NOTES_PORT=8787
 
 Only do this behind a firewall or a TLS proxy.
 
+### 2.1 Production Compose with Caddy
+
+```sh
+cp .env.prod.example .env.prod
+# set ION_OF_NOTES_DOMAIN and point DNS at the host
+cp secrets/owner_password.txt.example secrets/owner_password.txt
+docker compose -f compose.prod.yml --env-file .env.prod up -d --build
+```
+
+Caddy publishes 80/443 and obtains/renews certificates automatically; the app
+is not published on a host port and is reached as `ion-of-notes:8787` on the
+Compose network. Certificates and Caddy state live in the `caddy-data` and
+`caddy-config` volumes.
+
+- Public domain: `deploy/Caddyfile` uses `{$ION_OF_NOTES_DOMAIN}`.
+- Local HTTPS test: set `ION_OF_NOTES_CADDYFILE=./deploy/Caddyfile.local` and
+  `ION_OF_NOTES_DOMAIN=localhost`; Caddy uses its internal CA (`tls internal`).
+- Daily online backup: add `--profile backup` and optionally set
+  `ION_OF_NOTES_BACKUP_RETENTION_DAYS` (default 7). Archives land in
+  `./backups`.
+
+Caddy is the default because it handles ACME and WebSocket upgrades without
+extra configuration. An nginx deployment can use `ion-of-notes:8787` as the
+upstream and reuse the header rules in `deploy/Caddyfile.example`, but it needs
+certbot/ACME and explicit `Upgrade`/`Connection` proxy headers.
+
 ## 3. TLS with Caddy
 
 `deploy/Caddyfile.example` is a minimal reverse proxy with automatic

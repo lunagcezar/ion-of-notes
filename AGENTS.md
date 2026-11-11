@@ -47,7 +47,7 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Shared limits    | SQLite `rate_limits` + `RateLimitStore` | Multi-server workspace budgets (spec-041)        |
 | CRDT             | Yrs per-page text documents         | Server merge (042) + client session/awareness (043) |
 | Remote desktop   | ureq REST + tokio-tungstenite WS    | Remembered session + background connect (spec-055)   |
-| Deployment       | Docker multi-stage + Compose        | `ion-of-notes-server`, `ion-data` volume, secrets, `/ready`, `/metrics` (specs 050-052) |
+| Deployment       | Docker multi-stage + Compose + Caddy | `ion-of-notes-server`, production TLS stack, secrets, `/ready`, `/metrics` (specs 050-056) |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
@@ -250,8 +250,10 @@ tests/
   sqlite_store.rs  SQLite round-trip, accounts/sessions, JSON migration
   integration.rs   end-to-end client/server/store scenario
 Dockerfile         multi-stage server-only image
-compose.yml        self-hosted server stack with the ion-data volume
+compose.yml        development/self-hosted server stack
+compose.prod.yml   production app + Caddy TLS + optional backup profile
 .env.example       Compose bind/port/log template
+.env.prod.example  Production domain/image/backup template
 .dockerignore      build-context exclusions
 docker-bake.hcl    linux/amd64 + linux/arm64 build target
 rust-toolchain.toml pinned Rust 1.99.1 + rustfmt/clippy
@@ -260,6 +262,8 @@ renovate.json      Cargo, GitHub Actions and Docker updates
 secrets/
   owner_password.txt.example  Docker secret template
 deploy/
+  Caddyfile          Production Caddyfile
+  Caddyfile.local    Local tls internal test
   Caddyfile.example  TLS reverse-proxy example
 ```
 

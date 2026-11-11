@@ -1,0 +1,8 @@
+# Local HTTPS test: Caddy uses its internal CA instead of public ACME.
+# Use with ION_OF_NOTES_DOMAIN=localhost and
+# ION_OF_NOTES_CADDYFILE=./deploy/Caddyfile.local.
+localhost {
+	tls internal
+	encode zstd gzip
+	reverse_proxy ion-of-notes:8787
+}

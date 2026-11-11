@@ -93,6 +93,7 @@ Status vocabulary:
 | [053](spec-053-supply-chain-and-tooling.md) | Supply-chain and tooling baseline | implemented | Pinned toolchain/actions/images, Renovate, `cargo audit` |
 | [054](spec-054-webhook-reliability.md) | Webhook reliability | implemented | Persistent outbox, worker, dead-letter/requeue, metrics |
 | [055](spec-055-remote-mode-ux.md) | Remote-mode UX | implemented | Remembered session, background connect, startup restore |
+| [056](spec-056-production-compose-and-tls.md) | Production Compose and TLS manifest | implemented | Caddy TLS stack, local TLS test, optional backup profile |
 
 ## 3. Work status
 

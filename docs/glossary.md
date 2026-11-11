@@ -53,6 +53,8 @@ definition.
 | **Webhook outbox** | Persisted aggregated events waiting for the delivery worker. | `src/collab.rs`, `src/server/handlers/webhooks.rs` |
 | **Dead letter** | A webhook delivery that exhausted its retry budget and can be requeued. | `src/webhooks.rs`, `/api/v2/webhook_deliveries/dead_letters` |
 | **Remote session** | Persisted `base_url`/`email`/`token` for the desktop remote mode; never the password. | `src/remote.rs`, `remote-session.json` |
+| **Production stack** | `compose.prod.yml`: app + Caddy TLS, internal network, optional backup profile. | `compose.prod.yml`, `deploy/Caddyfile` |
+| **Backup profile** | Opt-in Compose service that runs a daily online SQLite backup with retention. | `compose.prod.yml` |
 
 ## 3. Domain
 
