@@ -56,7 +56,8 @@ Everything is written in English and built spec-first (`spec/`) and test-first
 - Rich text, block metadata/children, typed properties, databases, data
   sources and views.
 - Comments, users, file uploads and attachments.
-- Webhook subscriptions, HMAC-SHA256 signatures, aggregation and retries.
+- Webhook subscriptions, HMAC-SHA256 signatures, aggregation, a persistent
+  outbox, background retries and a dead-letter/requeue path.
 - Rate limits, request-size/block limits and `Retry-After` guidance.
 - Axum/Tokio/Tower HTTP adapter with graceful shutdown.
 - SQLite persistence (`--database`), Argon2id accounts, opaque sessions and
@@ -66,9 +67,10 @@ Everything is written in English and built spec-first (`spec/`) and test-first
 - TLS webhook delivery with ureq/rustls, no automatic redirects.
 - Shared SQLite rate-limit budgets across server instances using the same file.
 - Remote desktop transport: `--server`/`--token` over REST + background
-  WebSocket, with reconnect and `?since=` resume.
+  WebSocket, with reconnect, `?since=` resume and a remembered session.
 - Settings → Server login form: server URL, email, masked password,
-  connect/disconnect and live local/remote switching.
+  background connect/disconnect, live local/remote switching and startup
+  session restore.
 
 ### AI assistant (optional)
 
@@ -79,7 +81,7 @@ Everything is written in English and built spec-first (`spec/`) and test-first
 
 ## Requirements
 
-- A recent **stable Rust** toolchain (edition 2024).
+- Rust **1.99.1** (edition 2024), selected by `rust-toolchain.toml`.
 - A C compiler for bundled SQLite:
   - Windows: Visual Studio Build Tools with the MSVC C++ workload.
   - Linux: `build-essential` or equivalent.
@@ -199,10 +201,11 @@ export ION_OF_NOTES_OWNER_PASSWORD="choose-a-strong-password"
 cargo run --release -- --serve 127.0.0.1:8787 --database data/ion-of-notes.sqlite3
 ```
 
-If the variable is not set, the development default `change-me-now` is used and
-a warning is printed. The account is seeded **once**; changing the variable
-later does not change an existing password (there is no password-reset flow
-yet).
+The environment variable takes precedence; `ION_OF_NOTES_OWNER_PASSWORD_FILE`
+is the Docker-secret path. If neither is set, the development default
+`change-me-now` is used and a warning is printed. The account is seeded
+**once**; changing either source later does not change an existing password
+(there is no password-reset flow yet).
 
 ### Log in and call v2
 
@@ -268,9 +271,11 @@ workspace over REST and keeps the change feed, CRDT updates and awareness on a
 background WebSocket. Without `--server`, the desktop stays fully local.
 
 You can also connect from **Settings → Server** by entering the server URL,
-email and password. Starting with `--server` but no `--token` opens that page
-automatically. The password is sent only to the server and is cleared after a
-successful login; the session token is not persisted across restarts.
+email and password. Login/connect runs in the background, so the window keeps
+rendering. A successful login stores the token in `remote-session.json`;
+starting with `--server` restores it automatically. The password is never
+persisted and is cleared after a successful login. Disconnect removes the saved
+session.
 
 ## Configuration
 
@@ -284,6 +289,10 @@ successful login; the session token is not persisted across restarts.
 | `ION_OF_NOTES_LOCALE` | `en` | Initial locale (`en`, `pt-BR`, `eo`) |
 | `ION_OF_NOTES_OLLAMA_MODEL` | `llama3.2` / detected | Preferred Ollama model |
 | `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS` | `30` | Webhook flush/retry worker interval |
+| `ION_OF_NOTES_DOMAIN` | unset | Public hostname for `compose.prod.yml` / Caddy |
+| `ION_OF_NOTES_IMAGE` | `ion-of-notes-server:local` | Image used by `compose.prod.yml` |
+| `ION_OF_NOTES_CADDYFILE` | `./deploy/Caddyfile` | Caddyfile mounted by `compose.prod.yml` |
+| `ION_OF_NOTES_BACKUP_RETENTION_DAYS` | `7` | Backup archive retention for the `backup` profile |
 | `OLLAMA_HOST` | `127.0.0.1:11434` | Ollama service host and port |
 | `RUST_LOG` | `info,tower_http=info` | Server tracing filter |
 
@@ -313,7 +322,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-`cargo test --all-targets` still runs all default-feature tests (254), but the
+`cargo test --all-targets` still runs all default-feature tests (260), but the
 two passes above avoid linking the window into the core test binaries.
 
 Full gate, including Markdown link/Mermaid/table checks:
