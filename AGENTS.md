@@ -610,7 +610,7 @@ runs it with the `ion-data` volume, a required owner password and the
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust
 tab strip is the only window frame and doubles as a drag handle.
-`ION_OF_NOTES_SHOW=library|share|inbox|settings|settings-general|settings-sidebar|settings-people|settings-offline|settings-server|search|tasks|newtab|ai|shortcuts|iconpicker|pageactions|discussions|onboarding|templates`
+`ION_OF_NOTES_SHOW=library|share|inbox|settings|settings-general|settings-sidebar|settings-people|settings-offline|settings-server|search|tasks|newtab|ai|ai-error|shortcuts|iconpicker|iconpicker-icons|iconpicker-search|pageactions|discussions|onboarding|templates|slash|selection|customize-sidebar|customize-shortcut|workspace-switcher|new-workspace`
 is a harmless preview hook: it opens one pictured state on startup so it can be
 captured with `--screenshot`. Normal runs (and the rebuild check) never set it.
 

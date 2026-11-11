@@ -338,7 +338,7 @@ pub(crate) fn render_settings(
                                     _ => {
                                         ui.label(
                                             egui::RichText::new(
-                                                "Settings for this section live on your self-hosted workspace.",
+                                                "Not available in this version. This section is reserved for a future update.",
                                             )
                                             .size(13.0)
                                             .color(palette.muted),

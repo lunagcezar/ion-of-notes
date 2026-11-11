@@ -24,6 +24,7 @@ impl NotionApp {
                     let config = self.ai_config.clone();
                     let slot = Arc::clone(&self.ai_slot);
                     self.ai_busy = true;
+                    self.ai_started = Some(std::time::Instant::now());
                     self.ai_answer = None;
                     self.ai_error = None;
                     std::thread::spawn(move || {
@@ -38,6 +39,8 @@ impl NotionApp {
                 self.ai_query.clear();
                 self.ai_answer = None;
                 self.ai_error = None;
+                self.ai_busy = false;
+                self.ai_started = None;
             }
             Command::SetAiEndpoint(endpoint) => self.ai_config.endpoint = endpoint,
             Command::SetAiModel(model) => self.ai_config.model = model,

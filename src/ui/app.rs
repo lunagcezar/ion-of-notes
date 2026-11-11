@@ -102,6 +102,7 @@ pub struct NotionApp {
     pub(super) ai_answer: Option<String>,
     pub(super) ai_error: Option<String>,
     pub(super) ai_busy: bool,
+    pub(super) ai_started: Option<std::time::Instant>,
     pub(super) ai_slot: Arc<Mutex<Option<Result<String, String>>>>,
     // Help / window.
     pub(super) shortcuts_open: bool,
@@ -311,6 +312,7 @@ impl NotionApp {
                 demo.as_str(),
                 "settings"
                     | "ai"
+                    | "ai-error"
                     | "settings-general"
                     | "settings-sidebar"
                     | "settings-people"
@@ -320,7 +322,7 @@ impl NotionApp {
             onboarding_open,
             templates_open,
             settings_page: match demo.as_str() {
-                "ai" => "AI assistant".to_string(),
+                "ai" | "ai-error" => "AI assistant".to_string(),
                 "settings-general" => "General".to_string(),
                 "settings-sidebar" => "Sidebar".to_string(),
                 "settings-people" => "People".to_string(),
@@ -375,8 +377,17 @@ impl NotionApp {
             ai_status,
             ai_query: String::new(),
             ai_answer: None,
-            ai_error: None,
+            ai_error: if demo == "ai-error" {
+                Some(
+                    "Ollama is not available. Install the `ollama` CLI in PATH, or start the \
+                     service and set OLLAMA_HOST to a reachable host:port."
+                        .to_string(),
+                )
+            } else {
+                None
+            },
             ai_busy: false,
+            ai_started: None,
             ai_slot: Arc::new(Mutex::new(None)),
             shortcuts_open: demo == "shortcuts",
             zoom: 1.0,

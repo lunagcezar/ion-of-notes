@@ -17,8 +17,8 @@ in what order, and which document is the source of truth for each concern.
 ## Current status (2026-11-11)
 
 - **Specs:** `spec-001` .. `spec-056` implemented; `spec-007` retired;
-  `spec-016` is a plan with B5 done; `spec-057` is a plan for the UI quality
-  pass. The v2 foundation, pagination, rich
+  `spec-016` is a plan with B5 done; `spec-057` is implemented (UI quality
+  pass). The v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
   (spec-039), the WebSocket change feed (spec-040), TLS webhooks/shared limits

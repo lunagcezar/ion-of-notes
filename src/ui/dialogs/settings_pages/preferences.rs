@@ -44,7 +44,7 @@ pub(in crate::ui::dialogs) fn render_preferences(
                 ui,
                 row.title,
                 row.description,
-                "Use system setting ⌄",
+                "Use system setting",
                 palette,
             ),
             "enter_new_line" => display_row(ui, row.title, row.description, "Off", palette),
@@ -94,13 +94,16 @@ pub(in crate::ui::dialogs) fn render_preferences(
                     commands.push(Command::SetLanguage(next.to_string()));
                 }
             }
-            "number_format" => {
-                display_row(ui, row.title, row.description, "1.000.000,00 ⌄", palette)
-            }
+            "number_format" => display_row(ui, row.title, row.description, "Automatic", palette),
             "time_format" => display_row(ui, row.title, row.description, "24-hour", palette),
             "server" => {
+                let state = if view.server_connected {
+                    "connected"
+                } else {
+                    "local mode"
+                };
                 ui.label(
-                    egui::RichText::new("Self-hosted server  ·  connected")
+                    egui::RichText::new(format!("Self-hosted server  ·  {state}"))
                         .size(12.0)
                         .color(palette.accent),
                 );

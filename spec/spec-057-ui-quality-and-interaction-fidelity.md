@@ -168,6 +168,11 @@ E2. **Given** the AI assistant test, **when** Ollama is unavailable or
 returns an error, **then** the UI leaves "Waiting for Ollama" and shows the
 actual status/error; a successful response renders the answer.
 
+Implementation note (2026-11-11): the UI watchdog reports an error after 20
+seconds, so a blocking CLI or HTTP call can no longer leave the test stuck on
+"Waiting for Ollama". Read-only preferences now show plain values (no fake
+dropdown chevrons), and the Sidebar page toggles control the real rows.
+
 ## Test scenarios (written before implementation)
 
 - **Screenshot states:** default window, `share`, `settings`,
@@ -221,7 +226,7 @@ actual status/error; a successful response renders the answer.
       underline.
 - [x] Phase D: customize-sidebar mode, new-workspace dialog, workspace switcher,
       favorite target.
-- [ ] Phase E: settings persistence/placeholders, Ollama test state.
-- [ ] Add the new preview states and screenshot checks.
-- [ ] Run the full gate and update the changelog/spec index.
-- [ ] Commit each phase as its own spec if a phase is too large for one session.
+- [x] Phase E: settings persistence/placeholders, Ollama test state.
+- [x] Add the new preview states and screenshot checks.
+- [x] Run the full gate and update the changelog/spec index.
+- [x] Commit each phase as its own spec if a phase is too large for one session.

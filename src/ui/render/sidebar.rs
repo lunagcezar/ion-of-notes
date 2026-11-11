@@ -278,68 +278,80 @@ pub(crate) fn render_sidebar(
                     commands.push(Command::OpenSidebarMenu(SidebarMenu::Section));
                 }
             } else {
-                if nav_row(
-                    ui,
-                    width,
-                    &i18n::t("library"),
-                    view.library_open,
-                    palette,
-                    draw_library,
-                )
-                .clicked()
+                if ws.settings.sidebar_library
+                    && nav_row(
+                        ui,
+                        width,
+                        &i18n::t("library"),
+                        view.library_open,
+                        palette,
+                        draw_library,
+                    )
+                    .clicked()
                 {
                     commands.push(Command::OpenLibrary);
                 }
-                if nav_row(
-                    ui,
-                    width,
-                    &i18n::t("settings"),
-                    false,
-                    palette,
-                    draw_settings,
-                )
-                .clicked()
+                if ws.settings.sidebar_settings
+                    && nav_row(
+                        ui,
+                        width,
+                        &i18n::t("settings"),
+                        false,
+                        palette,
+                        draw_settings,
+                    )
+                    .clicked()
                 {
                     commands.push(Command::OpenSettings);
                 }
-                if nav_row(ui, width, &i18n::t("inbox"), false, palette, draw_inbox).clicked() {
+                if ws.settings.sidebar_inbox
+                    && nav_row(ui, width, &i18n::t("inbox"), false, palette, draw_inbox).clicked()
+                {
                     commands.push(Command::OpenInbox);
                 }
 
-                ui.add_space(18.0);
-                section_label(ui, &i18n::t("favorites"), palette);
-                let favorites = ws.favorites();
-                if favorites.is_empty() {
-                    section_label(ui, &i18n::t("no_favorites"), palette);
-                } else {
-                    for page in favorites {
-                        let selected = view.current_page == page.id && !view.library_open;
-                        let (rect, response) = nav_row_rect(ui, width, selected, palette);
-                        draw_page_icon(
-                            ui.painter(),
-                            Rect::from_min_size(rect.min + Vec2::new(10.0, 7.0), Vec2::splat(16.0)),
-                            &page.icon,
-                            palette,
-                            false,
-                        );
-                        ui.painter().text(
-                            rect.min + Vec2::new(36.0, 15.0),
-                            Align2::LEFT_CENTER,
-                            &page.title,
-                            FontId::proportional(13.5),
-                            palette.text,
-                        );
-                        if response.clicked() {
-                            commands.push(Command::SelectPage(page.id.clone()));
+                if ws.settings.sidebar_favorites {
+                    ui.add_space(18.0);
+                    section_label(ui, &i18n::t("favorites"), palette);
+                    let favorites = ws.favorites();
+                    if favorites.is_empty() {
+                        section_label(ui, &i18n::t("no_favorites"), palette);
+                    } else {
+                        for page in favorites {
+                            let selected = view.current_page == page.id && !view.library_open;
+                            let (rect, response) = nav_row_rect(ui, width, selected, palette);
+                            draw_page_icon(
+                                ui.painter(),
+                                Rect::from_min_size(
+                                    rect.min + Vec2::new(10.0, 7.0),
+                                    Vec2::splat(16.0),
+                                ),
+                                &page.icon,
+                                palette,
+                                false,
+                            );
+                            ui.painter().text(
+                                rect.min + Vec2::new(36.0, 15.0),
+                                Align2::LEFT_CENTER,
+                                &page.title,
+                                FontId::proportional(13.5),
+                                palette.text,
+                            );
+                            if response.clicked() {
+                                commands.push(Command::SelectPage(page.id.clone()));
+                            }
                         }
                     }
                 }
 
-                ui.add_space(18.0);
-                section_label(ui, &i18n::t("private"), palette);
-                render_tree(ui, ws, None, 0, width, view, palette, commands);
-                if nav_row(ui, width, &i18n::t("new_page"), false, palette, draw_plus).clicked() {
-                    commands.push(Command::NewPage(None));
+                if ws.settings.sidebar_private {
+                    ui.add_space(18.0);
+                    section_label(ui, &i18n::t("private"), palette);
+                    render_tree(ui, ws, None, 0, width, view, palette, commands);
+                    if nav_row(ui, width, &i18n::t("new_page"), false, palette, draw_plus).clicked()
+                    {
+                        commands.push(Command::NewPage(None));
+                    }
                 }
             }
         });
@@ -440,40 +452,42 @@ pub(crate) fn render_sidebar(
 
         // Invite-members card (same footprint as the pictured sidebar card).
         // Members, sharing and collaboration live on the self-hosted server.
-        let (card, card_resp) = ui.allocate_exact_size(Vec2::new(width, 76.0), Sense::click());
-        ui.painter()
-            .rect_filled(card, CornerRadius::same(8), palette.callout);
-        if card_resp.hovered() {
-            ui.painter().rect_stroke(
-                card,
-                CornerRadius::same(8),
-                Stroke::new(1.0, palette.accent),
-                egui::StrokeKind::Inside,
+        if ws.settings.sidebar_invite {
+            let (card, card_resp) = ui.allocate_exact_size(Vec2::new(width, 76.0), Sense::click());
+            ui.painter()
+                .rect_filled(card, CornerRadius::same(8), palette.callout);
+            if card_resp.hovered() {
+                ui.painter().rect_stroke(
+                    card,
+                    CornerRadius::same(8),
+                    Stroke::new(1.0, palette.accent),
+                    egui::StrokeKind::Inside,
+                );
+            }
+            draw_person(
+                ui.painter(),
+                Rect::from_min_size(card.min + Vec2::new(12.0, 12.0), Vec2::splat(16.0)),
+                palette.muted,
             );
+            ui.painter().text(
+                card.min + Vec2::new(36.0, 20.0),
+                Align2::LEFT_CENTER,
+                i18n::t("invite_members"),
+                FontId::proportional(13.0),
+                palette.accent,
+            );
+            ui.painter().text(
+                card.min + Vec2::new(12.0, 42.0),
+                Align2::LEFT_CENTER,
+                i18n::t("collaborate_team"),
+                FontId::proportional(11.0),
+                palette.muted,
+            );
+            if card_resp.clicked() {
+                commands.push(Command::OpenShare);
+            }
+            ui.add_space(8.0);
         }
-        draw_person(
-            ui.painter(),
-            Rect::from_min_size(card.min + Vec2::new(12.0, 12.0), Vec2::splat(16.0)),
-            palette.muted,
-        );
-        ui.painter().text(
-            card.min + Vec2::new(36.0, 20.0),
-            Align2::LEFT_CENTER,
-            i18n::t("invite_members"),
-            FontId::proportional(13.0),
-            palette.accent,
-        );
-        ui.painter().text(
-            card.min + Vec2::new(12.0, 42.0),
-            Align2::LEFT_CENTER,
-            i18n::t("collaborate_team"),
-            FontId::proportional(11.0),
-            palette.muted,
-        );
-        if card_resp.clicked() {
-            commands.push(Command::OpenShare);
-        }
-        ui.add_space(8.0);
 
         // Customize sidebar toggles the in-place edit mode; the Done button
         // sits above the invite card, as in reference/customize-sidebar.png.
@@ -492,7 +506,7 @@ pub(crate) fn render_sidebar(
                 commands.push(Command::SetSidebarCustomize(false));
             }
             ui.add_space(8.0);
-        } else {
+        } else if ws.settings.sidebar_customize {
             let (custom, custom_resp) =
                 ui.allocate_exact_size(Vec2::new(width, 28.0), Sense::click());
             if custom_resp.hovered() {

@@ -193,6 +193,25 @@ impl NotionApp {
         if !self.ai_busy {
             return;
         }
+        // The CLI and HTTP transports can block; never leave the settings test
+        // on "Waiting for Ollama" forever (spec-057).
+        if self
+            .ai_started
+            .is_some_and(|started| started.elapsed() > std::time::Duration::from_secs(20))
+        {
+            self.ai_busy = false;
+            self.ai_started = None;
+            self.ai_answer = None;
+            self.ai_error = Some(
+                "Ollama did not answer within 20 seconds. Check that the service is running \
+                 and the model is installed."
+                    .to_string(),
+            );
+            if let Ok(mut guard) = self.ai_slot.lock() {
+                *guard = None;
+            }
+            return;
+        }
         let done = self.ai_slot.lock().ok().and_then(|mut guard| guard.take());
         if let Some(result) = done {
             match result {
@@ -206,6 +225,7 @@ impl NotionApp {
                 }
             }
             self.ai_busy = false;
+            self.ai_started = None;
         }
     }
 

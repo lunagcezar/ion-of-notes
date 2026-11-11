@@ -6,6 +6,33 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-057 UI quality and interaction fidelity
+
+- Fixed the sidebar's uneven right padding and the settings rail/content
+  padding, aligned the settings search placeholder and moved the close control
+  inside the dialog padding.
+- Added the per-tab close "x", rebuilt the Share popover to the reference
+  layout (invite row, avatars, bordered general access, footer actions) and
+  centered the page icon glyph.
+- Added a page-level selection model: Ctrl+A, Ctrl+C and cross-block drag
+  highlighting; the six-dot handle now drags only, with a live block ghost and
+  insertion line.
+- Kept the typed `/` in the block, filtered the block-type menu by the text
+  after it, anchored the menu below the caret and added Escape/Close menu.
+- Replaced the icon picker catalogs with a searchable named emoji table and the
+  bundled monochrome `ui/icons` shapes; removed the stray tab underline.
+- Added in-place customize-sidebar mode with handle rows, Add shortcut/Add
+  section menus and a Done control; the workspace switcher is now an anchored
+  dropdown and help/four-point controls are outside its hover area.
+- "Create new workspace" opens the purpose dialog instead of Settings; the
+  Library view no longer favorites the last static page.
+- Wired the sidebar visibility toggles and marked read-only settings rows as
+  informational; the Ollama test now leaves "Waiting" with the real error or a
+  20-second timeout.
+- Added pure catalog-search tests and preview states for slash, selection,
+  icon tabs, customize-sidebar, workspace-switcher and new-workspace. Suite:
+  262 tests.
+
 ### Changed - spec-056 production Compose and TLS manifest
 
 - Added `compose.prod.yml`: app + Caddy TLS, app reachable only on the internal
