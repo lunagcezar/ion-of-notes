@@ -518,6 +518,15 @@ pub(super) fn draw_page_icon(
     if large {
         painter.rect_filled(rect, CornerRadius::same(12), palette.icon_bg);
     }
+    if let Some(name) = icon.strip_prefix("shape:") {
+        super::icon_catalog::draw_shape(
+            painter,
+            rect.shrink(rect.height() * 0.18),
+            name,
+            palette.text,
+        );
+        return;
+    }
     let label = if let Some(reference) = icon.strip_prefix("path:") {
         // An uploaded image is represented by a small picture placeholder;
         // the reference itself is kept on the page for persistence.

@@ -8,6 +8,7 @@ use ion_of_notes::ui::{
     is_valid_email, member_name_from_email, pages_for_view, parse_invite_emails, plan_for,
     rows_for, section_matches, settings_matches, status_color, visible_rows,
 };
+use ion_of_notes::ui::{EMOJI, ICONS, catalog_matches};
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
@@ -27,6 +28,21 @@ fn block_menu_options_match_block_kinds() {
     let labels: std::collections::HashSet<&str> = options.iter().map(|(_, l)| *l).collect();
     assert_eq!(labels.len(), options.len());
     assert!(options.iter().all(|(_, l)| !l.is_empty()));
+}
+
+#[test]
+fn emoji_and_icon_catalogs_search_by_name_and_keywords() {
+    assert!(
+        EMOJI.len() >= 400,
+        "the emoji catalog should be substantial"
+    );
+    assert!(ICONS.iter().any(|icon| icon.name == "star"));
+    assert!(ICONS.iter().any(|icon| icon.name == "lock"));
+    assert!(catalog_matches("grinning face", "smile happy", "smil"));
+    assert!(catalog_matches("rocket", "space launch", "launch"));
+    assert!(catalog_matches("star", "", "STAR"));
+    assert!(!catalog_matches("rocket", "space launch", "banana"));
+    assert!(catalog_matches("rocket", "space launch", "  "));
 }
 
 #[test]

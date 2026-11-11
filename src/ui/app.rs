@@ -377,9 +377,20 @@ impl NotionApp {
             search_selected: 0,
             highlight_pane: true,
             filters: false,
-            icon_picker_open: demo == "iconpicker",
-            icon_picker_tab: IconTab::Emoji,
-            icon_picker_query: String::new(),
+            icon_picker_open: matches!(
+                demo.as_str(),
+                "iconpicker" | "iconpicker-icons" | "iconpicker-search"
+            ),
+            icon_picker_tab: if demo == "iconpicker-icons" {
+                IconTab::Icons
+            } else {
+                IconTab::Emoji
+            },
+            icon_picker_query: if demo == "iconpicker-search" {
+                "rocket".to_string()
+            } else {
+                String::new()
+            },
             page_actions_open: demo == "pageactions",
             page_status: None,
             comment_input: String::new(),

@@ -56,8 +56,14 @@ impl NotionApp {
             .page(&self.current_page)
             .map(|p| (p.available_offline, p.locked))
             .unwrap_or((false, false));
+        let page_icon = self
+            .workspace
+            .page(&self.current_page)
+            .map(|p| p.icon.clone())
+            .unwrap_or_default();
         ViewState {
             current_page: self.current_page.clone(),
+            page_icon,
             remote_cursors: self.remote_awareness.clone(),
             server_url: self.server_url.clone(),
             server_email: self.server_email.clone(),

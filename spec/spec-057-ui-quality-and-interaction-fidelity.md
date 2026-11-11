@@ -211,7 +211,7 @@ actual status/error; a successful response renders the answer.
       settings content/rail/search/close padding.
 - [x] Phase B: selection model + Ctrl+A/mouse/Ctrl+C, drag ghost and six-dot
       behavior, slash menu.
-- [ ] Phase C: real emoji catalog/search, monochrome icon pack, remove blue
+- [x] Phase C: real emoji catalog/search, monochrome icon pack, remove blue
       underline.
 - [ ] Phase D: customize-sidebar mode, new-workspace dialog, workspace switcher,
       favorite target.

@@ -15,6 +15,7 @@ use std::sync::Arc;
 /// A snapshot of non-workspace app state passed to pure render functions.
 pub(super) struct ViewState {
     pub(super) current_page: String,
+    pub(super) page_icon: String,
     pub(super) remote_cursors: Vec<Awareness>,
     pub(super) server_url: String,
     pub(super) server_email: String,
