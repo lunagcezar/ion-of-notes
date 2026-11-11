@@ -64,6 +64,7 @@ impl NotionApp {
             server_password: self.server_password.clone(),
             server_status: self.server_status.clone(),
             server_connected: self.server_connected,
+            server_busy: self.server_busy,
             tabs: self.tabs.clone(),
             active_tab: self.active_tab,
             sidebar_open: self.sidebar_open,

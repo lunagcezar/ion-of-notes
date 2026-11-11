@@ -21,6 +21,7 @@ pub(super) struct ViewState {
     pub(super) server_password: String,
     pub(super) server_status: Option<String>,
     pub(super) server_connected: bool,
+    pub(super) server_busy: bool,
     pub(super) tabs: Vec<String>,
     pub(super) active_tab: usize,
     pub(super) sidebar_open: bool,

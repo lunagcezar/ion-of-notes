@@ -24,6 +24,8 @@ pub fn route_capability(method: Method, path: &str) -> Option<Capability> {
         (Method::Post, "/api/v2/webhooks") => Some(Capability::InsertContent),
         (Method::Get, "/api/v2/webhook_deliveries") => Some(Capability::ReadContent),
         (Method::Post, "/api/v2/webhook_deliveries/retry") => Some(Capability::InsertContent),
+        (Method::Get, "/api/v2/webhook_deliveries/dead_letters") => Some(Capability::ReadContent),
+        (Method::Post, "/api/v2/webhook_deliveries/requeue") => Some(Capability::InsertContent),
         (Method::Delete, p) if p.starts_with("/api/v2/webhooks/") => {
             Some(Capability::UpdateContent)
         }

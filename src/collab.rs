@@ -13,7 +13,7 @@
 //! "folder" markdown files that link to their sub-pages, and a `People` folder
 //! that records workspace membership and access.
 
-use crate::webhooks::{WebhookDelivery, WebhookSubscription};
+use crate::webhooks::{WebhookDelivery, WebhookEvent, WebhookSubscription};
 use serde::{Deserialize, Serialize};
 
 /// Keep at most this many snapshots per page (newest first).
@@ -254,6 +254,10 @@ pub struct CollabState {
     pub webhooks: Vec<WebhookSubscription>,
     #[serde(default)]
     pub webhook_deliveries: Vec<WebhookDelivery>,
+    /// Aggregated events waiting for the delivery worker. Persisted so a
+    /// restart does not lose pending webhooks.
+    #[serde(default)]
+    pub webhook_queue: Vec<WebhookEvent>,
 }
 
 impl Default for CollabState {
@@ -292,6 +296,7 @@ impl CollabState {
             versions: Vec::new(),
             webhooks: Vec::new(),
             webhook_deliveries: Vec::new(),
+            webhook_queue: Vec::new(),
         }
     }
 

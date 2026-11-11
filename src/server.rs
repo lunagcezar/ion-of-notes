@@ -259,7 +259,6 @@ struct Runtime {
 /// Webhook delivery state, separate from the collaboration records.
 struct WebhookRuntime {
     allow_insecure: bool,
-    queue: Vec<crate::webhooks::WebhookEvent>,
     sender: Box<dyn WebhookSender>,
 }
 
@@ -348,7 +347,6 @@ impl WorkspaceServer {
             },
             webhooks: WebhookRuntime {
                 allow_insecure: false,
-                queue: Vec::new(),
                 sender: Box::new(UreqWebhookSender::new()),
             },
             realtime: realtime::RealtimeHub::new(256),

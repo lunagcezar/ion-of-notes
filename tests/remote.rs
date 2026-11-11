@@ -7,7 +7,9 @@ use ion_of_notes::auth::{Account, AuthStore, MemoryAuthStore, hash_password};
 use ion_of_notes::client::Client;
 use ion_of_notes::collab::{ChangeOp, CollabState, Role};
 use ion_of_notes::model::{PageDraft, Workspace, now_iso};
-use ion_of_notes::remote::{RemoteApi, login};
+use ion_of_notes::remote::{
+    RemoteApi, RemoteSession, clear_session_at, load_session_at, login, save_session_at,
+};
 use ion_of_notes::server::WorkspaceServer;
 use ion_of_notes::server::realtime::{Awareness, ServerMessage};
 use ion_of_notes::server::web::router;
@@ -33,6 +35,27 @@ async fn start_server(server: WorkspaceServer) -> (String, JoinHandle<()>) {
 fn remote_client(base: &str) -> Client<DesktopApi> {
     let remote = RemoteApi::connect(base, "owner-token").expect("remote connect");
     Client::with_token(DesktopApi::Remote(remote), "owner-token")
+}
+
+#[test]
+fn remote_session_roundtrip_and_clear() {
+    let path = common::temp_path("remote-session", "json");
+    common::remove(&path);
+    let session = RemoteSession {
+        base_url: "http://127.0.0.1:8787".to_string(),
+        email: "owner@workspace.local".to_string(),
+        token: "sess_test".to_string(),
+    };
+    save_session_at(&path, &session).expect("save session");
+    assert_eq!(
+        load_session_at(&path, "http://127.0.0.1:8787"),
+        Some(session.clone())
+    );
+    assert_eq!(load_session_at(&path, "http://other.example"), None);
+
+    clear_session_at(&path).expect("clear session");
+    assert_eq!(load_session_at(&path, "http://127.0.0.1:8787"), None);
+    common::remove(&path);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -14,9 +14,11 @@ use crate::server::{
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use futures_util::{SinkExt, StreamExt};
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
@@ -24,6 +26,75 @@ use tokio_tungstenite::tungstenite::Message;
 
 enum WsCommand {
     Awareness(Awareness),
+}
+
+/// A persisted remote login. Only the session token is stored; the password is
+/// never written to disk.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RemoteSession {
+    pub base_url: String,
+    pub email: String,
+    pub token: String,
+}
+
+/// Default location of the remembered remote session.
+pub fn session_path() -> PathBuf {
+    crate::store::data_path().with_file_name("remote-session.json")
+}
+
+/// Persist a session at an explicit path (tests, alternate profiles).
+pub fn save_session_at(path: &Path, session: &RemoteSession) -> io::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let text = serde_json::to_string_pretty(session)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    std::fs::write(path, text)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(())
+}
+
+/// Load a session for `base_url`, ignoring missing/malformed/other-server files.
+pub fn load_session_at(path: &Path, base_url: &str) -> Option<RemoteSession> {
+    let text = std::fs::read_to_string(path).ok()?;
+    let session: RemoteSession = serde_json::from_str(&text).ok()?;
+    let expected = base_url.trim_end_matches('/');
+    (session.base_url.trim_end_matches('/') == expected).then_some(session)
+}
+
+/// Remove a saved session. Missing files are fine.
+pub fn clear_session_at(path: &Path) -> io::Result<()> {
+    match std::fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
+/// Persist the remembered session in the default profile location.
+pub fn save_session(base_url: &str, email: &str, token: &str) -> io::Result<()> {
+    save_session_at(
+        &session_path(),
+        &RemoteSession {
+            base_url: base_url.to_string(),
+            email: email.to_string(),
+            token: token.to_string(),
+        },
+    )
+}
+
+/// Load the remembered session for `base_url`.
+pub fn load_session(base_url: &str) -> Option<RemoteSession> {
+    load_session_at(&session_path(), base_url)
+}
+
+/// Forget the remembered session.
+pub fn clear_session() -> io::Result<()> {
+    clear_session_at(&session_path())
 }
 
 /// Log in to a remote server and return the session token.

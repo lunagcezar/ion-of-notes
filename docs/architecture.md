@@ -116,7 +116,7 @@ src/
   client.rs          typed client over WorkspaceApi
   client/
     retry.rs         RetryPolicy + RetryDecision
-  remote.rs          remote REST/WebSocket transport and login
+  remote.rs          remote REST/WebSocket transport, login and remembered session
   templates.rs       starter template catalog
   ollama.rs          AI assistant adapter
   shortcuts.rs       pure shortcut table
@@ -272,13 +272,17 @@ Current state:
 - Argon2id accounts and opaque sessions are implemented (spec-039);
 - `GET /ws/workspace/{id}` streams the versioned change feed with presence and
   `?since=` resume (spec-040); full Yrs/CRDT merge is staged;
-- webhook delivery uses ureq/rustls behind `WebhookSender` and SQLite can share
-  rate-limit budgets across server instances (spec-041);
+- webhook delivery uses ureq/rustls behind `WebhookSender`; the aggregated
+  outbox is persisted, a background worker retries with backoff, and exhausted
+  deliveries become dead letters (specs 041/054); SQLite can share rate-limit
+  budgets across server instances (spec-041);
 - Yrs merges page title/block text server-side and projects it into the durable
   snapshot (spec-042); the desktop editor uses a client Yrs session and
   awareness cursors (spec-043);
 - the desktop can use the same contract remotely with `--server`/`--token` or
-  Settings → Server (spec-044/045); local mode remains the default;
+  Settings -> Server (specs 044/045); it remembers the session token, connects
+  in the background and restores the session on startup (spec-055); local mode
+  remains the default;
 - `GET /api/realtime` returns the same contract as data.
 
 ## 8. Design principles in practice
@@ -354,7 +358,7 @@ flowchart TD
 | Properties/data sources | `model/property.rs`, `model/database.rs`, `server/handlers/databases.rs` | `TableRow` migration; `DataSource` schema |
 | Views | `model/view.rs`, `server/handlers/views.rs` | filter/sort/config; query pagination |
 | Comments/users/files | `model/comment.rs`, `model/file.rs`, `model/user.rs`, `server/handlers/content.rs` | attachments; `FileStore` port |
-| Webhooks | `webhooks.rs`, `server/handlers/webhooks.rs` | `WebhookStore` port; delivery worker |
+| Webhooks | `webhooks.rs`, `server/handlers/webhooks.rs` | Persistent outbox, retry worker, dead-letter store |
 | Limits | `server/limits.rs`, `server/rate_limit.rs` | policy, not domain rules; in-process limiter behind one decision type |
 
 The v2 work must not break the dependency direction: DTOs stay free of egui and

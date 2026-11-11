@@ -4,9 +4,9 @@ mod common;
 
 use ion_of_notes::client::Client;
 use ion_of_notes::model::Workspace;
-use ion_of_notes::server::{WebhookSender, WorkspaceServer};
+use ion_of_notes::server::{Method, WebhookSender, WorkspaceApi, WorkspaceServer};
 use ion_of_notes::webhooks::{
-    SubscriptionStatus, WebhookEvent, WebhookEventType, WebhookSubscription,
+    SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType, WebhookSubscription,
     WebhookSubscriptionInput, sign, verify,
 };
 use std::io::{Read, Write};
@@ -31,6 +31,14 @@ impl WebhookSender for RecordingSender {
             .unwrap()
             .push((url.to_string(), body.to_string(), signature.to_string()));
         Ok(204)
+    }
+}
+
+struct FailingSender;
+
+impl WebhookSender for FailingSender {
+    fn send(&self, _url: &str, _body: &str, _signature: &str) -> Result<u16, String> {
+        Err("receiver is down".to_string())
     }
 }
 
@@ -311,7 +319,7 @@ fn failed_delivery_is_retried() {
     assert!(!first[0].delivered);
     assert_eq!(first[0].attempts, 1);
 
-    server.process_webhook_deliveries();
+    server.retry_webhook_deliveries();
     let deliveries = server.webhook_deliveries();
     assert!(deliveries[0].delivered);
     assert_eq!(deliveries[0].attempts, 2);
@@ -381,4 +389,93 @@ fn all_documented_event_types_roundtrip() {
         let event_type = WebhookEventType::parse(name).expect(name);
         assert_eq!(event_type.as_str(), name);
     }
+}
+
+#[test]
+fn aggregated_events_survive_a_restart() {
+    let workspace_path = common::temp_path("webhook-queue-workspace", "json");
+    let collab_path = common::temp_path("webhook-queue-collab", "json");
+    common::remove(&workspace_path);
+    common::remove(&collab_path);
+    let workspace = Workspace::seed("webhook-queue");
+
+    let mut server = WorkspaceServer::with_paths(
+        workspace.clone(),
+        workspace_path.clone(),
+        collab_path.clone(),
+    );
+    server.allow_insecure_webhooks(true);
+    subscribe(
+        &mut server,
+        "http://127.0.0.1:9/hook",
+        vec![WebhookEventType::PageContentUpdated],
+    );
+    server.emit_webhook(
+        WebhookEventType::PageContentUpdated,
+        "page",
+        "p-home",
+        r#"{"version":1}"#,
+    );
+    assert_eq!(server.webhook_stats().pending, 1);
+    drop(server);
+
+    let mut reopened =
+        WorkspaceServer::with_paths(workspace, workspace_path.clone(), collab_path.clone());
+    reopened.allow_insecure_webhooks(true);
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    reopened.set_webhook_sender(RecordingSender {
+        calls: Arc::clone(&calls),
+    });
+    assert_eq!(reopened.webhook_stats().pending, 1);
+    reopened.flush_webhooks();
+    assert_eq!(reopened.webhook_stats().pending, 0);
+    assert_eq!(calls.lock().unwrap().len(), 1);
+    assert_eq!(reopened.webhook_deliveries().len(), 1);
+
+    common::remove(&workspace_path);
+    common::remove(&collab_path);
+}
+
+#[test]
+fn failed_delivery_is_dead_lettered_and_can_be_requeued() {
+    let mut server = WorkspaceServer::new(Workspace::seed("x"));
+    server.allow_insecure_webhooks(true);
+    server.set_webhook_sender(FailingSender);
+    subscribe(
+        &mut server,
+        "http://127.0.0.1:9/hook",
+        vec![WebhookEventType::CommentCreated],
+    );
+    server.emit_webhook(
+        WebhookEventType::CommentCreated,
+        "comment",
+        "comment-1",
+        r#"{}"#,
+    );
+    for _ in 0..8 {
+        server.retry_webhook_deliveries();
+    }
+    let delivery = server.webhook_deliveries()[0].clone();
+    assert!(delivery.dead_lettered);
+    assert_eq!(server.webhook_stats().dead_letters, 1);
+
+    let response = server.handle(&common::v2_request(
+        Method::Get,
+        "/api/v2/webhook_deliveries/dead_letters",
+        None,
+    ));
+    assert_eq!(response.status, 200);
+    let dead: Vec<WebhookDelivery> = common::data(&response);
+    assert_eq!(dead.len(), 1);
+
+    let body = serde_json::json!({ "id": delivery.id }).to_string();
+    let response = server.handle(&common::v2_request(
+        Method::Post,
+        "/api/v2/webhook_deliveries/requeue",
+        Some(body),
+    ));
+    assert_eq!(response.status, 200);
+    let requeued: WebhookDelivery = common::data(&response);
+    assert!(!requeued.dead_lettered);
+    assert_eq!(requeued.attempts, 0);
 }

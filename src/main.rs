@@ -30,15 +30,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Box::new(move |cc: &eframe::CreationContext<'_>| {
                     let app: Box<dyn eframe::App> = match (server.as_deref(), token.as_deref()) {
                         (Some(server), Some(token)) => {
-                            let (client, workspace) = app::build_remote_desktop(server, token)
-                                .map_err(std::io::Error::other)?;
-                            let mut app = NotionApp::with_client(cc, screenshot, client, workspace);
-                            app.mark_server_connected(server.to_string());
+                            let mut app = NotionApp::new(cc, screenshot);
+                            app.connect_server_with_token(server.to_string(), token.to_string());
                             Box::new(app)
                         }
                         (Some(server), None) => {
                             let mut app = NotionApp::new(cc, screenshot);
-                            app.open_server_login(server.to_string());
+                            app.restore_server_session(server.to_string());
                             Box::new(app)
                         }
                         (None, Some(_)) => {

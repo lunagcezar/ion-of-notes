@@ -70,7 +70,10 @@ pub use ollama::{
     generate, models, normalize_endpoint, parse_endpoint, parse_generate_response,
     parse_tags_response, service_reachable,
 };
-pub use remote::RemoteApi;
+pub use remote::{
+    RemoteApi, RemoteSession, clear_session, clear_session_at, load_session, load_session_at,
+    save_session, save_session_at, session_path,
+};
 pub use server::{
     API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, LimitViolation,
     ListResponse, Method, PageRequest, PaginationError, Plan, RateDecision, RateLimitPolicy,
@@ -85,6 +88,6 @@ pub use store::{
 pub use templates::{Template, catalog, find, template_for_purpose};
 pub use webhooks::{
     ActorRef, EntityRef, SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType,
-    WebhookSubscription, WebhookSubscriptionInput, WebhookVerificationInput, aggregate_events,
-    is_allowed_url, sign, verify,
+    WebhookRequeueInput, WebhookStats, WebhookSubscription, WebhookSubscriptionInput,
+    WebhookVerificationInput, aggregate_events, is_allowed_url, sign, verify,
 };

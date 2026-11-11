@@ -446,6 +446,15 @@ capabilities) is implemented; the rest are planned.
   are SHA-pinned and Docker/GitLab base images are digest-pinned; Renovate
   groups dependency updates and both CI systems run `cargo audit`
   (spec-053).
+- NFR-36: Aggregated webhook events are persisted, a background worker flushes
+  and retries them with backoff, exhausted deliveries become dead letters that
+  can be listed and requeued, and `/metrics` exposes the pending/dead-letter/
+  delivery counts (spec-054).
+- NFR-37: The desktop remembers the remote session token in
+  `remote-session.json` (never the password), restores it on startup, runs
+  login/connect in the background, clears it on disconnect or failed restore,
+  and keeps individual CRUD REST calls synchronous with the existing timeout
+  (spec-055).
 
 ## 3. Requirement → spec map
 
@@ -488,6 +497,8 @@ capabilities) is implemented; the rest are planned.
 | NFR-33                        | `spec-051-container-hardening-and-deployment-operations.md` |
 | NFR-34                        | `spec-052-deployment-hardening-ii.md` |
 | NFR-35                        | `spec-053-supply-chain-and-tooling.md` |
+| NFR-36                        | `spec-054-webhook-reliability.md` |
+| NFR-37                        | `spec-055-remote-mode-ux.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

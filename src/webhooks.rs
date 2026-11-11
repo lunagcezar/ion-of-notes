@@ -280,6 +280,23 @@ pub struct WebhookDelivery {
     pub last_error: Option<String>,
     pub delivered: bool,
     pub next_attempt_at: Option<String>,
+    /// True after the retry budget is exhausted; kept for inspection/requeue.
+    #[serde(default)]
+    pub dead_lettered: bool,
+}
+
+/// Counts exposed by `/metrics` and the delivery API.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WebhookStats {
+    pub pending: usize,
+    pub dead_letters: usize,
+    pub deliveries: usize,
+}
+
+/// Body for `POST /api/v2/webhook_deliveries/requeue`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WebhookRequeueInput {
+    pub id: String,
 }
 
 /// Group aggregated events by subscription and entity, keeping the latest.

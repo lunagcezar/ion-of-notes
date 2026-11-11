@@ -91,6 +91,8 @@ Status vocabulary:
 | [051](spec-051-container-hardening-and-deployment-operations.md) | Container hardening and deployment operations | implemented | Loopback bind, read-only root, Caddy example, deployment guide |
 | [052](spec-052-deployment-hardening-ii.md) | Deployment hardening II | implemented | `/ready`, `/metrics`, Docker secret, multi-arch bake, CI container smoke |
 | [053](spec-053-supply-chain-and-tooling.md) | Supply-chain and tooling baseline | implemented | Pinned toolchain/actions/images, Renovate, `cargo audit` |
+| [054](spec-054-webhook-reliability.md) | Webhook reliability | implemented | Persistent outbox, worker, dead-letter/requeue, metrics |
+| [055](spec-055-remote-mode-ux.md) | Remote-mode UX | implemented | Remembered session, background connect, startup restore |
 
 ## 3. Work status
 

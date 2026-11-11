@@ -6,8 +6,8 @@ use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
 use crate::model::now_iso;
 use crate::webhooks::{
     EntityRef, SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType,
-    WebhookSubscription, WebhookSubscriptionInput, WebhookVerificationInput, aggregate_events,
-    is_allowed_url, sign,
+    WebhookRequeueInput, WebhookStats, WebhookSubscription, WebhookSubscriptionInput,
+    WebhookVerificationInput, aggregate_events, is_allowed_url, sign,
 };
 
 impl WorkspaceServer {
@@ -72,6 +72,50 @@ impl WorkspaceServer {
         &self.collab.webhook_deliveries
     }
 
+    /// Counts for `/metrics` and the delivery API.
+    pub fn webhook_stats(&self) -> WebhookStats {
+        WebhookStats {
+            pending: self.collab.webhook_queue.len(),
+            dead_letters: self
+                .collab
+                .webhook_deliveries
+                .iter()
+                .filter(|delivery| delivery.dead_lettered)
+                .count(),
+            deliveries: self.collab.webhook_deliveries.len(),
+        }
+    }
+
+    /// Deliveries that exhausted the retry budget.
+    pub fn dead_letter_deliveries(&self) -> Vec<WebhookDelivery> {
+        self.collab
+            .webhook_deliveries
+            .iter()
+            .filter(|delivery| delivery.dead_lettered)
+            .cloned()
+            .collect()
+    }
+
+    /// Reset a dead-lettered delivery so the worker can try again.
+    pub fn requeue_webhook_delivery(&mut self, id: &str) -> Result<WebhookDelivery, String> {
+        let Some(delivery) = self
+            .collab
+            .webhook_deliveries
+            .iter_mut()
+            .find(|delivery| delivery.id == id)
+        else {
+            return Err("delivery not found".to_string());
+        };
+        delivery.dead_lettered = false;
+        delivery.delivered = false;
+        delivery.attempts = 0;
+        delivery.last_error = None;
+        delivery.next_attempt_at = Some(now_iso());
+        let updated = delivery.clone();
+        self.persist_collab().map_err(|error| error.to_string())?;
+        Ok(updated)
+    }
+
     /// Queue or deliver an event to active subscriptions.
     pub fn emit_webhook(
         &mut self,
@@ -93,6 +137,7 @@ impl WorkspaceServer {
             })
             .cloned()
             .collect();
+        let mut queued = false;
         for subscription in subscriptions {
             let event = WebhookEvent::new(
                 workspace_id.clone(),
@@ -106,24 +151,31 @@ impl WorkspaceServer {
                 data.clone(),
             );
             if event_type.is_aggregated() {
-                if let Some(existing) = self.webhooks.queue.iter_mut().find(|existing| {
+                if let Some(existing) = self.collab.webhook_queue.iter_mut().find(|existing| {
                     existing.subscription_id == event.subscription_id
                         && existing.entity.id == event.entity.id
                         && existing.r#type == event.r#type
                 }) {
                     *existing = event;
                 } else {
-                    self.webhooks.queue.push(event);
+                    self.collab.webhook_queue.push(event);
                 }
+                queued = true;
             } else {
                 self.deliver_event(&subscription, event);
             }
+        }
+        if queued {
+            let _ = self.persist_collab();
         }
     }
 
     /// Flush aggregated events (the production worker calls this on a timer).
     pub fn flush_webhooks(&mut self) {
-        let queued = std::mem::take(&mut self.webhooks.queue);
+        let queued = std::mem::take(&mut self.collab.webhook_queue);
+        if queued.is_empty() {
+            return;
+        }
         for event in aggregate_events(queued) {
             if let Some(subscription) = self
                 .collab
@@ -135,13 +187,31 @@ impl WorkspaceServer {
                 self.deliver_event(&subscription, event);
             }
         }
+        let _ = self.persist_collab();
     }
 
-    /// Retry failed deliveries with a small exponential backoff.
+    /// Retry failed deliveries with exponential backoff and a dead-letter
+    /// boundary after eight attempts.
     pub fn process_webhook_deliveries(&mut self) {
         let subscriptions: Vec<WebhookSubscription> = self.collab.webhooks.clone();
+        let now = chrono::Utc::now();
+        let mut changed = false;
         for delivery in &mut self.collab.webhook_deliveries {
-            if delivery.delivered || delivery.attempts >= 8 {
+            if delivery.delivered || delivery.dead_lettered {
+                continue;
+            }
+            if delivery.attempts >= 8 {
+                delivery.dead_lettered = true;
+                delivery.next_attempt_at = None;
+                changed = true;
+                continue;
+            }
+            if let Some(next) = delivery
+                .next_attempt_at
+                .as_deref()
+                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+                && next > now
+            {
                 continue;
             }
             let Some(subscription) = subscriptions
@@ -156,6 +226,7 @@ impl WorkspaceServer {
                     .sender
                     .send(&subscription.url, &delivery.payload, &signature);
             delivery.attempts = delivery.attempts.saturating_add(1);
+            changed = true;
             match result {
                 Ok(status) => {
                     delivery.last_status = Some(status);
@@ -174,7 +245,22 @@ impl WorkspaceServer {
                 }
             }
         }
-        let _ = self.persist_collab();
+        if changed {
+            let _ = self.persist_collab();
+        }
+    }
+
+    /// Force an immediate retry of every non-delivered, non-dead-lettered
+    /// delivery. The worker uses `process_webhook_deliveries` and respects the
+    /// backoff schedule; the manual `/retry` route uses this method.
+    pub fn retry_webhook_deliveries(&mut self) {
+        let now = now_iso();
+        for delivery in &mut self.collab.webhook_deliveries {
+            if !delivery.delivered && !delivery.dead_lettered {
+                delivery.next_attempt_at = Some(now.clone());
+            }
+        }
+        self.process_webhook_deliveries();
     }
 
     fn deliver_event(&mut self, subscription: &WebhookSubscription, mut event: WebhookEvent) {
@@ -202,6 +288,7 @@ impl WorkspaceServer {
             } else {
                 Some(backoff_time(1))
             },
+            dead_lettered: false,
         });
         let _ = self.persist_collab();
     }
@@ -240,11 +327,26 @@ impl WorkspaceServer {
             ));
         }
         if path == "/api/v2/webhook_deliveries/retry" && request.method == Method::Post {
-            self.process_webhook_deliveries();
+            self.retry_webhook_deliveries();
             return Some(json(
                 200,
                 Envelope::ok(self.collab.webhook_deliveries.clone()),
             ));
+        }
+        if path == "/api/v2/webhook_deliveries/dead_letters" && request.method == Method::Get {
+            return Some(json(200, Envelope::ok(self.dead_letter_deliveries())));
+        }
+        if path == "/api/v2/webhook_deliveries/requeue" && request.method == Method::Post {
+            let input = match parse_body::<WebhookRequeueInput>(request) {
+                Ok(input) => input,
+                Err(message) => {
+                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                }
+            };
+            return match self.requeue_webhook_delivery(&input.id) {
+                Ok(delivery) => Some(json(200, Envelope::ok(delivery))),
+                Err(message) => Some(v2_error(404, CODE_NOT_FOUND, message, request_id, None)),
+            };
         }
         let rest = path.strip_prefix("/api/v2/webhooks/")?;
         if let Some(id) = rest.strip_suffix("/verify") {

@@ -43,8 +43,8 @@ review checked this ledger against the implementation (spec-029).
   (public docs), specs 030-038 implemented, B5 done, B6
   recorded, B7 ongoing, B8 reviewed** before every source. See
   `docs/clean-room.md` and `docs/public-api-analysis.md`.
-- Verification: the core and desktop test passes are green (**258 tests**:
-  232 core + 26 desktop); both clippy feature passes and `cargo fmt --check`
+- Verification: the core and desktop test passes are green (**261 tests**:
+  235 core + 26 desktop); both clippy feature passes and `cargo fmt --check`
   are clean, and `--screenshot` produces a non-blank 1322×861 PNG.
 - The documentation review (spec-029) found and fixed stale statuses; the
   findings and remaining code gaps are in `docs/review-findings.md`.

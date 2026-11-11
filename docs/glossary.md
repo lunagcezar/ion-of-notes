@@ -50,6 +50,9 @@ definition.
 | **Renovate** | Automated dependency-update proposals for Cargo, GitHub Actions and Docker. | `renovate.json` |
 | **`cargo audit`** | RustSec advisory check run by the CI `security` job. | `.github/workflows/ci.yml`, `.gitlab-ci.yml` |
 | **Digest pinning** | Referencing a container image by `@sha256:...` instead of a mutable tag. | `Dockerfile`, `.gitlab-ci.yml` |
+| **Webhook outbox** | Persisted aggregated events waiting for the delivery worker. | `src/collab.rs`, `src/server/handlers/webhooks.rs` |
+| **Dead letter** | A webhook delivery that exhausted its retry budget and can be requeued. | `src/webhooks.rs`, `/api/v2/webhook_deliveries/dead_letters` |
+| **Remote session** | Persisted `base_url`/`email`/`token` for the desktop remote mode; never the password. | `src/remote.rs`, `remote-session.json` |
 
 ## 3. Domain
 

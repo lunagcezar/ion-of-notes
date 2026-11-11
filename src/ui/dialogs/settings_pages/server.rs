@@ -86,8 +86,18 @@ pub(in crate::ui::dialogs) fn render_server_settings(
         if ui.button("Disconnect and use local workspace").clicked() {
             commands.push(Command::DisconnectServer);
         }
-    } else if ui.button("Connect").clicked() {
-        commands.push(Command::ConnectServer);
+    } else {
+        let label = if view.server_busy {
+            "Connecting..."
+        } else {
+            "Connect"
+        };
+        if ui
+            .add_enabled(!view.server_busy, egui::Button::new(label))
+            .clicked()
+        {
+            commands.push(Command::ConnectServer);
+        }
     }
 
     if let Some(status) = &view.server_status {

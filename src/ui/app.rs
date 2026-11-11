@@ -36,6 +36,9 @@ pub(super) use super::commands::{Command, FontStyle, IconTab, NewTabChoice};
 use super::input::collect_shortcuts;
 pub(super) use super::view::ViewState;
 
+pub(super) type ServerConnectResult = Result<(Client<app::DesktopApi>, Workspace, String), String>;
+pub(super) type ServerSlot = Arc<Mutex<Option<ServerConnectResult>>>;
+
 pub struct NotionApp {
     pub(super) client: Client<app::DesktopApi>,
     pub(super) workspace: Workspace,
@@ -136,6 +139,8 @@ pub struct NotionApp {
     pub(super) server_password: String,
     pub(super) server_status: Option<String>,
     pub(super) server_connected: bool,
+    pub(super) server_busy: bool,
+    pub(super) server_slot: ServerSlot,
 }
 
 impl NotionApp {
@@ -149,6 +154,7 @@ impl NotionApp {
         self.server_url = server;
         self.settings_open = true;
         self.settings_page = "Server".to_string();
+        self.server_busy = false;
         self.server_status = Some("Enter your account and password.".to_string());
     }
 
@@ -156,6 +162,7 @@ impl NotionApp {
     pub fn mark_server_connected(&mut self, server: String) {
         self.server_url = server.clone();
         self.server_connected = true;
+        self.server_busy = false;
         self.server_status = Some(format!("Connected to {server}"));
     }
 
@@ -265,6 +272,8 @@ impl NotionApp {
             server_password: String::new(),
             server_status: None,
             server_connected: false,
+            server_busy: false,
+            server_slot: Arc::new(Mutex::new(None)),
             tabs: vec![demo_current_page],
             active_tab: 0,
             closed_tabs: Vec::new(),
@@ -375,6 +384,7 @@ impl eframe::App for NotionApp {
             self.zoom_dirty = false;
         }
         self.poll_ai();
+        self.poll_server();
         self.sync_crdt();
 
         // Snapshot before rendering: text edits mutate `workspace` directly, so

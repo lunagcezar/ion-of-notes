@@ -6,6 +6,33 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-055 remote-mode UX
+
+- Persisted the remote session (`base_url`, `email`, `token`) in
+  `remote-session.json`; the password is never written.
+- Login/connect and the initial workspace fetch now run on a background thread;
+  the UI shows `Connecting...` and polls the result on later frames.
+- `--server` restores a saved session on startup; `--server --token` also
+  connects in the background. Disconnect and failed restores clear the file.
+- Added session round-trip/clear tests; the suite is 261 tests.
+- Updated README, architecture, deployment, testing, requirements, glossary,
+  spec index and changelog.
+
+### Changed - spec-054 webhook reliability
+
+- Aggregated webhook events are persisted in `CollabState.webhook_queue`, so a
+  restart does not lose them.
+- The Axum adapter runs a background worker every
+  `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS` seconds (default 30) to flush the outbox
+  and retry due deliveries without blocking the reactor.
+- Added `WebhookDelivery::dead_lettered`, dead-letter listing and requeue
+  endpoints; exhausted deliveries stop retrying automatically.
+- `/metrics` now exposes webhook pending, dead-letter and delivery counts.
+- Added restart, dead-letter, requeue and metrics tests; the suite is 261
+  tests.
+- Updated the API contract, architecture, deployment, testing, requirements,
+  glossary, spec index and changelog.
+
 ### Changed - spec-053 supply-chain and tooling baseline
 
 - Added `rust-toolchain.toml` pinning Rust 1.99.1 with `rustfmt` and `clippy`.

@@ -104,6 +104,8 @@ Data locations:
 
 - Windows: `%LOCALAPPDATA%\ion-of-notes\workspace.json` and `collab.json`
 - macOS/Linux: `$HOME/ion-of-notes/workspace.json` and `collab.json`
+- Remote mode: `remote-session.json` in the same folder (token only; never the
+  password)
 
 `workspace.json` and `collab.json` are separate documents, so a corrupt
 collaboration file cannot destroy pages.
@@ -266,6 +268,7 @@ successful login; the session token is not persisted across restarts.
 | `ION_OF_NOTES_SHOW` | unset | Open one pictured UI state for screenshots |
 | `ION_OF_NOTES_LOCALE` | `en` | Initial locale (`en`, `pt-BR`, `eo`) |
 | `ION_OF_NOTES_OLLAMA_MODEL` | `llama3.2` / detected | Preferred Ollama model |
+| `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS` | `30` | Webhook flush/retry worker interval |
 | `OLLAMA_HOST` | `127.0.0.1:11434` | Ollama service host and port |
 | `RUST_LOG` | `info,tower_http=info` | Server tracing filter |
 
@@ -287,7 +290,7 @@ Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
 
 ```sh
 cargo build
-# 232 core tests without eframe/egui/wgpu
+# 235 core tests without eframe/egui/wgpu
 cargo test --all-targets --no-default-features
 # 26 desktop tests with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
@@ -350,7 +353,7 @@ src/
   screenshot.rs    PNG output (desktop feature)
   cli.rs           argument parsing
   i18n.rs          locale switching
-tests/             one integration-test crate per module (258 tests)
+tests/             one integration-test crate per module (261 tests)
 Dockerfile         multi-stage server-only image
 compose.yml        self-hosted server stack with the ion-data volume
 .env.example       Compose bind/port/log template
@@ -387,10 +390,12 @@ eframe, JSON files or sockets.
 
 ## Current limitations
 
-- Remote mode can log in through Settings → Server, but the token is not
-  persisted; users log in again after restart.
-- REST requests in remote mode are synchronous, so a slow server briefly blocks
-  the UI thread; awareness sent while the socket is disconnected is dropped.
+- Remote mode remembers the session token in
+  `remote-session.json` (a bearer secret; clear it with Disconnect). The
+  password is never persisted.
+- Login and the initial workspace fetch run in the background. Individual
+  CRUD REST calls remain synchronous and can briefly block on a slow server;
+  awareness sent while the socket is disconnected is dropped.
 - CRDT covers page title/block text. Block structure, properties and databases
   remain REST-owned.
 - The remote-caret overlay uses first-line width, so multi-line positions are
@@ -402,8 +407,8 @@ eframe, JSON files or sockets.
   termination, reverse-proxy configuration and automatic backups are not. Run
   the server behind a trusted proxy and follow `docs/deployment.md` for
   backups, secrets and upgrades.
-- Webhooks have no async queue/dead-letter store, and private CA/mTLS setup is
-  not configured.
+- Webhooks use a persistent outbox, background retry worker and dead-letter
+  store; an external queue and private CA/mTLS setup are not included.
 - B3 own-account capture remains blocked by the strict clean-room scope.
 
 ## Open source

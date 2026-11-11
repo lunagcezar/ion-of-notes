@@ -26,7 +26,7 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
@@ -94,6 +94,15 @@ async fn ready() -> Response {
 async fn metrics(State(state): State<AppState>) -> Response {
     let uptime = state.started.elapsed().as_secs();
     let requests = state.requests.load(Ordering::Relaxed);
+    let (pending, dead_letters, deliveries) = state
+        .server
+        .lock()
+        .ok()
+        .map(|server| {
+            let stats = server.webhook_stats();
+            (stats.pending, stats.dead_letters, stats.deliveries)
+        })
+        .unwrap_or((0, 0, 0));
     let body = format!(
         "# HELP ion_of_notes_up Whether the server process is running.\n\
          # TYPE ion_of_notes_up gauge\n\
@@ -103,7 +112,16 @@ async fn metrics(State(state): State<AppState>) -> Response {
          ion_of_notes_uptime_seconds {uptime}\n\
          # HELP ion_of_notes_http_requests_total API requests handled since start.\n\
          # TYPE ion_of_notes_http_requests_total counter\n\
-         ion_of_notes_http_requests_total {requests}\n"
+         ion_of_notes_http_requests_total {requests}\n\
+         # HELP ion_of_notes_webhook_pending Aggregated webhook events waiting to flush.\n\
+         # TYPE ion_of_notes_webhook_pending gauge\n\
+         ion_of_notes_webhook_pending {pending}\n\
+         # HELP ion_of_notes_webhook_dead_letters Deliveries that exhausted retries.\n\
+         # TYPE ion_of_notes_webhook_dead_letters gauge\n\
+         ion_of_notes_webhook_dead_letters {dead_letters}\n\
+         # HELP ion_of_notes_webhook_deliveries_total Delivery records created.\n\
+         # TYPE ion_of_notes_webhook_deliveries_total counter\n\
+         ion_of_notes_webhook_deliveries_total {deliveries}\n"
     );
     let mut response = body.into_response();
     response.headers_mut().insert(
@@ -124,10 +142,36 @@ pub fn serve_axum(addr: &str, server: WorkspaceServer) -> std::io::Result<()> {
         let listener = tokio::net::TcpListener::bind(addr).await?;
         let local = listener.local_addr()?;
         println!("ion-of-notes API listening on http://{local}");
-        axum::serve(listener, router(server))
+        let shared = Arc::new(Mutex::new(server));
+        spawn_webhook_worker(Arc::clone(&shared));
+        axum::serve(listener, router_with_server(shared))
             .with_graceful_shutdown(shutdown_signal())
             .await
     })
+}
+
+/// Periodically flush aggregated webhooks and retry failed deliveries.
+fn spawn_webhook_worker(server: Arc<Mutex<WorkspaceServer>>) {
+    let interval = std::env::var("ION_OF_NOTES_WEBHOOK_INTERVAL_SECS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(30)
+        .max(1);
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(interval));
+        ticker.tick().await;
+        loop {
+            ticker.tick().await;
+            let server = Arc::clone(&server);
+            let _ = tokio::task::spawn_blocking(move || {
+                if let Ok(mut server) = server.lock() {
+                    server.flush_webhooks();
+                    server.process_webhook_deliveries();
+                }
+            })
+            .await;
+        }
+    });
 }
 
 async fn handle(State(state): State<AppState>, request: Request) -> Response {

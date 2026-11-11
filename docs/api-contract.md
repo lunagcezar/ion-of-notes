@@ -455,7 +455,9 @@ Implemented v2 routes:
 | `DELETE` | `/api/v2/webhooks/{id}` | update content |
 | `POST` | `/api/v2/webhooks/{id}/verify` | insert content |
 | `GET` | `/api/v2/webhook_deliveries` | read content |
+| `GET` | `/api/v2/webhook_deliveries/dead_letters` | read content |
 | `POST` | `/api/v2/webhook_deliveries/retry` | insert content |
+| `POST` | `/api/v2/webhook_deliveries/requeue` | insert content |
 | `GET` | `/api/v2/realtime` | read content |
 
 ### 8.2 v2 list envelope (implemented)
@@ -567,13 +569,19 @@ and `href`.
 - Deliveries are signed with `X-Ion-Of-Notes-Signature: sha256=<hex>`, an
   HMAC-SHA256 over the raw JSON body keyed by the verification token.
 - High-frequency page/database/data-source events are aggregated per
-  subscription and entity; comment, file-upload and view events deliver
-  immediately.
+  subscription and entity in a persistent outbox; comment, file-upload and view
+  events deliver immediately.
+- The Axum adapter runs a background worker every
+  `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS` seconds (default 30) to flush the outbox
+  and retry due deliveries.
 - Failed deliveries are retried with exponential backoff up to 8 attempts; the
-  delivery log records the last status, error, attempt count and next attempt
-  time.
-- `GET /api/v2/webhook_deliveries` lists the log and
-  `POST /api/v2/webhook_deliveries/retry` processes due retries.
+  delivery log records the last status, error, attempt count, next attempt time
+  and `dead_lettered`.
+- `GET /api/v2/webhook_deliveries` lists the log,
+  `GET /api/v2/webhook_deliveries/dead_letters` lists exhausted deliveries,
+  `POST /api/v2/webhook_deliveries/retry` forces an immediate retry of due
+  deliveries and `POST /api/v2/webhook_deliveries/requeue` resets one
+  dead-lettered delivery (`{"id":"delivery-..."}`).
 - Subscription URLs must be HTTPS; loopback HTTP is accepted only when the
   server enables the explicit development override.
 - Delivery uses the `WebhookSender` port. The default `UreqWebhookSender` uses

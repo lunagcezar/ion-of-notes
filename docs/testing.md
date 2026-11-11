@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (258 tests across the two feature passes, 2026-11-10)
+## 3. Test-crate map (261 tests across the two feature passes, 2026-11-10)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -57,13 +57,13 @@ flowchart TD
 | `tests/properties.rs` | 9 | property schemas/values, clear rules, row migration, databases/data sources, property items |
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
 | `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
-| `tests/webhooks.rs` | 10 | subscriptions, verification, signatures, injected sender, delivery/retry |
+| `tests/webhooks.rs` | 12 | subscriptions, verification, signatures, injected sender, delivery/retry, persistent outbox, dead letter/requeue |
 | `tests/shared_limits.rs` | 2 | SQLite shared workspace budget and window reset |
 | `tests/web.rs` | 11 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, `/ready`, `/metrics` |
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 4 | client Yrs diff, empty-sync baseline, projection, convergence |
-| `tests/remote.rs` | 3 | login, remote REST/CRDT and WebSocket change/awareness |
+| `tests/remote.rs` | 4 | login, remote REST/CRDT and WebSocket change/awareness, remembered session |
 | `tests/auth.rs` | 7 | Argon2id, login, logout, demo token, sessions, SQLite restart, password-file secret |
 | `tests/sqlite_store.rs` | 3 | workspace/collab round-trip, accounts/sessions, JSON migration |
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
@@ -83,7 +83,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 232 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 235 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 26 desktop tests: the four UI crates, with the default-on desktop feature
@@ -100,7 +100,7 @@ pwsh -File scripts/quality.ps1
 `cargo test --all-targets` still runs all default-feature tests (254) with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 258 unique tests because each feature pass includes its
+(spec-048) and cover 261 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam
@@ -168,6 +168,17 @@ cargo audit
 
 Unmaintained-crate warnings are reported but do not fail the audit; a
 vulnerability fails it. `cargo deny` (licenses/bans) remains a future step.
+
+### 3.4 Remote and webhook checks
+
+- `tests/webhooks.rs` covers the persistent outbox, restart delivery,
+  dead-lettering and requeue.
+- `tests/remote.rs` covers the remembered session file in addition to login,
+  REST/CRDT and WebSocket behavior.
+- The webhook worker interval can be shortened for a manual check with
+  `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS=1` when running `--serve`.
+- Remote session file: `remote-session.json` beside `workspace.json`; delete it
+  or use Disconnect to clear it. The password is never written.
 
 ## 4. What each layer tests
 

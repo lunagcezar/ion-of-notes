@@ -43,10 +43,10 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Persistence      | JSON files + `rusqlite` (bundled)   | `SqliteStore` behind the existing store ports (spec-039) |
 | Auth             | Argon2id + opaque sessions          | Hashed passwords and session tokens (spec-039)      |
 | Real-time        | Axum WebSocket + Tokio broadcast    | Change feed, presence and resume (spec-040)          |
-| Webhooks         | ureq + rustls, no redirects         | Signed delivery behind a `WebhookSender` port (spec-041) |
+| Webhooks         | ureq + rustls, no redirects         | Persistent outbox, background worker, dead-letter store (spec-054) |
 | Shared limits    | SQLite `rate_limits` + `RateLimitStore` | Multi-server workspace budgets (spec-041)        |
 | CRDT             | Yrs per-page text documents         | Server merge (042) + client session/awareness (043) |
-| Remote desktop   | ureq REST + tokio-tungstenite WS    | `--server`/`--token` remote mode (044)               |
+| Remote desktop   | ureq REST + tokio-tungstenite WS    | Remembered session + background connect (spec-055)   |
 | Deployment       | Docker multi-stage + Compose        | `ion-of-notes-server`, `ion-data` volume, secrets, `/ready`, `/metrics` (specs 050-052) |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
@@ -151,7 +151,8 @@ src/
     crdt.rs        Yrs per-page text documents and projection (spec-042)
     web.rs         Axum/Tokio HTTP + WebSocket adapter for --serve
     webhook_sender.rs  WebhookSender port and ureq/rustls adapter (spec-041)
-  remote.rs        remote WorkspaceApi: ureq REST + background WebSocket
+  remote.rs        remote WorkspaceApi: ureq REST + background WebSocket +
+                   remembered session file
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
   client/
     retry.rs       RetryPolicy + RetryDecision
@@ -576,9 +577,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
-| `cargo test --all-targets --no-default-features` | Core integration tests (232, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (235, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (26) |
-| `cargo test --all-targets`               | All default-feature tests (257; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (260; the core-only seam test is skipped) |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, core + desktop tests, docs |

@@ -229,9 +229,12 @@ docker compose logs -f ion-of-notes
 - Owner-password errors mean `secrets/owner_password.txt` is missing or empty,
   or the `ION_OF_NOTES_OWNER_PASSWORD` fallback is unset.
 - Set `RUST_LOG=debug` temporarily for more detail; revert to `info` afterward.
-- `GET /metrics` exposes `ion_of_notes_up`, `ion_of_notes_uptime_seconds` and
-  `ion_of_notes_http_requests_total` in Prometheus text format. Keep it behind
-  the proxy if request volume is sensitive.
+- `GET /metrics` exposes `ion_of_notes_up`, `ion_of_notes_uptime_seconds`,
+  `ion_of_notes_http_requests_total` and the webhook pending/dead-letter/
+  delivery series in Prometheus text format. Keep it behind the proxy if
+  request volume is sensitive.
+- The webhook worker runs every `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS` seconds
+  (default 30); the outbox and delivery log are persisted in SQLite.
 
 ## 9. Multi-arch images
 

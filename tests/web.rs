@@ -98,6 +98,9 @@ async fn metrics_route_exposes_prometheus_text() {
     assert!(body.contains("ion_of_notes_up 1"));
     assert!(body.contains("ion_of_notes_uptime_seconds"));
     assert!(body.contains("ion_of_notes_http_requests_total 1"));
+    assert!(body.contains("ion_of_notes_webhook_pending"));
+    assert!(body.contains("ion_of_notes_webhook_dead_letters"));
+    assert!(body.contains("ion_of_notes_webhook_deliveries_total"));
 }
 
 #[tokio::test]
