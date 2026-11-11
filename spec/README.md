@@ -94,6 +94,7 @@ Status vocabulary:
 | [054](spec-054-webhook-reliability.md) | Webhook reliability | implemented | Persistent outbox, worker, dead-letter/requeue, metrics |
 | [055](spec-055-remote-mode-ux.md) | Remote-mode UX | implemented | Remembered session, background connect, startup restore |
 | [056](spec-056-production-compose-and-tls.md) | Production Compose and TLS manifest | implemented | Caddy TLS stack, local TLS test, optional backup profile |
+| [057](spec-057-ui-quality-and-interaction-fidelity.md) | UI quality and interaction fidelity | plan | Phased layout, editor, icon, sidebar/workspace and settings fixes |
 
 ## 3. Work status
 
