@@ -6,26 +6,29 @@ use uuid::Uuid;
 use super::super::app::NotionApp;
 use super::super::commands::Command;
 impl NotionApp {
-    pub(super) fn apply_blocks(&mut self, command: Command) {
+    pub(super) fn apply_blocks(&mut self, command: Command, ctx: &egui::Context) {
         match command {
-            Command::OpenSlash { block, pos } => {
-                if let Some(b) = self.find_block_mut(&block) {
-                    b.text = b.text.trim_start_matches('/').trim_start().to_string();
-                }
+            Command::OpenSlash { block, pos, query } => {
                 self.slash_for = Some(block);
                 self.slash_pos = pos;
+                self.slash_query = query;
             }
-            Command::CloseSlash => self.slash_for = None,
+            Command::CloseSlash => {
+                // Dismissing keeps the typed "/" text and stops the menu from
+                // reopening until the slash is removed (spec-057).
+                self.slash_dismissed = self.slash_for.take();
+                self.slash_query.clear();
+            }
+            Command::ClearSlashDismissed => self.slash_dismissed = None,
             Command::SetBlockKind(block, kind) => {
                 if let Some(b) = self.find_block_mut(&block) {
                     b.set_kind(kind);
-                    if kind.is_divider() {
+                    if kind.is_divider() || b.text.starts_with('/') {
                         b.text.clear();
-                    } else {
-                        b.text = b.text.trim_start_matches('/').trim_start().to_string();
                     }
                 }
                 self.slash_for = None;
+                self.slash_query.clear();
             }
             Command::ApplyMarkdown {
                 block,
@@ -73,6 +76,7 @@ impl NotionApp {
                         .insert(at, Block::new(new_id.clone(), BlockKind::Paragraph, ""));
                     self.slash_for = Some(new_id);
                     self.slash_pos = pos;
+                    self.slash_query.clear();
                 }
             }
             Command::StartBlockDrag(id) => {
@@ -137,6 +141,38 @@ impl NotionApp {
                         "",
                         "",
                     ));
+                }
+            }
+            Command::SelectAllBlocks => {
+                self.page_selection = self
+                    .workspace
+                    .page(&self.current_page)
+                    .map(|page| page.blocks.iter().map(|b| b.id.clone()).collect())
+                    .unwrap_or_default();
+                self.block_selecting = false;
+            }
+            Command::ExtendBlockSelection(id) => {
+                if !self.page_selection.contains(&id) {
+                    self.page_selection.push(id);
+                }
+                self.block_selecting = true;
+            }
+            Command::ClearBlockSelection => {
+                self.page_selection.clear();
+                self.block_selecting = false;
+            }
+            Command::CopyBlockSelection => {
+                if let Some(page) = self.workspace.page(&self.current_page) {
+                    let text = page
+                        .blocks
+                        .iter()
+                        .filter(|b| self.page_selection.contains(&b.id))
+                        .map(|b| b.text.as_str())
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    if !text.is_empty() {
+                        ctx.copy_text(text);
+                    }
                 }
             }
             other => debug_assert!(false, "unexpected blocks command: {other:?}"),

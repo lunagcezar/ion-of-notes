@@ -109,8 +109,10 @@ pub(super) enum Command {
     OpenSlash {
         block: String,
         pos: Pos2,
+        query: String,
     },
     CloseSlash,
+    ClearSlashDismissed,
     SetBlockKind(String, BlockKind),
     ApplyMarkdown {
         block: String,
@@ -130,6 +132,11 @@ pub(super) enum Command {
     StartBlockDrag(String),
     HoverBlockDrag(String),
     DropBlock,
+    /// Page-level text selection across blocks (Ctrl+A, Ctrl+C, drag).
+    SelectAllBlocks,
+    CopyBlockSelection,
+    ExtendBlockSelection(String),
+    ClearBlockSelection,
     DeleteBlock(String),
     ToggleTodo(String),
     CycleStatus(String),
@@ -342,6 +349,7 @@ impl Command {
             | Command::CloseInbox => Sharing,
             Command::OpenSlash { .. }
             | Command::CloseSlash
+            | Command::ClearSlashDismissed
             | Command::SetBlockKind(_, _)
             | Command::ApplyMarkdown { .. }
             | Command::InsertBlockAfter(_)
@@ -350,6 +358,10 @@ impl Command {
             | Command::StartBlockDrag(_)
             | Command::HoverBlockDrag(_)
             | Command::DropBlock
+            | Command::SelectAllBlocks
+            | Command::CopyBlockSelection
+            | Command::ExtendBlockSelection(_)
+            | Command::ClearBlockSelection
             | Command::DeleteBlock(_)
             | Command::ToggleTodo(_)
             | Command::CycleStatus(_)

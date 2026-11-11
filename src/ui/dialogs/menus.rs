@@ -8,6 +8,7 @@ use super::super::commands::Command;
 use super::super::palette::Palette;
 use super::super::view::ViewState;
 use super::super::widgets::{menu_button, popover_frame};
+use crate::model::BlockKind;
 
 #[allow(clippy::too_many_arguments)]
 fn popup_menu(
@@ -227,6 +228,11 @@ fn slash_group(ui: &mut egui::Ui, title: &str, palette: &Palette) {
 /// The block menu opened by the "+", the six-dot handle or typing "/".
 /// It mirrors the categorized menu in the attachments (Suggested, Basic
 /// blocks, Media, Database, Advanced blocks, Inline, Embeds).
+/// One block-menu entry: label, shortcut hint and the kind it applies.
+type SlashEntry = (&'static str, &'static str, Option<BlockKind>);
+/// A titled group of block-menu entries.
+type SlashGroup = (&'static str, &'static [SlashEntry]);
+
 #[allow(clippy::too_many_lines)]
 pub(crate) fn render_slash(
     ctx: &egui::Context,
@@ -235,7 +241,86 @@ pub(crate) fn render_slash(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    use crate::model::BlockKind;
+    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        commands.push(Command::CloseSlash);
+        return;
+    }
+    let query = view.slash_query.trim().to_lowercase();
+    let matches = |label: &str| query.is_empty() || label.to_lowercase().contains(&query);
+    let groups: &[SlashGroup] = &[
+        (
+            "Suggested",
+            &[
+                ("AI Meeting Notes", "", None),
+                ("HTML · Embeds", "", None),
+                ("AI Image", "", None),
+            ],
+        ),
+        (
+            "Basic blocks",
+            &[
+                ("Text", "", Some(BlockKind::Paragraph)),
+                ("Heading 1", "#", Some(BlockKind::Heading1)),
+                ("Heading 2", "##", Some(BlockKind::Heading2)),
+                ("Heading 3", "###", Some(BlockKind::Heading3)),
+                ("Bulleted list", "-", Some(BlockKind::Bulleted)),
+                ("Numbered list", "1.", Some(BlockKind::Numbered)),
+                ("To-do list", "[]", Some(BlockKind::Todo)),
+                ("Quote", "\"", Some(BlockKind::Quote)),
+                ("Callout", "", Some(BlockKind::Callout)),
+                ("Code", "", Some(BlockKind::Code)),
+                ("Divider", "---", Some(BlockKind::Divider)),
+            ],
+        ),
+        (
+            "Media",
+            &[
+                ("Image", "", None),
+                ("Video", "", None),
+                ("Audio", "", None),
+                ("File", "", None),
+                ("Web bookmark", "", None),
+            ],
+        ),
+        (
+            "Database",
+            &[
+                ("Table view", "", None),
+                ("Board view", "", None),
+                ("Gallery view", "", None),
+                ("List view", "", None),
+            ],
+        ),
+        (
+            "Advanced blocks",
+            &[
+                ("Table of contents", "", None),
+                ("Block equation", "", None),
+                ("Button", "", None),
+                ("Breadcrumb", "", None),
+                ("Tabs", "", None),
+                ("Synced block", "", None),
+            ],
+        ),
+        (
+            "Inline",
+            &[
+                ("Mention a person", "", None),
+                ("Mention a page", "", None),
+                ("Date or reminder", "", None),
+                ("Emoji", "", None),
+            ],
+        ),
+        (
+            "Embeds",
+            &[
+                ("Embed", "", None),
+                ("Google Drive", "", None),
+                ("Tweet", "", None),
+            ],
+        ),
+    ];
+
     egui::Window::new("slash_menu")
         .title_bar(false)
         .collapsible(false)
@@ -245,65 +330,35 @@ pub(crate) fn render_slash(
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical()
-                .auto_shrink([false, false])
+                .auto_shrink([false, true])
                 .max_height(330.0)
                 .show(ui, |ui| {
-                    let apply = |commands: &mut Vec<Command>, kind: BlockKind| {
-                        commands.push(Command::SetBlockKind(block.to_string(), kind));
-                    };
-                    slash_group(ui, "Suggested", palette);
-                    for label in ["AI Meeting Notes", "HTML · Embeds", "AI Image"] {
-                        slash_item(ui, label, "", palette);
-                    }
-                    slash_group(ui, "Basic blocks", palette);
-                    for (label, hint, kind) in [
-                        ("Text", "", BlockKind::Paragraph),
-                        ("Heading 1", "#", BlockKind::Heading1),
-                        ("Heading 2", "##", BlockKind::Heading2),
-                        ("Heading 3", "###", BlockKind::Heading3),
-                        ("Bulleted list", "-", BlockKind::Bulleted),
-                        ("Numbered list", "1.", BlockKind::Numbered),
-                        ("To-do list", "[]", BlockKind::Todo),
-                        ("Quote", "\"", BlockKind::Quote),
-                        ("Callout", "", BlockKind::Callout),
-                        ("Code", "", BlockKind::Code),
-                        ("Divider", "---", BlockKind::Divider),
-                    ] {
-                        if slash_item(ui, label, hint, palette).clicked() {
-                            apply(commands, kind);
+                    let mut shown = 0;
+                    for (title, items) in groups {
+                        let visible: Vec<_> = items
+                            .iter()
+                            .filter(|(label, _, _)| matches(label))
+                            .collect();
+                        if visible.is_empty() {
+                            continue;
+                        }
+                        slash_group(ui, title, palette);
+                        for (label, hint, kind) in visible {
+                            shown += 1;
+                            if slash_item(ui, label, hint, palette).clicked()
+                                && let Some(kind) = kind
+                            {
+                                commands.push(Command::SetBlockKind(block.to_string(), *kind));
+                            }
                         }
                     }
-                    slash_group(ui, "Media", palette);
-                    for label in ["Image", "Video", "Audio", "File", "Web bookmark"] {
-                        slash_item(ui, label, "", palette);
-                    }
-                    slash_group(ui, "Database", palette);
-                    for label in ["Table view", "Board view", "Gallery view", "List view"] {
-                        slash_item(ui, label, "", palette);
-                    }
-                    slash_group(ui, "Advanced blocks", palette);
-                    for label in [
-                        "Table of contents",
-                        "Block equation",
-                        "Button",
-                        "Breadcrumb",
-                        "Tabs",
-                        "Synced block",
-                    ] {
-                        slash_item(ui, label, "", palette);
-                    }
-                    slash_group(ui, "Inline", palette);
-                    for label in [
-                        "Mention a person",
-                        "Mention a page",
-                        "Date or reminder",
-                        "Emoji",
-                    ] {
-                        slash_item(ui, label, "", palette);
-                    }
-                    slash_group(ui, "Embeds", palette);
-                    for label in ["Embed", "Google Drive", "Tweet"] {
-                        slash_item(ui, label, "", palette);
+                    if shown == 0 {
+                        ui.add_space(6.0);
+                        ui.label(
+                            egui::RichText::new(format!("No blocks match “{query}”"))
+                                .size(12.0)
+                                .color(palette.muted),
+                        );
                     }
                 });
             ui.add_space(6.0);
@@ -320,11 +375,19 @@ pub(crate) fn render_slash(
                         .color(palette.muted),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(
-                        egui::RichText::new("Close menu  esc")
-                            .size(10.5)
-                            .color(palette.muted),
-                    );
+                    if ui
+                        .add(
+                            egui::Button::new(
+                                egui::RichText::new("Close menu  esc")
+                                    .size(10.5)
+                                    .color(palette.muted),
+                            )
+                            .frame(false),
+                        )
+                        .clicked()
+                    {
+                        commands.push(Command::CloseSlash);
+                    }
                 });
             });
         });

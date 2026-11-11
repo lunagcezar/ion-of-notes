@@ -35,6 +35,30 @@ pub(super) fn render_block(
         .unwrap_or(false);
     let menu_pos = Pos2::new(row_rect.min.x + 60.0, row_rect.min.y);
 
+    // Page-level selection (spec-057): the whole text row is tinted while a
+    // Ctrl+A selection or a cross-block drag is active.
+    if view.page_selection.iter().any(|id| id == &block.id) {
+        let highlight = Rect::from_min_size(
+            Pos2::new(row_rect.left() + gutter, row_rect.top()),
+            Vec2::new(width, 26.0),
+        );
+        ui.painter().rect_filled(
+            highlight,
+            CornerRadius::same(4),
+            Color32::from_rgba_unmultiplied(35, 131, 226, 48),
+        );
+    }
+    if view.block_selecting
+        && ui.input(|i| i.pointer.primary_down())
+        && let Some(p) = ui.ctx().pointer_interact_pos()
+        && row_rect.contains(p)
+    {
+        commands.push(Command::ExtendBlockSelection(block.id.clone()));
+    }
+    if view.slash_dismissed.as_deref() == Some(block.id.as_str()) && !block.text.starts_with('/') {
+        commands.push(Command::ClearSlashDismissed);
+    }
+
     // While the six-dot handle is being dragged, the block under the pointer
     // becomes the reorder target; draw an insertion marker at its lower edge.
     if view.drag_from.is_some()
@@ -76,7 +100,7 @@ pub(super) fn render_block(
                     ui.make_persistent_id(("block_handle", &block.id)),
                     Sense::click_and_drag(),
                 )
-                .on_hover_text("Drag to move · Click or Ctrl+/ to open menu");
+                .on_hover_text("Drag to move this block");
             if plus.hovered() {
                 ui.painter()
                     .rect_filled(plus_rect, CornerRadius::same(4), palette.hover);
@@ -105,17 +129,12 @@ pub(super) fn render_block(
             if handle.drag_stopped() {
                 commands.push(Command::DropBlock);
             }
-            if handle.clicked() {
-                commands.push(Command::OpenSlash {
-                    block: block.id.clone(),
-                    pos: menu_pos,
-                });
-            }
         }
 
         let locked = view.lock_page;
         let block_id_for_edit = block.id.clone();
         let page_id_for_edit = view.current_page.clone();
+        let edit_id = egui::Id::unique(("block_edit", &block.id, index));
         let pending_commands = std::cell::RefCell::new(Vec::new());
         let edit = |ui: &mut egui::Ui,
                     text: &mut String,
@@ -123,7 +142,7 @@ pub(super) fn render_block(
                     w: f32|
          -> egui::widgets::text_edit::TextEditOutput {
             let output = egui::TextEdit::multiline(text)
-                .id(ui.make_persistent_id(("block_edit", &block_id_for_edit, index)))
+                .id(edit_id)
                 .font(font.clone())
                 .frame(egui::Frame::NONE)
                 .desired_width(w)
@@ -160,8 +179,31 @@ pub(super) fn render_block(
                     selection_end,
                 });
             }
+            if output.response.dragged()
+                && ui.input(|i| i.pointer.primary_down())
+                && ui
+                    .input(|i| i.pointer.interact_pos())
+                    .is_some_and(|p| !output.response.rect.contains(p))
+            {
+                pending_commands
+                    .borrow_mut()
+                    .push(Command::ExtendBlockSelection(block_id_for_edit.clone()));
+            }
             output
         };
+
+        // Ctrl+A and Ctrl+C must win over the per-block TextEdit so the whole
+        // page selection is used (spec-057).
+        if !locked && ui.memory(|m| m.has_focus(edit_id)) {
+            if ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::A)) {
+                commands.push(Command::SelectAllBlocks);
+            }
+            if !view.page_selection.is_empty()
+                && ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::C))
+            {
+                commands.push(Command::CopyBlockSelection);
+            }
+        }
 
         let mut edit_response: Option<egui::widgets::text_edit::TextEditOutput> = None;
         match block.kind {
@@ -317,21 +359,73 @@ pub(super) fn render_block(
             {
                 delete_empty = true;
             }
+            if let Some(ref resp) = edit_response
+                && resp.response.clicked()
+                && !ui.input(|i| i.modifiers.shift)
+            {
+                commands.push(Command::ClearBlockSelection);
+            }
             if let Some((kind, prefix)) = markdown_prefix(&block.text) {
                 commands.push(Command::ApplyMarkdown {
                     block: block.id.clone(),
                     kind,
                     prefix: prefix.to_string(),
                 });
-            } else if block.text.starts_with('/') {
+            } else if block.text.starts_with('/')
+                && view.slash_dismissed.as_deref() != Some(block.id.as_str())
+            {
+                let query = block
+                    .text
+                    .trim_start_matches('/')
+                    .lines()
+                    .next()
+                    .unwrap_or("")
+                    .to_string();
+                let pos = edit_response.as_ref().map_or(menu_pos, |resp| {
+                    resp.response.rect.left_bottom() + Vec2::new(0.0, 4.0)
+                });
                 commands.push(Command::OpenSlash {
                     block: block.id.clone(),
-                    pos: Pos2::new(ui.max_rect().min.x + 60.0, ui.max_rect().min.y),
+                    pos,
+                    query,
                 });
             }
         }
         let _ = index;
     });
+    if view.drag_from.as_deref() == Some(block.id.as_str())
+        && let Some(pointer) = ui.ctx().pointer_interact_pos()
+    {
+        // Live drag preview: a floating copy of the block follows the pointer
+        // while the insertion line marks the drop target (spec-057).
+        let ghost = Rect::from_min_size(
+            pointer + Vec2::new(18.0, 8.0),
+            Vec2::new((width * 0.8).clamp(220.0, 420.0), 30.0),
+        );
+        let painter = ui.ctx().layer_painter(egui::LayerId::new(
+            egui::Order::Tooltip,
+            egui::Id::unique("block_drag_ghost"),
+        ));
+        painter.rect(
+            ghost,
+            CornerRadius::same(6),
+            palette.content,
+            Stroke::new(1.0, palette.accent),
+            egui::StrokeKind::Inside,
+        );
+        let label = if block.text.is_empty() {
+            "Empty block".to_string()
+        } else {
+            block.text.lines().next().unwrap_or("").to_string()
+        };
+        painter.text(
+            ghost.min + Vec2::new(12.0, 15.0),
+            Align2::LEFT_CENTER,
+            label,
+            FontId::proportional(13.0),
+            palette.text,
+        );
+    }
     if delete_empty {
         commands.push(Command::DeleteBlock(block.id.clone()));
     }

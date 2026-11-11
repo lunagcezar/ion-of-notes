@@ -51,6 +51,8 @@ pub(super) struct ViewState {
     pub(super) inbox_open: bool,
     pub(super) slash_for: Option<String>,
     pub(super) slash_pos: Pos2,
+    pub(super) slash_query: String,
+    pub(super) slash_dismissed: Option<String>,
     pub(super) new_tab_open: bool,
     pub(super) new_tab_query: String,
     pub(super) new_tab_selected: usize,
@@ -86,4 +88,6 @@ pub(super) struct ViewState {
     pub(super) grid_menu_open: bool,
     pub(super) drag_from: Option<String>,
     pub(super) drag_to: Option<String>,
+    pub(super) page_selection: Vec<String>,
+    pub(super) block_selecting: bool,
 }

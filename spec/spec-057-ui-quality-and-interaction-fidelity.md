@@ -209,7 +209,7 @@ actual status/error; a successful response renders the answer.
 
 - [x] Phase A: sidebar padding, tab close, share layout, page-icon centering,
       settings content/rail/search/close padding.
-- [ ] Phase B: selection model + Ctrl+A/mouse/Ctrl+C, drag ghost and six-dot
+- [x] Phase B: selection model + Ctrl+A/mouse/Ctrl+C, drag ghost and six-dot
       behavior, slash menu.
 - [ ] Phase C: real emoji catalog/search, monochrome icon pack, remove blue
       underline.

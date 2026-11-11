@@ -94,6 +94,8 @@ impl NotionApp {
             inbox_open: self.inbox_open,
             slash_for: self.slash_for.clone(),
             slash_pos: self.slash_pos,
+            slash_query: self.slash_query.clone(),
+            slash_dismissed: self.slash_dismissed.clone(),
             new_tab_open: self.new_tab_open,
             new_tab_query: self.new_tab_query.clone(),
             new_tab_selected: self.new_tab_selected,
@@ -129,6 +131,8 @@ impl NotionApp {
             grid_menu_open: self.grid_menu_open,
             drag_from: self.drag_from.clone(),
             drag_to: self.drag_to.clone(),
+            page_selection: self.page_selection.clone(),
+            block_selecting: self.block_selecting,
         }
     }
 
@@ -160,6 +164,8 @@ impl NotionApp {
         self.templates_open = false;
         self.drag_from = None;
         self.drag_to = None;
+        self.page_selection.clear();
+        self.block_selecting = false;
     }
 
     /// Add `id` as a new active tab (the "+" / Ctrl+T / Ctrl+Enter behaviour).
@@ -170,6 +176,8 @@ impl NotionApp {
         self.library_open = false;
         self.comment_input.clear();
         self.page_status = None;
+        self.page_selection.clear();
+        self.block_selecting = false;
         self.push_history(id);
     }
 
@@ -436,7 +444,7 @@ impl NotionApp {
                 CommandFamily::Navigation => self.apply_navigation(command, ctx, &mut commands),
                 CommandFamily::Library => self.apply_library(command),
                 CommandFamily::Sharing => self.apply_sharing(command),
-                CommandFamily::Blocks => self.apply_blocks(command),
+                CommandFamily::Blocks => self.apply_blocks(command, ctx),
                 CommandFamily::Workspace => had_undo_redo |= self.apply_workspace(command, ctx),
                 CommandFamily::Tabs => self.apply_tabs(command, ctx, &mut commands),
                 CommandFamily::Ai => self.apply_ai(command, &mut commands),

@@ -81,6 +81,8 @@ pub struct NotionApp {
     pub(super) nav_pos: usize,
     pub(super) slash_for: Option<String>,
     pub(super) slash_pos: Pos2,
+    pub(super) slash_query: String,
+    pub(super) slash_dismissed: Option<String>,
     pub(super) pending_reload: bool,
     pub(super) screenshot: Option<PathBuf>,
     pub(super) frames: u32,
@@ -125,6 +127,8 @@ pub struct NotionApp {
     pub(super) grid_menu_open: bool,
     pub(super) drag_from: Option<String>,
     pub(super) drag_to: Option<String>,
+    pub(super) page_selection: Vec<String>,
+    pub(super) block_selecting: bool,
     // Real-time CRDT and awareness.
     pub(super) crdt: CrdtSession,
     pub(super) crdt_page: String,
@@ -243,6 +247,22 @@ impl NotionApp {
             ));
         }
         let nav_history = vec![demo_current_page.clone()];
+        let slash_block = if demo == "slash" {
+            workspace
+                .page(&demo_current_page)
+                .and_then(|page| page.blocks.first())
+                .map(|block| block.id.clone())
+        } else {
+            None
+        };
+        let page_selection = if demo == "selection" {
+            workspace
+                .page(&demo_current_page)
+                .map(|page| page.blocks.iter().map(|b| b.id.clone()).collect())
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
         let ai_config = OllamaConfig::from_env();
         let ai_status = ollama::detect(&ai_config);
         let onboarding_open = demo == "onboarding"
@@ -325,8 +345,14 @@ impl NotionApp {
             inbox_open: demo == "inbox",
             nav_history,
             nav_pos: 0,
-            slash_for: None,
-            slash_pos: Pos2::new(360.0, 240.0),
+            slash_for: slash_block,
+            slash_pos: Pos2::new(560.0, 400.0),
+            slash_query: if demo == "slash" {
+                "head".to_string()
+            } else {
+                String::new()
+            },
+            slash_dismissed: None,
             pending_reload: false,
             screenshot,
             frames: 0,
@@ -368,6 +394,8 @@ impl NotionApp {
             grid_menu_open: false,
             drag_from: None,
             drag_to: None,
+            page_selection,
+            block_selecting: false,
         }
     }
 }
