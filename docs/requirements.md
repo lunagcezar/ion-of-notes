@@ -442,6 +442,10 @@ capabilities) is implemented; the rest are planned.
   owner password from a Docker secret file (`*_FILE`), and builds for
   `linux/amd64` and `linux/arm64`; the default Compose stack does not place the
   password in the environment (spec-052).
+- NFR-35: The Rust toolchain is pinned by `rust-toolchain.toml`; CI actions
+  are SHA-pinned and Docker/GitLab base images are digest-pinned; Renovate
+  groups dependency updates and both CI systems run `cargo audit`
+  (spec-053).
 
 ## 3. Requirement → spec map
 
@@ -483,6 +487,7 @@ capabilities) is implemented; the rest are planned.
 | NFR-32                        | `spec-050-server-container-and-compose.md` |
 | NFR-33                        | `spec-051-container-hardening-and-deployment-operations.md` |
 | NFR-34                        | `spec-052-deployment-hardening-ii.md` |
+| NFR-35                        | `spec-053-supply-chain-and-tooling.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

@@ -47,6 +47,9 @@ definition.
 | **Readiness probe** | `GET /ready`; reports that the router is serving, distinct from the `/health` liveness probe. | `src/server/web.rs` |
 | **Prometheus metrics** | `GET /metrics` text with up, uptime and API request count. | `src/server/web.rs` |
 | **Docker secret** | `secrets/owner_password.txt`, mounted at `/run/secrets/owner_password` and read through `ION_OF_NOTES_OWNER_PASSWORD_FILE`. | `compose.yml`, `src/auth.rs` |
+| **Renovate** | Automated dependency-update proposals for Cargo, GitHub Actions and Docker. | `renovate.json` |
+| **`cargo audit`** | RustSec advisory check run by the CI `security` job. | `.github/workflows/ci.yml`, `.gitlab-ci.yml` |
+| **Digest pinning** | Referencing a container image by `@sha256:...` instead of a mutable tag. | `Dockerfile`, `.gitlab-ci.yml` |
 
 ## 3. Domain
 

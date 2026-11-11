@@ -34,7 +34,7 @@ and in `docs/adr-002-architecture-guidelines.md`.
 
 | Layer            | Technology                          | Notes                                              |
 | ---------------- | ----------------------------------- | -------------------------------------------------- |
-| Language         | Rust (stable, edition 2024)         | `cargo build`, `cargo test`                        |
+| Language         | Rust 1.99.1 (edition 2024)          | Pinned by `rust-toolchain.toml`; `cargo build`, `cargo test` |
 | Window / UI      | eframe 0.37 + egui 0.37             | Immediate-mode UI; behind the default-on `desktop` feature |
 | Data model       | `serde` + `serde_json`              | JSON documents; SQLite document store for `--database` |
 | PNG output       | `image` (png feature only)          | `--screenshot`; behind the default-on `desktop` feature |
@@ -253,6 +253,9 @@ compose.yml        self-hosted server stack with the ion-data volume
 .env.example       Compose bind/port/log template
 .dockerignore      build-context exclusions
 docker-bake.hcl    linux/amd64 + linux/arm64 build target
+rust-toolchain.toml pinned Rust 1.99.1 + rustfmt/clippy
+renovate.json      Cargo, GitHub Actions and Docker updates
+.editorconfig      indentation and line-ending baseline
 secrets/
   owner_password.txt.example  Docker secret template
 deploy/

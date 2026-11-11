@@ -151,6 +151,24 @@ show `127.0.0.1:8787:8787`, `read_only: true`, `cap_drop: [ALL]`,
 `/ready` and `/metrics` must respond; see `docs/deployment.md` for backups,
 TLS and upgrade checks.
 
+### 3.3 Supply-chain checks
+
+The toolchain and CI inputs are pinned (spec-053):
+
+- `rust-toolchain.toml` selects Rust `1.99.1` with `rustfmt` and `clippy`.
+- GitHub Actions are referenced by commit SHA with a version comment; Docker
+  and GitLab base images are referenced by digest.
+- `renovate.json` groups Cargo, GitHub Actions and Docker updates.
+- A `security` job runs `cargo audit` on both CI systems. Locally:
+
+```sh
+cargo install cargo-audit --locked   # once
+cargo audit
+```
+
+Unmaintained-crate warnings are reported but do not fail the audit; a
+vulnerability fails it. `cargo deny` (licenses/bans) remains a future step.
+
 ## 4. What each layer tests
 
 ```mermaid

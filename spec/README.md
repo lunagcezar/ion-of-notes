@@ -90,6 +90,7 @@ Status vocabulary:
 | [050](spec-050-server-container-and-compose.md) | Server-only binary and Compose deployment | implemented | `ion-of-notes-server`, Dockerfile, `compose.yml` |
 | [051](spec-051-container-hardening-and-deployment-operations.md) | Container hardening and deployment operations | implemented | Loopback bind, read-only root, Caddy example, deployment guide |
 | [052](spec-052-deployment-hardening-ii.md) | Deployment hardening II | implemented | `/ready`, `/metrics`, Docker secret, multi-arch bake, CI container smoke |
+| [053](spec-053-supply-chain-and-tooling.md) | Supply-chain and tooling baseline | implemented | Pinned toolchain/actions/images, Renovate, `cargo audit` |
 
 ## 3. Work status
 

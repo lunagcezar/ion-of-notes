@@ -310,10 +310,12 @@ Screenshot mode renders about 120 frames, writes a PNG and exits:
 cargo run -- --screenshot shots/now.png
 ```
 
-CI runs formatting, clippy (both feature sets), the core + desktop tests and a
-release build. GitHub uses `.github/workflows/ci.yml` on Windows; GitLab uses
-`.gitlab-ci.yml` on a Linux Rust image and runs the same
-`scripts/quality.ps1` gate.
+CI runs formatting, clippy (both feature sets), the core + desktop tests, a
+release build and a `cargo audit` security job. GitHub uses
+`.github/workflows/ci.yml` on Windows plus a Linux container smoke job; GitLab
+uses `.gitlab-ci.yml` on a pinned Linux Rust image and runs the same
+`scripts/quality.ps1` gate. Actions and base images are pinned; Renovate
+proposes dependency updates.
 
 ## Project layout
 
@@ -351,7 +353,13 @@ src/
 tests/             one integration-test crate per module (258 tests)
 Dockerfile         multi-stage server-only image
 compose.yml        self-hosted server stack with the ion-data volume
-.env.example       Compose password, bind and port template
+.env.example       Compose bind/port/log template
+docker-bake.hcl    linux/amd64 + linux/arm64 build target
+rust-toolchain.toml pinned Rust 1.99.1 + rustfmt/clippy
+renovate.json      Cargo, GitHub Actions and Docker updates
+.editorconfig      indentation and line-ending baseline
+secrets/
+  owner_password.txt.example  Docker secret template
 deploy/
   Caddyfile.example  TLS reverse-proxy example
 ```

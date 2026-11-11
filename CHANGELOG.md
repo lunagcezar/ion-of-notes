@@ -6,6 +6,16 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-053 supply-chain and tooling baseline
+
+- Added `rust-toolchain.toml` pinning Rust 1.99.1 with `rustfmt` and `clippy`.
+- Pinned GitHub Actions by commit SHA and Docker/GitLab base images by digest.
+- Added `renovate.json` for grouped Cargo, GitHub Actions and Docker updates.
+- Added a `security` job running `cargo audit` in GitHub Actions and GitLab CI.
+- Added `.editorconfig` for indentation and line-ending consistency.
+- Updated README, contributor guide, architecture, testing, requirements,
+  glossary, spec index and changelog. No test-count change (258).
+
 ### Changed - spec-052 deployment hardening II
 
 - Added `GET /ready` and `GET /metrics` to the Axum adapter. `/metrics` exposes

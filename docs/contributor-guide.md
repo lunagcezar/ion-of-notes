@@ -6,7 +6,7 @@ code belongs, and how to verify a change.
 
 ## 1. Prerequisites
 
-- Rust stable (edition 2024), `cargo`.
+- Rust 1.99.1 (edition 2024), selected by `rust-toolchain.toml`; `cargo`.
 - Windows is the primary desktop target; the code is otherwise portable.
 - No database, web server or Node.js toolchain is required.
 - Docker + Compose are optional, only for the server container.
@@ -30,9 +30,11 @@ docker compose up --build       # server + ion-data volume
 pwsh -File scripts/quality.ps1
 ```
 
-CI runs formatting, clippy, tests and a release build. GitHub uses
-`.github/workflows/ci.yml` on Windows; GitLab uses `.gitlab-ci.yml` on Linux
-and runs the same `scripts/quality.ps1` gate.
+CI runs formatting, clippy, tests, a release build and a `cargo audit`
+security job. GitHub uses `.github/workflows/ci.yml` on Windows plus a Linux
+container smoke job; GitLab uses `.gitlab-ci.yml` on Linux and runs the same
+`scripts/quality.ps1` gate. Actions and base images are pinned; Renovate
+proposes updates.
 
 ## 3. The SDD/TDD loop
 

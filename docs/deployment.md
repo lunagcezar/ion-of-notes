@@ -265,6 +265,7 @@ faster.
 - [ ] Port 8787 is not exposed directly to the internet.
 - [ ] Backups run on a schedule and restores are tested.
 - [ ] The image is rebuilt for security updates and dependencies are reviewed.
+- [ ] Base images and CI actions stay pinned; Renovate update PRs are reviewed.
 - [ ] Log rotation and host disk monitoring are in place.
 - [ ] The container remains non-root with `cap_drop: [ALL]` and
       `no-new-privileges`.

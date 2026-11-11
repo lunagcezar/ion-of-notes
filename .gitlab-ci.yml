@@ -23,7 +23,7 @@ variables:
   CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
 
 default:
-  image: rust:1.99-bookworm
+  image: rust:1.99-bookworm@sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c
   cache:
     key:
       files:
@@ -31,7 +31,9 @@ default:
     paths:
       - .cargo/registry/
       - .cargo/git/
+      - .cargo/bin/
   before_script:
+    - export PATH="$CARGO_HOME/bin:$PATH"
     - apt-get update
     - >
       apt-get install -y --no-install-recommends
@@ -51,7 +53,7 @@ quality:
   timeout: 1 hour
   interruptible: true
   script:
-    # fmt + clippy (desktop and core) + 229 core tests + 26 desktop tests +
+    # fmt + clippy (desktop and core) + 232 core tests + 26 desktop tests +
     # Markdown link/Mermaid/table checks.
     - pwsh -File scripts/quality.ps1
     - cargo build --release --locked
@@ -60,6 +62,17 @@ quality:
     paths:
       - target/release/ion-of-notes
     expire_in: 1 week
+
+security:
+  stage: check
+  timeout: 30 minutes
+  interruptible: true
+  script:
+    - cargo install cargo-audit --locked
+    - cargo audit
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 # Windows runner alternative (self-managed or GitLab.com Windows runners).
 # Replace the `quality` job above with this one when the runner is tagged

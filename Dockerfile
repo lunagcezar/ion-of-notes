@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Server-only image: no eframe/egui/wgpu, no window, no X server.
-FROM rust:1.99-bookworm AS builder
+FROM rust:1.99-bookworm@sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c AS builder
 
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
@@ -11,7 +11,7 @@ COPY tests ./tests
 
 RUN cargo build --release --locked --no-default-features --bin ion-of-notes-server
 
-FROM debian:bookworm-slim AS runtime
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS runtime
 
 # rusqlite is bundled, so SQLite needs no runtime package. curl is only for
 # the healthcheck; ca-certificates is for outgoing TLS webhooks.
