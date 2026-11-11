@@ -15,6 +15,7 @@ Thumbs.db
 shots/
 screenshots/
 
-# Local server data and Compose secrets
+# Local server data, Compose secrets and backups
 /data/
+/backups/
 /.env

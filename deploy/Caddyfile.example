@@ -1,0 +1,19 @@
+# Caddy reverse proxy for ion-of-notes.
+#
+# 1. Replace your.domain.example with the public hostname.
+# 2. Point the DNS record at this host and allow ports 80/443.
+# 3. Run Caddy with this file; certificates are obtained automatically.
+#
+# The Compose stack publishes 127.0.0.1:8787 by default, so Caddy can reach
+# the server on the same host without exposing it directly.
+
+your.domain.example {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8787
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+}

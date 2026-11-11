@@ -243,8 +243,10 @@ tests/
   integration.rs   end-to-end client/server/store scenario
 Dockerfile         multi-stage server-only image
 compose.yml        self-hosted server stack with the ion-data volume
-.env.example       Compose password and port template
+.env.example       Compose password, bind and port template
 .dockerignore      build-context exclusions
+deploy/
+  Caddyfile.example  TLS reverse-proxy example
 ```
 
 Dependency direction: `ui -> client -> server -> model`, `server -> store`,
@@ -671,10 +673,11 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
   free edition; visual scope is the 98 pictures in `reference/` plus the 72
   `screenshots/` pictures. Mail & Calendar (`reference/picture-22.png`) is
   deliberately not implemented.
-- Documentation hub, architecture, testing, glossary, review findings, API
-  contract and clean-room guide: `docs/index.md`, `docs/architecture.md`,
-  `docs/testing.md`, `docs/glossary.md`, `docs/review-findings.md`,
-  `docs/api-contract.md`, `docs/clean-room.md` (spec-029).
+- Documentation hub, architecture, deployment, testing, glossary, review
+  findings, API contract and clean-room guide: `docs/index.md`,
+  `docs/architecture.md`, `docs/deployment.md`, `docs/testing.md`,
+  `docs/glossary.md`, `docs/review-findings.md`, `docs/api-contract.md`,
+  `docs/clean-room.md` (spec-029, spec-051).
 - Clean-room evidence levels and phases: `docs/api-observations.md`,
   `docs/reverse-engineering-log.md`, `docs/unknowns.md`.
 - Public Notion API alignment (B4): `docs/public-api-analysis.md`,

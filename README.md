@@ -146,11 +146,13 @@ docker compose up --build
 curl http://127.0.0.1:8787/health
 ```
 
-The `ion-data` volume keeps the SQLite workspace and collaboration state across
-container recreation. `docker compose down` keeps the volume; add `-v` to
-remove it. Compose refuses to start while `ION_OF_NOTES_OWNER_PASSWORD` is
-unset. The container runs as a non-root user, exposes port 8787 and uses the
-image healthcheck.
+The `ion-data` volume (Docker name `ion-of-notes-data`) keeps the SQLite
+workspace and collaboration state across container recreation.
+`docker compose down` keeps the volume; add `-v` to remove it. Compose refuses to start while `ION_OF_NOTES_OWNER_PASSWORD` is
+unset. The container runs as a non-root user, binds to loopback by default,
+uses a read-only root filesystem, drops capabilities, rotates logs and uses the
+image healthcheck. See [`docs/deployment.md`](docs/deployment.md) for TLS,
+backups/restore, secrets, upgrades and multi-arch builds.
 
 Health check:
 
@@ -338,7 +340,9 @@ src/
 tests/             one integration-test crate per module (255 tests)
 Dockerfile         multi-stage server-only image
 compose.yml        self-hosted server stack with the ion-data volume
-.env.example       Compose password and port template
+.env.example       Compose password, bind and port template
+deploy/
+  Caddyfile.example  TLS reverse-proxy example
 ```
 
 Dependency direction: `ui → client → server → model`, `server → store`; `app`
@@ -351,6 +355,7 @@ eframe, JSON files or sockets.
 | --- | --- |
 | [`docs/index.md`](docs/index.md) | Reading order and source-of-truth rules |
 | [`docs/architecture.md`](docs/architecture.md) | Layers, modules, request/persistence flows |
+| [`docs/deployment.md`](docs/deployment.md) | Container deployment, TLS, backups, secrets and upgrades |
 | [`docs/contributor-guide.md`](docs/contributor-guide.md) | SDD/TDD workflow and where code belongs |
 | [`docs/testing.md`](docs/testing.md) | Test strategy, crates and fakes |
 | [`docs/glossary.md`](docs/glossary.md) | Shared vocabulary |
@@ -374,9 +379,10 @@ eframe, JSON files or sockets.
 - SQLite is single-node; PostgreSQL and Redis/shared multi-node rate limiting
   are not implemented.
 - There is no browser UI, registration, password reset or account-management UI.
-- A Compose deployment manifest is included; TLS termination, reverse-proxy
-  configuration, backups and a production secret manager are not included. Run
-  the server behind a trusted proxy for network access.
+- A Compose deployment manifest and an operations guide are included; TLS
+  termination, reverse-proxy configuration and automatic backups are not. Run
+  the server behind a trusted proxy and follow `docs/deployment.md` for
+  backups, secrets and upgrades.
 - Webhooks have no async queue/dead-letter store, and private CA/mTLS setup is
   not configured.
 - B3 own-account capture remains blocked by the strict clean-room scope.

@@ -41,6 +41,8 @@ definition.
 | **Null object** | `NoStore` / `NoCollabStore` implement a port by doing nothing. | `src/store.rs` |
 | **Server-only binary** | `ion-of-notes-server`, built with `--no-default-features`; serves the API without eframe/egui/wgpu. | `src/bin/ion-of-notes-server.rs` |
 | **Compose stack** | `compose.yml` service with the `ion-data` volume, healthcheck and required owner password. | `compose.yml`, `Dockerfile` |
+| **Hardened stack** | Loopback bind, read-only root, `/tmp` tmpfs, dropped capabilities, `no-new-privileges`, `init`, stop grace period and log rotation. | `compose.yml`, `docs/deployment.md` |
+| **Caddy example** | Reverse proxy and automatic TLS configuration for the server. | `deploy/Caddyfile.example` |
 
 ## 3. Domain
 

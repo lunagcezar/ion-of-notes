@@ -6,6 +6,20 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-051 container hardening and deployment operations
+
+- Compose now binds to `127.0.0.1` by default (`ION_OF_NOTES_BIND` overrides),
+  runs with a read-only root, a `/tmp` tmpfs, `cap_drop: [ALL]`,
+  `no-new-privileges`, `init`, a 15-second stop grace period, a PID limit and
+  rotated `json-file` logs.
+- Added `deploy/Caddyfile.example` for a TLS reverse proxy and
+  `docs/deployment.md` covering TLS, volume permissions, cold/hot backups,
+  restore, secrets, upgrades, health/logs, troubleshooting, multi-arch builds
+  and a security checklist.
+- Updated `README.md`, `AGENTS.md`, `docs/index.md`, architecture, testing,
+  requirements, glossary, spec index and the deployment guide.
+- No Rust code or test-count change; the full gate remains 255 tests.
+
 ### Added - spec-050 server-only binary and Compose deployment
 
 - Added `src/bin/ion-of-notes-server.rs`, built with

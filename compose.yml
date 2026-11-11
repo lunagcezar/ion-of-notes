@@ -9,13 +9,31 @@ services:
       context: .
     image: ion-of-notes-server:local
     restart: unless-stopped
+    init: true
     ports:
-      - "${ION_OF_NOTES_PORT:-8787}:8787"
+      # Loopback by default: put a TLS reverse proxy in front for network
+      # access, or set ION_OF_NOTES_BIND=0.0.0.0 deliberately.
+      - "${ION_OF_NOTES_BIND:-127.0.0.1}:${ION_OF_NOTES_PORT:-8787}:8787"
     environment:
       ION_OF_NOTES_OWNER_PASSWORD: ${ION_OF_NOTES_OWNER_PASSWORD:?set ION_OF_NOTES_OWNER_PASSWORD in .env}
       RUST_LOG: ${RUST_LOG:-info,tower_http=info}
     volumes:
       - ion-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   ion-data:
+    name: ion-of-notes-data

@@ -143,7 +143,10 @@ ION_OF_NOTES_OWNER_PASSWORD=test docker compose config
 ```
 
 `docker compose up --build` must become healthy on `/health`; without
-`ION_OF_NOTES_OWNER_PASSWORD`, `docker compose config` must fail.
+`ION_OF_NOTES_OWNER_PASSWORD`, `docker compose config` must fail. The hardened
+stack (spec-051) must also show `127.0.0.1:8787:8787`, `read_only: true`,
+`cap_drop: [ALL]` and `no-new-privileges` in `docker compose config`; see
+`docs/deployment.md` for backups, TLS and upgrade checks.
 
 ## 4. What each layer tests
 

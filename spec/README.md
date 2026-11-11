@@ -88,6 +88,7 @@ Status vocabulary:
 | [048](spec-048-build-performance-and-desktop-feature-seam.md) | Build performance and the desktop feature seam | implemented | Default-on `desktop` feature, core/desktop test passes, lean debug info |
 | 049 | UI/client split (planned) | plan | Reserved; not yet written |
 | [050](spec-050-server-container-and-compose.md) | Server-only binary and Compose deployment | implemented | `ion-of-notes-server`, Dockerfile, `compose.yml` |
+| [051](spec-051-container-hardening-and-deployment-operations.md) | Container hardening and deployment operations | implemented | Loopback bind, read-only root, Caddy example, deployment guide |
 
 ## 3. Work status
 

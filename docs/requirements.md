@@ -433,6 +433,11 @@ capabilities) is implemented; the rest are planned.
   user, persists SQLite state in a named volume, exposes `/health` and shuts
   down gracefully on `SIGTERM`; Compose requires an owner password
   (spec-050).
+- NFR-33: The Compose stack binds loopback by default, runs with a read-only
+  root, a `/tmp` tmpfs, dropped capabilities, `no-new-privileges`, `init`, a
+  stop grace period and bounded logs. `docs/deployment.md` covers TLS/reverse
+  proxy, backups/restore, secrets, upgrades, health/logs and multi-arch builds
+  (spec-051).
 
 ## 3. Requirement → spec map
 
@@ -472,6 +477,7 @@ capabilities) is implemented; the rest are planned.
 | FR-104, NFR-30                | `spec-045-server-login-settings-ui.md` |
 | NFR-31                        | `spec-048-build-performance-and-desktop-feature-seam.md` |
 | NFR-32                        | `spec-050-server-container-and-compose.md` |
+| NFR-33                        | `spec-051-container-hardening-and-deployment-operations.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

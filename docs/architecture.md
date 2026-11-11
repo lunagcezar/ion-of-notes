@@ -146,7 +146,8 @@ src/
 
 Deployment files live at the repository root: `Dockerfile` (multi-stage,
 server-only build), `compose.yml` (server + `ion-data` volume),
-`.dockerignore` and `.env.example` (spec-050).
+`.dockerignore`, `.env.example` and `deploy/Caddyfile.example` (spec-050,
+spec-051).
 
 ## 4. Request lifecycle
 
@@ -371,7 +372,10 @@ new stores and delivery workers.
 - The container runs the server-only `ion-of-notes-server` binary built with
   `--no-default-features`; the desktop binary is not containerized. The
   `ion-data` volume holds the SQLite state, and `SIGTERM` is a graceful
-  shutdown (spec-050).
+  shutdown (spec-050). The Compose stack binds loopback by default, uses a
+  read-only root, drops capabilities and keeps `no-new-privileges`; TLS,
+  backups and upgrades are operator concerns documented in
+  `docs/deployment.md` (spec-051).
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
 - Inline comments persist a preference; block anchors are not implemented.
