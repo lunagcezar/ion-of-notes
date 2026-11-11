@@ -25,11 +25,15 @@ pub(super) enum FontStyle {
     Mono,
 }
 
-/// The popover opened from the customize-sidebar rows (spec-057).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The popover opened from the customize-sidebar rows (spec-062).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(super) enum SidebarMenu {
     Shortcut,
     Section,
+    RowSettings {
+        section: String,
+        shortcut: Option<String>,
+    },
 }
 
 /// One entry in the "Open in new tab…" switcher opened by the tab-strip `+`.
@@ -230,6 +234,18 @@ pub(super) enum Command {
     SetSidebarCustomize(bool),
     OpenSidebarMenu(SidebarMenu),
     CloseSidebarMenu,
+    AddSidebarShortcut(String, String),
+    AddSidebarSection(String, crate::model::SidebarSectionSource),
+    ToggleSidebarSectionHidden(String),
+    ToggleSidebarShortcutHidden(String, String),
+    RemoveSidebarSection(String),
+    RemoveSidebarShortcut(String, String),
+    RenameSidebarSection(String, String),
+    RenameSidebarShortcut(String, String, String),
+    MoveSidebarSection(String, usize),
+    MoveSidebarShortcut(String, String, String),
+    SetSidebarShowExcluded(bool),
+    ToggleSidebarNav(String),
     OpenAppMenu,
     CloseAppMenu,
     ToggleComposeMenu,
@@ -428,6 +444,18 @@ impl Command {
             | Command::SetSidebarCustomize(_)
             | Command::OpenSidebarMenu(_)
             | Command::CloseSidebarMenu
+            | Command::AddSidebarShortcut(_, _)
+            | Command::AddSidebarSection(_, _)
+            | Command::ToggleSidebarSectionHidden(_)
+            | Command::ToggleSidebarShortcutHidden(_, _)
+            | Command::RemoveSidebarSection(_)
+            | Command::RemoveSidebarShortcut(_, _)
+            | Command::RenameSidebarSection(_, _)
+            | Command::RenameSidebarShortcut(_, _, _)
+            | Command::MoveSidebarSection(_, _)
+            | Command::MoveSidebarShortcut(_, _, _)
+            | Command::SetSidebarShowExcluded(_)
+            | Command::ToggleSidebarNav(_)
             | Command::OpenAppMenu
             | Command::CloseAppMenu
             | Command::ToggleComposeMenu

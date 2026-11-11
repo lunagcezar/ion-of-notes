@@ -1,6 +1,6 @@
 # spec-062 - Customizable sidebar sections and shortcuts
 
-- Status: plan (2026-11-11)
+- Status: implemented (2026-11-11)
 - Related: `spec-013`, `spec-017`, `spec-057`, `spec-058`
 - Reference: `reference/customize-sidebar.png`,
   `reference/customize-sidebar-2.png`, `reference/customize-sidebar-3.png`
@@ -206,13 +206,13 @@ opens in the current tab and the active section is remembered.
 
 ## Plan / tasks
 
-- [ ] Model: layout types, defaults, migration and operations.
-- [ ] Store: JSON/SQLite round-trip and diff behavior.
-- [ ] Commands and app state for menus, rename, exclude, drag.
-- [ ] Sidebar render: sections, tabs, hover actions, Done.
-- [ ] Add shortcut and Add section menus with search/submenus.
-- [ ] Preview states, screenshots and full gate.
-- [ ] Update data model, requirements, glossary and changelog.
+- [x] Model: layout types, defaults, migration and operations.
+- [x] Store: JSON/SQLite round-trip and diff behavior.
+- [x] Commands and app state for menus, rename, exclude, drag.
+- [x] Sidebar render: sections, tabs, hover actions, Done.
+- [x] Add shortcut and Add section menus with search/submenus.
+- [x] Preview states, screenshots and full gate.
+- [x] Update data model, requirements, glossary and changelog.
 
 ## Decisions and open questions
 

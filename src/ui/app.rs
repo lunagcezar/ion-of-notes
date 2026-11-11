@@ -210,6 +210,17 @@ impl NotionApp {
                 data.insert_temp(egui::Id::unique("app_menu_active"), 2_usize);
             });
         }
+        if demo == "customize-section" {
+            workspace
+                .settings
+                .sidebar_layout
+                .add_section("Shortcuts", crate::model::SidebarSectionSource::Custom);
+            if let Some(page) = workspace.pages.first() {
+                let id = page.id.clone();
+                let title = page.title.clone();
+                workspace.settings.sidebar_layout.add_shortcut(&id, &title);
+            }
+        }
         let demo_current_page = if demo == "tasks" {
             workspace
                 .page("p-tasks")
@@ -388,11 +399,21 @@ impl NotionApp {
                 String::new()
             },
             slash_dismissed: None,
-            sidebar_customize: matches!(demo.as_str(), "customize-sidebar" | "customize-shortcut"),
-            sidebar_menu: if demo == "customize-shortcut" {
-                Some(SidebarMenu::Shortcut)
-            } else {
-                None
+            sidebar_customize: matches!(
+                demo.as_str(),
+                "customize-sidebar"
+                    | "customize-shortcut"
+                    | "customize-section"
+                    | "customize-row-settings"
+            ),
+            sidebar_menu: match demo.as_str() {
+                "customize-shortcut" => Some(SidebarMenu::Shortcut),
+                "customize-section" => Some(SidebarMenu::Section),
+                "customize-row-settings" => Some(SidebarMenu::RowSettings {
+                    section: "favorites".to_string(),
+                    shortcut: None,
+                }),
+                _ => None,
             },
             pending_reload: false,
             screenshot,
@@ -658,7 +679,7 @@ impl eframe::App for NotionApp {
         if view.workspace_menu_open {
             render_workspace_menu(&ctx, &palette, &mut commands);
         }
-        if let Some(menu) = view.sidebar_menu {
+        if let Some(ref menu) = view.sidebar_menu {
             render_sidebar_menu(&ctx, menu, &self.workspace, &view, &palette, &mut commands);
         }
         if view.grid_menu_open {

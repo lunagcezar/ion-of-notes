@@ -99,7 +99,7 @@ Status vocabulary:
 | [059](spec-059-app-bar-app-menu-and-sidebar-animation.md) | App bar, app menu and sidebar animation | implemented | Sidebar-width container, notification/compose, sectioned menu, animated sidebar |
 | [060](spec-060-editor-picker-and-ai-responsiveness.md) | Editor, picker and AI responsiveness | implemented | Release-based drop, virtualized emoji grid, centered icons, async AI |
 | [061](spec-061-settings-polish-and-number-time-formats.md) | Settings polish and number/time formats | implemented | Close/rail/scrollbar padding, working number and time formats |
-| [062](spec-062-customizable-sidebar-sections.md) | Customizable sidebar sections and shortcuts | plan | Row settings/exclude/drag, Add shortcut/section menus, sidebar tabs |
+| [062](spec-062-customizable-sidebar-sections.md) | Customizable sidebar sections and shortcuts | implemented | Row settings/exclude/drag, Add shortcut/section menus, sidebar tabs |
 
 ## 3. Work status
 

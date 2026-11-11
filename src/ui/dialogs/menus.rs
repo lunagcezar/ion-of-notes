@@ -321,10 +321,11 @@ pub(crate) fn render_workspace_menu(
     }
 }
 
-/// The Add shortcut / Add section popover used by customize-sidebar mode.
+/// The Add shortcut / Add section / row-settings popover used by customize
+/// sidebar mode (spec-062).
 pub(crate) fn render_sidebar_menu(
     ctx: &egui::Context,
-    menu: SidebarMenu,
+    menu: &SidebarMenu,
     ws: &Workspace,
     _view: &ViewState,
     palette: &Palette,
@@ -333,19 +334,22 @@ pub(crate) fn render_sidebar_menu(
     let screen = ctx.viewport_rect();
     let y = match menu {
         SidebarMenu::Shortcut => screen.top() + 300.0,
-        SidebarMenu::Section => screen.top() + 470.0,
+        SidebarMenu::Section => screen.top() + 420.0,
+        SidebarMenu::RowSettings { .. } => screen.top() + 360.0,
     };
+    let query_id = egui::Id::unique(("sidebar_menu_query", menu));
     let resp = egui::Window::new("sidebar_menu")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
         .fixed_pos(Pos2::new(screen.left() + 12.0, y))
-        .default_width(250.0)
+        .default_width(260.0)
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
             let title = match menu {
                 SidebarMenu::Shortcut => "Add shortcut",
                 SidebarMenu::Section => "Add section",
+                SidebarMenu::RowSettings { .. } => "Row settings",
             };
             ui.label(
                 egui::RichText::new(title)
@@ -356,31 +360,193 @@ pub(crate) fn render_sidebar_menu(
             ui.add_space(4.0);
             match menu {
                 SidebarMenu::Shortcut => {
-                    for page in ws.pages.iter().take(10) {
-                        let hint = if page.favorite { "✓" } else { "" };
-                        if menu_button(ui, &page.title, hint, palette).clicked() {
-                            commands.push(Command::ToggleFavorite(page.id.clone()));
+                    let mut query: String =
+                        ctx.data(|data| data.get_temp(query_id).unwrap_or_default());
+                    if ui
+                        .add(
+                            egui::TextEdit::singleline(&mut query)
+                                .desired_width(f32::INFINITY)
+                                .hint_text("Search shortcuts...")
+                                .text_color(palette.text),
+                        )
+                        .changed()
+                    {
+                        ctx.data_mut(|data| data.insert_temp(query_id, query.clone()));
+                    }
+                    let query = query.trim().to_lowercase();
+                    let matches =
+                        |label: &str| query.is_empty() || label.to_lowercase().contains(&query);
+                    if matches("New page")
+                        && menu_button(ui, "New page", "Ctrl+N", palette).clicked()
+                    {
+                        commands.push(Command::NewPage(None));
+                        commands.push(Command::CloseSidebarMenu);
+                    }
+                    for label in ["New chat", "New meeting note", "New database", "New agent"] {
+                        if matches(label) {
+                            menu_button(ui, label, "soon", palette);
+                        }
+                    }
+                    ui.separator();
+                    for (label, cmd) in [
+                        ("Settings", Command::OpenSettings),
+                        ("Library", Command::OpenLibrary),
+                        ("Inbox", Command::OpenInbox),
+                    ] {
+                        if matches(label) && menu_button(ui, label, "", palette).clicked() {
+                            commands.push(cmd);
                             commands.push(Command::CloseSidebarMenu);
                         }
                     }
                     ui.separator();
-                    if menu_button(ui, "New page", "", palette).clicked() {
-                        commands.push(Command::NewPage(None));
-                        commands.push(Command::CloseSidebarMenu);
+                    ui.label(egui::RichText::new("Pages").size(10.5).color(palette.muted));
+                    for page in ws.pages.iter().filter(|page| matches(&page.title)) {
+                        if menu_button(ui, &page.title, "", palette).clicked() {
+                            commands.push(Command::AddSidebarShortcut(
+                                page.id.clone(),
+                                page.title.clone(),
+                            ));
+                            commands.push(Command::CloseSidebarMenu);
+                        }
                     }
                 }
                 SidebarMenu::Section => {
-                    for label in ["Favorites", "Private", "Shared"] {
-                        if menu_button(ui, label, "", palette).clicked() {
+                    let mut query: String =
+                        ctx.data(|data| data.get_temp(query_id).unwrap_or_default());
+                    if ui
+                        .add(
+                            egui::TextEdit::singleline(&mut query)
+                                .desired_width(f32::INFINITY)
+                                .hint_text("Search sections...")
+                                .text_color(palette.text),
+                        )
+                        .changed()
+                    {
+                        ctx.data_mut(|data| data.insert_temp(query_id, query.clone()));
+                    }
+                    let query = query.trim().to_lowercase();
+                    let matches =
+                        |label: &str| query.is_empty() || label.to_lowercase().contains(&query);
+                    let items: &[(&str, crate::model::SidebarSectionSource)] = &[
+                        ("Favorites", crate::model::SidebarSectionSource::Favorites),
+                        ("Private", crate::model::SidebarSectionSource::Private),
+                        ("Blank section", crate::model::SidebarSectionSource::Custom),
+                        ("Recents", crate::model::SidebarSectionSource::Custom),
+                        ("Shared", crate::model::SidebarSectionSource::Custom),
+                        ("Pinned", crate::model::SidebarSectionSource::Custom),
+                        ("Chats", crate::model::SidebarSectionSource::Custom),
+                        ("Agents", crate::model::SidebarSectionSource::Custom),
+                        (
+                            "Upcoming events",
+                            crate::model::SidebarSectionSource::Custom,
+                        ),
+                        (
+                            "AI Meeting Notes",
+                            crate::model::SidebarSectionSource::Custom,
+                        ),
+                        ("Developer", crate::model::SidebarSectionSource::Custom),
+                    ];
+                    for (label, source) in items {
+                        if matches(label) && menu_button(ui, label, "", palette).clicked() {
+                            commands
+                                .push(Command::AddSidebarSection((*label).to_string(), *source));
                             commands.push(Command::CloseSidebarMenu);
                         }
                     }
                     ui.add_space(4.0);
                     ui.label(
-                        egui::RichText::new("Sections group shortcuts in the sidebar.")
+                        egui::RichText::new("A section is a sidebar tab with its own shortcuts.")
                             .size(10.5)
                             .color(palette.muted),
                     );
+                }
+                SidebarMenu::RowSettings { section, shortcut } => {
+                    let rename_id = egui::Id::unique(("sidebar_rename", section, shortcut));
+                    let current = if let Some(shortcut_id) = shortcut {
+                        ws.settings
+                            .sidebar_layout
+                            .sections
+                            .iter()
+                            .find(|item| &item.id == section)
+                            .and_then(|item| {
+                                item.shortcuts
+                                    .iter()
+                                    .find(|item| &item.id == shortcut_id)
+                                    .map(|item| item.label.clone())
+                            })
+                            .unwrap_or_default()
+                    } else {
+                        ws.settings
+                            .sidebar_layout
+                            .sections
+                            .iter()
+                            .find(|item| &item.id == section)
+                            .map(|item| item.title.clone())
+                            .unwrap_or_default()
+                    };
+                    let mut rename: String =
+                        ctx.data(|data| data.get_temp(rename_id).unwrap_or(current));
+                    ui.label(egui::RichText::new("Name").size(10.5).color(palette.muted));
+                    if ui
+                        .add(
+                            egui::TextEdit::singleline(&mut rename)
+                                .desired_width(f32::INFINITY)
+                                .text_color(palette.text),
+                        )
+                        .changed()
+                    {
+                        ctx.data_mut(|data| data.insert_temp(rename_id, rename.clone()));
+                    }
+                    if ui.button("Apply name").clicked() {
+                        if let Some(shortcut_id) = shortcut {
+                            commands.push(Command::RenameSidebarShortcut(
+                                section.clone(),
+                                shortcut_id.clone(),
+                                rename.clone(),
+                            ));
+                        } else {
+                            commands.push(Command::RenameSidebarSection(
+                                section.clone(),
+                                rename.clone(),
+                            ));
+                        }
+                        commands.push(Command::CloseSidebarMenu);
+                    }
+                    ui.separator();
+                    let hide_label = if shortcut.is_some() {
+                        "Hide / show shortcut"
+                    } else {
+                        "Hide / show section"
+                    };
+                    if menu_button(ui, hide_label, "", palette).clicked() {
+                        if let Some(shortcut_id) = shortcut {
+                            commands.push(Command::ToggleSidebarShortcutHidden(
+                                section.clone(),
+                                shortcut_id.clone(),
+                            ));
+                        } else if let Some(nav) = section.strip_prefix("nav:") {
+                            commands.push(Command::ToggleSidebarNav(nav.to_string()));
+                        } else {
+                            commands.push(Command::ToggleSidebarSectionHidden(section.clone()));
+                        }
+                        commands.push(Command::CloseSidebarMenu);
+                    }
+                    if let Some(shortcut_id) = shortcut
+                        && menu_button(ui, "Remove shortcut", "", palette).clicked()
+                    {
+                        commands.push(Command::RemoveSidebarShortcut(
+                            section.clone(),
+                            shortcut_id.clone(),
+                        ));
+                        commands.push(Command::CloseSidebarMenu);
+                    }
+                    if shortcut.is_none()
+                        && !section.starts_with("nav:")
+                        && menu_button(ui, "Remove section", "", palette).clicked()
+                    {
+                        commands.push(Command::RemoveSidebarSection(section.clone()));
+                        commands.push(Command::CloseSidebarMenu);
+                    }
                 }
             }
         });

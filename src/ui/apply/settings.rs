@@ -72,6 +72,114 @@ impl NotionApp {
             }
             Command::OpenSidebarMenu(menu) => self.sidebar_menu = Some(menu),
             Command::CloseSidebarMenu => self.sidebar_menu = None,
+            Command::AddSidebarShortcut(page_id, label) => {
+                self.workspace
+                    .settings
+                    .sidebar_layout
+                    .add_shortcut(&page_id, &label);
+            }
+            Command::AddSidebarSection(title, source) => {
+                self.workspace
+                    .settings
+                    .sidebar_layout
+                    .add_section(&title, source);
+            }
+            Command::ToggleSidebarSectionHidden(id) => {
+                if let Some(section) = self.workspace.settings.sidebar_layout.section_mut(&id) {
+                    section.hidden = !section.hidden;
+                }
+            }
+            Command::ToggleSidebarShortcutHidden(section_id, shortcut_id) => {
+                if let Some(section) = self
+                    .workspace
+                    .settings
+                    .sidebar_layout
+                    .section_mut(&section_id)
+                    && let Some(shortcut) = section
+                        .shortcuts
+                        .iter_mut()
+                        .find(|shortcut| shortcut.id == shortcut_id)
+                {
+                    shortcut.hidden = !shortcut.hidden;
+                }
+            }
+            Command::RemoveSidebarSection(id) => {
+                self.workspace
+                    .settings
+                    .sidebar_layout
+                    .sections
+                    .retain(|section| section.id != id);
+            }
+            Command::RemoveSidebarShortcut(section_id, shortcut_id) => {
+                if let Some(section) = self
+                    .workspace
+                    .settings
+                    .sidebar_layout
+                    .section_mut(&section_id)
+                {
+                    section
+                        .shortcuts
+                        .retain(|shortcut| shortcut.id != shortcut_id);
+                }
+            }
+            Command::RenameSidebarSection(id, title) => {
+                if let Some(section) = self.workspace.settings.sidebar_layout.section_mut(&id) {
+                    section.title = title;
+                }
+            }
+            Command::RenameSidebarShortcut(section_id, shortcut_id, title) => {
+                if let Some(section) = self
+                    .workspace
+                    .settings
+                    .sidebar_layout
+                    .section_mut(&section_id)
+                    && let Some(shortcut) = section
+                        .shortcuts
+                        .iter_mut()
+                        .find(|shortcut| shortcut.id == shortcut_id)
+                {
+                    shortcut.label = title;
+                }
+            }
+            Command::MoveSidebarSection(id, index) => {
+                let layout = &mut self.workspace.settings.sidebar_layout;
+                if let Some(position) = layout.sections.iter().position(|section| section.id == id)
+                {
+                    let section = layout.sections.remove(position);
+                    let target = index.min(layout.sections.len());
+                    layout.sections.insert(target, section);
+                }
+            }
+            Command::MoveSidebarShortcut(from, shortcut_id, to) => {
+                let layout = &mut self.workspace.settings.sidebar_layout;
+                let moved = layout.section_mut(&from).and_then(|section| {
+                    let index = section
+                        .shortcuts
+                        .iter()
+                        .position(|shortcut| shortcut.id == shortcut_id)?;
+                    Some(section.shortcuts.remove(index))
+                });
+                if let Some(shortcut) = moved
+                    && let Some(section) = layout.section_mut(&to)
+                {
+                    section.shortcuts.push(shortcut);
+                }
+            }
+            Command::SetSidebarShowExcluded(_) => {}
+            Command::ToggleSidebarNav(id) => match id.as_str() {
+                "library" => {
+                    self.workspace.settings.sidebar_library =
+                        !self.workspace.settings.sidebar_library;
+                }
+                "settings" => {
+                    self.workspace.settings.sidebar_settings =
+                        !self.workspace.settings.sidebar_settings;
+                }
+                "inbox" => {
+                    self.workspace.settings.sidebar_inbox = !self.workspace.settings.sidebar_inbox;
+                }
+                _ => {}
+            },
             Command::OpenAppMenu => {
                 let open = !self.app_menu_open;
                 self.close_overlays();

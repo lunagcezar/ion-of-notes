@@ -6,6 +6,21 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-062 customizable sidebar sections
+
+- Added a persisted `SidebarLayout` with Favorites, Private and any number of
+  custom sections (sidebar tabs) that own their shortcut sets.
+- Customize mode rows now expose settings and exclude actions on hover, plus
+  drag handles; sections can be reordered and shortcuts can move between
+  sections.
+- Rebuilt the Add shortcut menu with search, create actions, navigation rows
+  and a page list, and the Add section menu with search and
+  Pages/Chats/Meetings/Advanced choices.
+- Row settings supports rename, hide/show and remove; hidden rows and sections
+  stay in the layout and can be restored.
+- The normal sidebar renders the customized sections and shortcuts.
+- Added a sidebar-layout model test; suite: 267 tests.
+
 ### Changed - spec-059 app bar, app menu and sidebar animation
 
 - Split the title bar into a sidebar-width container (app menu, toggle,

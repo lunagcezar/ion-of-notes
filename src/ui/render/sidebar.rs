@@ -2,12 +2,12 @@
 //! the fixed bottom account / invite / customize group.
 
 use crate::i18n;
-use crate::model::Workspace;
+use crate::model::{SidebarSectionSource, Workspace};
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::super::commands::{Command, SidebarMenu};
 use super::super::icons::{
-    draw_chevron, draw_dots, draw_grid, draw_help, draw_inbox, draw_library, draw_page,
+    draw_chevron, draw_close, draw_dots, draw_grid, draw_help, draw_inbox, draw_library, draw_page,
     draw_page_icon, draw_person, draw_plus, draw_search, draw_settings, draw_sliders,
 };
 use super::super::palette::Palette;
@@ -53,21 +53,92 @@ fn customize_row(
     response
 }
 
-/// A section label with the drag handle shown while customizing.
-fn customize_section(ui: &mut egui::Ui, label: &str, palette: &Palette) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 24.0), Sense::hover());
+/// A customize-mode row with the settings and exclude actions on hover.
+#[allow(clippy::too_many_arguments)]
+fn customize_row_actions(
+    ui: &mut egui::Ui,
+    width: f32,
+    label: &str,
+    selected: bool,
+    palette: &Palette,
+    draw: fn(&egui::Painter, Rect, Color32),
+    section: &str,
+    shortcut: Option<&str>,
+    commands: &mut Vec<Command>,
+) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 30.0), Sense::click_and_drag());
+    let fill = if selected {
+        palette.selected
+    } else if response.hovered() {
+        palette.hover
+    } else {
+        Color32::TRANSPARENT
+    };
+    if fill != Color32::TRANSPARENT {
+        ui.painter().rect_filled(rect, CornerRadius::same(6), fill);
+    }
     draw_dots(
         ui.painter(),
-        Rect::from_min_size(rect.min + Vec2::new(4.0, 6.0), Vec2::splat(12.0)),
+        Rect::from_min_size(rect.min + Vec2::new(4.0, 9.0), Vec2::splat(12.0)),
+        palette.muted,
+    );
+    draw(
+        ui.painter(),
+        Rect::from_min_size(rect.min + Vec2::new(22.0, 7.0), Vec2::splat(16.0)),
         palette.muted,
     );
     ui.painter().text(
-        rect.min + Vec2::new(22.0, 12.0),
+        rect.min + Vec2::new(46.0, 15.0),
         Align2::LEFT_CENTER,
         label,
-        FontId::proportional(11.0),
-        palette.muted,
+        FontId::proportional(13.0),
+        palette.text,
     );
+    if response.hovered() {
+        let gear = Rect::from_center_size(
+            Pos2::new(rect.right() - 40.0, rect.center().y),
+            Vec2::splat(18.0),
+        );
+        let exclude = Rect::from_center_size(
+            Pos2::new(rect.right() - 18.0, rect.center().y),
+            Vec2::splat(18.0),
+        );
+        let gear_resp = ui.interact(
+            gear,
+            ui.scope_id().with(("sidebar_gear", section, shortcut)),
+            Sense::click(),
+        );
+        let exclude_resp = ui.interact(
+            exclude,
+            ui.scope_id().with(("sidebar_exclude", section, shortcut)),
+            Sense::click(),
+        );
+        draw_settings(ui.painter(), gear, palette.muted);
+        draw_close(ui.painter(), exclude, palette.muted);
+        if gear_resp.clicked() {
+            commands.push(Command::OpenSidebarMenu(SidebarMenu::RowSettings {
+                section: section.to_string(),
+                shortcut: shortcut.map(str::to_string),
+            }));
+        }
+        if exclude_resp.clicked() {
+            if let Some(shortcut) = shortcut {
+                if section == "favorites" {
+                    commands.push(Command::ToggleFavorite(shortcut.to_string()));
+                } else {
+                    commands.push(Command::ToggleSidebarShortcutHidden(
+                        section.to_string(),
+                        shortcut.to_string(),
+                    ));
+                }
+            } else if let Some(nav) = section.strip_prefix("nav:") {
+                commands.push(Command::ToggleSidebarNav(nav.to_string()));
+            } else {
+                commands.push(Command::ToggleSidebarSectionHidden(section.to_string()));
+            }
+        }
+    }
+    response
 }
 
 /// Allocate a sidebar row and paint its hover / selection background.
@@ -182,22 +253,24 @@ pub(crate) fn render_sidebar(
         .show(ui, |ui| {
             ui.set_width(width);
             if view.sidebar_customize {
-                // Edit mode replaces the normal navigation with handle rows
-                // and the Add shortcut / Add section menus (reference/
-                // customize-sidebar*.png, spec-057).
+                // Edit mode: every row has a handle, settings and exclude
+                // actions; sections can be reordered and extended (spec-062).
                 let home_id = ws
                     .pages
                     .iter()
                     .find(|page| page.title == "Home")
                     .or_else(|| ws.pages.first())
                     .map(|page| page.id.clone());
-                let home = customize_row(
+                let home = customize_row_actions(
                     ui,
                     width,
                     "Home",
                     home_id.as_deref() == Some(view.current_page.as_str()) && !view.library_open,
                     palette,
                     draw_page,
+                    "nav:home",
+                    None,
+                    commands,
                 );
                 let plus_rect =
                     Rect::from_min_size(home.rect.max - Vec2::new(30.0, 24.0), Vec2::splat(18.0));
@@ -218,40 +291,64 @@ pub(crate) fn render_sidebar(
                 {
                     commands.push(Command::SelectPage(id));
                 }
-                if customize_row(
+                if customize_row_actions(
                     ui,
                     width,
                     &i18n::t("library"),
                     view.library_open,
                     palette,
                     draw_library,
+                    "nav:library",
+                    None,
+                    commands,
                 )
                 .clicked()
                 {
                     commands.push(Command::OpenLibrary);
                 }
-                if customize_row(
+                if customize_row_actions(
                     ui,
                     width,
                     &i18n::t("settings"),
                     view.settings_open,
                     palette,
                     draw_settings,
+                    "nav:settings",
+                    None,
+                    commands,
                 )
                 .clicked()
                 {
                     commands.push(Command::OpenSettings);
                 }
+                if customize_row_actions(
+                    ui,
+                    width,
+                    &i18n::t("inbox"),
+                    view.inbox_open,
+                    palette,
+                    draw_inbox,
+                    "nav:inbox",
+                    None,
+                    commands,
+                )
+                .clicked()
+                {
+                    commands.push(Command::OpenInbox);
+                }
                 if let Some(page) = ws.page(&view.current_page)
                     && page.title != "Home"
                 {
-                    customize_row(
+                    customize_row_actions(
                         ui,
                         width,
                         &page.title,
                         !view.library_open,
                         palette,
                         draw_page,
+                        "nav:page",
+                        None,
+                        commands,
                     );
                 }
                 if customize_row(ui, width, "Add shortcut", false, palette, draw_plus).clicked() {
@@ -259,23 +356,131 @@ pub(crate) fn render_sidebar(
                 }
 
                 ui.add_space(18.0);
-                customize_section(ui, &i18n::t("favorites"), palette);
-                for page in ws.favorites() {
-                    if customize_row(
+                let drag_id = egui::Id::unique("sidebar_drag_section");
+                let drop_id = egui::Id::unique("sidebar_drop_section");
+                let shortcut_drag_id = egui::Id::unique("sidebar_drag_shortcut");
+                let shortcut_target_id = egui::Id::unique("sidebar_shortcut_target");
+                for (index, section) in view.sidebar_layout.sections.iter().enumerate() {
+                    let title = if section.hidden {
+                        format!("{} (hidden)", section.title)
+                    } else {
+                        section.title.clone()
+                    };
+                    let header = customize_row_actions(
                         ui,
                         width,
-                        &page.title,
-                        view.current_page == page.id && !view.library_open,
+                        &title,
+                        false,
                         palette,
                         draw_page,
-                    )
-                    .clicked()
-                    {
-                        commands.push(Command::SelectPage(page.id.clone()));
+                        &section.id,
+                        None,
+                        commands,
+                    );
+                    if header.drag_started() {
+                        ui.ctx().data_mut(|data| {
+                            data.insert_temp(drag_id, section.id.clone());
+                        });
+                    }
+                    if header.hovered() && ui.input(|i| i.pointer.primary_down()) {
+                        ui.ctx().data_mut(|data| {
+                            data.insert_temp(drop_id, index);
+                        });
+                        if let Some((_, _)) = ui
+                            .ctx()
+                            .data(|data| data.get_temp::<(String, String)>(shortcut_drag_id))
+                        {
+                            ui.ctx().data_mut(|data| {
+                                data.insert_temp(shortcut_target_id, section.id.clone());
+                            });
+                        }
+                    }
+                    if section.source == crate::model::SidebarSectionSource::Favorites {
+                        for page in ws.favorites() {
+                            if customize_row_actions(
+                                ui,
+                                width,
+                                &page.title,
+                                view.current_page == page.id && !view.library_open,
+                                palette,
+                                draw_page,
+                                "favorites",
+                                Some(&page.id),
+                                commands,
+                            )
+                            .clicked()
+                            {
+                                commands.push(Command::SelectPage(page.id.clone()));
+                            }
+                        }
+                    } else if section.source == crate::model::SidebarSectionSource::Custom {
+                        for shortcut in &section.shortcuts {
+                            let label = ws
+                                .page(&shortcut.page_id)
+                                .map(|page| page.title.clone())
+                                .unwrap_or_else(|| shortcut.label.clone());
+                            let row = customize_row_actions(
+                                ui,
+                                width,
+                                &label,
+                                !shortcut.hidden,
+                                palette,
+                                draw_page,
+                                &section.id,
+                                Some(&shortcut.id),
+                                commands,
+                            );
+                            if row.drag_started() {
+                                ui.ctx().data_mut(|data| {
+                                    data.insert_temp(
+                                        shortcut_drag_id,
+                                        (section.id.clone(), shortcut.id.clone()),
+                                    );
+                                });
+                            }
+                            if row.hovered() && ui.input(|i| i.pointer.primary_down()) {
+                                ui.ctx().data_mut(|data| {
+                                    data.insert_temp(shortcut_target_id, section.id.clone());
+                                });
+                            }
+                            if row.clicked()
+                                && let Some(page) = ws.page(&shortcut.page_id)
+                            {
+                                commands.push(Command::SelectPage(page.id.clone()));
+                            }
+                        }
                     }
                 }
                 if customize_row(ui, width, "Add section", false, palette, draw_plus).clicked() {
                     commands.push(Command::OpenSidebarMenu(SidebarMenu::Section));
+                }
+                if let Some(id) = ui.ctx().data(|data| data.get_temp::<String>(drag_id))
+                    && !ui.input(|i| i.pointer.primary_down())
+                {
+                    if let Some(target) = ui.ctx().data(|data| data.get_temp::<usize>(drop_id)) {
+                        commands.push(Command::MoveSidebarSection(id, target));
+                    }
+                    ui.ctx().data_mut(|data| {
+                        data.remove::<String>(drag_id);
+                        data.remove::<usize>(drop_id);
+                    });
+                }
+                if let Some((from, shortcut_id)) = ui
+                    .ctx()
+                    .data(|data| data.get_temp::<(String, String)>(shortcut_drag_id))
+                    && !ui.input(|i| i.pointer.primary_down())
+                {
+                    if let Some(target) = ui
+                        .ctx()
+                        .data(|data| data.get_temp::<String>(shortcut_target_id))
+                        && target != from
+                    {
+                        commands.push(Command::MoveSidebarShortcut(from, shortcut_id, target));
+                    }
+                    ui.ctx().data_mut(|data| {
+                        data.remove::<(String, String)>(shortcut_drag_id);
+                        data.remove::<String>(shortcut_target_id);
+                    });
                 }
             } else {
                 if ws.settings.sidebar_library
@@ -310,47 +515,106 @@ pub(crate) fn render_sidebar(
                     commands.push(Command::OpenInbox);
                 }
 
-                if ws.settings.sidebar_favorites {
-                    ui.add_space(18.0);
-                    section_label(ui, &i18n::t("favorites"), palette);
-                    let favorites = ws.favorites();
-                    if favorites.is_empty() {
-                        section_label(ui, &i18n::t("no_favorites"), palette);
-                    } else {
-                        for page in favorites {
-                            let selected = view.current_page == page.id && !view.library_open;
-                            let (rect, response) = nav_row_rect(ui, width, selected, palette);
-                            draw_page_icon(
-                                ui.painter(),
-                                Rect::from_min_size(
-                                    rect.min + Vec2::new(10.0, 7.0),
-                                    Vec2::splat(16.0),
-                                ),
-                                &page.icon,
-                                palette,
-                                false,
-                            );
-                            ui.painter().text(
-                                rect.min + Vec2::new(36.0, 15.0),
-                                Align2::LEFT_CENTER,
-                                &page.title,
-                                FontId::proportional(13.5),
-                                palette.text,
-                            );
-                            if response.clicked() {
-                                commands.push(Command::SelectPage(page.id.clone()));
+                for section in view.sidebar_layout.visible_sections() {
+                    match section.source {
+                        SidebarSectionSource::Favorites if ws.settings.sidebar_favorites => {
+                            ui.add_space(18.0);
+                            section_label(ui, &i18n::t("favorites"), palette);
+                            let favorites = ws.favorites();
+                            if favorites.is_empty() {
+                                section_label(ui, &i18n::t("no_favorites"), palette);
+                            } else {
+                                for page in favorites {
+                                    let selected =
+                                        view.current_page == page.id && !view.library_open;
+                                    let (rect, response) =
+                                        nav_row_rect(ui, width, selected, palette);
+                                    draw_page_icon(
+                                        ui.painter(),
+                                        Rect::from_min_size(
+                                            rect.min + Vec2::new(10.0, 7.0),
+                                            Vec2::splat(16.0),
+                                        ),
+                                        &page.icon,
+                                        palette,
+                                        false,
+                                    );
+                                    ui.painter().text(
+                                        rect.min + Vec2::new(36.0, 15.0),
+                                        Align2::LEFT_CENTER,
+                                        &page.title,
+                                        FontId::proportional(13.5),
+                                        palette.text,
+                                    );
+                                    if response.clicked() {
+                                        commands.push(Command::SelectPage(page.id.clone()));
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-
-                if ws.settings.sidebar_private {
-                    ui.add_space(18.0);
-                    section_label(ui, &i18n::t("private"), palette);
-                    render_tree(ui, ws, None, 0, width, view, palette, commands);
-                    if nav_row(ui, width, &i18n::t("new_page"), false, palette, draw_plus).clicked()
-                    {
-                        commands.push(Command::NewPage(None));
+                        SidebarSectionSource::Private if ws.settings.sidebar_private => {
+                            ui.add_space(18.0);
+                            section_label(ui, &i18n::t("private"), palette);
+                            render_tree(ui, ws, None, 0, width, view, palette, commands);
+                            if nav_row(ui, width, &i18n::t("new_page"), false, palette, draw_plus)
+                                .clicked()
+                            {
+                                commands.push(Command::NewPage(None));
+                            }
+                        }
+                        SidebarSectionSource::Custom => {
+                            ui.add_space(18.0);
+                            let title = if section.title.trim().is_empty() {
+                                "Shortcuts"
+                            } else {
+                                &section.title
+                            };
+                            section_label(ui, title, palette);
+                            for shortcut in
+                                section.shortcuts.iter().filter(|shortcut| !shortcut.hidden)
+                            {
+                                let (rect, response) =
+                                    ui.allocate_exact_size(Vec2::new(width, 28.0), Sense::click());
+                                if response.hovered() {
+                                    ui.painter().rect_filled(
+                                        rect,
+                                        CornerRadius::same(6),
+                                        palette.hover,
+                                    );
+                                }
+                                if let Some(page) = ws.page(&shortcut.page_id) {
+                                    draw_page_icon(
+                                        ui.painter(),
+                                        Rect::from_min_size(
+                                            rect.min + Vec2::new(10.0, 6.0),
+                                            Vec2::splat(16.0),
+                                        ),
+                                        &page.icon,
+                                        palette,
+                                        false,
+                                    );
+                                    ui.painter().text(
+                                        rect.min + Vec2::new(36.0, 14.0),
+                                        Align2::LEFT_CENTER,
+                                        &page.title,
+                                        FontId::proportional(13.0),
+                                        palette.text,
+                                    );
+                                    if response.clicked() {
+                                        commands.push(Command::SelectPage(page.id.clone()));
+                                    }
+                                } else {
+                                    ui.painter().text(
+                                        rect.min + Vec2::new(36.0, 14.0),
+                                        Align2::LEFT_CENTER,
+                                        &shortcut.label,
+                                        FontId::proportional(13.0),
+                                        palette.text,
+                                    );
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 }
             }

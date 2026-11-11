@@ -59,6 +59,7 @@ pub(super) struct ViewState {
     pub(super) slash_dismissed: Option<String>,
     pub(super) sidebar_customize: bool,
     pub(super) sidebar_menu: Option<SidebarMenu>,
+    pub(super) sidebar_layout: crate::model::SidebarLayout,
     pub(super) new_tab_open: bool,
     pub(super) new_tab_query: String,
     pub(super) new_tab_selected: usize,

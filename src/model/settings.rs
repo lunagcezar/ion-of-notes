@@ -33,6 +33,124 @@ pub enum TimeFormat {
     Hour12,
 }
 
+/// How a sidebar section gets its contents.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum SidebarSectionSource {
+    #[default]
+    Custom,
+    Favorites,
+    Private,
+}
+
+/// One shortcut inside a custom sidebar section.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SidebarShortcut {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub page_id: String,
+    #[serde(default)]
+    pub label: String,
+    #[serde(default)]
+    pub hidden: bool,
+}
+
+/// One sidebar section (a tab with its own shortcut set).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SidebarSection {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub source: SidebarSectionSource,
+    #[serde(default)]
+    pub shortcuts: Vec<SidebarShortcut>,
+    #[serde(default)]
+    pub hidden: bool,
+}
+
+/// The persisted sidebar layout.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SidebarLayout {
+    #[serde(default)]
+    pub sections: Vec<SidebarSection>,
+}
+
+impl Default for SidebarLayout {
+    fn default() -> Self {
+        Self {
+            sections: vec![
+                SidebarSection {
+                    id: "favorites".to_string(),
+                    title: "Favorites".to_string(),
+                    source: SidebarSectionSource::Favorites,
+                    shortcuts: Vec::new(),
+                    hidden: false,
+                },
+                SidebarSection {
+                    id: "private".to_string(),
+                    title: "Private".to_string(),
+                    source: SidebarSectionSource::Private,
+                    shortcuts: Vec::new(),
+                    hidden: false,
+                },
+            ],
+        }
+    }
+}
+
+impl SidebarLayout {
+    pub fn visible_sections(&self) -> impl Iterator<Item = &SidebarSection> {
+        self.sections.iter().filter(|section| !section.hidden)
+    }
+
+    pub fn section_mut(&mut self, id: &str) -> Option<&mut SidebarSection> {
+        self.sections.iter_mut().find(|section| section.id == id)
+    }
+
+    /// Add a shortcut to the first custom section, creating a Shortcuts
+    /// section when none exists yet.
+    pub fn add_shortcut(&mut self, page_id: &str, label: &str) {
+        let index = self
+            .sections
+            .iter()
+            .position(|section| section.source == SidebarSectionSource::Custom);
+        let index = index.unwrap_or_else(|| {
+            self.sections.push(SidebarSection {
+                id: "shortcuts".to_string(),
+                title: "Shortcuts".to_string(),
+                source: SidebarSectionSource::Custom,
+                shortcuts: Vec::new(),
+                hidden: false,
+            });
+            self.sections.len() - 1
+        });
+        let section = &mut self.sections[index];
+        if section.shortcuts.iter().any(|item| item.page_id == page_id) {
+            return;
+        }
+        section.shortcuts.push(SidebarShortcut {
+            id: format!("{page_id}-{}", section.shortcuts.len()),
+            page_id: page_id.to_string(),
+            label: label.to_string(),
+            hidden: false,
+        });
+    }
+
+    pub fn add_section(&mut self, title: &str, source: SidebarSectionSource) {
+        let id = format!("section-{}", self.sections.len());
+        self.sections.push(SidebarSection {
+            id,
+            title: title.to_string(),
+            source,
+            shortcuts: Vec::new(),
+            hidden: false,
+        });
+    }
+}
+
 /// Settings shown in the General / Sidebar / People / Offline pages.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkspaceSettings {
@@ -78,6 +196,8 @@ pub struct WorkspaceSettings {
     pub number_format: NumberFormat,
     #[serde(default)]
     pub time_format: TimeFormat,
+    #[serde(default)]
+    pub sidebar_layout: SidebarLayout,
 }
 
 impl Default for WorkspaceSettings {
@@ -104,6 +224,7 @@ impl Default for WorkspaceSettings {
             hover_cards: true,
             number_format: NumberFormat::Automatic,
             time_format: TimeFormat::Hour24,
+            sidebar_layout: SidebarLayout::default(),
         }
     }
 }

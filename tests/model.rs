@@ -1,6 +1,9 @@
 //! Tests for the pure workspace data model (public API only).
 
-use ion_of_notes::model::{Block, BlockKind, Comment, Page, PageDiff, Workspace, WorkspaceError};
+use ion_of_notes::model::{
+    Block, BlockKind, Comment, Page, PageDiff, SidebarLayout, SidebarSectionSource, Workspace,
+    WorkspaceError,
+};
 
 fn block(id: &str, kind: BlockKind, text: &str) -> Block {
     Block::new(id, kind, text)
@@ -315,4 +318,40 @@ fn block_kind_labels_are_unique() {
     let unique: std::collections::HashSet<&str> = labels.iter().copied().collect();
     assert_eq!(labels.len(), unique.len());
     assert_eq!(BlockKind::Divider.label(), "Divider");
+}
+
+#[test]
+fn sidebar_layout_starts_with_favorites_and_private_and_accepts_shortcuts() {
+    let mut layout = SidebarLayout::default();
+    assert_eq!(layout.visible_sections().count(), 2);
+    assert!(
+        layout
+            .sections
+            .iter()
+            .any(|section| section.title == "Favorites")
+    );
+    assert!(
+        layout
+            .sections
+            .iter()
+            .any(|section| section.title == "Private")
+    );
+
+    layout.add_shortcut("p-home", "Home");
+    layout.add_shortcut("p-home", "Home");
+    let custom = layout
+        .sections
+        .iter()
+        .find(|section| section.source == SidebarSectionSource::Custom)
+        .expect("a custom section is created");
+    assert_eq!(custom.shortcuts.len(), 1);
+    assert_eq!(custom.shortcuts[0].page_id, "p-home");
+
+    layout.add_section("Reading", SidebarSectionSource::Custom);
+    assert!(
+        layout
+            .sections
+            .iter()
+            .any(|section| section.title == "Reading")
+    );
 }
