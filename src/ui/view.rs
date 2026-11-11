@@ -64,6 +64,7 @@ pub(super) struct ViewState {
     pub(super) ai_error: Option<String>,
     pub(super) ai_busy: bool,
     pub(super) ai_status: String,
+    pub(super) ai_checking: bool,
     pub(super) ai_connected: bool,
     pub(super) ai_endpoint: String,
     pub(super) ai_model: String,

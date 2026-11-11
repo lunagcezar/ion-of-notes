@@ -14,6 +14,10 @@ use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, V
 use super::app::{Command, IconTab, ViewState};
 use super::icon_catalog::{EMOJI, Emoji, ICONS, IconGlyph, catalog_matches};
 use super::palette::Palette;
+use std::sync::Arc;
+
+const ICON_COLUMNS: usize = 9;
+const ICON_ROW_HEIGHT: f32 = 32.0;
 
 fn filtered_emoji(query: &str) -> Vec<&'static Emoji> {
     EMOJI
@@ -27,6 +31,34 @@ fn filtered_icons(query: &str) -> Vec<&'static IconGlyph> {
         .iter()
         .filter(|entry| catalog_matches(entry.name, "", query))
         .collect()
+}
+
+/// Filtered catalog indices cached per tab and query. The grid only paints the
+/// visible rows, so a large catalog no longer costs one widget per entry on
+/// every frame (spec-060).
+fn cached_indices(ctx: &egui::Context, tab: IconTab, query: &str) -> Arc<Vec<usize>> {
+    let id = egui::Id::unique(("icon_picker_indices", tab, query));
+    if let Some(cached) = ctx.data(|data| data.get_temp::<Arc<Vec<usize>>>(id)) {
+        return cached;
+    }
+    let indices: Vec<usize> = match tab {
+        IconTab::Emoji => EMOJI
+            .iter()
+            .enumerate()
+            .filter(|(_, entry)| catalog_matches(entry.name, entry.keywords, query))
+            .map(|(index, _)| index)
+            .collect(),
+        IconTab::Icons => ICONS
+            .iter()
+            .enumerate()
+            .filter(|(_, entry)| catalog_matches(entry.name, "", query))
+            .map(|(index, _)| index)
+            .collect(),
+        IconTab::Upload => Vec::new(),
+    };
+    let cached = Arc::new(indices);
+    ctx.data_mut(|data| data.insert_temp(id, Arc::clone(&cached)));
+    cached
 }
 
 /// One selectable emoji in the grid.
@@ -260,61 +292,43 @@ pub(super) fn render_icon_picker(
                 }
                 IconTab::Emoji | IconTab::Icons => {
                     let query = view.icon_picker_query.trim();
-                    if view.icon_picker_tab == IconTab::Emoji {
-                        let entries = filtered_emoji(query);
-                        if entries.is_empty() {
-                            ui.label(
-                                egui::RichText::new(format!("No emoji match “{query}”"))
-                                    .size(12.0)
-                                    .color(palette.muted),
-                            );
+                    let indices = cached_indices(ctx, view.icon_picker_tab, query);
+                    if indices.is_empty() {
+                        let label = if view.icon_picker_tab == IconTab::Emoji {
+                            format!("No emoji match “{query}”")
                         } else {
-                            egui::ScrollArea::vertical()
-                                .auto_shrink([false, false])
-                                .show(ui, |ui| {
-                                    egui::Grid::new("icon_picker_emoji_grid")
-                                        .num_columns(9)
-                                        .spacing(Vec2::splat(2.0))
-                                        .show(ui, |ui| {
-                                            for (index, entry) in entries.iter().enumerate() {
+                            format!("No icons match “{query}”")
+                        };
+                        ui.label(egui::RichText::new(label).size(12.0).color(palette.muted));
+                    } else {
+                        let rows = indices.len().div_ceil(ICON_COLUMNS);
+                        egui::ScrollArea::vertical()
+                            .auto_shrink([false, false])
+                            .show_rows(ui, ICON_ROW_HEIGHT, rows, |ui, range| {
+                                for row in range {
+                                    ui.horizontal(|ui| {
+                                        ui.spacing_mut().item_spacing = Vec2::splat(2.0);
+                                        for column in 0..ICON_COLUMNS {
+                                            let slot = row * ICON_COLUMNS + column;
+                                            let Some(&index) = indices.get(slot) else {
+                                                break;
+                                            };
+                                            if view.icon_picker_tab == IconTab::Emoji {
+                                                let entry = &EMOJI[index];
                                                 let selected = view.page_icon == entry.glyph;
                                                 emoji_button(
                                                     ui, entry, selected, palette, commands,
                                                 );
-                                                if (index + 1) % 9 == 0 {
-                                                    ui.end_row();
-                                                }
-                                            }
-                                        });
-                                });
-                        }
-                    } else {
-                        let entries = filtered_icons(query);
-                        if entries.is_empty() {
-                            ui.label(
-                                egui::RichText::new(format!("No icons match “{query}”"))
-                                    .size(12.0)
-                                    .color(palette.muted),
-                            );
-                        } else {
-                            egui::ScrollArea::vertical()
-                                .auto_shrink([false, false])
-                                .show(ui, |ui| {
-                                    egui::Grid::new("icon_picker_shape_grid")
-                                        .num_columns(9)
-                                        .spacing(Vec2::splat(2.0))
-                                        .show(ui, |ui| {
-                                            for (index, entry) in entries.iter().enumerate() {
+                                            } else {
+                                                let entry = &ICONS[index];
                                                 let selected = view.page_icon
                                                     == format!("shape:{}", entry.name);
                                                 icon_button(ui, entry, selected, palette, commands);
-                                                if (index + 1) % 9 == 0 {
-                                                    ui.end_row();
-                                                }
                                             }
-                                        });
-                                });
-                        }
+                                        }
+                                    });
+                                }
+                            });
                     }
                 }
             }

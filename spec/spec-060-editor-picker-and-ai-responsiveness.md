@@ -1,6 +1,6 @@
 # spec-060 - Editor, picker and AI responsiveness
 
-- Status: plan (2026-11-11)
+- Status: implemented (2026-11-11)
 - Related: `spec-013`, `spec-017`, `spec-040`, `spec-043`, `spec-057`
 - Reference: `reference/block-type.png`, `reference/customize-sidebar.png`
 - Runtime: local desktop window, optional Ollama service or CLI
@@ -146,12 +146,12 @@ ignored while one is in flight.
 
 ## Plan / tasks
 
-- [ ] Drag state machine and release-based drop/cancel with tests.
-- [ ] Picker cache and virtualized grid.
-- [ ] Centering helper and unified book artwork.
-- [ ] Async AI runner, startup/refresh states and watchdog.
-- [ ] Preview states and screenshots.
-- [ ] Full gate and changelog.
+- [x] Drag state machine and release-based drop/cancel with tests.
+- [x] Picker cache and virtualized grid.
+- [x] Centering helper and unified book artwork.
+- [x] Async AI runner, startup/refresh states and watchdog.
+- [x] Preview states and screenshots.
+- [x] Full gate and changelog.
 
 ## Decisions and open questions
 

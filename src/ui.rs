@@ -32,6 +32,7 @@ pub use app::NotionApp;
 pub use crdt::CrdtSession;
 pub use edit_queue::{CommitPlan, PendingEdits, execute_plan, plan_for};
 pub use icon_catalog::{EMOJI, ICONS, catalog_matches};
+pub use icons::glyph_visual_offset;
 pub use invite::{is_valid_email, member_name_from_email, parse_invite_emails};
 pub use library_filter::pages_for_view;
 pub use palette::{

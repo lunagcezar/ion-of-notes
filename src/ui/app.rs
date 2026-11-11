@@ -98,6 +98,8 @@ pub struct NotionApp {
     // AI assistant.
     pub(super) ai_config: OllamaConfig,
     pub(super) ai_status: OllamaStatus,
+    pub(super) ai_checking: bool,
+    pub(super) ai_status_slot: Arc<Mutex<Option<OllamaStatus>>>,
     pub(super) ai_query: String,
     pub(super) ai_answer: Option<String>,
     pub(super) ai_error: Option<String>,
@@ -268,7 +270,18 @@ impl NotionApp {
             Vec::new()
         };
         let ai_config = OllamaConfig::from_env();
-        let ai_status = ollama::detect(&ai_config);
+        let ai_status = OllamaStatus::Unavailable;
+        let ai_status_slot = Arc::new(Mutex::new(None));
+        {
+            let config = ai_config.clone();
+            let slot = Arc::clone(&ai_status_slot);
+            std::thread::spawn(move || {
+                let status = ollama::detect(&config);
+                if let Ok(mut guard) = slot.lock() {
+                    *guard = Some(status);
+                }
+            });
+        }
         let onboarding_open = demo == "onboarding"
             || demo == "new-workspace"
             || (workspace.pages.is_empty() && !workspace.settings.onboarding_completed);
@@ -375,6 +388,8 @@ impl NotionApp {
             new_tab_selected: 0,
             ai_config,
             ai_status,
+            ai_checking: true,
+            ai_status_slot,
             ai_query: String::new(),
             ai_answer: None,
             ai_error: if demo == "ai-error" {
@@ -446,6 +461,11 @@ impl eframe::App for NotionApp {
         self.poll_ai();
         self.poll_server();
         self.sync_crdt();
+        // Reset the per-frame "pointer is over a block" flag used by the
+        // release-based drag drop (spec-060).
+        ctx.data_mut(|data| {
+            data.insert_temp(egui::Id::unique("block_drag_over"), false);
+        });
 
         // Snapshot before rendering: text edits mutate `workspace` directly, so
         // this is the state an Undo would restore.
@@ -547,6 +567,19 @@ impl eframe::App for NotionApp {
                 .show(ui, |ui| {
                     render_content(ui, workspace_mut, &view, &palette, &mut commands);
                 });
+        }
+
+        // A block drag ends on pointer release anywhere, not only over the
+        // six-dot handle. Releasing outside a block cancels the move.
+        if self.drag_from.is_some() && !ctx.input(|i| i.pointer.primary_down()) {
+            let over = ctx
+                .data(|data| data.get_temp::<bool>(egui::Id::unique("block_drag_over")))
+                .unwrap_or(false);
+            commands.push(if over {
+                Command::DropBlock
+            } else {
+                Command::CancelBlockDrag
+            });
         }
 
         if view.search_open {

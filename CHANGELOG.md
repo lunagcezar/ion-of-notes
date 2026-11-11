@@ -6,6 +6,20 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-060 editor, picker and AI responsiveness
+
+- Block drag now drops on pointer release anywhere in the editor and cancels
+  when released outside a block; the ghost and insertion marker always clear.
+- The page-icon picker virtualizes its emoji/icon grid and caches filtered
+  indices per tab and query, so only visible rows are built each frame.
+- Page icon glyphs are centered by their laid-out galley with a proportional
+  optical lift; the default/book icon now draws the book shape at small sizes
+  in the sidebar, tabs and breadcrumbs.
+- Ollama detection now runs on a worker thread at startup and on Refresh, with
+  a visible "Checking…" state; generation keeps the 20-second watchdog and the
+  window stays responsive.
+- Added a glyph-offset regression test; suite: 263 tests.
+
 ### Changed - spec-057 UI quality and interaction fidelity
 
 - Fixed the sidebar's uneven right padding and the settings rail/content

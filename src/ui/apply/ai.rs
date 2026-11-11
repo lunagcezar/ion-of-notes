@@ -46,7 +46,15 @@ impl NotionApp {
             Command::SetAiModel(model) => self.ai_config.model = model,
             Command::ToggleAiCli => self.ai_config.prefer_cli = !self.ai_config.prefer_cli,
             Command::RefreshAiStatus => {
-                self.ai_status = ollama::detect(&self.ai_config);
+                self.ai_checking = true;
+                let config = self.ai_config.clone();
+                let slot = Arc::clone(&self.ai_status_slot);
+                std::thread::spawn(move || {
+                    let status = ollama::detect(&config);
+                    if let Ok(mut guard) = slot.lock() {
+                        *guard = Some(status);
+                    }
+                });
             }
             other => debug_assert!(false, "unexpected ai command: {other:?}"),
         }

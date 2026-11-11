@@ -10,7 +10,7 @@ use crate::model::{BlockKind, Workspace};
 use egui::Pos2;
 
 /// Tabs of the page-icon picker (spec-013).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum IconTab {
     Emoji,
     Icons,
@@ -139,6 +139,7 @@ pub(super) enum Command {
     StartBlockDrag(String),
     HoverBlockDrag(String),
     DropBlock,
+    CancelBlockDrag,
     /// Page-level text selection across blocks (Ctrl+A, Ctrl+C, drag).
     SelectAllBlocks,
     CopyBlockSelection,
@@ -368,6 +369,7 @@ impl Command {
             | Command::StartBlockDrag(_)
             | Command::HoverBlockDrag(_)
             | Command::DropBlock
+            | Command::CancelBlockDrag
             | Command::SelectAllBlocks
             | Command::CopyBlockSelection
             | Command::ExtendBlockSelection(_)

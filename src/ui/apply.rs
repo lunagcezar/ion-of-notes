@@ -112,6 +112,7 @@ impl NotionApp {
             ai_error: self.ai_error.clone(),
             ai_busy: self.ai_busy,
             ai_status: self.ai_status.label(),
+            ai_checking: self.ai_checking,
             ai_connected: self.ai_status.connected(),
             ai_endpoint: self.ai_config.endpoint.clone(),
             ai_model: self.ai_config.model.clone(),
@@ -190,6 +191,15 @@ impl NotionApp {
     }
 
     pub(super) fn poll_ai(&mut self) {
+        if let Some(status) = self
+            .ai_status_slot
+            .lock()
+            .ok()
+            .and_then(|mut guard| guard.take())
+        {
+            self.ai_status = status;
+            self.ai_checking = false;
+        }
         if !self.ai_busy {
             return;
         }

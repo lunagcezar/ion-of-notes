@@ -108,6 +108,10 @@ impl NotionApp {
                     page.blocks.insert(target.min(page.blocks.len()), block);
                 }
             }
+            Command::CancelBlockDrag => {
+                self.drag_from = None;
+                self.drag_to = None;
+            }
             Command::DeleteBlock(block_id) => {
                 if let Some(page) = self.current_page_mut() {
                     page.blocks.retain(|b| b.id != block_id);

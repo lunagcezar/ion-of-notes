@@ -492,6 +492,12 @@ pub(super) fn draw_bullet_dot(painter: &egui::Painter, rect: Rect, color: Color3
     painter.circle_filled(rect.center(), 3.0, color);
 }
 
+/// Optical lift applied to text glyphs so their ink, not the font box, sits in
+/// the center of the icon well.
+pub fn glyph_visual_offset(font_size: f32) -> f32 {
+    font_size * 0.08
+}
+
 /// Draw the icon that identifies a page (spec-013).
 ///
 /// An empty icon (or the literal `"book"`) is the default: the original
@@ -508,11 +514,7 @@ pub(super) fn draw_page_icon(
     large: bool,
 ) {
     if icon.is_empty() || icon == "book" {
-        if large {
-            draw_book(painter, rect);
-        } else {
-            draw_page(painter, rect, palette.muted);
-        }
+        draw_book(painter, rect.shrink(if large { 0.0 } else { 1.0 }));
         return;
     }
     if large {
@@ -535,13 +537,15 @@ pub(super) fn draw_page_icon(
     } else {
         icon
     };
-    // Emoji and symbol fonts sit slightly below the geometric center; a small
-    // optical lift keeps the glyph centered in the icon well.
-    painter.text(
-        rect.center() - Vec2::new(0.0, rect.height() * 0.03),
-        egui::Align2::CENTER_CENTER,
-        label,
-        egui::FontId::proportional(rect.height() * if large { 0.60 } else { 0.72 }),
+    // Emoji and symbol fonts sit slightly below the geometric center; center
+    // the laid-out galley and apply a small optical lift so the ink, not the
+    // font box, is centered in the icon well.
+    let size = rect.height() * if large { 0.60 } else { 0.72 };
+    let galley = painter.layout_no_wrap(
+        label.to_string(),
+        egui::FontId::proportional(size),
         palette.text,
     );
+    let pos = rect.center() - galley.size() / 2.0 - Vec2::new(0.0, glyph_visual_offset(size));
+    painter.galley(pos, galley, palette.text);
 }

@@ -8,7 +8,7 @@ use ion_of_notes::ui::{
     is_valid_email, member_name_from_email, pages_for_view, parse_invite_emails, plan_for,
     rows_for, section_matches, settings_matches, status_color, visible_rows,
 };
-use ion_of_notes::ui::{EMOJI, ICONS, catalog_matches};
+use ion_of_notes::ui::{EMOJI, ICONS, catalog_matches, glyph_visual_offset};
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
@@ -43,6 +43,13 @@ fn emoji_and_icon_catalogs_search_by_name_and_keywords() {
     assert!(catalog_matches("star", "", "STAR"));
     assert!(!catalog_matches("rocket", "space launch", "banana"));
     assert!(catalog_matches("rocket", "space launch", "  "));
+}
+
+#[test]
+fn glyphs_are_lifted_in_proportion_to_their_font_size() {
+    assert!(glyph_visual_offset(20.0) > 0.0);
+    assert!(glyph_visual_offset(40.0) > glyph_visual_offset(20.0));
+    assert_eq!(glyph_visual_offset(0.0), 0.0);
 }
 
 #[test]

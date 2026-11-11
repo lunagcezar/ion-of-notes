@@ -22,16 +22,22 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
         }
         match row.id {
             "connection" => {
+                let checking = view.ai_checking;
+                let label = if checking {
+                    "Checking…".to_string()
+                } else {
+                    view.ai_status.clone()
+                };
                 ui.horizontal(|ui| {
-                    let dot_color = if view.ai_connected {
+                    let dot_color = if view.ai_connected && !checking {
                         palette.accent
                     } else {
                         palette.muted
                     };
                     let (dot, _) = ui.allocate_exact_size(Vec2::splat(10.0), Sense::hover());
                     ui.painter().circle_filled(dot.center(), 4.0, dot_color);
-                    ui.label(egui::RichText::new(&view.ai_status).size(12.0).color(
-                        if view.ai_connected {
+                    ui.label(egui::RichText::new(label).size(12.0).color(
+                        if view.ai_connected && !checking {
                             palette.text
                         } else {
                             palette.muted

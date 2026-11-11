@@ -65,6 +65,9 @@ pub(super) fn render_block(
         && let Some(p) = ui.ctx().pointer_interact_pos()
         && row_rect.contains(p)
     {
+        ui.ctx().data_mut(|data| {
+            data.insert_temp(egui::Id::unique("block_drag_over"), true);
+        });
         commands.push(Command::HoverBlockDrag(block.id.clone()));
     }
     if view.drag_to.as_deref() == Some(block.id.as_str()) {
@@ -125,9 +128,6 @@ pub(super) fn render_block(
             }
             if handle.drag_started() {
                 commands.push(Command::StartBlockDrag(block.id.clone()));
-            }
-            if handle.drag_stopped() {
-                commands.push(Command::DropBlock);
             }
         }
 
