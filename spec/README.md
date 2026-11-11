@@ -95,7 +95,7 @@ Status vocabulary:
 | [055](spec-055-remote-mode-ux.md) | Remote-mode UX | implemented | Remembered session, background connect, startup restore |
 | [056](spec-056-production-compose-and-tls.md) | Production Compose and TLS manifest | implemented | Caddy TLS stack, local TLS test, optional backup profile |
 | [057](spec-057-ui-quality-and-interaction-fidelity.md) | UI quality and interaction fidelity | implemented | Phased layout, editor, icon, sidebar/workspace and settings fixes |
-| [058](spec-058-multi-workspace-persistence.md) | Multi-workspace persistence | implemented (desktop catalog) | Catalog, JSON/SQLite, API, switcher, create/rename/delete/switch |
+| [058](spec-058-multi-workspace-persistence.md) | Multi-workspace persistence | implemented (desktop catalog) | Desktop catalog, JSON migration, switcher, create/rename/delete/switch |
 | [059](spec-059-app-bar-app-menu-and-sidebar-animation.md) | App bar, app menu and sidebar animation | implemented | Sidebar-width container, notification/compose, sectioned menu, animated sidebar |
 | [060](spec-060-editor-picker-and-ai-responsiveness.md) | Editor, picker and AI responsiveness | implemented | Release-based drop, virtualized emoji grid, centered icons, async AI |
 | [061](spec-061-settings-polish-and-number-time-formats.md) | Settings polish and number/time formats | implemented | Close/rail/scrollbar padding, working number and time formats |
