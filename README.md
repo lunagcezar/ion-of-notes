@@ -140,30 +140,35 @@ feature.
 ### Docker Compose
 
 ```sh
-cp .env.example .env
-# edit .env and set a strong ION_OF_NOTES_OWNER_PASSWORD
+cp secrets/owner_password.txt.example secrets/owner_password.txt
+# edit secrets/owner_password.txt and set a strong password
 docker compose up --build
 curl http://127.0.0.1:8787/health
+curl http://127.0.0.1:8787/ready
 ```
 
 The `ion-data` volume (Docker name `ion-of-notes-data`) keeps the SQLite
 workspace and collaboration state across container recreation.
-`docker compose down` keeps the volume; add `-v` to remove it. Compose refuses to start while `ION_OF_NOTES_OWNER_PASSWORD` is
-unset. The container runs as a non-root user, binds to loopback by default,
-uses a read-only root filesystem, drops capabilities, rotates logs and uses the
-image healthcheck. See [`docs/deployment.md`](docs/deployment.md) for TLS,
-backups/restore, secrets, upgrades and multi-arch builds.
+`docker compose down` keeps the volume; add `-v` to remove it. The owner
+password is mounted as a Docker secret, not exposed in the environment. The
+container runs as a non-root user, binds to loopback by default, uses a
+read-only root filesystem, drops capabilities, rotates logs and uses the image
+healthcheck. See [`docs/deployment.md`](docs/deployment.md) for TLS,
+backups/restore, secrets, readiness/metrics, upgrades and multi-arch builds.
 
-Health check:
+Health and readiness:
 
 ```sh
 curl http://127.0.0.1:8787/health
+curl http://127.0.0.1:8787/ready
+curl http://127.0.0.1:8787/metrics
 ```
 
 ### First SQLite run and the owner account
 
 The first SQLite run seeds the owner account from
-`ION_OF_NOTES_OWNER_PASSWORD`:
+`ION_OF_NOTES_OWNER_PASSWORD_FILE` (Docker secret) or
+`ION_OF_NOTES_OWNER_PASSWORD` (environment fallback):
 
 ```sh
 # PowerShell
@@ -254,7 +259,9 @@ successful login; the session token is not persisted across restarts.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ION_OF_NOTES_OWNER_PASSWORD` | `change-me-now` | Password for the seeded owner on the first SQLite run |
+| `ION_OF_NOTES_OWNER_PASSWORD` | `change-me-now` | Password for the seeded owner on the first SQLite run (environment fallback) |
+| `ION_OF_NOTES_OWNER_PASSWORD_FILE` | unset | File containing the owner password; used by Compose secrets |
+| `ION_OF_NOTES_BIND` | `127.0.0.1` | Host bind address published by `compose.yml` |
 | `ION_OF_NOTES_PORT` | `8787` | Host port published by `compose.yml` |
 | `ION_OF_NOTES_SHOW` | unset | Open one pictured UI state for screenshots |
 | `ION_OF_NOTES_LOCALE` | `en` | Initial locale (`en`, `pt-BR`, `eo`) |
@@ -280,7 +287,7 @@ Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
 
 ```sh
 cargo build
-# 229 core tests without eframe/egui/wgpu
+# 232 core tests without eframe/egui/wgpu
 cargo test --all-targets --no-default-features
 # 26 desktop tests with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
@@ -341,7 +348,7 @@ src/
   screenshot.rs    PNG output (desktop feature)
   cli.rs           argument parsing
   i18n.rs          locale switching
-tests/             one integration-test crate per module (255 tests)
+tests/             one integration-test crate per module (258 tests)
 Dockerfile         multi-stage server-only image
 compose.yml        self-hosted server stack with the ion-data volume
 .env.example       Compose password, bind and port template
@@ -438,4 +445,5 @@ security posture.
 This is a self-hosted project under active development. Do not expose the server
 directly to the public internet without TLS termination, a reverse proxy,
 backups and a security review. The development owner password must not be used
-in production; set `ION_OF_NOTES_OWNER_PASSWORD` before the first SQLite run.
+in production; set `secrets/owner_password.txt` (or
+`ION_OF_NOTES_OWNER_PASSWORD`) before the first SQLite run.

@@ -73,6 +73,34 @@ async fn health_route_works_through_axum() {
 }
 
 #[tokio::test]
+async fn ready_route_reports_ready() {
+    let app = router(server());
+    let (status, headers, body) = send(&app, request("GET", "/ready", None)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        header(&headers, "content-type"),
+        "application/json; charset=utf-8"
+    );
+    let envelope: Envelope<String> = serde_json::from_str(&body).unwrap();
+    assert_eq!(envelope.data.unwrap(), "ready");
+}
+
+#[tokio::test]
+async fn metrics_route_exposes_prometheus_text() {
+    let app = router(server());
+    let _ = send(&app, request("GET", "/api/pages", None)).await;
+    let (status, headers, body) = send(&app, request("GET", "/metrics", None)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        header(&headers, "content-type"),
+        "text/plain; version=0.0.4"
+    );
+    assert!(body.contains("ion_of_notes_up 1"));
+    assert!(body.contains("ion_of_notes_uptime_seconds"));
+    assert!(body.contains("ion_of_notes_http_requests_total 1"));
+}
+
+#[tokio::test]
 async fn v1_pages_route_works_through_axum() {
     let app = router(server());
     let (status, _, body) = send(&app, request("GET", "/api/pages", None)).await;

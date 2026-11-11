@@ -24,7 +24,9 @@ use axum::routing::get;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use tokio::sync::broadcast;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
@@ -36,6 +38,8 @@ const MAX_BODY_BYTES: usize = 2 * 1024 * 1024;
 #[derive(Clone)]
 struct AppState {
     server: Arc<Mutex<WorkspaceServer>>,
+    started: Instant,
+    requests: Arc<AtomicU64>,
 }
 
 /// Build the Axum router around one server instance.
@@ -49,13 +53,64 @@ pub fn router(server: WorkspaceServer) -> Router {
 
 /// Build the router around an already shared server (tests, embedding).
 pub fn router_with_server(server: Arc<Mutex<WorkspaceServer>>) -> Router {
-    let state = AppState { server };
+    let state = AppState {
+        server,
+        started: Instant::now(),
+        requests: Arc::new(AtomicU64::new(0)),
+    };
     Router::new()
+        .route("/health", get(health))
+        .route("/ready", get(ready))
+        .route("/metrics", get(metrics))
         .route("/ws/workspace/{id}", get(ws_handler))
         .fallback(handle)
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
+}
+
+/// Liveness probe. Kept separate from `/ready` so healthchecks do not count as
+/// API traffic in `/metrics`.
+async fn health() -> Response {
+    let mut response = r#"{"data":"ok","error":null}"#.into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("application/json; charset=utf-8"),
+    );
+    response
+}
+
+/// Readiness probe: the process is up and the router is serving.
+async fn ready() -> Response {
+    let mut response = r#"{"data":"ready","error":null}"#.into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("application/json; charset=utf-8"),
+    );
+    response
+}
+
+/// Minimal Prometheus text exposition for uptime and request volume.
+async fn metrics(State(state): State<AppState>) -> Response {
+    let uptime = state.started.elapsed().as_secs();
+    let requests = state.requests.load(Ordering::Relaxed);
+    let body = format!(
+        "# HELP ion_of_notes_up Whether the server process is running.\n\
+         # TYPE ion_of_notes_up gauge\n\
+         ion_of_notes_up 1\n\
+         # HELP ion_of_notes_uptime_seconds Process uptime in seconds.\n\
+         # TYPE ion_of_notes_uptime_seconds gauge\n\
+         ion_of_notes_uptime_seconds {uptime}\n\
+         # HELP ion_of_notes_http_requests_total API requests handled since start.\n\
+         # TYPE ion_of_notes_http_requests_total counter\n\
+         ion_of_notes_http_requests_total {requests}\n"
+    );
+    let mut response = body.into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("text/plain; version=0.0.4"),
+    );
+    response
 }
 
 /// Run the Axum server until Ctrl+C.
@@ -76,6 +131,7 @@ pub fn serve_axum(addr: &str, server: WorkspaceServer) -> std::io::Result<()> {
 }
 
 async fn handle(State(state): State<AppState>, request: Request) -> Response {
+    state.requests.fetch_add(1, Ordering::Relaxed);
     let (parts, body) = request.into_parts();
     let body = match axum::body::to_bytes(body, MAX_BODY_BYTES).await {
         Ok(bytes) => (!bytes.is_empty()).then(|| String::from_utf8_lossy(&bytes).into_owned()),

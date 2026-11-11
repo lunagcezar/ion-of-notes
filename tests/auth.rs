@@ -4,7 +4,7 @@ mod common;
 
 use ion_of_notes::auth::{
     Account, AuthStore, LoginInput, MemoryAuthStore, Session, SessionInfo, SessionResponse,
-    hash_password, hash_token, new_session_token, verify_password,
+    hash_password, hash_token, new_session_token, read_password_file, verify_password,
 };
 use ion_of_notes::collab::{CollabState, Role};
 use ion_of_notes::model::{Workspace, now_iso};
@@ -200,4 +200,16 @@ fn session_survives_a_sqlite_reopen() {
     assert_eq!(response.status, 200);
 
     common::remove(&db);
+}
+
+#[test]
+fn owner_password_file_is_trimmed_and_empty_is_rejected() {
+    let path = common::temp_path("owner-password", "txt");
+    std::fs::write(&path, "secret\r\n").expect("write secret");
+    assert_eq!(read_password_file(&path).expect("read secret"), "secret");
+
+    std::fs::write(&path, "\r\n").expect("write empty secret");
+    assert!(read_password_file(&path).is_err());
+
+    common::remove(&path);
 }

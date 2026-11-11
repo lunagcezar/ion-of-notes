@@ -45,7 +45,8 @@ pub use app::{
 pub use auth::{
     Account, AuthStore, DEFAULT_OWNER_PASSWORD, LoginInput, MemoryAuthStore, NoAuthStore,
     SESSION_DAYS, Session, SessionInfo, SessionResponse, hash_password, hash_token,
-    new_session_token, session_expiry, session_is_expired, session_is_expired_at, verify_password,
+    new_session_token, read_password_file, session_expiry, session_is_expired,
+    session_is_expired_at, verify_password,
 };
 pub use client::{Client, ClientError, RetryDecision, RetryPolicy};
 pub use collab::{

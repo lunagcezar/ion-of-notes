@@ -6,6 +6,26 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-052 deployment hardening II
+
+- Added `GET /ready` and `GET /metrics` to the Axum adapter. `/metrics` exposes
+  `ion_of_notes_up`, `ion_of_notes_uptime_seconds` and
+  `ion_of_notes_http_requests_total`; health/readiness probes do not inflate the
+  API request counter.
+- Added `ION_OF_NOTES_OWNER_PASSWORD_FILE` and `auth::read_password_file`; the
+  environment variable remains the explicit fallback and takes precedence.
+- Compose now mounts `secrets/owner_password.txt` as a Docker secret instead of
+  putting the password in the environment. Added the example secret file,
+  `/secrets/*` ignore rules and `.dockerignore` coverage.
+- Added `docker-bake.hcl` for `linux/amd64` + `linux/arm64` builds.
+- Added a GitHub Actions container job that builds the image, waits for
+  `/ready`, checks `/health` and `/metrics`, and cleans up the container and
+  volume.
+- Tests: 258 total (232 core + 26 desktop); both clippy passes, fmt, docs and
+  the preview screenshots pass.
+- Updated README, deployment guide, architecture, testing, requirements,
+  glossary, spec index and changelog.
+
 ### Changed - spec-049 UI and client modularization
 
 - Split `ui/apply.rs` into command-family modules under `ui/apply/`

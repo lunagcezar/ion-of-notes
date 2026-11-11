@@ -22,11 +22,12 @@ loopback. Do not publish port 8787 directly to the internet.
 ## 2. Quick start
 
 ```sh
-cp .env.example .env
-# edit .env and set a strong ION_OF_NOTES_OWNER_PASSWORD
+cp secrets/owner_password.txt.example secrets/owner_password.txt
+# edit secrets/owner_password.txt and set a strong password
 docker compose up --build -d
 docker compose ps
 curl http://127.0.0.1:8787/health
+curl http://127.0.0.1:8787/ready
 ```
 
 Expected health body:
@@ -35,11 +36,17 @@ Expected health body:
 {"data":"ok","error":null}
 ```
 
-The first SQLite run seeds the owner account from
-`ION_OF_NOTES_OWNER_PASSWORD`. The account is seeded once; changing the
-variable later does not change an existing password.
+`/health` is the liveness probe. `/ready` is the readiness probe used by the
+container smoke test and orchestration; both return `200` once the router is
+serving.
 
-To expose the server on a LAN or a reverse-proxy host, set:
+The first SQLite run seeds the owner account from the Docker secret at
+`/run/secrets/owner_password` (`ION_OF_NOTES_OWNER_PASSWORD_FILE`). The
+account is seeded once; changing the secret later does not change an existing
+password.
+
+To expose the server on a LAN or a reverse-proxy host, set the optional values
+in `.env`:
 
 ```sh
 ION_OF_NOTES_BIND=0.0.0.0
@@ -176,16 +183,18 @@ A cold volume archive is simpler and is the supported default.
 
 ## 6. Secrets
 
-- Keep `.env` out of version control and restrict it: `chmod 600 .env`.
-- `ION_OF_NOTES_OWNER_PASSWORD` is required by Compose; the stack refuses to
-  start while it is unset.
-- For production, inject the variable from your secret manager or use Docker
-  secrets with a small entrypoint that exports the file contents. The app
-  currently reads the environment variable directly; a native
-  `*_PASSWORD_FILE` option is a future improvement.
-- Rotating the environment variable does not change an existing seeded
-  account. There is no password-reset flow yet; plan account changes as a
-  data/account migration.
+- Compose mounts `secrets/owner_password.txt` at
+  `/run/secrets/owner_password` and sets
+  `ION_OF_NOTES_OWNER_PASSWORD_FILE=/run/secrets/owner_password`. The value is
+  not in the environment and does not appear in `docker inspect`.
+- Keep `secrets/owner_password.txt` out of version control and restrict it:
+  `chmod 600 secrets/owner_password.txt`. The repository ignores everything
+  under `secrets/` except the `.example` file.
+- `ION_OF_NOTES_OWNER_PASSWORD` remains the explicit fallback for
+  `docker run` and local `--serve`; the environment variable takes precedence
+  when both are set.
+- Rotating the secret does not change an existing seeded account. There is no
+  password-reset flow yet; plan account changes as a data/account migration.
 
 ## 7. Upgrades and rollback
 
@@ -217,12 +226,23 @@ docker compose logs -f ion-of-notes
 - `permission denied` on `/data` means a bind mount is not owned by UID 10001.
 - `read-only file system` means a custom command writes outside `/data` or
   `/tmp`; add a tmpfs only if you understand the path.
-- `ION_OF_NOTES_OWNER_PASSWORD` errors mean `.env` is missing or unset.
+- Owner-password errors mean `secrets/owner_password.txt` is missing or empty,
+  or the `ION_OF_NOTES_OWNER_PASSWORD` fallback is unset.
 - Set `RUST_LOG=debug` temporarily for more detail; revert to `info` afterward.
+- `GET /metrics` exposes `ion_of_notes_up`, `ion_of_notes_uptime_seconds` and
+  `ion_of_notes_http_requests_total` in Prometheus text format. Keep it behind
+  the proxy if request volume is sensitive.
 
 ## 9. Multi-arch images
 
-Build for both common server architectures with BuildKit:
+`docker-bake.hcl` defines the `linux/amd64` and `linux/arm64` target. Validate
+the definition with:
+
+```sh
+docker buildx bake --print server
+```
+
+Build and push both architectures with:
 
 ```sh
 docker buildx build \
@@ -238,8 +258,8 @@ faster.
 
 ## 10. Security checklist
 
-- [ ] `ION_OF_NOTES_OWNER_PASSWORD` is strong and stored outside git.
-- [ ] `.env` is `chmod 600` and not committed.
+- [ ] `secrets/owner_password.txt` is strong and stored outside git.
+- [ ] The secret file is `chmod 600` and not committed.
 - [ ] The app is bound to `127.0.0.1` or a private network.
 - [ ] A TLS reverse proxy terminates public traffic.
 - [ ] Port 8787 is not exposed directly to the internet.

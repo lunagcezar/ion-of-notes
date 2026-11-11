@@ -167,8 +167,7 @@ fn seed_owner_account(store: &SqliteStore, collab: &CollabState) -> io::Result<(
     if store.find_account(&email)?.is_some() {
         return Ok(());
     }
-    let password = std::env::var("ION_OF_NOTES_OWNER_PASSWORD")
-        .unwrap_or_else(|_| auth::DEFAULT_OWNER_PASSWORD.to_string());
+    let password = owner_password()?;
     let password_hash = auth::hash_password(&password).map_err(io::Error::other)?;
     store.upsert_account(&Account {
         id: format!("account-{}", owner.id),
@@ -177,12 +176,26 @@ fn seed_owner_account(store: &SqliteStore, collab: &CollabState) -> io::Result<(
         password_hash,
         created_at: now_iso(),
     })?;
-    if std::env::var("ION_OF_NOTES_OWNER_PASSWORD").is_err() {
+    if std::env::var_os("ION_OF_NOTES_OWNER_PASSWORD").is_none()
+        && std::env::var_os("ION_OF_NOTES_OWNER_PASSWORD_FILE").is_none()
+    {
         eprintln!(
-            "warning: seeded the owner account with the development password; set ION_OF_NOTES_OWNER_PASSWORD"
+            "warning: seeded the owner account with the development password; set ION_OF_NOTES_OWNER_PASSWORD or ION_OF_NOTES_OWNER_PASSWORD_FILE"
         );
     }
     Ok(())
+}
+
+/// Resolve the first-run owner password: explicit environment variable first,
+/// then a Docker/Kubernetes secret file, then the development default.
+fn owner_password() -> io::Result<String> {
+    if let Ok(value) = std::env::var("ION_OF_NOTES_OWNER_PASSWORD") {
+        return Ok(value);
+    }
+    if let Ok(path) = std::env::var("ION_OF_NOTES_OWNER_PASSWORD_FILE") {
+        return auth::read_password_file(Path::new(&path));
+    }
+    Ok(auth::DEFAULT_OWNER_PASSWORD.to_string())
 }
 
 /// Compose the object graph for the desktop window.

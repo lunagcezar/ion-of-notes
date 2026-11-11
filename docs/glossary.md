@@ -44,6 +44,9 @@ definition.
 | **Hardened stack** | Loopback bind, read-only root, `/tmp` tmpfs, dropped capabilities, `no-new-privileges`, `init`, stop grace period and log rotation. | `compose.yml`, `docs/deployment.md` |
 | **Caddy example** | Reverse proxy and automatic TLS configuration for the server. | `deploy/Caddyfile.example` |
 | **CommandFamily** | Routing classification for `Command` into the `ui/apply/*` family modules. | `src/ui/commands.rs` |
+| **Readiness probe** | `GET /ready`; reports that the router is serving, distinct from the `/health` liveness probe. | `src/server/web.rs` |
+| **Prometheus metrics** | `GET /metrics` text with up, uptime and API request count. | `src/server/web.rs` |
+| **Docker secret** | `secrets/owner_password.txt`, mounted at `/run/secrets/owner_password` and read through `ION_OF_NOTES_OWNER_PASSWORD_FILE`. | `compose.yml`, `src/auth.rs` |
 
 ## 3. Domain
 

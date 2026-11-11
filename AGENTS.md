@@ -47,7 +47,7 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Shared limits    | SQLite `rate_limits` + `RateLimitStore` | Multi-server workspace budgets (spec-041)        |
 | CRDT             | Yrs per-page text documents         | Server merge (042) + client session/awareness (043) |
 | Remote desktop   | ureq REST + tokio-tungstenite WS    | `--server`/`--token` remote mode (044)               |
-| Deployment       | Docker multi-stage + Compose        | `ion-of-notes-server`, `ion-data` volume (spec-050) |
+| Deployment       | Docker multi-stage + Compose        | `ion-of-notes-server`, `ion-data` volume, secrets, `/ready`, `/metrics` (specs 050-052) |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
@@ -250,8 +250,11 @@ tests/
   integration.rs   end-to-end client/server/store scenario
 Dockerfile         multi-stage server-only image
 compose.yml        self-hosted server stack with the ion-data volume
-.env.example       Compose password, bind and port template
+.env.example       Compose bind/port/log template
 .dockerignore      build-context exclusions
+docker-bake.hcl    linux/amd64 + linux/arm64 build target
+secrets/
+  owner_password.txt.example  Docker secret template
 deploy/
   Caddyfile.example  TLS reverse-proxy example
 ```
@@ -570,9 +573,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
-| `cargo test --all-targets --no-default-features` | Core integration tests (229, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (232, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (26) |
-| `cargo test --all-targets`               | All default-feature tests (254; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (257; the core-only seam test is skipped) |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, core + desktop tests, docs |

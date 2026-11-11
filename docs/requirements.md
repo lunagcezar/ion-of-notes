@@ -438,6 +438,10 @@ capabilities) is implemented; the rest are planned.
   stop grace period and bounded logs. `docs/deployment.md` covers TLS/reverse
   proxy, backups/restore, secrets, upgrades, health/logs and multi-arch builds
   (spec-051).
+- NFR-34: The server exposes `/ready` and Prometheus `/metrics`, accepts the
+  owner password from a Docker secret file (`*_FILE`), and builds for
+  `linux/amd64` and `linux/arm64`; the default Compose stack does not place the
+  password in the environment (spec-052).
 
 ## 3. Requirement → spec map
 
@@ -478,6 +482,7 @@ capabilities) is implemented; the rest are planned.
 | NFR-31                        | `spec-048-build-performance-and-desktop-feature-seam.md` |
 | NFR-32                        | `spec-050-server-container-and-compose.md` |
 | NFR-33                        | `spec-051-container-hardening-and-deployment-operations.md` |
+| NFR-34                        | `spec-052-deployment-hardening-ii.md` |
 | FR-67 (implemented)           | `spec-017-ui-modularization.md` |
 | FR-63 (implemented)           | `spec-019-collaboration-persistence.md` |
 | FR-64 (implemented)           | `spec-020-per-page-writes-and-debounce.md` |

@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (255 tests across the two feature passes, 2026-11-10)
+## 3. Test-crate map (258 tests across the two feature passes, 2026-11-10)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -59,12 +59,12 @@ flowchart TD
 | `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
 | `tests/webhooks.rs` | 10 | subscriptions, verification, signatures, injected sender, delivery/retry |
 | `tests/shared_limits.rs` | 2 | SQLite shared workspace budget and window reset |
-| `tests/web.rs` | 9 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks |
+| `tests/web.rs` | 11 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, `/ready`, `/metrics` |
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 4 | client Yrs diff, empty-sync baseline, projection, convergence |
 | `tests/remote.rs` | 3 | login, remote REST/CRDT and WebSocket change/awareness |
-| `tests/auth.rs` | 6 | Argon2id, login, logout, demo token, sessions, SQLite restart |
+| `tests/auth.rs` | 7 | Argon2id, login, logout, demo token, sessions, SQLite restart, password-file secret |
 | `tests/sqlite_store.rs` | 3 | workspace/collab round-trip, accounts/sessions, JSON migration |
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
 | `tests/shortcuts.rs` | 8 | shortcut table, exactness, focus/modifier guard |
@@ -83,7 +83,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 229 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 232 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 26 desktop tests: the four UI crates, with the default-on desktop feature
@@ -100,7 +100,7 @@ pwsh -File scripts/quality.ps1
 `cargo test --all-targets` still runs all default-feature tests (254) with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 255 unique tests because each feature pass includes its
+(spec-048) and cover 258 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam
@@ -129,6 +129,8 @@ docker run -d --name ion-test -p 18787:8787 \
   -e ION_OF_NOTES_OWNER_PASSWORD=test-password \
   -v ion-test-data:/data ion-of-notes-server:test
 curl http://127.0.0.1:18787/health          # {"data":"ok","error":null}
+curl http://127.0.0.1:18787/ready           # {"data":"ready","error":null}
+curl http://127.0.0.1:18787/metrics         # Prometheus text
 curl -s -X POST http://127.0.0.1:18787/api/pages \
   -H 'Content-Type: application/json' \
   -d '{"title":"Container test","icon":"box","parent":null}'
@@ -142,11 +144,12 @@ docker volume rm ion-test-data
 ION_OF_NOTES_OWNER_PASSWORD=test docker compose config
 ```
 
-`docker compose up --build` must become healthy on `/health`; without
-`ION_OF_NOTES_OWNER_PASSWORD`, `docker compose config` must fail. The hardened
-stack (spec-051) must also show `127.0.0.1:8787:8787`, `read_only: true`,
-`cap_drop: [ALL]` and `no-new-privileges` in `docker compose config`; see
-`docs/deployment.md` for backups, TLS and upgrade checks.
+`docker compose up --build` must become healthy on `/health`; create
+`secrets/owner_password.txt` from the example first. The hardened stack must
+show `127.0.0.1:8787:8787`, `read_only: true`, `cap_drop: [ALL]`,
+`no-new-privileges` and the `owner_password` secret in `docker compose config`.
+`/ready` and `/metrics` must respond; see `docs/deployment.md` for backups,
+TLS and upgrade checks.
 
 ## 4. What each layer tests
 

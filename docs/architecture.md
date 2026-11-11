@@ -152,9 +152,10 @@ src/
 ```
 
 Deployment files live at the repository root: `Dockerfile` (multi-stage,
-server-only build), `compose.yml` (server + `ion-data` volume),
-`.dockerignore`, `.env.example` and `deploy/Caddyfile.example` (spec-050,
-spec-051).
+server-only build), `compose.yml` (server + `ion-data` volume + Docker secret),
+`.dockerignore`, `.env.example`, `docker-bake.hcl` and
+`deploy/Caddyfile.example` (specs 050-052). The Axum adapter exposes `/health`,
+`/ready` and `/metrics`.
 
 ## 4. Request lifecycle
 

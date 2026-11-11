@@ -19,3 +19,5 @@ screenshots/
 /data/
 /backups/
 /.env
+/secrets/*
+!/secrets/owner_password.txt.example

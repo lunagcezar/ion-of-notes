@@ -41,3 +41,35 @@ jobs:
 
       - name: Release build
         run: cargo build --release --locked
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build server image
+        run: docker build -t ion-of-notes-server:ci .
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          docker run -d --name ion-ci -p 18787:8787 \
+            -e ION_OF_NOTES_OWNER_PASSWORD=test-password \
+            -v ion-ci-data:/data ion-of-notes-server:ci
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18787/ready >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:18787/ready
+          curl -fsS http://127.0.0.1:18787/health
+          curl -fsS http://127.0.0.1:18787/metrics | grep -q 'ion_of_notes_up 1'
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f ion-ci || true
+          docker volume rm ion-ci-data || true

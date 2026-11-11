@@ -9,6 +9,7 @@ use argon2::password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash}
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::io;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 /// Development default used when `ION_OF_NOTES_OWNER_PASSWORD` is not set.
@@ -17,6 +18,22 @@ pub const DEFAULT_OWNER_PASSWORD: &str = "change-me-now";
 
 /// Session lifetime in days.
 pub const SESSION_DAYS: i64 = 30;
+
+/// Read an owner password from a secret file (Docker/Kubernetes style).
+///
+/// Trailing CR/LF is removed; an empty file is rejected so a missing secret
+/// cannot silently fall back to the development password.
+pub fn read_password_file(path: &Path) -> io::Result<String> {
+    let value = std::fs::read_to_string(path)?;
+    let value = value.trim_end_matches(['\r', '\n']).to_string();
+    if value.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "owner password file is empty",
+        ));
+    }
+    Ok(value)
+}
 
 /// One local account. The password is an Argon2id PHC string.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -16,7 +16,7 @@ code belongs, and how to verify a change.
 
 ```sh
 cargo build                     # compile the desktop app
-cargo test --all-targets --no-default-features   # 229 core tests
+cargo test --all-targets --no-default-features   # 232 core tests
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot  # 26 desktop tests
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check

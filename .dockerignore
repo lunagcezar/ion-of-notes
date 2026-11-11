@@ -8,4 +8,5 @@ screenshots/
 shots/
 .env
 .env.*
+secrets/
 *.md
