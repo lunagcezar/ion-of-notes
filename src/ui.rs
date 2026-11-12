@@ -33,7 +33,7 @@ mod view;
 mod widgets;
 
 pub use app::NotionApp;
-pub use block_ops::{drop_index, split_index};
+pub use block_ops::{block_outside_viewport, drop_index, split_index};
 pub use commands::frame_may_mutate;
 pub use crdt::CrdtSession;
 pub use dialogs::search_window::page_matches as search_page_matches;

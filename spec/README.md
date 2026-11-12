@@ -146,6 +146,8 @@ Status vocabulary:
 | [106](spec-106-shared-expanded-set.md) | Share the expanded page set | implemented | `Arc<HashSet<String>>` in state/view |
 | [107](spec-107-bounded-awareness-channel.md) | Bound the remote awareness channel | implemented | Capacity 64 with latest-value drop |
 | [108](spec-108-remote-request-worker.md) | Background remote request worker | implemented | Search/save/replace/CRDT off the UI thread |
+| [109](spec-109-incremental-search-cache.md) | Incremental search document cache | implemented | Dirty-page re-indexing |
+| [110](spec-110-block-viewport-culling.md) | Block height cache and viewport culling | implemented | Offscreen blocks/rows skipped after measurement |
 
 ## 3. Work status
 

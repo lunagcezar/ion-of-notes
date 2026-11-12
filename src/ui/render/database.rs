@@ -91,6 +91,9 @@ fn render_table(
     let status_w = (width * 0.22).max(110.0);
     let assignee_w = (width * 0.16).max(80.0);
     let due_w = (width * 0.16).max(80.0);
+    let viewport = ui.clip_rect();
+    let interactive = ui.memory(|memory| memory.focused().is_some())
+        || ui.input(|input| input.pointer.any_down());
 
     ui.horizontal(|ui| {
         ui.add_space(gutter);
@@ -103,6 +106,19 @@ fn render_table(
 
     for (index, row) in page.rows.iter_mut().enumerate() {
         let row_id = row.id.clone();
+        let row_height = 28.0;
+        let top = ui.cursor().top();
+        if !interactive
+            && crate::ui::block_outside_viewport(
+                top,
+                row_height,
+                (viewport.top(), viewport.bottom()),
+                400.0,
+            )
+        {
+            ui.add_space(row_height);
+            continue;
+        }
         let clicked = egui::Frame::NONE
             .fill(if index % 2 == 1 {
                 palette.callout
@@ -172,6 +188,15 @@ fn render_table(
 fn render_board(ui: &mut egui::Ui, page: &mut Page, width: f32, palette: &Palette) {
     let statuses = ["Not started", "In progress", "Done"];
     let column_width = (width - 24.0) / 3.0;
+    let groups: Vec<Vec<&crate::model::TableRow>> = statuses
+        .iter()
+        .map(|status| {
+            page.rows
+                .iter()
+                .filter(|row| &row.status == status)
+                .collect()
+        })
+        .collect();
     ui.columns(3, |columns| {
         for (index, status) in statuses.iter().enumerate() {
             let col = &mut columns[index];
@@ -183,7 +208,7 @@ fn render_board(ui: &mut egui::Ui, page: &mut Page, width: f32, palette: &Palett
                     .color(palette.muted),
             );
             col.add_space(6.0);
-            for row in page.rows.iter().filter(|r| &r.status == status) {
+            for row in &groups[index] {
                 egui::Frame::NONE
                     .fill(palette.callout)
                     .corner_radius(CornerRadius::same(metrics::ROW_RADIUS))

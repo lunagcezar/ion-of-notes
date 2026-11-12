@@ -13,8 +13,9 @@ use ion_of_notes::ui::{
     visible_rows,
 };
 use ion_of_notes::ui::{
-    EMOJI, ICONS, app_bar_left_width, catalog_matches, drop_index, frame_may_mutate,
-    glyph_visual_offset, index_cursors, page_icon_letter, search_page_matches, split_index,
+    EMOJI, ICONS, app_bar_left_width, block_outside_viewport, catalog_matches, drop_index,
+    frame_may_mutate, glyph_visual_offset, index_cursors, page_icon_letter, search_page_matches,
+    split_index,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -285,6 +286,15 @@ fn block_drop_and_split_indices_cover_the_edges() {
     assert_eq!(split_index(3, 0), Some(1));
     assert_eq!(split_index(3, 2), Some(3));
     assert_eq!(split_index(0, 0), None);
+}
+
+#[test]
+fn block_viewport_culling_keeps_the_overscan_band() {
+    let viewport = (100.0, 500.0);
+    assert!(block_outside_viewport(-200.0, 40.0, viewport, 100.0));
+    assert!(!block_outside_viewport(90.0, 40.0, viewport, 100.0));
+    assert!(!block_outside_viewport(480.0, 40.0, viewport, 100.0));
+    assert!(block_outside_viewport(650.0, 40.0, viewport, 100.0));
 }
 
 #[test]

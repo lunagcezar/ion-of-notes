@@ -6,7 +6,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
-### Performance - spec-101..spec-108
+### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames
   (`frame_may_mutate`, optional undo snapshot, gated `commit_edits`).
@@ -22,6 +22,9 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Run remote search, saves, replaces and CRDT calls on a bounded background
   worker; coalesce search and commits and fall back to a synchronous CRDT call
   when the queue is full.
+- Cache per-page search documents and re-index only dirty pages.
+- Cache measured block heights and skip unchanged offscreen blocks; cull
+  offscreen table rows and group board columns once.
 
 ### Changed - spec-100 domain events
 

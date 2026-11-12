@@ -1,8 +1,10 @@
 //! Page header, breadcrumbs and page body entry point.
 
 use crate::i18n;
-use crate::model::{BlockKind, Workspace};
+use crate::model::{Block, BlockKind, Workspace};
 use egui::{Align2, CornerRadius, FontFamily, FontId, Pos2, Rect, Sense, Stroke, Vec2};
+use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hash, Hasher};
 
 use super::super::super::commands::{Command, FontStyle, SidebarCmd};
 use super::super::super::format::format_timestamp;
@@ -249,6 +251,23 @@ fn crumb(ui: &mut egui::Ui, icon: &str, text: &str, palette: &Palette) -> egui::
 // ---- Page -----------------------------------------------------------------
 
 #[allow(clippy::too_many_arguments)]
+/// Cached measured height for one block (spec-110).
+#[derive(Clone, Copy)]
+struct BlockHeight {
+    fingerprint: u64,
+    height: f32,
+}
+
+/// A cheap content fingerprint; a change invalidates the cached height.
+fn block_fingerprint(block: &Block) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    block.text.hash(&mut hasher);
+    block.rich_text.len().hash(&mut hasher);
+    std::mem::discriminant(&block.kind).hash(&mut hasher);
+    block.children.len().hash(&mut hasher);
+    hasher.finish()
+}
+
 fn render_page(
     ui: &mut egui::Ui,
     ws: &mut Workspace,
@@ -353,11 +372,43 @@ fn render_page(
 
     let mut numbered: usize = 0;
     let block_count = page.blocks.len();
+    let height_id = egui::Id::unique(("block_heights", page.id.as_str()));
+    let mut heights: HashMap<String, BlockHeight> = ui
+        .ctx()
+        .data(|data| data.get_temp::<HashMap<String, BlockHeight>>(height_id))
+        .unwrap_or_default();
+    let viewport = ui.clip_rect();
+    let overscan = (viewport.height() * 1.5).max(400.0);
+    let interactive = view.block_selecting || view.drag_from.is_some();
     for index in 0..page.blocks.len() {
-        if page.blocks[index].kind.is_heading() {
+        let block = &mut page.blocks[index];
+        let top = ui.cursor().top();
+        let forced = view.focus_block.as_deref() == Some(block.id.as_str())
+            || view.slash_for.as_deref() == Some(block.id.as_str())
+            || view.page_selection.iter().any(|id| id == &block.id);
+        let cached = heights.get(&block.id).copied();
+        let fingerprint = block_fingerprint(block);
+        if !interactive
+            && !forced
+            && let Some(entry) = cached
+            && entry.fingerprint == fingerprint
+            && crate::ui::block_outside_viewport(
+                top,
+                entry.height,
+                (viewport.top(), viewport.bottom()),
+                overscan,
+            )
+        {
+            if block.kind.is_heading() {
+                ui.add_space(BLOCK_HEADING_GAP);
+            }
+            ui.add_space(entry.height + BLOCK_GAP);
+            continue;
+        }
+        if block.kind.is_heading() {
             ui.add_space(BLOCK_HEADING_GAP);
         }
-        let block = &mut page.blocks[index];
+        let before = ui.cursor().top();
         render_block(
             ui,
             block,
@@ -371,8 +422,19 @@ fn render_page(
             commands,
             block_count,
         );
+        let height = (ui.cursor().top() - before).max(0.0);
+        heights.insert(
+            block.id.clone(),
+            BlockHeight {
+                fingerprint,
+                height,
+            },
+        );
         ui.add_space(BLOCK_GAP);
     }
+    ui.ctx().data_mut(|data| {
+        data.insert_temp(height_id, heights);
+    });
 
     // Subtle add-block row.
     ui.horizontal(|ui| {

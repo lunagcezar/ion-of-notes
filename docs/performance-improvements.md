@@ -23,6 +23,8 @@ the whole workspace.
 | `spec-106` | Share the expanded-page set through an `Arc`. | Stops deep-cloning the sidebar expansion set every frame. |
 | `spec-107` | Bound the remote awareness channel. | Prevents an unbounded cursor queue when the WebSocket worker falls behind. |
 | `spec-108` | Background remote request worker for search, saves, replaces and CRDT. | Removes blocking `ureq` calls from the egui thread in remote mode. |
+| `spec-109` | Incremental search document cache in `Workspace`. | Re-indexes only pages mutated since the last query. |
+| `spec-110` | Block height cache + viewport culling; table row culling and board grouping. | Stops rendering unchanged offscreen blocks/rows after the first measured frame. |
 
 The existing good decisions are preserved: cached filtered icon indices,
 `ScrollArea::show_rows` virtualization for the icon grid, the debounced edit
@@ -33,9 +35,10 @@ queue, the background WebSocket, and background webhook delivery.
 | Phase | Item | Status / trigger |
 | ----- | ---- | ---------------- |
 | 2 | Bounded remote API worker for REST, search and CRDT sync | Implemented in `spec-108`: one worker per connection, latest-search coalescing, in-flight commit coalescing and a synchronous CRDT fallback when the queue is full. |
-| 3 | Incremental search index | Not implemented; current UI caches results by query + workspace version, and the model now avoids duplicate body work. |
-| 3 | Block virtualization with measured heights | Not implemented; variable-height blocks need a layout cache and stable widget ids. High impact on very long pages. |
+| 3 | Incremental search index | Implemented in `spec-109`: per-page documents, dirty-page invalidation and a clone-reset runtime cache. |
+| 3 | Block virtualization with measured heights | Implemented conservatively in `spec-110`: measured heights plus viewport/overscan culling; the first frame still renders every block. |
 | 3 | Cursor geometry cache | Not implemented; cursor text widths are still measured during rendering. |
+| 3 | Database table/board virtualization | Implemented in `spec-110`: offscreen rows advance by a fixed height and board columns share one status grouping. |
 | 4 | Immutable server read snapshots + ordered writer | Not implemented; the Axum adapter still serializes through one `Mutex<WorkspaceServer>`. |
 | 4 | Incremental SQLite persistence | Deferred by measurement: see `docs/performance-roadmap.md`. |
 

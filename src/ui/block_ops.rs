@@ -24,3 +24,11 @@ pub fn drop_index(len: usize, target: Option<usize>, before: bool) -> usize {
 pub fn split_index(len: usize, source: usize) -> Option<usize> {
     (source < len).then_some(source + 1)
 }
+
+/// True when a block with `top`/`height` is outside the viewport plus overscan.
+/// Used by the block height cache to skip unchanged offscreen blocks
+/// (spec-110).
+pub fn block_outside_viewport(top: f32, height: f32, viewport: (f32, f32), overscan: f32) -> bool {
+    let bottom = top + height;
+    bottom < viewport.0 - overscan || top > viewport.1 + overscan
+}
