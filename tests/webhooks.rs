@@ -8,7 +8,7 @@ use ion_of_notes::server::webhook_sender::UreqWebhookSender;
 use ion_of_notes::server::{Method, WebhookSender, WorkspaceApi, WorkspaceServer};
 use ion_of_notes::webhooks::{
     SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType, WebhookSubscription,
-    WebhookSubscriptionInput, sign, verify,
+    WebhookSubscriptionInput, is_allowed_url, sign, verify,
 };
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -366,7 +366,7 @@ fn production_sender_returns_redirect_status_without_following_it() {
             );
         }
     });
-    let sender = UreqWebhookSender::new();
+    let sender = UreqWebhookSender::new_development();
     let status = sender
         .send(&format!("http://127.0.0.1:{port}/hook"), "{}", "sig")
         .expect("delivery");
@@ -501,4 +501,32 @@ fn failed_delivery_is_dead_lettered_and_can_be_requeued() {
     let requeued: WebhookDelivery = common::data(&response);
     assert!(!requeued.dead_lettered);
     assert_eq!(requeued.attempts, 0);
+}
+
+#[test]
+fn private_https_targets_are_rejected() {
+    for url in [
+        "https://127.0.0.1/hook",
+        "https://10.0.0.1/hook",
+        "https://192.168.1.1/hook",
+        "https://172.16.0.1/hook",
+        "https://169.254.169.254/latest/meta-data",
+        "https://[::1]/hook",
+        "https://localhost/hook",
+        "https://foo.localhost/hook",
+    ] {
+        assert!(!is_allowed_url(url, false), "{url} must be rejected");
+    }
+    assert!(!is_allowed_url("http://127.0.0.1:9/hook", false));
+    assert!(is_allowed_url("http://127.0.0.1:9/hook", true));
+    assert!(is_allowed_url("https://example.com/hook", false));
+}
+
+#[test]
+fn production_sender_rejects_a_private_resolution() {
+    let sender = UreqWebhookSender::new();
+    let error = sender
+        .send("https://127.0.0.1:9/hook", "{}", "sig")
+        .expect_err("private target must fail");
+    assert!(error.contains("private"), "{error}");
 }
