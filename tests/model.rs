@@ -321,6 +321,16 @@ fn block_kind_labels_are_unique() {
 }
 
 #[test]
+fn new_pages_default_to_the_workspace_owner_and_hidden_sections_are_skipped() {
+    let page = Page::new("p", "Title", "");
+    assert_eq!(page.created_by, "Workspace Owner");
+
+    let mut layout = SidebarLayout::default();
+    layout.sections[0].hidden = true;
+    assert_eq!(layout.visible_sections().count(), 1);
+}
+
+#[test]
 fn sidebar_layout_starts_with_favorites_and_private_and_accepts_shortcuts() {
     let mut layout = SidebarLayout::default();
     assert_eq!(layout.visible_sections().count(), 2);

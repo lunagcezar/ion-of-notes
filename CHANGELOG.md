@@ -6,6 +6,13 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Tests - stability hardening
+
+- Added pure block drop/split index tests (first, last, gap, empty page, self
+  drop) and used the helpers in the command handler.
+- Added a page creator default test and a hidden-sidebar-section test.
+- Suite: 274 tests.
+
 ### Changed - spec-066 search and new-tab filters
 
 - Added working filters to Ctrl+K and the new-tab window: Title only, Created

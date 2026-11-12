@@ -10,8 +10,8 @@ use ion_of_notes::ui::{
     visible_rows,
 };
 use ion_of_notes::ui::{
-    EMOJI, ICONS, app_bar_left_width, catalog_matches, glyph_visual_offset, page_icon_letter,
-    search_page_matches,
+    EMOJI, ICONS, app_bar_left_width, catalog_matches, drop_index, glyph_visual_offset,
+    page_icon_letter, search_page_matches, split_index,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -151,6 +151,19 @@ fn search_filters_match_title_creator_scope_and_comments() {
         Some("parent"),
         false
     ));
+}
+
+#[test]
+fn block_drop_and_split_indices_cover_the_edges() {
+    assert_eq!(drop_index(0, None, false), 0);
+    assert_eq!(drop_index(3, Some(0), true), 0);
+    assert_eq!(drop_index(3, Some(0), false), 1);
+    assert_eq!(drop_index(3, Some(2), false), 3);
+    assert_eq!(drop_index(3, None, false), 3);
+    assert_eq!(drop_index(3, Some(99), true), 3);
+    assert_eq!(split_index(3, 0), Some(1));
+    assert_eq!(split_index(3, 2), Some(3));
+    assert_eq!(split_index(0, 0), None);
 }
 
 #[test]

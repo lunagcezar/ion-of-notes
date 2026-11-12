@@ -10,6 +10,7 @@
 
 mod app;
 mod apply;
+mod block_ops;
 mod commands;
 mod crdt;
 mod dialogs;
@@ -30,6 +31,7 @@ mod view;
 mod widgets;
 
 pub use app::NotionApp;
+pub use block_ops::{drop_index, split_index};
 pub use crdt::CrdtSession;
 pub use dialogs::search_window::page_matches as search_page_matches;
 pub use edit_queue::{CommitPlan, PendingEdits, execute_plan, plan_for};

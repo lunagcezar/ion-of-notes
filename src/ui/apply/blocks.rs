@@ -105,17 +105,12 @@ impl NotionApp {
                         return;
                     }
                     let block = page.blocks.remove(from_idx);
-                    if let Some(to) = to {
-                        let target = page.blocks.iter().position(|b| b.id == to).map_or(
-                            page.blocks.len(),
-                            |index| {
-                                if before { index } else { index + 1 }
-                            },
-                        );
-                        page.blocks.insert(target.min(page.blocks.len()), block);
-                    } else {
-                        page.blocks.push(block);
-                    }
+                    let target = to
+                        .as_deref()
+                        .and_then(|id| page.blocks.iter().position(|block| block.id == id));
+                    let target =
+                        crate::ui::block_ops::drop_index(page.blocks.len(), target, before);
+                    page.blocks.insert(target, block);
                 }
             }
             Command::CancelBlockDrag => {
@@ -126,12 +121,11 @@ impl NotionApp {
             Command::SplitBlock(block_id) => {
                 if let Some(page) = self.current_page_mut()
                     && let Some(index) = page.blocks.iter().position(|b| b.id == block_id)
+                    && let Some(at) = crate::ui::block_ops::split_index(page.blocks.len(), index)
                 {
                     let new_id = Uuid::new_v4().to_string();
-                    page.blocks.insert(
-                        index + 1,
-                        Block::new(new_id.clone(), BlockKind::Paragraph, ""),
-                    );
+                    page.blocks
+                        .insert(at, Block::new(new_id.clone(), BlockKind::Paragraph, ""));
                     self.focus_block = Some(new_id);
                 }
             }
