@@ -87,6 +87,24 @@ fn search_ranks_title_above_body_and_ignores_case() {
 }
 
 #[test]
+fn search_cache_tracks_page_block_and_remove_edits() {
+    let mut ws = Workspace::new("w");
+    let mut p = page("p", "P", None);
+    p.blocks.push(block("b1", BlockKind::Paragraph, "alpha"));
+    ws.add_page(p).unwrap();
+    assert!(ws.search("beta").is_empty());
+
+    ws.block_mut("b1").unwrap().text = "beta".to_string();
+    assert_eq!(ws.search("beta").len(), 1);
+
+    ws.page_mut("p").unwrap().title = "Beta page".to_string();
+    assert_eq!(ws.search("beta page")[0].page_id, "p");
+
+    ws.remove_page("p").unwrap();
+    assert!(ws.search("beta").is_empty());
+}
+
+#[test]
 fn plain_text_joins_block_text() {
     let mut p = page("p", "P", None);
     p.blocks.push(block("b1", BlockKind::Paragraph, "Hello"));

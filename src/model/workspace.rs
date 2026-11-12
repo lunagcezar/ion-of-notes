@@ -15,6 +15,7 @@ use super::property::{
     SelectOption, StatusGroup, resolve_property, value_as_string,
 };
 use super::rich_text::RichText;
+use super::search::SearchCacheCell;
 use super::settings::WorkspaceSettings;
 use super::view::{
     Filter, Sort, View, ViewConfig, ViewGroup, ViewType, compare_pages, matches_filter,
@@ -42,6 +43,8 @@ pub struct Workspace {
     pub file_uploads: Vec<FileUpload>,
     #[serde(skip)]
     index: WorkspaceIndex,
+    #[serde(skip)]
+    pub(crate) search_cache: SearchCacheCell,
 }
 
 impl PartialEq for Workspace {
@@ -91,6 +94,7 @@ impl<'de> Deserialize<'de> for Workspace {
         }
         Ok(Self {
             index: WorkspaceIndex::build(&pages),
+            search_cache: SearchCacheCell::default(),
             name: data.name,
             pages,
             version: data.version,
@@ -117,6 +121,7 @@ impl Workspace {
             comments: Vec::new(),
             file_uploads: Vec::new(),
             index: WorkspaceIndex::default(),
+            search_cache: SearchCacheCell::default(),
         }
     }
 
@@ -157,6 +162,7 @@ impl Workspace {
     }
 
     pub fn page_mut(&mut self, id: &str) -> Option<&mut Page> {
+        self.search_cache.mark_dirty(id);
         let position = if self.index.len() == self.pages.len() {
             self.index.position(id)
         } else {
@@ -179,6 +185,9 @@ impl Workspace {
 
     /// Find a block anywhere in the page tree for mutation.
     pub fn block_mut(&mut self, id: &str) -> Option<&mut Block> {
+        if let Some(page_id) = self.page_id_for_block(id) {
+            self.search_cache.mark_dirty(&page_id);
+        }
         self.pages
             .iter_mut()
             .find_map(|page| find_block_in_mut(&mut page.blocks, id))
@@ -536,8 +545,10 @@ impl Workspace {
         {
             return Err(WorkspaceError::InvalidParent(parent.to_string()));
         }
+        let page_id = page.id.clone();
         self.pages.push(page);
         self.index = WorkspaceIndex::build(&self.pages);
+        self.search_cache.mark_dirty(&page_id);
         Ok(())
     }
 
@@ -569,6 +580,9 @@ impl Workspace {
             .collect();
         self.pages.retain(|p| !doomed.contains(&p.id));
         self.index = WorkspaceIndex::build(&self.pages);
+        for page_id in &removed {
+            self.search_cache.remove(page_id);
+        }
         Ok(removed)
     }
 
