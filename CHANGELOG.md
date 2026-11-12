@@ -28,7 +28,8 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   centered content, the four-point menu aligns with its button, the inbox fills
   the height below the tab bar, the settings search is fixed above the rail
   scroll, and the settings content spans to the right border with internal
-  padding.
+  padding. The settings rail now spans its full container width with internal
+  padding, its scrollbar sits on the border, and the scroll fade is disabled.
 
 ### Changed - spec-067 runtime smoke tests
 
