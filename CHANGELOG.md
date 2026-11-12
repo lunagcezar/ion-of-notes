@@ -6,6 +6,17 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-063 sidebar menus, breadcrumbs and gutter
+
+- Anchored the workspace switcher and four-point menu to the bottom-left of the
+  sidebar so they sit just above the account row.
+- Aligned the breadcrumb row with the page content column instead of the
+  content-pane edge.
+- Centered the plus/six-dot gutter controls on the first text line, including
+  heading sizes.
+- Every app-menu section now shows its right chevron in idle and hovered
+  states.
+
 ### Changed - spec-058 multi-workspace persistence
 
 - Added a persisted `WorkspaceCatalog` (`workspaces.json`) with migration from

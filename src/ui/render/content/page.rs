@@ -23,11 +23,24 @@ pub(crate) fn render_content(
     commands: &mut Vec<Command>,
 ) {
     // Compact breadcrumb bar (spec-013).
+    let full_width = ui.available_width();
+    let column_width = if view.full_width {
+        (full_width - 96.0).max(360.0)
+    } else {
+        (full_width - 96.0).clamp(360.0, 708.0)
+    };
+    let gutter = 48.0;
+    let pad = ((full_width - column_width) / 2.0 - gutter).max(0.0);
+    let breadcrumb_pad = if view.library_open {
+        16.0
+    } else {
+        pad + gutter
+    };
     ui.vertical(|ui| {
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 6.0;
-            ui.add_space(16.0);
+            ui.add_space(breadcrumb_pad);
             if !view.sidebar_open && ui.add(egui::Button::new(">").frame(false)).clicked() {
                 commands.push(Command::ToggleSidebar);
             }
@@ -84,17 +97,9 @@ pub(crate) fn render_content(
     });
     ui.separator();
 
-    let full_width = ui.available_width();
     if view.library_open {
         render_library(ui, ws, view, palette, commands);
     } else {
-        let column_width = if view.full_width {
-            (full_width - 96.0).max(360.0)
-        } else {
-            (full_width - 96.0).clamp(360.0, 708.0)
-        };
-        let gutter = 48.0;
-        let pad = ((full_width - column_width) / 2.0 - gutter).max(0.0);
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| {

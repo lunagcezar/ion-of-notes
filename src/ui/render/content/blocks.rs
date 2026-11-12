@@ -82,11 +82,16 @@ pub(super) fn render_block(
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
         // Keep layout stable regardless of hover to avoid stealing TextEdit focus.
+        let control_h = if block.kind.is_heading() {
+            block.kind.font_size().max(22.0)
+        } else {
+            22.0
+        };
         let plus_rect = ui
-            .allocate_exact_size(Vec2::new(22.0, 22.0), Sense::hover())
+            .allocate_exact_size(Vec2::new(22.0, control_h), Sense::hover())
             .0;
         let handle_rect = ui
-            .allocate_exact_size(Vec2::new(22.0, 22.0), Sense::hover())
+            .allocate_exact_size(Vec2::new(22.0, control_h), Sense::hover())
             .0;
         ui.add_space(4.0);
         if hover && !view.lock_page {

@@ -10,55 +10,6 @@ use super::super::view::ViewState;
 use super::super::widgets::{menu_button, popover_frame};
 use crate::model::{BlockKind, Workspace};
 
-#[allow(clippy::too_many_arguments)]
-fn popup_menu(
-    ctx: &egui::Context,
-    id: &str,
-    pos: Pos2,
-    width: f32,
-    palette: &Palette,
-    items: &[(&str, &str, Command)],
-    commands: &mut Vec<Command>,
-    close: Command,
-) {
-    let resp = egui::Window::new(id)
-        .title_bar(false)
-        .collapsible(false)
-        .resizable(false)
-        .fixed_pos(pos)
-        .default_width(width)
-        .frame(
-            egui::Frame::NONE
-                .fill(palette.content)
-                .corner_radius(CornerRadius::same(8))
-                .inner_margin(Margin::same(6))
-                .stroke(Stroke::new(1.0, palette.border)),
-        )
-        .show(ctx, |ui| {
-            for (label, hint, cmd) in items {
-                if *label == "---" {
-                    ui.separator();
-                    continue;
-                }
-                let r = menu_button(ui, label, hint, palette);
-                if r.clicked() {
-                    commands.push(cmd.clone());
-                    commands.push(close.clone());
-                }
-            }
-        });
-    if let Some(inner) = resp
-        && ctx.input(|i| i.pointer.any_click())
-        && ctx.input(|i| {
-            i.pointer
-                .interact_pos()
-                .is_some_and(|p| !inner.response.rect.contains(p))
-        })
-    {
-        commands.push(close);
-    }
-}
-
 /// One app-menu section: title plus label/hint/command rows.
 type AppMenuSection = (&'static str, Vec<(&'static str, &'static str, Command)>);
 
@@ -150,8 +101,7 @@ pub(crate) fn render_app_menu(ctx: &egui::Context, palette: &Palette, commands: 
                 ui.vertical(|ui| {
                     ui.set_width(150.0);
                     for (index, (title, _)) in sections.iter().enumerate() {
-                        let hint = if index == active { "›" } else { "" };
-                        let response = menu_button(ui, title, hint, palette);
+                        let response = menu_button(ui, title, "›", palette);
                         if response.hovered() || response.clicked() {
                             active = index;
                             ctx.data_mut(|data| data.insert_temp(active_id, index));
@@ -231,12 +181,11 @@ pub(crate) fn render_workspace_menu(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    let screen = ctx.viewport_rect();
     let resp = egui::Window::new("workspace_menu")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_pos(Pos2::new(screen.left() + 12.0, screen.bottom() - 430.0))
+        .anchor(Align2::LEFT_BOTTOM, Vec2::new(12.0, -75.0))
         .default_width(250.0)
         .frame(
             egui::Frame::NONE
@@ -582,7 +531,6 @@ pub(crate) fn render_grid_menu(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    let screen = ctx.viewport_rect();
     let items = vec![
         ("Library", "", Command::OpenLibrary),
         (
@@ -594,16 +542,41 @@ pub(crate) fn render_grid_menu(
         ("---", "", Command::NoOp),
         ("Settings", "", Command::OpenSettings),
     ];
-    popup_menu(
-        ctx,
-        "grid_menu",
-        Pos2::new(screen.left() + 220.0, screen.bottom() - 220.0),
-        180.0,
-        palette,
-        &items,
-        commands,
-        Command::CloseGridMenu,
-    );
+    let resp = egui::Window::new("grid_menu")
+        .title_bar(false)
+        .collapsible(false)
+        .resizable(false)
+        .anchor(Align2::LEFT_BOTTOM, Vec2::new(120.0, -75.0))
+        .default_width(180.0)
+        .frame(
+            egui::Frame::NONE
+                .fill(palette.content)
+                .corner_radius(CornerRadius::same(8))
+                .inner_margin(Margin::same(6))
+                .stroke(Stroke::new(1.0, palette.border)),
+        )
+        .show(ctx, |ui| {
+            for (label, hint, cmd) in &items {
+                if *label == "---" {
+                    ui.separator();
+                    continue;
+                }
+                if menu_button(ui, label, hint, palette).clicked() {
+                    commands.push(cmd.clone());
+                    commands.push(Command::CloseGridMenu);
+                }
+            }
+        });
+    if let Some(inner) = resp
+        && ctx.input(|i| i.pointer.any_click())
+        && ctx.input(|i| {
+            i.pointer
+                .interact_pos()
+                .is_some_and(|p| !inner.response.rect.contains(p))
+        })
+    {
+        commands.push(Command::CloseGridMenu);
+    }
 }
 
 /// One entry of the block menu: a label and the kind it turns the block into.
