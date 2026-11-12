@@ -22,7 +22,6 @@ use super::settings_pages::{
 /// close control so they cannot drift (spec-061).
 const SETTINGS_PADDING: f32 = 20.0;
 const SETTINGS_RAIL_PADDING_Y: f32 = 18.0;
-const SETTINGS_SCROLLBAR_MARGIN: f32 = 72.0;
 
 /// A settings navigation row with a leading glyph, as in the reference
 /// pictures (preferences window layout).
@@ -192,11 +191,16 @@ pub(crate) fn render_settings(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    let screen = ctx.viewport_rect();
+    let size = Vec2::new(
+        (screen.width() - 80.0).clamp(720.0, 1200.0),
+        (screen.height() - 80.0).clamp(420.0, 720.0),
+    );
     let resp = egui::Window::new("settings")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_size(Vec2::new(1200.0, 720.0))
+        .fixed_size(size)
         .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
         .frame(
             egui::Frame::NONE
@@ -223,9 +227,17 @@ pub(crate) fn render_settings(
                 ui.add_space(16.0);
                 // Left navigation column. Mail & Calendar is intentionally not
                 // implemented, so it is not offered in the rail.
-                ui.vertical(|ui| {
-                    ui.set_width(268.0);
-                    ui.add_space(SETTINGS_RAIL_PADDING_Y);
+                ui.allocate_ui_with_layout(
+                    Vec2::new(268.0, whole.height() - 2.0 * SETTINGS_RAIL_PADDING_Y),
+                    egui::Layout::top_down(egui::Align::LEFT),
+                    |ui| {
+                        egui::ScrollArea::vertical()
+                            .id_salt("settings_rail_scroll")
+                            .max_height(whole.height() - 2.0 * SETTINGS_RAIL_PADDING_Y)
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                ui.set_width(268.0);
+                                ui.add_space(SETTINGS_RAIL_PADDING_Y);
                     let (search, _) =
                         ui.allocate_exact_size(Vec2::new(268.0, 30.0), Sense::hover());
                     ui.painter().rect_filled(search, CornerRadius::same(6), palette.hover);
@@ -271,17 +283,18 @@ pub(crate) fn render_settings(
                         ui.add_space(14.0);
                     }
                     ui.add_space(SETTINGS_RAIL_PADDING_Y);
-                });
+                            });
+                    },
+                );
 
-                ui.add_space(40.0);
+                ui.add_space(16.0);
 
-                // Right content column. The right margin keeps the content
-                // clear of the fixed close control in the header corner.
+                // Right content column spans from the rail to the dialog's
+                // right border; the scrollbar sits on that border and the
+                // frame supplies the internal content padding (spec-069).
                 ui.vertical(|ui| {
-                    ui.set_width(
-                        (ui.available_width() - SETTINGS_SCROLLBAR_MARGIN).max(320.0),
-                    );
-                    let content_height = (ui.available_height() - 24.0).max(120.0);
+                    ui.set_width(ui.available_width().max(320.0));
+                    let content_height = (ui.available_height() - 8.0).max(120.0);
                     egui::ScrollArea::vertical()
                         .scroll_bar_visibility(
                             egui::scroll_area::ScrollBarVisibility::AlwaysVisible,
@@ -290,6 +303,9 @@ pub(crate) fn render_settings(
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
                             ui.add_space(24.0);
+                            egui::Frame::NONE
+                                .inner_margin(egui::Margin::symmetric(24, 0))
+                                .show(ui, |ui| {
                             let page = view.settings_page.as_str();
                             let subtitle = if page == "Preferences" {
                                 "Choose how you want the app to look and behave"
@@ -361,6 +377,7 @@ pub(crate) fn render_settings(
                                 }
                             }
                             ui.add_space(24.0);
+                                });
                         });
                 });
             });
@@ -369,28 +386,36 @@ pub(crate) fn render_settings(
             // preferences window (reference/picture-15.png .. picture-29.png),
             // NOT a button on the heading row. It stays put while content
             // scrolls, and sits in a subtle rounded hover well.
-            let close_rect = Rect::from_center_size(
-                Pos2::new(
-                    whole.right() - SETTINGS_PADDING - 40.0,
-                    whole.top() + SETTINGS_PADDING + 14.0,
-                ),
-                Vec2::splat(28.0),
+            // The close "x" lives in a foreground layer so scrolling content
+            // can never paint over it (spec-069).
+            let close_pos = Pos2::new(
+                whole.right() - SETTINGS_PADDING - 42.0,
+                whole.top() + SETTINGS_PADDING,
             );
-            ui.painter().rect_filled(
-                close_rect,
-                CornerRadius::same(14),
-                palette.hover,
-            );
-            let close = ui.put(
-                close_rect,
-                egui::Button::new(
-                    egui::RichText::new("×").size(18.0).color(palette.muted),
-                )
-                .frame(false),
-            );
-            if close.clicked() {
-                commands.push(Command::CloseSettings);
-            }
+            egui::Area::new(egui::Id::unique("settings_close"))
+                .order(egui::Order::Foreground)
+                .fixed_pos(close_pos)
+                .show(ctx, |ui| {
+                    let (rect, response) =
+                        ui.allocate_exact_size(Vec2::splat(28.0), Sense::click());
+                    if response.hovered() {
+                        ui.painter().rect_filled(
+                            rect,
+                            CornerRadius::same(14),
+                            palette.hover,
+                        );
+                    }
+                    ui.painter().text(
+                        rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        "×",
+                        egui::FontId::proportional(18.0),
+                        palette.muted,
+                    );
+                    if response.clicked() {
+                        commands.push(Command::CloseSettings);
+                    }
+                });
         });
     if let Some(inner) = resp
         && ctx.input(|i| i.pointer.any_click())
