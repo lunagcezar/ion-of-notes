@@ -12,9 +12,9 @@ in what order, and which document is the source of truth for each concern.
 | Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014 |
 | Deploying the server | `docs/deployment.md` → `compose.yml` → `Dockerfile` → `spec-050`/`spec-051` |
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
-| Working on visuals | `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
+| Working on visuals | `docs/ui-guidelines.md` → `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
-## Current status (2026-11-11)
+## Current status (2026-11-12)
 
 - **Specs:** `spec-001` .. `spec-056` implemented; `spec-007` retired;
   `spec-016` is a plan with B5 done; `spec-057` is implemented (UI quality
@@ -22,7 +22,8 @@ in what order, and which document is the source of truth for each concern.
   editor/AI responsiveness, settings formats, customizable sidebar);
   `spec-063` .. `spec-066` are implemented (bug-bashing II); `spec-067` is
   implemented (runtime smoke tests); `spec-068` .. `spec-071` are implemented
-  (bug-bashing III). The v2 foundation, pagination, rich
+  (bug-bashing III); `spec-072` is implemented (centralized UI metrics). The
+  v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
   (spec-039), the WebSocket change feed (spec-040), TLS webhooks/shared limits
@@ -34,7 +35,7 @@ in what order, and which document is the source of truth for each concern.
   (spec-051), deployment hardening II (spec-052), the supply-chain/tooling baseline
   (spec-053), webhook reliability (spec-054), remote-mode UX (spec-055) and the production
   Compose/TLS manifest (spec-056) are implemented.
-- **Tests:** 261 tests across the core and desktop passes (235 + 26); both
+- **Tests:** 289 tests across the core and desktop passes (252 + 37); both
   clippy feature passes and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
   selects SQLite with Argon2id accounts and sessions. The desktop can connect
@@ -71,6 +72,7 @@ flowchart TD
     README[README.md] --> INDEX[docs/index.md]
     INDEX --> ARCH[docs/architecture.md]
     INDEX --> GUIDE[docs/contributor-guide.md]
+    INDEX --> UIGUIDE[docs/ui-guidelines.md]
     INDEX --> TEST[docs/testing.md]
     INDEX --> GLOSS[docs/glossary.md]
     INDEX --> REVIEW[docs/review-findings.md]
@@ -100,6 +102,7 @@ flowchart TD
 | `docs/architecture.md` | contributors, agents | System context, layers, modules, request/persistence flows, diagrams |
 | `docs/deployment.md` | operators | Container deployment, TLS/reverse proxy, backups, secrets, upgrades and hardening |
 | `docs/contributor-guide.md` | contributors, agents | Step-by-step SDD/TDD workflow and how to add features |
+| `docs/ui-guidelines.md` | UI contributors, agents | Alignment, margins, padding, design constants and how to add new UI tokens |
 | `docs/testing.md` | contributors, agents | Test strategy, test crates, fakes, red/green discipline |
 | `docs/glossary.md` | everyone | Shared vocabulary (domain, ports, adapters, DTOs, CRDT, clean room, …) |
 | `docs/review-findings.md` | maintainers, reviewers | Findings from the architecture/performance review and their resolution |
@@ -121,18 +124,20 @@ flowchart TD
 
 1. **Behavior requirements** live in `docs/requirements.md`; a spec records the
    slice that implements them.
-5. **Data shape** lives in `docs/data-model.md`; Rust structs are the executable
+2. **Data shape** lives in `docs/data-model.md`; Rust structs are the executable
    form.
 3. **Architecture decisions** live in ADRs; `AGENTS.md` summarizes the standing
    guidelines.
 4. **The current API** is `docs/api-contract.md`; the original service's
    contract is unknown and must not be inferred from our implementation.
-5. **Visual evidence** is `reference/` (98 pictures: the original 29 plus the
+5. **UI layout and design constants** are `docs/ui-guidelines.md`; the
+   executable values are in `src/ui/constants.rs`.
+6. **Visual evidence** is `reference/` (98 pictures: the original 29 plus the
    later build) plus `screenshots/` (72 local later-build pictures);
    `docs/visual-reference-inventory.md` summarizes them.
-6. **Clean-room evidence** is `docs/api-observations.md` and
+7. **Clean-room evidence** is `docs/api-observations.md` and
    `docs/reverse-engineering-log.md`; no capture is authorized under B1.
-7. **Public API evidence** is `docs/public-api-analysis.md` plus the
+8. **Public API evidence** is `docs/public-api-analysis.md` plus the
    **Observed (public docs)** rows in `docs/api-observations.md`. It describes
    the public integration contract, not the original private server.
 
@@ -143,6 +148,8 @@ flowchart TD
 - New route/DTO/status → update `docs/api-contract.md`.
 - New module or dependency direction change → update `AGENTS.md` and
   `docs/architecture.md`.
+- UI layout, alignment, spacing or design-token change → update
+  `docs/ui-guidelines.md` and the relevant spec.
 - New visual surface → update `docs/visual-reference-inventory.md` if it comes
   from the pictures.
 - Completed spec → update `CHANGELOG.md`, `spec/README.md`, and commit.

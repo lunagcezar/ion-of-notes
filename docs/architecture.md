@@ -409,6 +409,7 @@ new stores and delivery workers.
 ## 12. Further reading
 
 - `docs/contributor-guide.md` — how to make a change.
+- `docs/ui-guidelines.md` — alignment, spacing and design constants.
 - `docs/testing.md` — test strategy.
 - `docs/api-contract.md` — current and decided API.
 - `docs/adr-002-architecture-guidelines.md` — guidelines.

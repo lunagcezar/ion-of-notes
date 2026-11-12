@@ -153,7 +153,9 @@ flowchart LR
    `ui/commands.rs`.
 3. Apply them in `ui/apply.rs`; keep persistence through `Client`.
 4. Render in `ui/render/*` or `ui/dialogs/*`; collect commands, never mutate
-   server state directly.
+   server state directly. Use the layout tokens from `src/ui/constants.rs`
+   (see `docs/ui-guidelines.md` for alignment, margins, padding and how to add
+   a token).
 5. Add pure helper tests where possible; otherwise verify with `--screenshot`.
 6. Add a `ION_OF_NOTES_SHOW` preview hook if the state is otherwise hard to
    capture.

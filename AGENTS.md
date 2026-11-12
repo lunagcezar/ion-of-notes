@@ -587,6 +587,32 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
   13 px and `STROKE_HAIRLINE` tokens.
 - Every user-visible command is also reachable through the client API.
 
+### UI layout guidelines (alignment, spacing and constants)
+
+- **One source of truth:** every layout value comes from
+  `src/ui/constants.rs`. Do not hardcode spacing, sizes, padding or radii in a
+  UI module; use a base-scale token (`SPACE_12`) or a semantic token
+  (`ROW_HEIGHT`).
+- **Shared values:** the main sidebar and the settings rail use the same
+  `SIDEBAR_CONTENT_PADDING`, `ROW_HEIGHT`, `ROW_RADIUS`, `ICON_SIZE` and
+  `SECTION_GAP`. Prefer the shared token over a new number.
+- **Even numbers:** layout values are even. The only documented exceptions are
+  `FONT_SMALL = 13.0` (compact label size) and `STROKE_HAIRLINE = 1.0` (crisp
+  borders). Ratios use percent integers (`SWITCHER_LIST_PERCENT`).
+- **Alignment:** fixed-height rows use `Layout::left_to_right(Align::Center)`
+  or paint text at `rect.center().y` with `Align2::LEFT_CENTER`. Do not use a
+  full-height `horizontal_centered` for a compact strip.
+- **Insets:** main sidebar rows use 10 px icon / 36 px label insets; settings
+  navigation rows use 12 px / 38 px. Section labels are 24 px high. Keep a
+  surface's insets consistent.
+- **Popovers:** anchor to the control rect with `pivot(Align2::LEFT_BOTTOM)`
+  and `fixed_pos(anchor.left(), anchor.top())`; use `POPOVER_GAP`.
+- **New constants:** add them to the matching section of
+  `src/ui/constants.rs` with a semantic `SCREAMING_SNAKE_CASE` name, an even
+  value and a doc comment when needed. Then run
+  `cargo test --features desktop --test ui ui_constants`.
+- Full guide: `docs/ui-guidelines.md`.
+
 ## Commands
 
 | Command                                  | Purpose                                  |
@@ -594,9 +620,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
-| `cargo test --all-targets --no-default-features` | Core integration tests (235, no desktop stack) |
-| `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (26) |
-| `cargo test --all-targets`               | All default-feature tests (260; the core-only seam test is skipped) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (252, no desktop stack) |
+| `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (37) |
+| `cargo test --all-targets`               | All default-feature tests (289; the core-only seam test is skipped) |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, core + desktop tests, docs |
@@ -651,6 +677,8 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
 - New route/DTO/status → update `docs/api-contract.md`.
 - New module or dependency-direction change → update `AGENTS.md` and
   `docs/architecture.md`.
+- UI layout, alignment, spacing or design-token change → update
+  `docs/ui-guidelines.md` and the relevant spec.
 - New term → update `docs/glossary.md`.
 - Each implemented spec → add a `CHANGELOG.md` entry and update
   `spec/README.md`.
@@ -675,6 +703,8 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
 
 - eframe / egui: https://docs.rs/eframe/latest/eframe/ and https://docs.rs/egui/latest/egui/
 - Rust API Guidelines: https://github.com/rust-lang/api-guidelines
+- UI layout, alignment and design constants: `docs/ui-guidelines.md`
+  (constants use `SCREAMING_SNAKE_CASE` per the Rust API Guidelines / RFC 430).
 - The Rust Programming Language, ch. 7 "Managing Growing Projects with
   Packages, Crates, and Modules":
   https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html

@@ -431,6 +431,7 @@ eframe, JSON files or sockets.
 | [`docs/architecture.md`](docs/architecture.md) | Layers, modules, request/persistence flows |
 | [`docs/deployment.md`](docs/deployment.md) | Container deployment, TLS, backups, secrets and upgrades |
 | [`docs/contributor-guide.md`](docs/contributor-guide.md) | SDD/TDD workflow and where code belongs |
+| [`docs/ui-guidelines.md`](docs/ui-guidelines.md) | Alignment, spacing and design constants |
 | [`docs/testing.md`](docs/testing.md) | Test strategy, crates and fakes |
 | [`docs/glossary.md`](docs/glossary.md) | Shared vocabulary |
 | [`docs/api-contract.md`](docs/api-contract.md) | Implemented v1/v2 routes and WebSocket messages |
