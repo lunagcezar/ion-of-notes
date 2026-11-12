@@ -125,6 +125,34 @@ impl Workspace {
         }
     }
 
+    /// Rebuild a workspace from the normalized SQLite parts (spec-114).
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn from_stored_parts(
+        name: String,
+        pages: Vec<Page>,
+        version: u64,
+        settings: WorkspaceSettings,
+        databases: Vec<Database>,
+        data_sources: Vec<DataSource>,
+        views: Vec<View>,
+        comments: Vec<CommentDto>,
+        file_uploads: Vec<FileUpload>,
+    ) -> Self {
+        Self {
+            name,
+            index: WorkspaceIndex::build(&pages),
+            pages,
+            version,
+            settings,
+            databases,
+            data_sources,
+            views,
+            comments,
+            file_uploads,
+            search_cache: SearchCacheCell::default(),
+        }
+    }
+
     /// Clear the legacy `"P"` icon default when it does not match the title's
     /// first letter, so old pages regain the title-letter fallback (spec-068).
     pub fn normalize_legacy_icons(&mut self) {

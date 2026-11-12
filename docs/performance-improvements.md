@@ -28,6 +28,7 @@ the whole workspace.
 | `spec-111` | Immutable v1 read snapshots outside the server mutex. | `/api/workspace`, `/api/pages` and `/api/pages/{id}` serialize without holding the server lock; writes stay ordered. |
 | `spec-112` | Cache remote cursor text widths. | Reuses measured cursor geometry instead of rebuilding prefixes every frame. |
 | `spec-113` | Estimate uncached block heights. | Skips far-below blocks on the first frame; measured heights replace estimates once rendered. |
+| `spec-114` | Incremental SQLite page persistence. | One-page writes update one page row plus metadata/collaboration instead of rewriting the whole workspace JSON. |
 
 The existing good decisions are preserved: cached filtered icon indices,
 `ScrollArea::show_rows` virtualization for the icon grid, the debounced edit
@@ -43,7 +44,7 @@ queue, the background WebSocket, and background webhook delivery.
 | 3 | Cursor geometry cache | Implemented in `spec-112`: cached text widths keyed by text hash, index, font size and family. |
 | 3 | Database table/board virtualization | Implemented in `spec-110`: offscreen rows advance by a fixed height and board columns share one status grouping. |
 | 4 | Immutable server read snapshots + ordered writer | Implemented for the expensive v1 reads in `spec-111`; writes still use the ordered mutex and v2 stays on the locked pipeline for policy/limits. |
-| 4 | Incremental SQLite persistence | Deferred by measurement: see `docs/performance-roadmap.md`. |
+| 4 | Incremental SQLite persistence | Implemented in `spec-114`: metadata plus one row per page; one-page writes update one page row and preserve order. |
 
 ## 4. Measurement
 

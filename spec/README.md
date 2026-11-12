@@ -151,6 +151,7 @@ Status vocabulary:
 | [111](spec-111-read-snapshots.md) | Immutable v1 read snapshots | implemented | Workspace/pages reads outside the server mutex |
 | [112](spec-112-cursor-geometry-cache.md) | Cache remote cursor geometry | implemented | Text-width cache per block/font/index |
 | [113](spec-113-estimated-block-heights.md) | Estimate uncached block heights | implemented | First-frame far-below blocks skipped |
+| [114](spec-114-incremental-sqlite-persistence.md) | Incremental SQLite page persistence | implemented | Metadata + one row per page |
 
 ## 3. Work status
 

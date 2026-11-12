@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (323 tests across the two feature passes, 2026-11-12)
+## 3. Test-crate map (324 tests across the two feature passes, 2026-11-12)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -65,7 +65,7 @@ flowchart TD
 | `tests/ui_crdt.rs` | 5 | client Yrs diff, empty-sync baseline, projection, convergence |
 | `tests/remote.rs` | 5 | login, remote REST/CRDT and WebSocket change/awareness, remembered session |
 | `tests/auth.rs` | 7 | Argon2id, login, logout, demo token, sessions, SQLite restart, password-file secret |
-| `tests/sqlite_store.rs` | 3 | workspace/collab round-trip, accounts/sessions, JSON migration |
+| `tests/sqlite_store.rs` | 4 | workspace/collab round-trip, accounts/sessions, JSON migration |
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
 | `tests/shortcuts.rs` | 8 | shortcut table, exactness, focus/modifier guard |
 | `tests/ollama.rs` | 7 | endpoint parsing, request/response decoding, chunked bodies, status |

@@ -8,7 +8,7 @@ use ion_of_notes::auth::{
 };
 use ion_of_notes::collab::CollabState;
 use ion_of_notes::model::{Workspace, now_iso};
-use ion_of_notes::store::{SqliteStore, save, save_collab};
+use ion_of_notes::store::{SnapshotStore, SqliteStore, save, save_collab};
 
 #[test]
 fn workspace_and_collab_roundtrip_through_sqlite() {
@@ -30,6 +30,49 @@ fn workspace_and_collab_roundtrip_through_sqlite() {
         reopened.load_collab().expect("load").expect("collab"),
         collab
     );
+
+    common::remove(&path);
+}
+
+#[test]
+fn incremental_page_persist_updates_one_page_and_preserves_order() {
+    let path = common::temp_path("sqlite-incremental", "sqlite3");
+    let mut workspace = Workspace::seed("sqlite-incremental");
+    let collab = CollabState::new();
+    let store = SqliteStore::open(&path).expect("open");
+    store.persist_workspace(&workspace).expect("workspace");
+    let page_id = workspace.pages[0].id.clone();
+    let order: Vec<String> = workspace.pages.iter().map(|page| page.id.clone()).collect();
+
+    workspace.pages[0].title = "Only this page".to_string();
+    store
+        .persist_page(&workspace, &collab, &page_id)
+        .expect("page");
+    drop(store);
+
+    let reopened = SqliteStore::open(&path).expect("reopen");
+    let loaded = reopened.load_workspace().expect("load").expect("workspace");
+    assert_eq!(loaded.pages[0].title, "Only this page");
+    assert_eq!(
+        loaded
+            .pages
+            .iter()
+            .map(|page| page.id.clone())
+            .collect::<Vec<_>>(),
+        order
+    );
+    assert_eq!(loaded.pages.len(), workspace.pages.len());
+
+    let mut workspace = loaded;
+    workspace.remove_page(&page_id).expect("remove");
+    reopened
+        .persist_page(&workspace, &collab, &page_id)
+        .expect("delete page");
+    drop(reopened);
+
+    let reopened = SqliteStore::open(&path).expect("reopen");
+    let loaded = reopened.load_workspace().expect("load").expect("workspace");
+    assert!(!loaded.pages.iter().any(|page| page.id == page_id));
 
     common::remove(&path);
 }

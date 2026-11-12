@@ -72,6 +72,19 @@ pub trait CollabStore: Send + Sync {
 pub trait SnapshotStore: Send + Sync {
     /// Persist workspace and collaboration state in one durable commit.
     fn persist_snapshots(&self, workspace: &Workspace, collab: &CollabState) -> io::Result<()>;
+
+    /// Persist one page (plus workspace metadata and collaboration state).
+    ///
+    /// Adapters that store whole documents can use the default full snapshot.
+    fn persist_page(
+        &self,
+        workspace: &Workspace,
+        collab: &CollabState,
+        page_id: &str,
+    ) -> io::Result<()> {
+        let _ = page_id;
+        self.persist_snapshots(workspace, collab)
+    }
 }
 
 /// One shared rate-limit decision.

@@ -29,6 +29,8 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   the server mutex, invalidated after writes and WebSocket CRDT updates.
 - Cache remote cursor text widths and estimate uncached block heights so the
   first frame skips far-below blocks.
+- Store SQLite pages in a normalized `workspace_pages` table so one-page writes
+  update one row plus metadata/collaboration state.
 
 ### Changed - spec-100 domain events
 

@@ -680,6 +680,15 @@ impl WorkspaceServer {
         self.persistence.collab_store.persist(&self.collab)
     }
 
+    /// Persist one page plus metadata/collaboration (spec-114).
+    fn persist_page(&self, page_id: &str) -> std::io::Result<()> {
+        if let Some(store) = &self.persistence.snapshot_store {
+            return store.persist_page(&self.workspace, &self.collab, page_id);
+        }
+        self.persistence.workspace_store.persist(&self.workspace)?;
+        self.persistence.collab_store.persist(&self.collab)
+    }
+
     /// Single write path (DRY): bump the version, append one sync-log entry,
     /// and persist both documents. Every mutation goes through here and reports
     /// a storage failure to the caller instead of hiding it (spec-015).
@@ -687,7 +696,7 @@ impl WorkspaceServer {
         self.workspace.bump_version();
         let actor = self.collab.owner_id();
         let change = self.collab.record(op, page_id, &actor);
-        if let Err(error) = self.persist() {
+        if let Err(error) = self.persist_page(page_id) {
             self.reload_after_failure();
             return Err(error);
         }
@@ -724,7 +733,7 @@ impl WorkspaceServer {
         self.crdt.project(&mut self.workspace, page_id)?;
         self.workspace.bump_version();
         self.collab.record(ChangeOp::Update, page_id, actor);
-        if let Err(error) = self.persist() {
+        if let Err(error) = self.persist_page(page_id) {
             self.reload_after_failure();
             self.crdt.reset_page(page_id);
             return Err(error.to_string());

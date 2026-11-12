@@ -7,7 +7,9 @@
 
 use crate::auth::{Account, AuthStore, Session};
 use crate::collab::CollabState;
-use crate::model::{Workspace, now_iso};
+use crate::model::{
+    CommentDto, DataSource, Database, FileUpload, Page, View, Workspace, WorkspaceSettings, now_iso,
+};
 use crate::store::{CollabStore, RateLimitHit, RateLimitStore, SnapshotStore, WorkspaceStore};
 use rusqlite::{Connection, OptionalExtension, params};
 use std::io;
@@ -19,6 +21,175 @@ use std::sync::{Arc, Mutex};
 pub struct SqliteStore {
     path: PathBuf,
     connection: Arc<Mutex<Connection>>,
+}
+
+/// Workspace fields that are not pages. Pages live in their own table so a
+/// one-page write does not serialize the whole workspace (spec-114).
+#[derive(serde::Serialize, serde::Deserialize)]
+struct WorkspaceMeta {
+    name: String,
+    version: u64,
+    settings: WorkspaceSettings,
+    #[serde(default)]
+    databases: Vec<Database>,
+    #[serde(default)]
+    data_sources: Vec<DataSource>,
+    #[serde(default)]
+    views: Vec<View>,
+    #[serde(default)]
+    comments: Vec<CommentDto>,
+    #[serde(default)]
+    file_uploads: Vec<FileUpload>,
+}
+
+impl WorkspaceMeta {
+    fn from_workspace(workspace: &Workspace) -> Self {
+        Self {
+            name: workspace.name.clone(),
+            version: workspace.version,
+            settings: workspace.settings.clone(),
+            databases: workspace.databases.clone(),
+            data_sources: workspace.data_sources.clone(),
+            views: workspace.views.clone(),
+            comments: workspace.comments.clone(),
+            file_uploads: workspace.file_uploads.clone(),
+        }
+    }
+
+    fn into_workspace(self, pages: Vec<Page>) -> Workspace {
+        Workspace::from_stored_parts(
+            self.name,
+            pages,
+            self.version,
+            self.settings,
+            self.databases,
+            self.data_sources,
+            self.views,
+            self.comments,
+            self.file_uploads,
+        )
+    }
+}
+
+fn serialize_page(page: &Page) -> rusqlite::Result<String> {
+    serde_json::to_string(page)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))
+}
+
+fn write_meta(connection: &Connection, meta: &WorkspaceMeta, now: &str) -> rusqlite::Result<()> {
+    let json = serde_json::to_string(meta)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    connection.execute(
+        "INSERT INTO workspace_meta (id, json, updated_at) VALUES (1, ?1, ?2)
+         ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
+        params![json, now],
+    )?;
+    Ok(())
+}
+
+fn write_page(
+    connection: &Connection,
+    page: &Page,
+    position: usize,
+    now: &str,
+) -> rusqlite::Result<()> {
+    let json = serialize_page(page)?;
+    connection.execute(
+        "INSERT INTO workspace_pages (id, position, json, updated_at) VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(id) DO UPDATE SET
+             position = excluded.position,
+             json = excluded.json,
+             updated_at = excluded.updated_at",
+        params![page.id, position as i64, json, now],
+    )?;
+    Ok(())
+}
+
+fn write_all_pages(
+    connection: &Connection,
+    workspace: &Workspace,
+    now: &str,
+) -> rusqlite::Result<()> {
+    connection.execute("DELETE FROM workspace_pages", [])?;
+    for (position, page) in workspace.pages.iter().enumerate() {
+        write_page(connection, page, position, now)?;
+    }
+    Ok(())
+}
+
+fn refresh_positions(connection: &Connection, workspace: &Workspace) -> rusqlite::Result<()> {
+    for (position, page) in workspace.pages.iter().enumerate() {
+        connection.execute(
+            "UPDATE workspace_pages SET position = ?1 WHERE id = ?2",
+            params![position as i64, page.id],
+        )?;
+    }
+    Ok(())
+}
+
+fn write_collab(connection: &Connection, collab: &CollabState, now: &str) -> rusqlite::Result<()> {
+    let json = serde_json::to_string(collab)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    connection.execute(
+        "INSERT INTO collab (id, json, updated_at) VALUES (1, ?1, ?2)
+         ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
+        params![json, now],
+    )?;
+    Ok(())
+}
+
+fn read_pages(connection: &Connection) -> rusqlite::Result<Vec<Page>> {
+    let mut statement =
+        connection.prepare("SELECT json FROM workspace_pages ORDER BY position, id")?;
+    let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+    let mut pages = Vec::new();
+    for row in rows {
+        let json = row?;
+        let page: Page = serde_json::from_str(&json).map_err(|error| {
+            rusqlite::Error::FromSqlConversionFailure(
+                0,
+                rusqlite::types::Type::Text,
+                Box::new(error),
+            )
+        })?;
+        pages.push(page);
+    }
+    Ok(pages)
+}
+
+fn migrate_legacy(connection: &mut Connection) -> io::Result<()> {
+    let has_meta: bool = connection
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM workspace_meta WHERE id = 1)",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(io::Error::other)?;
+    if has_meta {
+        return Ok(());
+    }
+    let legacy: Option<String> = connection
+        .query_row("SELECT json FROM workspace WHERE id = 1", [], |row| {
+            row.get(0)
+        })
+        .optional()
+        .map_err(io::Error::other)?;
+    let Some(json) = legacy else {
+        return Ok(());
+    };
+    let workspace: Workspace = serde_json::from_str(&json)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    let now = now_iso();
+    let transaction = connection.transaction().map_err(io::Error::other)?;
+    write_meta(
+        &transaction,
+        &WorkspaceMeta::from_workspace(&workspace),
+        &now,
+    )
+    .map_err(io::Error::other)?;
+    write_all_pages(&transaction, &workspace, &now).map_err(io::Error::other)?;
+    transaction.commit().map_err(io::Error::other)?;
+    Ok(())
 }
 
 impl std::fmt::Debug for SqliteStore {
@@ -39,7 +210,7 @@ impl SqliteStore {
         {
             std::fs::create_dir_all(parent)?;
         }
-        let connection = Connection::open(&path).map_err(io::Error::other)?;
+        let mut connection = Connection::open(&path).map_err(io::Error::other)?;
         connection
             .execute_batch(
                 "PRAGMA journal_mode = WAL;
@@ -49,6 +220,19 @@ impl SqliteStore {
                      json TEXT NOT NULL,
                      updated_at TEXT NOT NULL
                  );
+                 CREATE TABLE IF NOT EXISTS workspace_meta (
+                     id INTEGER PRIMARY KEY CHECK (id = 1),
+                     json TEXT NOT NULL,
+                     updated_at TEXT NOT NULL
+                 );
+                 CREATE TABLE IF NOT EXISTS workspace_pages (
+                     id TEXT PRIMARY KEY,
+                     position INTEGER NOT NULL,
+                     json TEXT NOT NULL,
+                     updated_at TEXT NOT NULL
+                 );
+                 CREATE INDEX IF NOT EXISTS workspace_pages_position
+                     ON workspace_pages(position);
                  CREATE TABLE IF NOT EXISTS collab (
                      id INTEGER PRIMARY KEY CHECK (id = 1),
                      json TEXT NOT NULL,
@@ -76,6 +260,7 @@ impl SqliteStore {
                  );",
             )
             .map_err(io::Error::other)?;
+        migrate_legacy(&mut connection)?;
         Ok(Self {
             path,
             connection: Arc::new(Mutex::new(connection)),
@@ -99,20 +284,25 @@ impl SqliteStore {
 
     /// Load the workspace document, if present.
     pub fn load_workspace(&self) -> io::Result<Option<Workspace>> {
-        let json: Option<String> = self.with_connection(|connection| {
-            connection
-                .query_row("SELECT json FROM workspace WHERE id = 1", [], |row| {
+        self.with_connection(|connection| {
+            let meta_json: Option<String> = connection
+                .query_row("SELECT json FROM workspace_meta WHERE id = 1", [], |row| {
                     row.get(0)
                 })
-                .optional()
-        })?;
-        json.map(|json| {
-            let mut workspace: Workspace = serde_json::from_str(&json)
-                .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-            workspace.normalize_legacy_icons();
-            Ok(workspace)
+                .optional()?;
+            let Some(meta_json) = meta_json else {
+                return Ok(None);
+            };
+            let meta: WorkspaceMeta = serde_json::from_str(&meta_json).map_err(|error| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Text,
+                    Box::new(error),
+                )
+            })?;
+            let pages = read_pages(connection)?;
+            Ok(Some(meta.into_workspace(pages)))
         })
-        .transpose()
     }
 
     /// Load the collaboration document, if present.
@@ -203,14 +393,11 @@ impl RateLimitStore for SqliteStore {
 
 impl WorkspaceStore for SqliteStore {
     fn persist(&self, workspace: &Workspace) -> io::Result<()> {
-        let json = serde_json::to_string(workspace)
-            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        let meta = WorkspaceMeta::from_workspace(workspace);
+        let now = now_iso();
         self.with_connection(|connection| {
-            connection.execute(
-                "INSERT INTO workspace (id, json, updated_at) VALUES (1, ?1, ?2)
-                 ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
-                params![json, now_iso()],
-            )
+            write_meta(connection, &meta, &now)?;
+            write_all_pages(connection, workspace, &now)
         })?;
         Ok(())
     }
@@ -241,23 +428,42 @@ impl CollabStore for SqliteStore {
 
 impl SnapshotStore for SqliteStore {
     fn persist_snapshots(&self, workspace: &Workspace, collab: &CollabState) -> io::Result<()> {
-        let workspace_json = serde_json::to_string(workspace)
-            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-        let collab_json = serde_json::to_string(collab)
-            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-        let updated_at = now_iso();
+        let meta = WorkspaceMeta::from_workspace(workspace);
+        let now = now_iso();
         self.with_connection_mut(|connection| {
             let transaction = connection.transaction()?;
-            transaction.execute(
-                "INSERT INTO workspace (id, json, updated_at) VALUES (1, ?1, ?2)
-                 ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
-                params![workspace_json, updated_at],
-            )?;
-            transaction.execute(
-                "INSERT INTO collab (id, json, updated_at) VALUES (1, ?1, ?2)
-                 ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
-                params![collab_json, updated_at],
-            )?;
+            write_meta(&transaction, &meta, &now)?;
+            write_all_pages(&transaction, workspace, &now)?;
+            write_collab(&transaction, collab, &now)?;
+            transaction.commit()
+        })?;
+        Ok(())
+    }
+
+    fn persist_page(
+        &self,
+        workspace: &Workspace,
+        collab: &CollabState,
+        page_id: &str,
+    ) -> io::Result<()> {
+        let meta = WorkspaceMeta::from_workspace(workspace);
+        let now = now_iso();
+        self.with_connection_mut(|connection| {
+            let transaction = connection.transaction()?;
+            write_meta(&transaction, &meta, &now)?;
+            match workspace.pages.iter().position(|page| page.id == page_id) {
+                Some(position) => {
+                    write_page(&transaction, &workspace.pages[position], position, &now)?
+                }
+                None => {
+                    transaction.execute(
+                        "DELETE FROM workspace_pages WHERE id = ?1",
+                        params![page_id],
+                    )?;
+                }
+            }
+            refresh_positions(&transaction, workspace)?;
+            write_collab(&transaction, collab, &now)?;
             transaction.commit()
         })?;
         Ok(())
