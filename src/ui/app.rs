@@ -44,6 +44,35 @@ pub(super) use super::view::ViewState;
 pub(super) type ServerConnectResult = Result<(Client<app::DesktopApi>, Workspace, String), String>;
 pub(super) type ServerSlot = Arc<Mutex<Option<ServerConnectResult>>>;
 
+/// Search-owned application state.
+pub(super) struct SearchState {
+    pub open: bool,
+    pub query: String,
+    pub results: Arc<Vec<SearchResult>>,
+    pub title_only: bool,
+    pub created_by: Option<String>,
+    pub in_page: Option<String>,
+    pub has_comments: bool,
+    pub cache: SearchCache,
+    pub selected: usize,
+}
+
+impl Default for SearchState {
+    fn default() -> Self {
+        Self {
+            open: false,
+            query: String::new(),
+            results: Arc::new(Vec::new()),
+            title_only: false,
+            created_by: None,
+            in_page: None,
+            has_comments: false,
+            cache: SearchCache::default(),
+            selected: 0,
+        }
+    }
+}
+
 pub struct NotionApp {
     pub(super) client: Client<app::DesktopApi>,
     pub(super) workspace: Workspace,
@@ -55,14 +84,7 @@ pub struct NotionApp {
     pub(super) closed_tabs: Vec<String>,
     pub(super) sidebar_open: bool,
     pub(super) expanded: HashSet<String>,
-    pub(super) search_open: bool,
-    pub(super) search_query: String,
-    pub(super) search_results: Arc<Vec<SearchResult>>,
-    pub(super) search_title_only: bool,
-    pub(super) search_created_by: Option<String>,
-    pub(super) search_in: Option<String>,
-    pub(super) search_has_comments: bool,
-    pub(super) search_cache: SearchCache,
+    pub(super) search: SearchState,
     pub(super) settings_open: bool,
     pub(super) onboarding_open: bool,
     pub(super) templates_open: bool,
@@ -121,7 +143,6 @@ pub struct NotionApp {
     pub(super) fullscreen: bool,
     pub(super) undo_stack: Vec<Workspace>,
     pub(super) redo_stack: Vec<Workspace>,
-    pub(super) search_selected: usize,
     pub(super) highlight_pane: bool,
     pub(super) filters: bool,
     pub(super) icon_picker_open: bool,
@@ -403,29 +424,32 @@ impl NotionApp {
             closed_tabs: Vec::new(),
             sidebar_open: demo != "appbar-closed",
             expanded: HashSet::new(),
-            search_open: matches!(
-                demo.as_str(),
-                "search" | "filter-title" | "filter-created" | "filter-in" | "filter-hidden"
-            ),
-            search_query: if demo.starts_with("filter-") {
-                "o".to_string()
-            } else {
-                String::new()
+            search: SearchState {
+                open: matches!(
+                    demo.as_str(),
+                    "search" | "filter-title" | "filter-created" | "filter-in" | "filter-hidden"
+                ),
+                query: if demo.starts_with("filter-") {
+                    "o".to_string()
+                } else {
+                    String::new()
+                },
+                results: Arc::new(Vec::new()),
+                title_only: demo == "filter-title",
+                created_by: if demo == "filter-created" {
+                    Some("Workspace Owner".to_string())
+                } else {
+                    None
+                },
+                in_page: if demo == "filter-in" {
+                    Some("p-projects".to_string())
+                } else {
+                    None
+                },
+                has_comments: false,
+                cache: SearchCache::default(),
+                selected: 0,
             },
-            search_results: Arc::new(Vec::new()),
-            search_title_only: demo == "filter-title",
-            search_created_by: if demo == "filter-created" {
-                Some("Workspace Owner".to_string())
-            } else {
-                None
-            },
-            search_in: if demo == "filter-in" {
-                Some("p-projects".to_string())
-            } else {
-                None
-            },
-            search_has_comments: false,
-            search_cache: SearchCache::default(),
             settings_open: matches!(
                 demo.as_str(),
                 "settings"
@@ -525,7 +549,6 @@ impl NotionApp {
             fullscreen: false,
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
-            search_selected: 0,
             highlight_pane: true,
             filters: demo != "filter-hidden",
             icon_picker_open: matches!(
@@ -595,7 +618,7 @@ impl eframe::App for NotionApp {
         let frame_before = self.workspace.clone();
 
         let popup_open = self.new_tab_open
-            || self.search_open
+            || self.search.open
             || self.icon_picker_open
             || self.page_actions_open
             || self.version_history_open
@@ -624,10 +647,11 @@ impl eframe::App for NotionApp {
         // only when the query or the workspace version changed (spec-015).
         // An unchanged frame is a cache hit and never calls the server.
         if self
-            .search_cache
-            .needs_refresh(&self.search_query, self.workspace.version)
+            .search
+            .cache
+            .needs_refresh(&self.search.query, self.workspace.version)
         {
-            let results = if self.search_query.trim().is_empty() {
+            let results = if self.search.query.trim().is_empty() {
                 self.workspace
                     .pages
                     .iter()
@@ -640,9 +664,9 @@ impl eframe::App for NotionApp {
                     })
                     .collect()
             } else {
-                self.client.search(&self.search_query).unwrap_or_default()
+                self.client.search(&self.search.query).unwrap_or_default()
             };
-            self.search_results = Arc::new(results);
+            self.search.results = Arc::new(results);
         }
 
         let palette = Palette::for_theme(self.dark);
@@ -722,7 +746,7 @@ impl eframe::App for NotionApp {
             });
         }
 
-        if view.search_open {
+        if view.search.open {
             render_search(&ctx, &self.workspace, &view, &palette, &mut commands);
         }
         if view.settings_open {

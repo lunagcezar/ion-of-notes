@@ -39,8 +39,8 @@ impl NotionApp {
                     if let Some(choice) = choices.get(self.new_tab_selected).cloned() {
                         commands.push(Command::ActivateNewTab(choice));
                     }
-                } else if self.search_open
-                    && let Some(result) = self.search_results.get(self.search_selected)
+                } else if self.search.open
+                    && let Some(result) = self.search.results.get(self.search.selected)
                 {
                     let id = result.page_id.clone();
                     self.open_in_tab(id);
@@ -50,7 +50,7 @@ impl NotionApp {
             Command::ActivateNewTab(choice) => match choice {
                 NewTabChoice::NewChat => {
                     self.close_overlays();
-                    self.search_open = true;
+                    self.search.open = true;
                     self.ai_query.clear();
                     self.ai_answer = None;
                     self.ai_error = None;

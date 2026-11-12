@@ -6,6 +6,13 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-088 search state and view
+
+- Grouped the nine search fields into `SearchState` on `NotionApp` and
+  `SearchView` in `ViewState`; references use `self.search.*` / `view.search.*`.
+- The search cache and selected index stay in the runtime state; the view only
+  carries immutable presentation data.
+
 ### Changed - spec-087 typed handler errors and comments
 
 - Added `server/error.rs` with `HandlerError`, `HandlerResult<T>`, `body<T>()`

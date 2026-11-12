@@ -125,6 +125,7 @@ Status vocabulary:
 | [085](spec-085-transport-adapter-split.md) | Transport adapter split | implemented | `server/web/` and `remote/` modules |
 | [086](spec-086-refactoring-round-ii.md) | Refactoring round II | implemented | Status and deferred roadmap |
 | [087](spec-087-typed-handler-errors-and-comments.md) | Typed handler errors and comments use case | implemented | `HandlerResult`, comments use case, feature-specific handler |
+| [088](spec-088-search-state-and-view.md) | SearchState and SearchView grouping | implemented | Search runtime/view fields grouped |
 
 ## 3. Work status
 

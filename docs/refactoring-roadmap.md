@@ -15,6 +15,8 @@ deliberately deferred. It complements `docs/architecture.md` and
 | Transport segregation | `RequestTransport` owns `handle`; `CollabTransport` owns CRDT/realtime/awareness; `WorkspaceApi` is the composite. `Client` request methods need only `RequestTransport`. | `spec-083` |
 | Resource-oriented client | `src/client/` is split into pages, sharing, blocks, databases, views, comments, webhooks, collab and the shared request core. | `spec-084` |
 | Transport adapter split | `server/web/` is split into router/state, HTTP translation, operations and WebSocket modules; `remote/` is split into session, HTTP, realtime and CRDT modules. | `spec-085` |
+| Typed handler errors | `HandlerError`/`HandlerResult`/`body()` and the comments handler are converted. | `spec-087` |
+| Search state/view | Search fields are grouped into `SearchState` and `SearchView`; references use `self.search.*` / `view.search.*`. | `spec-088` |
 
 ## 2. Deferred: server request layer
 
@@ -30,8 +32,8 @@ deliberately deferred. It complements `docs/architecture.md` and
 
 | Item | Why it is deferred | Suggested first slice |
 | ---- | ------------------ | --------------------- |
-| Composable app state | `NotionApp` still owns navigation, editor, search, sharing, settings, AI, collaboration, server login and window state. | Group `SearchState` first, then `SharingState` and `CollaborationState`. |
-| Narrow view models | `ViewState` is still passed to every renderer. | Add `SearchView` and pass it only to the search renderer. |
+| Composable app state | `SearchState` is grouped; sharing, collaboration, settings and AI state remain flat on `NotionApp`. | Group `SharingState`, then `CollaborationState`. |
+| Narrow view models | `SearchView` is grouped; the search renderer still receives `ViewState` for the shared switcher fields. | Pass `SearchView` plus the three switcher fields, or split the switcher spec. |
 | Command grouping | `Command` still has one large family of variants. | Add `SidebarCmd` and route it through `apply/settings.rs`. |
 | DTO/domain separation | `model` still exports domain entities and API DTOs together. | Add v2 mapping for comments or blocks, the resources most likely to evolve. |
 | Normalized SQLite | Workspace and collaboration are whole-document JSON snapshots. | Measure load/serialization at 1k/10k/50k blocks first; then add per-page rows or an operation log. |

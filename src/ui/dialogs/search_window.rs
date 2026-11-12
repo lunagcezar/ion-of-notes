@@ -80,10 +80,10 @@ fn build_new_tab_rows(
                     ws,
                     page,
                     &view.new_tab_query,
-                    view.search_title_only,
-                    view.search_created_by.as_deref(),
-                    view.search_in.as_deref(),
-                    view.search_has_comments,
+                    view.search.title_only,
+                    view.search.created_by.as_deref(),
+                    view.search.in_page.as_deref(),
+                    view.search.has_comments,
                 )
             }),
             _ => true,
@@ -135,18 +135,19 @@ fn build_new_tab_rows(
 }
 
 fn build_search_rows(ws: &Workspace, view: &ViewState) -> Vec<SwitcherRow> {
-    view.search_results
+    view.search
+        .results
         .iter()
         .filter(|result| {
             ws.page(&result.page_id).is_some_and(|page| {
                 page_matches(
                     ws,
                     page,
-                    &view.search_query,
-                    view.search_title_only,
-                    view.search_created_by.as_deref(),
-                    view.search_in.as_deref(),
-                    view.search_has_comments,
+                    &view.search.query,
+                    view.search.title_only,
+                    view.search.created_by.as_deref(),
+                    view.search.in_page.as_deref(),
+                    view.search.has_comments,
                 )
             })
         })
@@ -185,10 +186,10 @@ fn switcher_spec<'a>(
         selected,
         highlight: view.highlight_pane,
         filters: view.filters,
-        title_only: view.search_title_only,
-        created_by: view.search_created_by.as_deref(),
-        in_page: view.search_in.as_deref(),
-        has_comments: view.search_has_comments,
+        title_only: view.search.title_only,
+        created_by: view.search.created_by.as_deref(),
+        in_page: view.search.in_page.as_deref(),
+        has_comments: view.search.has_comments,
         members: view.share_members.as_slice(),
         mode,
         ws,
@@ -228,9 +229,9 @@ pub(crate) fn render_search(
     let spec = switcher_spec(
         "quick_search",
         "Search...",
-        &view.search_query,
+        &view.search.query,
         &rows,
-        view.search_selected,
+        view.search.selected,
         SwitcherMode::Search,
         ws,
         view,

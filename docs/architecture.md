@@ -151,9 +151,9 @@ src/
   ui/
     commands.rs      Command / NewTabChoice / IconTab / FontStyle
     constants.rs     layout metrics: spacing, sizes, padding, radii, fonts
-    view.rs          ViewState
+    view.rs          ViewState + SearchView
     input.rs         egui keys -> shortcut actions
-    app.rs           NotionApp shell + eframe::App
+    app.rs           NotionApp shell, SearchState + eframe::App
     apply.rs         facade: apply_commands + shared helpers
     apply/           navigation, library, sharing, blocks, workspace, tabs,
                      ai, settings, page_actions, crdt, server

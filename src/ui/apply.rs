@@ -34,7 +34,7 @@ mod workspace;
 use super::crdt::CrdtSession;
 use super::edit_queue::{PendingEdits, execute_plan, plan_for};
 use super::search_cache::SearchCache;
-use super::view::ViewState;
+use super::view::{SearchView, ViewState};
 
 pub(super) fn set_block_text(blocks: &mut [Block], block_id: &str, text: &str) -> bool {
     for block in blocks {
@@ -76,13 +76,16 @@ impl NotionApp {
             active_tab: self.active_tab,
             sidebar_open: self.sidebar_open,
             expanded: self.expanded.clone(),
-            search_open: self.search_open,
-            search_query: self.search_query.clone(),
-            search_results: Arc::clone(&self.search_results),
-            search_title_only: self.search_title_only,
-            search_created_by: self.search_created_by.clone(),
-            search_in: self.search_in.clone(),
-            search_has_comments: self.search_has_comments,
+            search: SearchView {
+                open: self.search.open,
+                query: self.search.query.clone(),
+                results: Arc::clone(&self.search.results),
+                title_only: self.search.title_only,
+                created_by: self.search.created_by.clone(),
+                in_page: self.search.in_page.clone(),
+                has_comments: self.search.has_comments,
+                selected: self.search.selected,
+            },
             settings_open: self.settings_open,
             onboarding_open: self.onboarding_open,
             templates_open: self.templates_open,
@@ -136,7 +139,6 @@ impl NotionApp {
             ai_model: self.ai_config.model.clone(),
             ai_prefer_cli: self.ai_config.prefer_cli,
             shortcuts_open: self.shortcuts_open,
-            search_selected: self.search_selected,
             highlight_pane: self.highlight_pane,
             filters: self.filters,
             icon_picker_open: self.icon_picker_open,
@@ -180,7 +182,7 @@ impl NotionApp {
     }
 
     fn close_overlays(&mut self) {
-        self.search_open = false;
+        self.search.open = false;
         self.settings_open = false;
         self.share_open = false;
         self.inbox_open = false;
@@ -495,7 +497,7 @@ impl NotionApp {
         self.nav_history = self.tabs.clone();
         self.nav_pos = 0;
         self.library_open = false;
-        self.search_open = false;
+        self.search.open = false;
         self.settings_open = false;
         self.share_open = false;
         self.inbox_open = false;
@@ -508,8 +510,8 @@ impl NotionApp {
         self.crdt_rx = self.client.subscribe_realtime();
         self.remote_awareness.clear();
         self.last_awareness = None;
-        self.search_cache = SearchCache::default();
-        self.search_results = Arc::new(Vec::new());
+        self.search.cache = SearchCache::default();
+        self.search.results = Arc::new(Vec::new());
     }
 
     /// Persist the current workspace, activate `id` and show it.

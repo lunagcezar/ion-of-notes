@@ -30,8 +30,9 @@ in what order, and which document is the source of truth for each concern.
   shared CRDT helpers, sidebar decomposition and the refactoring roadmap);
   `spec-082` .. `spec-086` are implemented (pipeline stages, transport
   segregation, client modules, adapter split and refactoring round II);
-  `spec-087` is implemented (typed handler errors and the comments use case).
-  The v2 foundation, pagination, rich
+  `spec-087` is implemented (typed handler errors and the comments use case);
+  `spec-088` is implemented (SearchState/SearchView grouping). The
+  v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
   (spec-039), the WebSocket change feed (spec-040), TLS webhooks/shared limits

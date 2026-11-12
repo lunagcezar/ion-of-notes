@@ -59,30 +59,30 @@ impl NotionApp {
             Command::OpenSearch => {
                 self.close_overlays();
                 self.refresh_members();
-                self.search_open = true;
+                self.search.open = true;
             }
             Command::ToggleSearch => {
-                if self.search_open {
-                    self.search_open = false;
-                    self.search_query.clear();
+                if self.search.open {
+                    self.search.open = false;
+                    self.search.query.clear();
                 } else {
                     self.close_overlays();
                     self.refresh_members();
-                    self.search_open = true;
+                    self.search.open = true;
                 }
             }
             Command::CloseSearch => {
-                self.search_open = false;
-                self.search_query.clear();
+                self.search.open = false;
+                self.search.query.clear();
             }
-            Command::SetSearchQuery(query) => self.search_query = query,
+            Command::SetSearchQuery(query) => self.search.query = query,
             Command::ToggleSearchTitleOnly => {
-                self.search_title_only = !self.search_title_only;
+                self.search.title_only = !self.search.title_only;
             }
-            Command::SetSearchCreatedBy(name) => self.search_created_by = name,
-            Command::SetSearchIn(page) => self.search_in = page,
+            Command::SetSearchCreatedBy(name) => self.search.created_by = name,
+            Command::SetSearchIn(page) => self.search.in_page = page,
             Command::ToggleSearchHasComments => {
-                self.search_has_comments = !self.search_has_comments;
+                self.search.has_comments = !self.search.has_comments;
             }
             Command::OpenSettings => {
                 self.close_overlays();
@@ -160,7 +160,7 @@ impl NotionApp {
                 self.fullscreen = !self.fullscreen;
                 ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(self.fullscreen));
             }
-            Command::SetSearchSelected(index) => self.search_selected = index,
+            Command::SetSearchSelected(index) => self.search.selected = index,
             Command::ToggleHighlightPane => self.highlight_pane = !self.highlight_pane,
             Command::ToggleFilters => self.filters = !self.filters,
             other => debug_assert!(false, "unexpected navigation command: {other:?}"),

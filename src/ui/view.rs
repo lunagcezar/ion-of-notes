@@ -12,6 +12,18 @@ use egui::Pos2;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+/// Search-specific presentation data.
+pub(super) struct SearchView {
+    pub(super) open: bool,
+    pub(super) query: String,
+    pub(super) results: Arc<Vec<SearchResult>>,
+    pub(super) title_only: bool,
+    pub(super) created_by: Option<String>,
+    pub(super) in_page: Option<String>,
+    pub(super) has_comments: bool,
+    pub(super) selected: usize,
+}
+
 /// A snapshot of non-workspace app state passed to pure render functions.
 pub(super) struct ViewState {
     pub(super) current_page: String,
@@ -27,13 +39,7 @@ pub(super) struct ViewState {
     pub(super) active_tab: usize,
     pub(super) sidebar_open: bool,
     pub(super) expanded: HashSet<String>,
-    pub(super) search_open: bool,
-    pub(super) search_query: String,
-    pub(super) search_results: Arc<Vec<SearchResult>>,
-    pub(super) search_title_only: bool,
-    pub(super) search_created_by: Option<String>,
-    pub(super) search_in: Option<String>,
-    pub(super) search_has_comments: bool,
+    pub(super) search: SearchView,
     pub(super) settings_open: bool,
     pub(super) onboarding_open: bool,
     pub(super) templates_open: bool,
@@ -82,7 +88,6 @@ pub(super) struct ViewState {
     pub(super) ai_model: String,
     pub(super) ai_prefer_cli: bool,
     pub(super) shortcuts_open: bool,
-    pub(super) search_selected: usize,
     pub(super) highlight_pane: bool,
     pub(super) filters: bool,
     pub(super) icon_picker_open: bool,
