@@ -59,23 +59,30 @@ pub(super) fn render_block(
         commands.push(Command::ClearSlashDismissed);
     }
 
-    // While the six-dot handle is being dragged, the block under the pointer
-    // becomes the reorder target; draw an insertion marker at its lower edge.
+    // While the six-dot handle is being dragged, the nearest gap above or
+    // below a block becomes the reorder target (spec-064).
     if view.drag_from.is_some()
         && let Some(p) = ui.ctx().pointer_interact_pos()
-        && row_rect.contains(p)
+        && row_rect.expand2(Vec2::new(0.0, 10.0)).contains(p)
     {
         ui.ctx().data_mut(|data| {
             data.insert_temp(egui::Id::unique("block_drag_over"), true);
         });
-        commands.push(Command::HoverBlockDrag(block.id.clone()));
+        commands.push(Command::HoverBlockDrag {
+            block: block.id.clone(),
+            before: p.y < row_rect.center().y,
+        });
     }
-    if view.drag_to.as_deref() == Some(block.id.as_str()) {
-        ui.painter().hline(
-            row_rect.x_range(),
-            row_rect.max.y,
-            Stroke::new(2.0, palette.accent),
-        );
+    if view.drag_to.as_deref() == Some(block.id.as_str())
+        && view.drag_from.as_deref() != Some(block.id.as_str())
+    {
+        let y = if view.drag_before {
+            row_rect.top()
+        } else {
+            row_rect.max.y
+        };
+        ui.painter()
+            .hline(row_rect.x_range(), y, Stroke::new(2.0, palette.accent));
     }
 
     let mut delete_empty = false;
@@ -141,6 +148,17 @@ pub(super) fn render_block(
         let page_id_for_edit = view.current_page.clone();
         let edit_id = egui::Id::unique(("block_edit", &block.id, index));
         let pending_commands = std::cell::RefCell::new(Vec::new());
+        if !locked && ui.memory(|memory| memory.has_focus(edit_id)) {
+            // Notion-style split: Enter creates a new block; Shift+Enter keeps
+            // the native newline behavior.
+            if ui.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Enter)) {
+                commands.push(Command::SplitBlock(block.id.clone()));
+            }
+        }
+        if view.focus_block.as_deref() == Some(block.id.as_str()) {
+            ui.memory_mut(|memory| memory.request_focus(edit_id));
+            commands.push(Command::ClearBlockFocus);
+        }
         let edit = |ui: &mut egui::Ui,
                     text: &mut String,
                     font: FontId,
@@ -153,6 +171,7 @@ pub(super) fn render_block(
                 .desired_width(w)
                 .desired_rows(1)
                 .interactive(!locked)
+                .hint_text(crate::i18n::t("block_placeholder"))
                 .text_color(palette.text)
                 .show(ui);
             let remote: Vec<Awareness> = view

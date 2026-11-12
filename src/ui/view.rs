@@ -102,6 +102,8 @@ pub(super) struct ViewState {
     pub(super) grid_menu_open: bool,
     pub(super) drag_from: Option<String>,
     pub(super) drag_to: Option<String>,
+    pub(super) drag_before: bool,
+    pub(super) focus_block: Option<String>,
     pub(super) page_selection: Vec<String>,
     pub(super) block_selecting: bool,
 }

@@ -101,7 +101,7 @@ Status vocabulary:
 | [061](spec-061-settings-polish-and-number-time-formats.md) | Settings polish and number/time formats | implemented | Close/rail/scrollbar padding, working number and time formats |
 | [062](spec-062-customizable-sidebar-sections.md) | Customizable sidebar sections and shortcuts | implemented | Row settings/exclude/drag, Add shortcut/section menus, sidebar tabs |
 | [063](spec-063-sidebar-menus-breadcrumbs-and-gutter.md) | Sidebar menus, breadcrumbs and gutter alignment | implemented | Menu anchoring, breadcrumb padding, gutter centering, idle chevrons |
-| [064](spec-064-block-editor-drop-targets-and-enter-split.md) | Block editor drop targets and Enter split | plan | Gap-based drops, Enter creates a block, localized placeholder |
+| [064](spec-064-block-editor-drop-targets-and-enter-split.md) | Block editor drop targets and Enter split | implemented | Gap-based drops, Enter creates a block, localized placeholder |
 | [065](spec-065-page-icon-letter-fallback.md) | Page icon letter fallback | plan | Empty icon uses the uppercase title letter everywhere |
 | [066](spec-066-search-and-new-tab-filters.md) | Search and new-tab filters | plan | Title only, Created by, In, Has comments, show/hide; remove Ask AI |
 

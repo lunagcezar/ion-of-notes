@@ -82,36 +82,60 @@ impl NotionApp {
             Command::StartBlockDrag(id) => {
                 self.drag_from = Some(id);
                 self.drag_to = None;
+                self.drag_before = false;
             }
-            Command::HoverBlockDrag(id) => {
+            Command::HoverBlockDrag { block, before } => {
                 // Only track a target while a drag is actually in progress;
                 // this also prevents a late hover command (pushed later in
                 // the same frame as the drop) from leaving stale state.
-                if self.drag_from.is_some() && self.drag_from.as_deref() != Some(id.as_str()) {
-                    self.drag_to = Some(id);
+                if self.drag_from.is_some() && self.drag_from.as_deref() != Some(block.as_str()) {
+                    self.drag_to = Some(block);
+                    self.drag_before = before;
                 }
             }
             Command::DropBlock => {
                 let from = self.drag_from.take();
                 let to = self.drag_to.take();
-                if let (Some(from), Some(to)) = (from, to)
-                    && from != to
+                let before = self.drag_before;
+                if let Some(from) = from
                     && let Some(page) = self.current_page_mut()
                     && let Some(from_idx) = page.blocks.iter().position(|b| b.id == from)
                 {
+                    if to.as_deref() == Some(from.as_str()) {
+                        return;
+                    }
                     let block = page.blocks.remove(from_idx);
-                    let target = page
-                        .blocks
-                        .iter()
-                        .position(|b| b.id == to)
-                        .map_or(page.blocks.len(), |i| i + 1);
-                    page.blocks.insert(target.min(page.blocks.len()), block);
+                    if let Some(to) = to {
+                        let target = page.blocks.iter().position(|b| b.id == to).map_or(
+                            page.blocks.len(),
+                            |index| {
+                                if before { index } else { index + 1 }
+                            },
+                        );
+                        page.blocks.insert(target.min(page.blocks.len()), block);
+                    } else {
+                        page.blocks.push(block);
+                    }
                 }
             }
             Command::CancelBlockDrag => {
                 self.drag_from = None;
                 self.drag_to = None;
+                self.drag_before = false;
             }
+            Command::SplitBlock(block_id) => {
+                if let Some(page) = self.current_page_mut()
+                    && let Some(index) = page.blocks.iter().position(|b| b.id == block_id)
+                {
+                    let new_id = Uuid::new_v4().to_string();
+                    page.blocks.insert(
+                        index + 1,
+                        Block::new(new_id.clone(), BlockKind::Paragraph, ""),
+                    );
+                    self.focus_block = Some(new_id);
+                }
+            }
+            Command::ClearBlockFocus => self.focus_block = None,
             Command::DeleteBlock(block_id) => {
                 if let Some(page) = self.current_page_mut() {
                     page.blocks.retain(|b| b.id != block_id);

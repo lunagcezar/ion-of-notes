@@ -143,6 +143,8 @@ pub struct NotionApp {
     pub(super) grid_menu_open: bool,
     pub(super) drag_from: Option<String>,
     pub(super) drag_to: Option<String>,
+    pub(super) drag_before: bool,
+    pub(super) focus_block: Option<String>,
     pub(super) page_selection: Vec<String>,
     pub(super) block_selecting: bool,
     // Real-time CRDT and awareness.
@@ -245,6 +247,15 @@ impl NotionApp {
                 let title = page.title.clone();
                 workspace.settings.sidebar_layout.add_shortcut(&id, &title);
             }
+        }
+        if demo == "empty-block"
+            && let Some(page) = workspace.page_mut("p-home")
+        {
+            page.blocks = vec![crate::model::Block::new(
+                "empty-block",
+                crate::model::BlockKind::Paragraph,
+                "",
+            )];
         }
         let demo_current_page = if demo == "tasks" {
             workspace
@@ -530,6 +541,8 @@ impl NotionApp {
             grid_menu_open: false,
             drag_from: None,
             drag_to: None,
+            drag_before: false,
+            focus_block: None,
             page_selection,
             block_selecting: false,
         }
@@ -678,7 +691,10 @@ impl eframe::App for NotionApp {
             let over = ctx
                 .data(|data| data.get_temp::<bool>(egui::Id::unique("block_drag_over")))
                 .unwrap_or(false);
-            commands.push(if over {
+            let in_editor = ctx
+                .input(|i| i.pointer.interact_pos())
+                .is_some_and(|p| p.x > sidebar_width && p.y > TITLE_BAR_HEIGHT + 40.0);
+            commands.push(if over || in_editor {
                 Command::DropBlock
             } else {
                 Command::CancelBlockDrag

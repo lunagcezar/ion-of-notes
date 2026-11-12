@@ -156,6 +156,8 @@ impl NotionApp {
             grid_menu_open: self.grid_menu_open,
             drag_from: self.drag_from.clone(),
             drag_to: self.drag_to.clone(),
+            drag_before: self.drag_before,
+            focus_block: self.focus_block.clone(),
             page_selection: self.page_selection.clone(),
             block_selecting: self.block_selecting,
         }

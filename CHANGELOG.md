@@ -6,6 +6,17 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-064 block editor drop targets and Enter split
+
+- Block drops now use the nearest gap (before/after) instead of a block id, so
+  the first line, last line, spaces between blocks and an empty page all accept
+  a drop.
+- Enter in a focused block creates a new empty block after it and focuses it;
+  Shift+Enter keeps the newline behavior.
+- Empty editable blocks show the localized "Press / to insert blocks"
+  placeholder (en, pt-BR, eo).
+- Added the `empty-block` preview state.
+
 ### Changed - spec-063 sidebar menus, breadcrumbs and gutter
 
 - Anchored the workspace switcher and four-point menu to the bottom-left of the

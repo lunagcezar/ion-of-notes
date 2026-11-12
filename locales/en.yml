@@ -25,6 +25,7 @@ en:
   version_history: "Version history"
   page_actions: "Page settings and actions"
   untitled: "Untitled"
+  block_placeholder: "Press / to insert blocks"
   workspace: "Workspace"
   general: "General"
   people: "People"

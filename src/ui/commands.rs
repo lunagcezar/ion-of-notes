@@ -148,9 +148,14 @@ pub(super) enum Command {
     },
     /// Drag-to-reorder state for the six-dot block handle.
     StartBlockDrag(String),
-    HoverBlockDrag(String),
+    HoverBlockDrag {
+        block: String,
+        before: bool,
+    },
     DropBlock,
     CancelBlockDrag,
+    SplitBlock(String),
+    ClearBlockFocus,
     /// Page-level text selection across blocks (Ctrl+A, Ctrl+C, drag).
     SelectAllBlocks,
     CopyBlockSelection,
@@ -336,8 +341,9 @@ impl Command {
                 | Command::InsertBlockAfter(_)
                 | Command::AppendBlock
                 | Command::AddBlock { .. }
+                | Command::SplitBlock(_)
                 | Command::StartBlockDrag(_)
-                | Command::HoverBlockDrag(_)
+                | Command::HoverBlockDrag { .. }
                 | Command::DropBlock
                 | Command::DeleteBlock(_)
                 | Command::ToggleTodo(_)
@@ -402,9 +408,11 @@ impl Command {
             | Command::AppendBlock
             | Command::AddBlock { .. }
             | Command::StartBlockDrag(_)
-            | Command::HoverBlockDrag(_)
+            | Command::HoverBlockDrag { .. }
             | Command::DropBlock
             | Command::CancelBlockDrag
+            | Command::SplitBlock(_)
+            | Command::ClearBlockFocus
             | Command::SelectAllBlocks
             | Command::CopyBlockSelection
             | Command::ExtendBlockSelection(_)
