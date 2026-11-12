@@ -19,6 +19,8 @@ the whole workspace.
 | `spec-102` | Normalize the emoji query once; scan lowercase catalog metadata directly. | Removes two `String` allocations per catalog entry per filter pass. |
 | `spec-103` | Index remote cursors by block once per page per frame; share the awareness vector through an `Arc`. | Changes per-frame cursor work from `O(blocks × cursors)` to `O(blocks + cursors)` without cloning awareness records or the whole vector. |
 | `spec-104` | Build the search body text once per page. | Removes duplicate `plain_text()`/row work inside a search pass. |
+| `spec-105` | Trace the frame sections with `tracing` spans. | Separates render/command/persistence time from blocking I/O. |
+| `spec-106` | Share the expanded-page set through an `Arc`. | Stops deep-cloning the sidebar expansion set every frame. |
 
 The existing good decisions are preserved: cached filtered icon indices,
 `ScrollArea::show_rows` virtualization for the icon grid, the debounced edit

@@ -47,8 +47,9 @@ impl NotionApp {
                 self.pending_reload = true;
             }
             Command::Sidebar(SidebarCmd::ToggleExpand(id)) => {
-                if !self.expanded.insert(id.clone()) {
-                    self.expanded.remove(&id);
+                let expanded = std::sync::Arc::make_mut(&mut self.expanded);
+                if !expanded.insert(id.clone()) {
+                    expanded.remove(&id);
                 }
             }
             Command::Sidebar(SidebarCmd::ToggleFavorite(id)) => {

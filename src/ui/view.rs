@@ -82,7 +82,7 @@ pub(super) struct ViewState {
     pub(super) tabs: Vec<String>,
     pub(super) active_tab: usize,
     pub(super) sidebar_open: bool,
-    pub(super) expanded: HashSet<String>,
+    pub(super) expanded: Arc<HashSet<String>>,
     pub(super) search: SearchView,
     pub(super) settings: SettingsView,
     pub(super) onboarding_open: bool,

@@ -6,7 +6,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
-### Performance - spec-101..spec-105
+### Performance - spec-101..spec-106
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames
   (`frame_may_mutate`, optional undo snapshot, gated `commit_edits`).
@@ -17,6 +17,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Build the search body text once per page and reuse it for the excerpt.
 - Trace `ui.view_state`, `ui.apply_commands`, `ui.commit_edits`,
   `ui.render_sidebar` and `ui.render_content` with `tracing` spans.
+- Share the expanded-page set through an `Arc` instead of cloning it per frame.
 
 ### Changed - spec-100 domain events
 

@@ -148,7 +148,7 @@ pub struct NotionApp {
     pub(super) active_tab: usize,
     pub(super) closed_tabs: Vec<String>,
     pub(super) sidebar_open: bool,
-    pub(super) expanded: HashSet<String>,
+    pub(super) expanded: Arc<HashSet<String>>,
     pub(super) search: SearchState,
     pub(super) settings: SettingsState,
     pub(super) onboarding_open: bool,
@@ -452,7 +452,7 @@ impl NotionApp {
             active_tab: 0,
             closed_tabs: Vec::new(),
             sidebar_open: demo != "appbar-closed",
-            expanded: HashSet::new(),
+            expanded: Arc::new(HashSet::new()),
             search: SearchState {
                 open: matches!(
                     demo.as_str(),

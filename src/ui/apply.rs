@@ -78,7 +78,7 @@ impl NotionApp {
             tabs: self.tabs.clone(),
             active_tab: self.active_tab,
             sidebar_open: self.sidebar_open,
-            expanded: self.expanded.clone(),
+            expanded: Arc::clone(&self.expanded),
             search: SearchView {
                 open: self.search.open,
                 query: self.search.query.clone(),
