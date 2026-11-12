@@ -4,7 +4,7 @@ use crate::model::PageDraft;
 use crate::templates;
 
 use super::super::app::NotionApp;
-use super::super::commands::Command;
+use super::super::commands::{Command, SidebarCmd};
 use super::super::palette::apply_theme;
 impl NotionApp {
     pub(super) fn apply_navigation(
@@ -46,12 +46,12 @@ impl NotionApp {
                 let _ = self.client.delete_page(&id);
                 self.pending_reload = true;
             }
-            Command::ToggleExpand(id) => {
+            Command::Sidebar(SidebarCmd::ToggleExpand(id)) => {
                 if !self.expanded.insert(id.clone()) {
                     self.expanded.remove(&id);
                 }
             }
-            Command::ToggleFavorite(id) => {
+            Command::Sidebar(SidebarCmd::ToggleFavorite(id)) => {
                 if let Some(page) = self.workspace.page_mut(&id) {
                     page.favorite = !page.favorite;
                 }
@@ -120,7 +120,7 @@ impl NotionApp {
                 self.settings.theme_dirty = true;
                 apply_theme(ctx, self.settings.dark);
             }
-            Command::ToggleSidebar => self.sidebar_open = !self.sidebar_open,
+            Command::Sidebar(SidebarCmd::Toggle) => self.sidebar_open = !self.sidebar_open,
             Command::SetTableView(table) => self.settings.table_view = table,
             Command::GoBack => {
                 if self.nav_pos > 0 {

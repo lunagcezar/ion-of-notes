@@ -8,7 +8,7 @@ use crate::model::{Page, Workspace};
 use crate::ui::constants as metrics;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
-use super::super::commands::{Command, FontStyle};
+use super::super::commands::{Command, FontStyle, SidebarCmd};
 use super::super::format::format_timestamp;
 use super::super::palette::{Palette, strong_font};
 use super::super::view::ViewState;
@@ -50,7 +50,7 @@ fn action_items(view: &ViewState) -> Vec<(String, &'static str, Command)> {
         (
             i18n::t("show_hide_sidebar"),
             "Ctrl+\\",
-            Command::ToggleSidebar,
+            Command::Sidebar(SidebarCmd::Toggle),
         ),
         (
             i18n::t("more"),

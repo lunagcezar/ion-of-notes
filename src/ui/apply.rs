@@ -18,7 +18,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use super::app::NotionApp;
-use super::commands::{Command, CommandFamily};
+use super::commands::{Command, CommandFamily, SidebarCmd};
 
 mod ai;
 mod blocks;
@@ -286,7 +286,7 @@ impl NotionApp {
             CopyLink => Command::CopyLink,
             CopyPageName => Command::CopyPageName,
             Reload | ForceReload => Command::Reload,
-            ToggleSidebar => Command::ToggleSidebar,
+            ToggleSidebar => Command::Sidebar(SidebarCmd::Toggle),
             ZoomIn => Command::ZoomIn,
             ZoomOut => Command::ZoomOut,
             ZoomReset => Command::ZoomReset,

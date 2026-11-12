@@ -6,6 +6,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-098 sidebar commands
+
+- Grouped the twelve sidebar variants into `SidebarCmd` behind
+  `Command::Sidebar`; command-family dispatch and behavior are unchanged.
+
 ### Added - spec-097 performance harness
 
 - Added `tests/perf.rs`, an opt-in (`ION_OF_NOTES_PERF=1`) harness that measures

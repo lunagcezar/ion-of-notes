@@ -3,7 +3,7 @@
 use crate::i18n;
 
 use super::super::app::NotionApp;
-use super::super::commands::{Command, WorkspaceDialogMode};
+use super::super::commands::{Command, SidebarCmd, WorkspaceDialogMode};
 impl NotionApp {
     pub(super) fn apply_settings(&mut self, command: Command) {
         match command {
@@ -84,12 +84,12 @@ impl NotionApp {
                     .sidebar_layout
                     .add_section(&title, source);
             }
-            Command::ToggleSidebarSectionHidden(id) => {
+            Command::Sidebar(SidebarCmd::ToggleSectionHidden(id)) => {
                 if let Some(section) = self.workspace.settings.sidebar_layout.section_mut(&id) {
                     section.hidden = !section.hidden;
                 }
             }
-            Command::ToggleSidebarShortcutHidden(section_id, shortcut_id) => {
+            Command::Sidebar(SidebarCmd::ToggleShortcutHidden(section_id, shortcut_id)) => {
                 if let Some(section) = self
                     .workspace
                     .settings
@@ -141,13 +141,13 @@ impl NotionApp {
                     shortcut.label = title;
                 }
             }
-            Command::MoveSidebarSection(id, index) => {
+            Command::Sidebar(SidebarCmd::MoveSection(id, index)) => {
                 self.workspace
                     .settings
                     .sidebar_layout
                     .move_section(&id, index);
             }
-            Command::MoveSidebarShortcut(from, shortcut_id, to, index) => {
+            Command::Sidebar(SidebarCmd::MoveShortcut(from, shortcut_id, to, index)) => {
                 self.workspace.settings.sidebar_layout.move_shortcut(
                     &from,
                     &shortcut_id,
@@ -155,15 +155,17 @@ impl NotionApp {
                     index,
                 );
             }
-            Command::SetSidebarShowExcluded(_) => {}
-            Command::AddSidebarTab => self.workspace.settings.sidebar_layout.add_tab(),
-            Command::SwitchSidebarTab(id) => {
+            Command::Sidebar(SidebarCmd::SetShowExcluded(_)) => {}
+            Command::Sidebar(SidebarCmd::AddTab) => {
+                self.workspace.settings.sidebar_layout.add_tab()
+            }
+            Command::Sidebar(SidebarCmd::SwitchTab(id)) => {
                 self.workspace.settings.sidebar_layout.switch_tab(&id);
             }
-            Command::RemoveSidebarTab(id) => {
+            Command::Sidebar(SidebarCmd::RemoveTab(id)) => {
                 self.workspace.settings.sidebar_layout.remove_tab(&id);
             }
-            Command::ToggleSidebarNav(id) => match id.as_str() {
+            Command::Sidebar(SidebarCmd::ToggleNav(id)) => match id.as_str() {
                 "library" => {
                     self.workspace.settings.sidebar_library =
                         !self.workspace.settings.sidebar_library;

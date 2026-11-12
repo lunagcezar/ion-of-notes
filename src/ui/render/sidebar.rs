@@ -15,7 +15,7 @@ use crate::ui::constants::{
     SPACE_64, STROKE_EMPHASIS, STROKE_HAIRLINE,
 };
 
-use super::super::commands::{Command, SidebarMenu};
+use super::super::commands::{Command, SidebarCmd, SidebarMenu};
 use super::super::icons::{
     draw_chevron, draw_close, draw_dots, draw_grid, draw_help, draw_inbox, draw_library, draw_page,
     draw_page_icon, draw_person, draw_plus, draw_search, draw_settings, draw_sliders,
@@ -280,7 +280,9 @@ fn customize_row_actions(
     if exclude_resp.clicked() {
         if let Some(shortcut) = shortcut {
             if section == "favorites" {
-                commands.push(Command::ToggleFavorite(shortcut.to_string()));
+                commands.push(Command::Sidebar(SidebarCmd::ToggleFavorite(
+                    shortcut.to_string(),
+                )));
             } else {
                 commands.push(Command::RemoveSidebarShortcut(
                     section.to_string(),
@@ -288,7 +290,7 @@ fn customize_row_actions(
                 ));
             }
         } else if let Some(nav) = section.strip_prefix("nav:") {
-            commands.push(Command::ToggleSidebarNav(nav.to_string()));
+            commands.push(Command::Sidebar(SidebarCmd::ToggleNav(nav.to_string())));
         } else {
             commands.push(Command::RemoveSidebarSection(section.to_string()));
         }
@@ -430,7 +432,7 @@ pub(crate) fn render_sidebar(
                             )
                             .clicked()
                         {
-                            commands.push(Command::SwitchSidebarTab(tab.id.clone()));
+                            commands.push(Command::Sidebar(SidebarCmd::SwitchTab(tab.id.clone())));
                         }
                         if view.sidebar_customize
                             && active
@@ -445,7 +447,7 @@ pub(crate) fn render_sidebar(
                                 )
                                 .clicked()
                         {
-                            commands.push(Command::RemoveSidebarTab(tab.id.clone()));
+                            commands.push(Command::Sidebar(SidebarCmd::RemoveTab(tab.id.clone())));
                         }
                     }
                     if view.sidebar_customize
@@ -459,7 +461,7 @@ pub(crate) fn render_sidebar(
                             .on_hover_text("Add tab")
                             .clicked()
                     {
-                        commands.push(Command::AddSidebarTab);
+                        commands.push(Command::Sidebar(SidebarCmd::AddTab));
                     }
                 });
                 ui.add_space(SPACE_8);
@@ -702,19 +704,22 @@ fn render_sidebar_customize(
             {
                 match (&drag, &target.kind) {
                     (SidebarDrag::Section(id), SidebarDropKind::Section { index, .. }) => {
-                        commands.push(Command::MoveSidebarSection(id.clone(), *index));
+                        commands.push(Command::Sidebar(SidebarCmd::MoveSection(
+                            id.clone(),
+                            *index,
+                        )));
                     }
                     (
                         SidebarDrag::Shortcut { section, shortcut },
                         SidebarDropKind::Section { id, .. },
                     ) => {
                         if section != id {
-                            commands.push(Command::MoveSidebarShortcut(
+                            commands.push(Command::Sidebar(SidebarCmd::MoveShortcut(
                                 section.clone(),
                                 shortcut.clone(),
                                 id.clone(),
                                 None,
-                            ));
+                            )));
                         }
                     }
                     (
@@ -725,12 +730,12 @@ fn render_sidebar_customize(
                             index,
                         },
                     ) if shortcut != target_shortcut => {
-                        commands.push(Command::MoveSidebarShortcut(
+                        commands.push(Command::Sidebar(SidebarCmd::MoveShortcut(
                             section.clone(),
                             shortcut.clone(),
                             to.clone(),
                             Some(*index),
-                        ));
+                        )));
                     }
                     _ => {}
                 }
@@ -1182,7 +1187,7 @@ fn render_tree(
                 .map(|pos| glyph_rect.contains(pos))
                 .unwrap_or(false);
             if has_children && on_chevron {
-                commands.push(Command::ToggleExpand(page.id.clone()));
+                commands.push(Command::Sidebar(SidebarCmd::ToggleExpand(page.id.clone())));
             } else {
                 commands.push(Command::SelectPage(page.id.clone()));
             }

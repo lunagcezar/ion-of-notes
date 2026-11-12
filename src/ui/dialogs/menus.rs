@@ -4,7 +4,7 @@
 
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Vec2};
 
-use super::super::commands::{Command, SidebarMenu};
+use super::super::commands::{Command, SidebarCmd, SidebarMenu};
 use super::super::palette::Palette;
 use super::super::view::ViewState;
 use super::super::widgets::{menu_button, popover_frame, popover_frame_compact};
@@ -56,7 +56,11 @@ pub(crate) fn render_app_menu(ctx: &egui::Context, palette: &Palette, commands: 
         (
             "View",
             vec![
-                ("Toggle sidebar", "Ctrl+\\", Command::ToggleSidebar),
+                (
+                    "Toggle sidebar",
+                    "Ctrl+\\",
+                    Command::Sidebar(SidebarCmd::Toggle),
+                ),
                 ("Zoom in", "Ctrl++", Command::ZoomIn),
                 ("Zoom out", "Ctrl+-", Command::ZoomOut),
                 ("Toggle theme", "Ctrl+Shift+L", Command::ToggleTheme),
@@ -516,14 +520,16 @@ pub(crate) fn render_sidebar_menu(
                     };
                     if menu_button(ui, hide_label, "", palette).clicked() {
                         if let Some(shortcut_id) = shortcut {
-                            commands.push(Command::ToggleSidebarShortcutHidden(
+                            commands.push(Command::Sidebar(SidebarCmd::ToggleShortcutHidden(
                                 section.clone(),
                                 shortcut_id.clone(),
-                            ));
+                            )));
                         } else if let Some(nav) = section.strip_prefix("nav:") {
-                            commands.push(Command::ToggleSidebarNav(nav.to_string()));
+                            commands.push(Command::Sidebar(SidebarCmd::ToggleNav(nav.to_string())));
                         } else {
-                            commands.push(Command::ToggleSidebarSectionHidden(section.clone()));
+                            commands.push(Command::Sidebar(SidebarCmd::ToggleSectionHidden(
+                                section.clone(),
+                            )));
                         }
                         commands.push(Command::CloseSidebarMenu);
                     }

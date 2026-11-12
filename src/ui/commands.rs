@@ -86,6 +86,24 @@ pub(super) enum CommandFamily {
     NoOp,
 }
 
+/// Sidebar navigation, favorites and layout commands (spec-098).
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub(super) enum SidebarCmd {
+    Toggle,
+    ToggleExpand(String),
+    ToggleFavorite(String),
+    ToggleSectionHidden(String),
+    ToggleShortcutHidden(String, String),
+    MoveSection(String, usize),
+    MoveShortcut(String, String, String, Option<usize>),
+    SetShowExcluded(bool),
+    ToggleNav(String),
+    AddTab,
+    SwitchTab(String),
+    RemoveTab(String),
+}
+
 /// Every user-visible state change is collected as a `Command` and applied
 /// through the `Client`, so the UI never mutates server state directly.
 #[allow(dead_code)]
@@ -94,8 +112,6 @@ pub(super) enum Command {
     SelectPage(String),
     NewPage(Option<String>),
     DeletePage(String),
-    ToggleExpand(String),
-    ToggleFavorite(String),
     OpenSearch,
     ToggleSearch,
     CloseSearch,
@@ -103,7 +119,7 @@ pub(super) enum Command {
     OpenSettings,
     CloseSettings,
     ToggleTheme,
-    ToggleSidebar,
+    Sidebar(SidebarCmd),
     SetTableView(bool),
     OpenLibrary,
     CloseLibrary,
@@ -252,19 +268,10 @@ pub(super) enum Command {
     CloseSidebarMenu,
     AddSidebarShortcut(String, String),
     AddSidebarSection(String, crate::model::SidebarSectionSource),
-    ToggleSidebarSectionHidden(String),
-    ToggleSidebarShortcutHidden(String, String),
     RemoveSidebarSection(String),
     RemoveSidebarShortcut(String, String),
     RenameSidebarSection(String, String),
     RenameSidebarShortcut(String, String, String),
-    MoveSidebarSection(String, usize),
-    MoveSidebarShortcut(String, String, String, Option<usize>),
-    SetSidebarShowExcluded(bool),
-    ToggleSidebarNav(String),
-    AddSidebarTab,
-    SwitchSidebarTab(String),
-    RemoveSidebarTab(String),
     OpenWorkspaceCreate,
     OpenWorkspaceRename,
     CloseWorkspaceDialog,
@@ -340,7 +347,7 @@ impl Command {
         matches!(
             self,
             Command::DeletePage(_)
-                | Command::ToggleFavorite(_)
+                | Command::Sidebar(SidebarCmd::ToggleFavorite(_))
                 | Command::SetTableView(_)
                 | Command::OpenSlash { .. }
                 | Command::SetBlockKind(_, _)
@@ -369,8 +376,8 @@ impl Command {
             Command::SelectPage(_)
             | Command::NewPage(_)
             | Command::DeletePage(_)
-            | Command::ToggleExpand(_)
-            | Command::ToggleFavorite(_)
+            | Command::Sidebar(SidebarCmd::ToggleExpand(_))
+            | Command::Sidebar(SidebarCmd::ToggleFavorite(_))
             | Command::OpenSearch
             | Command::ToggleSearch
             | Command::CloseSearch
@@ -384,7 +391,7 @@ impl Command {
             | Command::CloseTemplates
             | Command::ApplyTemplate(_)
             | Command::ToggleTheme
-            | Command::ToggleSidebar
+            | Command::Sidebar(SidebarCmd::Toggle)
             | Command::SetTableView(_)
             | Command::GoBack
             | Command::GoForward
@@ -480,19 +487,19 @@ impl Command {
             | Command::CloseSidebarMenu
             | Command::AddSidebarShortcut(_, _)
             | Command::AddSidebarSection(_, _)
-            | Command::ToggleSidebarSectionHidden(_)
-            | Command::ToggleSidebarShortcutHidden(_, _)
+            | Command::Sidebar(SidebarCmd::ToggleSectionHidden(_))
+            | Command::Sidebar(SidebarCmd::ToggleShortcutHidden(_, _))
             | Command::RemoveSidebarSection(_)
             | Command::RemoveSidebarShortcut(_, _)
             | Command::RenameSidebarSection(_, _)
             | Command::RenameSidebarShortcut(_, _, _)
-            | Command::MoveSidebarSection(_, _)
-            | Command::MoveSidebarShortcut(_, _, _, _)
-            | Command::SetSidebarShowExcluded(_)
-            | Command::ToggleSidebarNav(_)
-            | Command::AddSidebarTab
-            | Command::SwitchSidebarTab(_)
-            | Command::RemoveSidebarTab(_)
+            | Command::Sidebar(SidebarCmd::MoveSection(_, _))
+            | Command::Sidebar(SidebarCmd::MoveShortcut(_, _, _, _))
+            | Command::Sidebar(SidebarCmd::SetShowExcluded(_))
+            | Command::Sidebar(SidebarCmd::ToggleNav(_))
+            | Command::Sidebar(SidebarCmd::AddTab)
+            | Command::Sidebar(SidebarCmd::SwitchTab(_))
+            | Command::Sidebar(SidebarCmd::RemoveTab(_))
             | Command::OpenWorkspaceCreate
             | Command::OpenWorkspaceRename
             | Command::CloseWorkspaceDialog

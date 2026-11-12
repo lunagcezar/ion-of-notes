@@ -15,7 +15,7 @@ use crate::ui::constants::{
     TITLE_BUTTON_SIZE, WINDOW_CONTROL_WIDTH,
 };
 
-use super::super::commands::Command;
+use super::super::commands::{Command, SidebarCmd};
 use super::super::icons::{
     draw_arrow_left, draw_arrow_right, draw_close, draw_inbox, draw_menu, draw_minus,
     draw_page_icon, draw_panel, draw_pen, draw_plus, draw_square, glyph_button, page_icon_letter,
@@ -70,7 +70,7 @@ pub(crate) fn render_title_bar(
                 )
                 .on_hover_text("Show / hide sidebar (Ctrl+\\)");
                 if panel.clicked() {
-                    commands.push(Command::ToggleSidebar);
+                    commands.push(Command::Sidebar(SidebarCmd::Toggle));
                 }
                 let controls = TITLE_BUTTON_SIZE + TITLE_BUTTON_SIZE + SPACE_6;
                 let show_extras = left >= SHOW_EXTRAS_MIN_WIDTH;

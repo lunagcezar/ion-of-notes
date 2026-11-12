@@ -4,7 +4,7 @@ use crate::i18n;
 use crate::model::{BlockKind, Workspace};
 use egui::{Align2, CornerRadius, FontFamily, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
-use super::super::super::commands::{Command, FontStyle};
+use super::super::super::commands::{Command, FontStyle, SidebarCmd};
 use super::super::super::format::format_timestamp;
 use super::super::super::icons::{
     draw_ellipsis, draw_lines, draw_link, draw_page_icon, draw_pen, draw_plus, draw_share,
@@ -51,7 +51,7 @@ pub(crate) fn render_content(
                 ui.spacing_mut().item_spacing.x = BREADCRUMB_GAP;
                 ui.add_space(breadcrumb_pad);
                 if !view.sidebar_open && ui.add(egui::Button::new(">").frame(false)).clicked() {
-                    commands.push(Command::ToggleSidebar);
+                    commands.push(Command::Sidebar(SidebarCmd::Toggle));
                 }
                 let mut crumbs = crumb_chain(ws, &view.current_page);
                 if crumbs.is_empty() {
@@ -92,7 +92,9 @@ pub(crate) fn render_content(
                         )
                         .clicked()
                     {
-                        commands.push(Command::ToggleFavorite(view.current_page.clone()));
+                        commands.push(Command::Sidebar(SidebarCmd::ToggleFavorite(
+                            view.current_page.clone(),
+                        )));
                     }
                     if glyph_button(
                         ui,
