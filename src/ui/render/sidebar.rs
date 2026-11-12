@@ -93,7 +93,7 @@ impl NavShortcut {
     fn selected(self, view: &ViewState) -> bool {
         match self {
             Self::Library => view.library_open,
-            Self::Settings => view.settings_open,
+            Self::Settings => view.settings.open,
             Self::Inbox => view.inbox_open,
             Self::Home => false,
         }
@@ -533,7 +533,7 @@ fn render_sidebar_customize(
         ui,
         width,
         &i18n::t("settings"),
-        view.settings_open,
+        view.settings.open,
         palette,
         draw_settings,
         "nav:settings",

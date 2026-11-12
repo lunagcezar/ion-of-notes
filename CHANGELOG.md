@@ -6,6 +6,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-095 settings state and view
+
+- Grouped the settings dialog and preference fields into `SettingsState` and
+  `SettingsView`; references use `self.settings.*` and `view.settings.*`.
+
 ### Changed - spec-094 AI and server state
 
 - Grouped the AI assistant and server-login fields into `AiState`/`ServerState`

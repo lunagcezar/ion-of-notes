@@ -83,8 +83,8 @@ impl NotionApp {
             Err(error) => {
                 let _ = crate::remote::clear_session();
                 self.server.status = Some(error);
-                self.settings_open = true;
-                self.settings_page = "Server".to_string();
+                self.settings.open = true;
+                self.settings.page = "Server".to_string();
             }
         }
     }

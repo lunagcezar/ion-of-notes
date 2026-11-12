@@ -34,7 +34,7 @@ mod workspace;
 use super::crdt::CrdtSession;
 use super::edit_queue::{PendingEdits, execute_plan, plan_for};
 use super::search_cache::SearchCache;
-use super::view::{AiView, SearchView, ServerView, SharingView, ViewState};
+use super::view::{AiView, SearchView, ServerView, SettingsView, SharingView, ViewState};
 
 pub(super) fn set_block_text(blocks: &mut [Block], block_id: &str, text: &str) -> bool {
     for block in blocks {
@@ -88,17 +88,22 @@ impl NotionApp {
                 has_comments: self.search.has_comments,
                 selected: self.search.selected,
             },
-            settings_open: self.settings_open,
+            settings: SettingsView {
+                open: self.settings.open,
+                page: self.settings.page.clone(),
+                query: self.settings.query.clone(),
+                status: self.settings.status.clone(),
+                language: self.settings.language.clone(),
+                number_format: self.workspace.settings.number_format,
+                time_format: self.workspace.settings.time_format,
+                dark: self.settings.dark,
+                table_view: self.settings.table_view,
+                font_style: self.settings.font_style,
+                full_width: self.settings.full_width,
+                small_text: self.settings.small_text,
+            },
             onboarding_open: self.onboarding_open,
             templates_open: self.templates_open,
-            settings_page: self.settings_page.clone(),
-            settings_query: self.settings_query.clone(),
-            settings_status: self.settings_status.clone(),
-            language: self.language.clone(),
-            number_format: self.workspace.settings.number_format,
-            time_format: self.workspace.settings.time_format,
-            dark: self.dark,
-            table_view: self.table_view,
             library_open: self.library_open,
             library_tab: self.library_tab.clone(),
             library_shared: Arc::clone(&self.library_shared),
@@ -156,9 +161,6 @@ impl NotionApp {
             version_history_open: self.version_history_open,
             versions: Arc::clone(&self.versions),
             version_selected: self.version_selected,
-            font_style: self.font_style,
-            full_width: self.full_width,
-            small_text: self.small_text,
             available_offline,
             lock_page,
             workspace_menu_open: self.workspace_menu_open,
@@ -189,7 +191,7 @@ impl NotionApp {
 
     fn close_overlays(&mut self) {
         self.search.open = false;
-        self.settings_open = false;
+        self.settings.open = false;
         self.sharing.open = false;
         self.inbox_open = false;
         self.slash_for = None;
@@ -506,7 +508,7 @@ impl NotionApp {
         self.nav_pos = 0;
         self.library_open = false;
         self.search.open = false;
-        self.settings_open = false;
+        self.settings.open = false;
         self.sharing.open = false;
         self.inbox_open = false;
         self.slash_for = None;

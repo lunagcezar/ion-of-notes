@@ -135,7 +135,7 @@ pub(crate) fn render_page_actions(
                                 ("Serif", FontStyle::Serif),
                                 ("Mono", FontStyle::Mono),
                             ] {
-                                let active = view.font_style == style;
+                                let active = view.settings.font_style == style;
                                 if ui
                                     .add(
                                         egui::Button::new(
@@ -161,10 +161,14 @@ pub(crate) fn render_page_actions(
                             }
                         });
                         ui.add_space(metrics::SPACE_4);
-                        if toggle_button(ui, "Small text", view.small_text, palette).clicked() {
+                        if toggle_button(ui, "Small text", view.settings.small_text, palette)
+                            .clicked()
+                        {
                             commands.push(Command::ToggleSmallText);
                         }
-                        if toggle_button(ui, "Full width", view.full_width, palette).clicked() {
+                        if toggle_button(ui, "Full width", view.settings.full_width, palette)
+                            .clicked()
+                        {
                             commands.push(Command::ToggleFullWidth);
                         }
                         let page = ws.page(&view.current_page);
@@ -366,7 +370,7 @@ pub(crate) fn render_version_history(
                             format!(
                                 "{} · {}",
                                 version.actor,
-                                format_timestamp(&version.updated_at, view.time_format)
+                                format_timestamp(&version.updated_at, view.settings.time_format)
                             ),
                             FontId::proportional(metrics::FONT_MICRO),
                             palette.muted,

@@ -57,6 +57,22 @@ pub(super) struct ServerView {
     pub(super) busy: bool,
 }
 
+/// Settings dialog and preference presentation data.
+pub(super) struct SettingsView {
+    pub(super) open: bool,
+    pub(super) page: String,
+    pub(super) query: String,
+    pub(super) status: Option<String>,
+    pub(super) language: String,
+    pub(super) number_format: crate::model::NumberFormat,
+    pub(super) time_format: crate::model::TimeFormat,
+    pub(super) dark: bool,
+    pub(super) table_view: bool,
+    pub(super) font_style: FontStyle,
+    pub(super) full_width: bool,
+    pub(super) small_text: bool,
+}
+
 /// A snapshot of non-workspace app state passed to pure render functions.
 pub(super) struct ViewState {
     pub(super) current_page: String,
@@ -68,17 +84,9 @@ pub(super) struct ViewState {
     pub(super) sidebar_open: bool,
     pub(super) expanded: HashSet<String>,
     pub(super) search: SearchView,
-    pub(super) settings_open: bool,
+    pub(super) settings: SettingsView,
     pub(super) onboarding_open: bool,
     pub(super) templates_open: bool,
-    pub(super) settings_page: String,
-    pub(super) settings_query: String,
-    pub(super) settings_status: Option<String>,
-    pub(super) language: String,
-    pub(super) number_format: crate::model::NumberFormat,
-    pub(super) time_format: crate::model::TimeFormat,
-    pub(super) dark: bool,
-    pub(super) table_view: bool,
     pub(super) library_open: bool,
     pub(super) library_tab: String,
     pub(super) library_shared: Arc<HashSet<String>>,
@@ -114,9 +122,6 @@ pub(super) struct ViewState {
     pub(super) version_history_open: bool,
     pub(super) versions: Arc<Vec<PageVersion>>,
     pub(super) version_selected: usize,
-    pub(super) font_style: FontStyle,
-    pub(super) full_width: bool,
-    pub(super) small_text: bool,
     pub(super) available_offline: bool,
     pub(super) lock_page: bool,
     pub(super) workspace_menu_open: bool,

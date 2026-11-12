@@ -102,7 +102,7 @@ pub(in crate::ui::dialogs) fn render_people_settings(
                         commands.push(Command::SetSettingsStatus(i18n::t("delete_disabled")));
                     }
                 });
-                if let Some(status) = &view.settings_status {
+                if let Some(status) = &view.settings.status {
                     ui.label(
                         egui::RichText::new(status)
                             .size(metrics::FONT_MICRO)

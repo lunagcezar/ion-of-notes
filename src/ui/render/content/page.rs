@@ -34,7 +34,7 @@ pub(crate) fn render_content(
 ) {
     // Compact breadcrumb bar (spec-013).
     let full_width = ui.available_width();
-    let column_width = if view.full_width {
+    let column_width = if view.settings.full_width {
         (full_width - CONTENT_SIDE_MARGIN).max(CONTENT_COLUMN_MIN)
     } else {
         (full_width - CONTENT_SIDE_MARGIN).clamp(CONTENT_COLUMN_MIN, CONTENT_COLUMN_MAX)
@@ -204,8 +204,12 @@ fn crumb_chain(ws: &Workspace, id: &str) -> Vec<(String, String)> {
 
 /// Body font for a block, honouring the Appearance & layout choices (spec-013).
 pub(super) fn body_font(view: &ViewState, size: f32) -> FontId {
-    let size = if view.small_text { size * 0.85 } else { size };
-    match view.font_style {
+    let size = if view.settings.small_text {
+        size * 0.85
+    } else {
+        size
+    };
+    match view.settings.font_style {
         FontStyle::Default => FontId::proportional(size),
         FontStyle::Serif => FontId::new(size, FontFamily::Name("Serif".into())),
         FontStyle::Mono => FontId::monospace(size),
@@ -407,7 +411,7 @@ fn render_page(
                         ui.label(
                             egui::RichText::new(format_timestamp(
                                 &comment.created_at,
-                                view.time_format,
+                                view.settings.time_format,
                             ))
                             .size(FONT_MICRO)
                             .color(palette.muted),

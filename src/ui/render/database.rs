@@ -22,22 +22,26 @@ pub(super) fn render_database(
     ui.horizontal(|ui| {
         ui.add_space(gutter);
         let table = ui.add(
-            egui::Button::new(egui::RichText::new("Table").color(if view.table_view {
-                palette.text
-            } else {
-                palette.muted
-            }))
+            egui::Button::new(
+                egui::RichText::new("Table").color(if view.settings.table_view {
+                    palette.text
+                } else {
+                    palette.muted
+                }),
+            )
             .frame(false),
         );
         if table.clicked() {
             commands.push(Command::SetTableView(true));
         }
         let board = ui.add(
-            egui::Button::new(egui::RichText::new("Board").color(if view.table_view {
-                palette.muted
-            } else {
-                palette.text
-            }))
+            egui::Button::new(
+                egui::RichText::new("Board").color(if view.settings.table_view {
+                    palette.muted
+                } else {
+                    palette.text
+                }),
+            )
             .frame(false),
         );
         if board.clicked() {
@@ -47,7 +51,7 @@ pub(super) fn render_database(
         ui.label(
             egui::RichText::new(format!(
                 "{} rows",
-                format_number(page.rows.len() as f64, view.number_format)
+                format_number(page.rows.len() as f64, view.settings.number_format)
             ))
             .size(metrics::FONT_CAPTION)
             .color(palette.muted),
@@ -56,7 +60,7 @@ pub(super) fn render_database(
     ui.add_space(metrics::SPACE_8);
     ui.separator();
 
-    if view.table_view {
+    if view.settings.table_view {
         render_table(ui, page, width, gutter, palette, commands);
     } else {
         render_board(ui, page, width, palette);

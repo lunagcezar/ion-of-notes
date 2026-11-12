@@ -86,13 +86,13 @@ impl NotionApp {
             }
             Command::OpenSettings => {
                 self.close_overlays();
-                self.settings_open = true;
-                self.settings_status = None;
-                if self.settings_page == "People" {
+                self.settings.open = true;
+                self.settings.status = None;
+                if self.settings.page == "People" {
                     self.refresh_members();
                 }
             }
-            Command::CloseSettings => self.settings_open = false,
+            Command::CloseSettings => self.settings.open = false,
             Command::OpenOnboarding => {
                 self.close_overlays();
                 self.onboarding_open = true;
@@ -116,12 +116,12 @@ impl NotionApp {
             Command::CloseTemplates => self.templates_open = false,
             Command::ApplyTemplate(id) => self.apply_template(&id),
             Command::ToggleTheme => {
-                self.dark = !self.dark;
-                self.theme_dirty = true;
-                apply_theme(ctx, self.dark);
+                self.settings.dark = !self.settings.dark;
+                self.settings.theme_dirty = true;
+                apply_theme(ctx, self.settings.dark);
             }
             Command::ToggleSidebar => self.sidebar_open = !self.sidebar_open,
-            Command::SetTableView(table) => self.table_view = table,
+            Command::SetTableView(table) => self.settings.table_view = table,
             Command::GoBack => {
                 if self.nav_pos > 0 {
                     self.nav_pos -= 1;

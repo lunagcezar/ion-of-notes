@@ -105,6 +105,23 @@ pub(super) struct ServerState {
     pub slot: ServerSlot,
 }
 
+/// Settings dialog and preference state.
+pub(super) struct SettingsState {
+    pub open: bool,
+    pub page: String,
+    pub query: String,
+    pub status: Option<String>,
+    pub language: String,
+    pub dark: bool,
+    pub theme_dirty: bool,
+    pub table_view: bool,
+    pub font_style: FontStyle,
+    pub full_width: bool,
+    pub small_text: bool,
+    pub zoom: f32,
+    pub zoom_dirty: bool,
+}
+
 impl Default for SearchState {
     fn default() -> Self {
         Self {
@@ -133,16 +150,9 @@ pub struct NotionApp {
     pub(super) sidebar_open: bool,
     pub(super) expanded: HashSet<String>,
     pub(super) search: SearchState,
-    pub(super) settings_open: bool,
+    pub(super) settings: SettingsState,
     pub(super) onboarding_open: bool,
     pub(super) templates_open: bool,
-    pub(super) settings_page: String,
-    pub(super) settings_query: String,
-    pub(super) settings_status: Option<String>,
-    pub(super) language: String,
-    pub(super) dark: bool,
-    pub(super) theme_dirty: bool,
-    pub(super) table_view: bool,
     pub(super) library_open: bool,
     pub(super) library_tab: String,
     pub(super) library_shared: Arc<HashSet<String>>,
@@ -170,8 +180,6 @@ pub struct NotionApp {
     pub(super) ai: AiState,
     // Help / window.
     pub(super) shortcuts_open: bool,
-    pub(super) zoom: f32,
-    pub(super) zoom_dirty: bool,
     pub(super) fullscreen: bool,
     pub(super) undo_stack: Vec<Workspace>,
     pub(super) redo_stack: Vec<Workspace>,
@@ -186,9 +194,6 @@ pub struct NotionApp {
     pub(super) version_history_open: bool,
     pub(super) versions: Arc<Vec<PageVersion>>,
     pub(super) version_selected: usize,
-    pub(super) font_style: FontStyle,
-    pub(super) full_width: bool,
-    pub(super) small_text: bool,
     pub(super) workspace_menu_open: bool,
     pub(super) app_menu_open: bool,
     pub(super) compose_menu_open: bool,
@@ -226,8 +231,8 @@ impl NotionApp {
     /// Open the Server settings page with a prefilled URL (startup prompt).
     pub fn open_server_login(&mut self, server: String) {
         self.server.url = server;
-        self.settings_open = true;
-        self.settings_page = "Server".to_string();
+        self.settings.open = true;
+        self.settings.page = "Server".to_string();
         self.server.busy = false;
         self.server.status = Some("Enter your account and password.".to_string());
     }
@@ -474,34 +479,41 @@ impl NotionApp {
                 cache: SearchCache::default(),
                 selected: 0,
             },
-            settings_open: matches!(
-                demo.as_str(),
-                "settings"
-                    | "ai"
-                    | "ai-error"
-                    | "settings-12h"
-                    | "settings-comma"
-                    | "settings-general"
-                    | "settings-people"
-                    | "settings-offline"
-                    | "settings-server"
-            ),
+            settings: SettingsState {
+                open: matches!(
+                    demo.as_str(),
+                    "settings"
+                        | "ai"
+                        | "ai-error"
+                        | "settings-12h"
+                        | "settings-comma"
+                        | "settings-general"
+                        | "settings-people"
+                        | "settings-offline"
+                        | "settings-server"
+                ),
+                page: match demo.as_str() {
+                    "ai" | "ai-error" => "AI assistant".to_string(),
+                    "settings-general" => "General".to_string(),
+                    "settings-people" => "People".to_string(),
+                    "settings-offline" => "Offline".to_string(),
+                    "settings-server" => "Server".to_string(),
+                    _ => "Preferences".to_string(),
+                },
+                query: String::new(),
+                status: None,
+                language,
+                dark: true,
+                theme_dirty: false,
+                table_view: true,
+                font_style: FontStyle::Default,
+                full_width: false,
+                small_text: false,
+                zoom: 1.0,
+                zoom_dirty: false,
+            },
             onboarding_open,
             templates_open,
-            settings_page: match demo.as_str() {
-                "ai" | "ai-error" => "AI assistant".to_string(),
-                "settings-general" => "General".to_string(),
-                "settings-people" => "People".to_string(),
-                "settings-offline" => "Offline".to_string(),
-                "settings-server" => "Server".to_string(),
-                _ => "Preferences".to_string(),
-            },
-            settings_query: String::new(),
-            settings_status: None,
-            language,
-            dark: true,
-            theme_dirty: false,
-            table_view: true,
             library_open: demo == "library",
             library_tab: "Recents".to_string(),
             library_shared,
@@ -572,8 +584,6 @@ impl NotionApp {
                 slot: Arc::new(Mutex::new(None)),
             },
             shortcuts_open: demo == "shortcuts",
-            zoom: 1.0,
-            zoom_dirty: false,
             fullscreen: false,
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
@@ -599,9 +609,6 @@ impl NotionApp {
             version_history_open: false,
             versions: Arc::new(Vec::new()),
             version_selected: 0,
-            font_style: FontStyle::Default,
-            full_width: false,
-            small_text: false,
             workspace_menu_open: demo == "workspace-switcher",
             app_menu_open: demo == "app-menu-file" || demo == "app-menu-view",
             compose_menu_open: demo == "compose-menu",
@@ -624,13 +631,13 @@ impl NotionApp {
 impl eframe::App for NotionApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        if self.theme_dirty {
-            apply_theme(&ctx, self.dark);
-            self.theme_dirty = false;
+        if self.settings.theme_dirty {
+            apply_theme(&ctx, self.settings.dark);
+            self.settings.theme_dirty = false;
         }
-        if self.zoom_dirty {
-            ctx.set_zoom_factor(self.zoom);
-            self.zoom_dirty = false;
+        if self.settings.zoom_dirty {
+            ctx.set_zoom_factor(self.settings.zoom);
+            self.settings.zoom_dirty = false;
         }
         self.poll_ai();
         self.poll_server();
@@ -697,7 +704,7 @@ impl eframe::App for NotionApp {
             self.search.results = Arc::new(results);
         }
 
-        let palette = Palette::for_theme(self.dark);
+        let palette = Palette::for_theme(self.settings.dark);
         let view = self.view_state();
         let sidebar_t = ctx.animate_bool_with_time(
             egui::Id::unique("sidebar_open_anim"),
@@ -777,7 +784,7 @@ impl eframe::App for NotionApp {
         if view.search.open {
             render_search(&ctx, &self.workspace, &view, &palette, &mut commands);
         }
-        if view.settings_open {
+        if view.settings.open {
             render_settings(&ctx, &mut self.workspace, &view, &palette, &mut commands);
         }
         if view.onboarding_open {

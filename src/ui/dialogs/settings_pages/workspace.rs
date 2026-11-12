@@ -163,7 +163,7 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                         commands.push(Command::ExportMembers);
                     }
                 });
-                if let Some(status) = &view.settings_status {
+                if let Some(status) = &view.settings.status {
                     ui.label(
                         egui::RichText::new(status)
                             .size(metrics::FONT_MICRO)

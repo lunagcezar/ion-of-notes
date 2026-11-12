@@ -9,19 +9,19 @@ impl NotionApp {
         match command {
             // ---- Settings / help / window ------------------------------
             Command::SetSettingsPage(page) => {
-                self.settings_page = page.clone();
-                self.settings_status = None;
+                self.settings.page = page.clone();
+                self.settings.status = None;
                 if page == "People" {
                     self.refresh_members();
                 }
             }
-            Command::SetSettingsQuery(query) => self.settings_query = query,
-            Command::SetSettingsStatus(message) => self.settings_status = Some(message),
+            Command::SetSettingsQuery(query) => self.settings.query = query,
+            Command::SetSettingsStatus(message) => self.settings.status = Some(message),
             Command::ExportWorkspace => match self.client.export_tree() {
                 Ok(files) => {
-                    self.settings_status = Some(i18n::t_count("exported_files", files.len()))
+                    self.settings.status = Some(i18n::t_count("exported_files", files.len()))
                 }
-                Err(error) => self.settings_status = Some(error.to_string()),
+                Err(error) => self.settings.status = Some(error.to_string()),
             },
             Command::ExportMembers => match self.client.export_tree() {
                 Ok(files) => {
@@ -29,13 +29,13 @@ impl NotionApp {
                         .iter()
                         .filter(|file| file.path.starts_with("People"))
                         .count();
-                    self.settings_status = Some(i18n::t_count("exported_people_files", count));
+                    self.settings.status = Some(i18n::t_count("exported_people_files", count));
                 }
-                Err(error) => self.settings_status = Some(error.to_string()),
+                Err(error) => self.settings.status = Some(error.to_string()),
             },
             Command::SetLanguage(locale) => {
                 crate::i18n::set_locale(&locale);
-                self.language = locale;
+                self.settings.language = locale;
             }
             Command::SetNumberFormat(format) => {
                 self.workspace.settings.number_format = format;
@@ -49,16 +49,16 @@ impl NotionApp {
             }
             Command::CloseShortcuts => self.shortcuts_open = false,
             Command::ZoomIn => {
-                self.zoom = (self.zoom + 0.1).min(1.6);
-                self.zoom_dirty = true;
+                self.settings.zoom = (self.settings.zoom + 0.1).min(1.6);
+                self.settings.zoom_dirty = true;
             }
             Command::ZoomOut => {
-                self.zoom = (self.zoom - 0.1).max(0.7);
-                self.zoom_dirty = true;
+                self.settings.zoom = (self.settings.zoom - 0.1).max(0.7);
+                self.settings.zoom_dirty = true;
             }
             Command::ZoomReset => {
-                self.zoom = 1.0;
-                self.zoom_dirty = true;
+                self.settings.zoom = 1.0;
+                self.settings.zoom_dirty = true;
             }
             Command::ToggleWorkspaceMenu => {
                 let open = !self.workspace_menu_open;
@@ -234,9 +234,9 @@ impl NotionApp {
                 self.grid_menu_open = open;
             }
             Command::CloseGridMenu => self.grid_menu_open = false,
-            Command::ToggleFullWidth => self.full_width = !self.full_width,
-            Command::ToggleSmallText => self.small_text = !self.small_text,
-            Command::SetFontStyle(style) => self.font_style = style,
+            Command::ToggleFullWidth => self.settings.full_width = !self.settings.full_width,
+            Command::ToggleSmallText => self.settings.small_text = !self.settings.small_text,
+            Command::SetFontStyle(style) => self.settings.font_style = style,
             other => debug_assert!(false, "unexpected settings command: {other:?}"),
         }
     }

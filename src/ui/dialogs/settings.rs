@@ -105,7 +105,7 @@ fn settings_nav(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    let selected = view.settings_page == label;
+    let selected = view.settings.page == label;
     if nav_item(
         ui,
         &settings_label(label),
@@ -265,7 +265,7 @@ pub(crate) fn render_settings(
                                 ),
                                 palette.muted,
                             );
-                            let mut query = view.settings_query.clone();
+                            let mut query = view.settings.query.clone();
                             if query.is_empty() {
                                 ui.painter().text(
                                     Pos2::new(search.min.x + SETTINGS_SEARCH_TEXT_INSET, search.center().y),
@@ -312,7 +312,7 @@ pub(crate) fn render_settings(
                                                 .iter()
                                                 .filter(|(label, description)| {
                                                     section_matches(
-                                                        &view.settings_query,
+                                                        &view.settings.query,
                                                         label,
                                                         description,
                                                     )
@@ -349,7 +349,7 @@ pub(crate) fn render_settings(
                             egui::Frame::NONE
                                 .inner_margin(egui::Margin::symmetric(SETTINGS_CONTENT_PADDING as i8, 0))
                                 .show(ui, |ui| {
-                            let page = view.settings_page.as_str();
+                            let page = view.settings.page.as_str();
                             let subtitle = if page == "Preferences" {
                                 "Choose how you want the app to look and behave"
                             } else if page == "AI assistant" {
@@ -369,7 +369,7 @@ pub(crate) fn render_settings(
                                     .color(palette.muted),
                             );
                             ui.add_space(SPACE_26);
-                            let query = view.settings_query.trim();
+                            let query = view.settings.query.trim();
                             let catalog = rows_for(page);
                             let rows = visible_rows(page, query);
                             let matches = if catalog.is_empty() {

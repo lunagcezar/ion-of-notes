@@ -11,8 +11,8 @@ impl NotionApp {
             // ---- AI assistant ------------------------------------------
             Command::OpenAiChat => {
                 self.close_overlays();
-                self.settings_open = true;
-                self.settings_page = "AI assistant".to_string();
+                self.settings.open = true;
+                self.settings.page = "AI assistant".to_string();
                 self.ai.answer = None;
                 self.ai.error = None;
             }

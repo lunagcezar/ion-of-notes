@@ -182,7 +182,7 @@ pub(super) fn render_library(
                 ui.painter().text(
                     rect.min + Vec2::new(name_w + created_w + source_w + 12.0, 17.0),
                     Align2::LEFT_CENTER,
-                    format_timestamp(&page.updated_at, view.time_format),
+                    format_timestamp(&page.updated_at, view.settings.time_format),
                     FontId::proportional(metrics::FONT_CAPTION),
                     palette.muted,
                 );
