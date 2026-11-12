@@ -5,11 +5,11 @@
 //! update for the server. Remote updates are applied back and projected into
 //! the page.
 
-use crate::model::{Block, Page, RichText};
+use crate::model::Page;
 use std::collections::BTreeMap;
 use yrs::updates::decoder::Decode;
 use yrs::updates::encoder::Encode;
-use yrs::{Doc, GetString, ReadTxn, StateVector, Text, TextRef, Transact, Transaction, Update};
+use yrs::{Doc, GetString, ReadTxn, StateVector, Text, TextRef, Transact, Update};
 
 #[derive(Default)]
 pub struct CrdtSession {
@@ -36,7 +36,7 @@ impl CrdtSession {
     pub fn baseline_page(&mut self, page: &Page) {
         self.last_text.clear();
         let mut texts = BTreeMap::new();
-        collect_block_texts(&self.doc, &page.blocks, &mut texts);
+        crate::crdt_text::collect_block_texts(&self.doc, &page.blocks, &mut texts);
         let txn = self.doc.transact();
         for (block_id, text) in texts {
             self.last_text.insert(block_id, text.get_string(&txn));
@@ -49,8 +49,7 @@ impl CrdtSession {
         self.page_id = Some(page.id.clone());
         self.last_text.clear();
         let title = self.doc.get_or_insert_text("title");
-        let mut texts = Vec::new();
-        collect_texts(&self.doc, &page.blocks, &mut texts);
+        let texts = crate::crdt_text::collect_text_snapshots(&self.doc, &page.blocks);
         {
             let mut txn = self.doc.transact_mut();
             title.insert(&mut txn, 0, &page.title);
@@ -128,10 +127,10 @@ impl CrdtSession {
     pub fn project_page(&self, page: &mut Page) {
         let title = self.doc.get_or_insert_text("title");
         let mut texts = BTreeMap::new();
-        collect_block_texts(&self.doc, &page.blocks, &mut texts);
+        crate::crdt_text::collect_block_texts(&self.doc, &page.blocks, &mut texts);
         let txn = self.doc.transact();
         page.title = title.get_string(&txn);
-        project_blocks(&texts, &txn, &mut page.blocks);
+        crate::crdt_text::project_blocks(&texts, &txn, &mut page.blocks);
     }
 
     fn refresh_last_text(&mut self) {
@@ -149,35 +148,5 @@ impl CrdtSession {
         for (key, text) in refs {
             self.last_text.insert(key, text.get_string(&txn));
         }
-    }
-}
-
-fn collect_texts(doc: &Doc, blocks: &[Block], out: &mut Vec<(String, TextRef, String)>) {
-    for block in blocks {
-        let text = doc.get_or_insert_text(format!("block:{}", block.id));
-        out.push((block.id.clone(), text, block.plain_text()));
-        collect_texts(doc, &block.children, out);
-    }
-}
-
-fn collect_block_texts(doc: &Doc, blocks: &[Block], out: &mut BTreeMap<String, TextRef>) {
-    for block in blocks {
-        out.insert(
-            block.id.clone(),
-            doc.get_or_insert_text(format!("block:{}", block.id)),
-        );
-        collect_block_texts(doc, &block.children, out);
-    }
-}
-
-fn project_blocks(texts: &BTreeMap<String, TextRef>, txn: &Transaction<'_>, blocks: &mut [Block]) {
-    for block in blocks {
-        if let Some(text) = texts.get(&block.id) {
-            block.text = text.get_string(txn);
-            if block.rich_text.len() <= 1 {
-                block.rich_text = vec![RichText::text(block.text.clone())];
-            }
-        }
-        project_blocks(texts, txn, &mut block.children);
     }
 }

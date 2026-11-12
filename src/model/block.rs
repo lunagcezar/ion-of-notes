@@ -491,11 +491,24 @@ pub struct BlockChildrenRequest {
     pub children: Vec<BlockInput>,
 }
 
+pub(crate) fn walk_blocks(blocks: &[Block], visit: &mut impl FnMut(&Block)) {
+    for block in blocks {
+        visit(block);
+        walk_blocks(&block.children, visit);
+    }
+}
+
+pub(crate) fn walk_blocks_mut(blocks: &mut [Block], visit: &mut impl FnMut(&mut Block)) {
+    for block in blocks {
+        visit(block);
+        walk_blocks_mut(&mut block.children, visit);
+    }
+}
+
 pub(super) fn count_blocks(blocks: &[Block]) -> u64 {
-    blocks
-        .iter()
-        .map(|block| 1 + count_blocks(&block.children))
-        .sum()
+    let mut count = 0;
+    walk_blocks(blocks, &mut |_| count += 1);
+    count
 }
 
 pub(super) fn find_block_in<'a>(blocks: &'a [Block], id: &str) -> Option<&'a Block> {

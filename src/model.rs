@@ -27,6 +27,7 @@ mod view;
 mod workspace;
 
 pub use block::{Block, BlockChildrenRequest, BlockDto, BlockInput, BlockKind, ParentDto};
+pub(crate) use block::{walk_blocks, walk_blocks_mut};
 pub use catalog::{WorkspaceCatalog, WorkspaceSummary};
 pub use comment::{
     AttachmentInput, Comment, CommentDisplayName, CommentDisplayNameDto, CommentDto, CommentInput,

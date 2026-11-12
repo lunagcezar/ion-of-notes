@@ -5,12 +5,12 @@
 //! workspace snapshot after every update, so a restart can re-seed from the
 //! durable page document.
 
-use crate::model::{Block, RichText, Workspace};
+use crate::model::Workspace;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use yrs::updates::decoder::Decode;
 use yrs::updates::encoder::Encode;
-use yrs::{Doc, GetString, ReadTxn, StateVector, Text, TextRef, Transact, Transaction, Update};
+use yrs::{Doc, GetString, ReadTxn, StateVector, Text, Transact, Update};
 
 /// In-memory CRDT documents keyed by page id.
 #[derive(Clone, Default)]
@@ -37,12 +37,11 @@ impl CrdtStore {
             .ok_or_else(|| format!("page not found: {page_id}"))?;
         let doc = Doc::new();
         let title = doc.get_or_insert_text("title");
-        let mut texts = Vec::new();
-        collect_texts(&doc, &page.blocks, &mut texts);
+        let texts = crate::crdt_text::collect_text_snapshots(&doc, &page.blocks);
         {
             let mut txn = doc.transact_mut();
             title.insert(&mut txn, 0, &page.title);
-            for (text, value) in texts {
+            for (_, text, value) in texts {
                 if !value.is_empty() {
                     text.insert(&mut txn, 0, &value);
                 }
@@ -118,7 +117,7 @@ impl CrdtStore {
                 .ok_or_else(|| format!("page not found: {page_id}"))?;
             let title = doc.get_or_insert_text("title");
             let mut texts = BTreeMap::new();
-            collect_block_texts(doc, &page.blocks, &mut texts);
+            crate::crdt_text::collect_block_texts(doc, &page.blocks, &mut texts);
             (title, texts)
         };
         let txn = doc.transact();
@@ -126,7 +125,7 @@ impl CrdtStore {
             .page_mut(page_id)
             .ok_or_else(|| format!("page not found: {page_id}"))?;
         page.title = title.get_string(&txn);
-        project_blocks(&texts, &txn, &mut page.blocks);
+        crate::crdt_text::project_blocks(&texts, &txn, &mut page.blocks);
         page.updated_at = crate::model::now_label();
         Ok(())
     }
@@ -145,35 +144,5 @@ impl CrdtStore {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .clear();
-    }
-}
-
-fn collect_texts(doc: &Doc, blocks: &[Block], out: &mut Vec<(TextRef, String)>) {
-    for block in blocks {
-        let text = doc.get_or_insert_text(format!("block:{}", block.id));
-        out.push((text, block.plain_text()));
-        collect_texts(doc, &block.children, out);
-    }
-}
-
-fn collect_block_texts(doc: &Doc, blocks: &[Block], out: &mut BTreeMap<String, TextRef>) {
-    for block in blocks {
-        out.insert(
-            block.id.clone(),
-            doc.get_or_insert_text(format!("block:{}", block.id)),
-        );
-        collect_block_texts(doc, &block.children, out);
-    }
-}
-
-fn project_blocks(texts: &BTreeMap<String, TextRef>, txn: &Transaction<'_>, blocks: &mut [Block]) {
-    for block in blocks {
-        if let Some(text) = texts.get(&block.id) {
-            block.text = text.get_string(txn);
-            if block.rich_text.len() <= 1 {
-                block.rich_text = vec![RichText::text(block.text.clone())];
-            }
-        }
-        project_blocks(texts, txn, &mut block.children);
     }
 }

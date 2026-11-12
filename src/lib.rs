@@ -23,6 +23,7 @@ pub mod auth;
 pub mod cli;
 pub mod client;
 pub mod collab;
+mod crdt_text;
 pub mod i18n;
 pub mod model;
 pub mod ollama;
