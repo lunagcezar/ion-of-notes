@@ -249,6 +249,7 @@ tests/
   auth.rs          password hashing, login/logout/session, SQLite restart
   sqlite_store.rs  SQLite round-trip, accounts/sessions, JSON migration
   integration.rs   end-to-end client/server/store scenario
+  deployment.rs    Docker/Compose/Caddy/build-profile drift tests
 Dockerfile         multi-stage server-only image
 compose.yml        development/self-hosted server stack
 compose.prod.yml   production app + Caddy TLS + optional backup profile

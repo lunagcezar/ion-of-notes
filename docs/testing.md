@@ -42,14 +42,14 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (261 tests across the two feature passes, 2026-11-10)
+## 3. Test-crate map (274 tests across the two feature passes, 2026-11-12)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
-| `tests/model.rs` | 21 | entities, tree, search, diff, index, settings, comments, JSON round-trip |
+| `tests/model.rs` | 24 | entities, tree, search, diff, index, settings, comments, JSON round-trip |
 | `tests/server.rs` | 12 | routes, envelopes, status codes, HTTP parse/format, concurrent loopback |
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
-| `tests/ui.rs` | 14 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, desktop feature seam |
+| `tests/ui.rs` | 22 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, desktop feature seam |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
 | `tests/contract.rs` | 18 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/pagination.rs` | 11 | list envelopes, cursor round-trip, page bounds, v2 pages/search/sync/versions |
@@ -72,11 +72,12 @@ flowchart TD
 | `tests/collab_store.rs` | 6 | collaboration JSON round-trip, seed/corrupt fallback, restart restore, failing store |
 | `tests/fidelity.rs` | 6 | chrome colors, strong font, tab truncation, seeded page shape |
 | `tests/store_port.rs` | 5 | injectable store, failing store → `500`, null store |
-| `tests/store.rs` | 4 | JSON save/load, atomic write, missing file seed |
+| `tests/store.rs` | 5 | JSON save/load, atomic write, missing file seed, workspace catalog |
 | `tests/cli.rs` | 3 | argument parsing for desktop, screenshot and serve |
 | `tests/templates.rs` | 3 | template catalog, stable page building, purpose mapping |
-| `tests/app.rs` | 3 | composition root wiring, core-without-desktop feature seam |
+| `tests/app.rs` | 3 | composition root wiring, replace-workspace, core-without-desktop feature seam |
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
+| `tests/deployment.rs` | 6 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
 | `tests/screenshot.rs` | 2 | `ColorImage` → RGBA, PNG output |
 | `tests/integration.rs` | 1 | client → server → store end to end |
 
