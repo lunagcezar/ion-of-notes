@@ -9,6 +9,7 @@ use super::super::commands::{Command, SidebarMenu};
 use super::super::icons::{
     draw_chevron, draw_close, draw_dots, draw_grid, draw_help, draw_inbox, draw_library, draw_page,
     draw_page_icon, draw_person, draw_plus, draw_search, draw_settings, draw_sliders,
+    page_icon_letter,
 };
 use super::super::palette::Palette;
 use super::super::view::ViewState;
@@ -535,7 +536,7 @@ pub(crate) fn render_sidebar(
                                             rect.min + Vec2::new(10.0, 7.0),
                                             Vec2::splat(16.0),
                                         ),
-                                        &page.icon,
+                                        &page_icon_letter(&page.icon, &page.title),
                                         palette,
                                         false,
                                     );
@@ -589,7 +590,7 @@ pub(crate) fn render_sidebar(
                                             rect.min + Vec2::new(10.0, 6.0),
                                             Vec2::splat(16.0),
                                         ),
-                                        &page.icon,
+                                        &page_icon_letter(&page.icon, &page.title),
                                         palette,
                                         false,
                                     );
@@ -831,7 +832,13 @@ fn render_tree(
         if has_children {
             draw_chevron(ui.painter(), glyph_rect, open, palette.muted);
         } else {
-            draw_page_icon(ui.painter(), glyph_rect, &page.icon, palette, false);
+            draw_page_icon(
+                ui.painter(),
+                glyph_rect,
+                &page_icon_letter(&page.icon, &page.title),
+                palette,
+                false,
+            );
         }
         ui.painter().text(
             rect.min + Vec2::new(indent + 24.0, 14.0),

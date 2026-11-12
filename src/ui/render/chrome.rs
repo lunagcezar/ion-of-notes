@@ -11,7 +11,7 @@ use egui::{Align2, CornerRadius, FontId, Pos2, Rect, Sense, Vec2};
 use super::super::commands::Command;
 use super::super::icons::{
     draw_arrow_left, draw_arrow_right, draw_close, draw_inbox, draw_menu, draw_minus,
-    draw_page_icon, draw_panel, draw_pen, draw_plus, draw_square, glyph_button,
+    draw_page_icon, draw_panel, draw_pen, draw_plus, draw_square, glyph_button, page_icon_letter,
 };
 use super::super::palette::{Palette, tab_title};
 use super::super::view::ViewState;
@@ -133,7 +133,13 @@ pub(crate) fn render_title_bar(
             }
             let icon_rect =
                 Rect::from_min_size(tab_rect.min + Vec2::new(10.0, 6.0), Vec2::splat(16.0));
-            draw_page_icon(ui.painter(), icon_rect, &icon, palette, false);
+            draw_page_icon(
+                ui.painter(),
+                icon_rect,
+                &page_icon_letter(&icon, &label),
+                palette,
+                false,
+            );
             ui.painter().text(
                 tab_rect.min + Vec2::new(34.0, (h - 8.0) / 2.0),
                 Align2::LEFT_CENTER,

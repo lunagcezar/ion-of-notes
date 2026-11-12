@@ -10,7 +10,7 @@ use crate::model::Workspace;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::app::{Command, NewTabChoice};
-use super::icons::{draw_help, draw_page_icon, draw_search, draw_sliders};
+use super::icons::{draw_help, draw_page_icon, draw_search, draw_sliders, page_icon_letter};
 use super::palette::{Palette, strong_font};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -289,7 +289,7 @@ pub(super) fn render_switcher(
                                     draw_page_icon(
                                         ui.painter(),
                                         icon_rect,
-                                        &row.icon,
+                                        &page_icon_letter(&row.icon, &row.label),
                                         palette,
                                         false,
                                     );
@@ -427,7 +427,7 @@ pub(super) fn render_switcher(
                                             card.min + Vec2::new(24.0, 28.0),
                                             Vec2::splat(48.0),
                                         ),
-                                        &page.icon,
+                                        &page_icon_letter(&page.icon, &page.title),
                                         palette,
                                         true,
                                     );

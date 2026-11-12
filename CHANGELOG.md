@@ -6,6 +6,15 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-065 page icon letter fallback
+
+- Pages without an icon now render the uppercase first letter of their title
+  in the header, sidebar, tabs, breadcrumbs and search results; explicit
+  emoji/symbol/shape icons still win.
+- The workspace breadcrumb uses the workspace icon instead of the letter
+  fallback.
+- Added a `page_icon_letter` regression test; suite: 271 tests.
+
 ### Changed - spec-064 block editor drop targets and Enter split
 
 - Block drops now use the nearest gap (before/after) instead of a block id, so

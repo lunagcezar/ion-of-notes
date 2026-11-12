@@ -8,7 +8,7 @@ use super::super::super::commands::{Command, FontStyle};
 use super::super::super::format::format_timestamp;
 use super::super::super::icons::{
     draw_ellipsis, draw_lines, draw_link, draw_page_icon, draw_pen, draw_plus, draw_share,
-    draw_star, glyph_button, icon_button,
+    draw_star, glyph_button, icon_button, page_icon_letter,
 };
 use super::super::super::palette::{Palette, strong_font};
 use super::super::super::view::ViewState;
@@ -49,7 +49,7 @@ pub(crate) fn render_content(
                 crumbs.push((String::new(), "Workspace".to_string()));
             }
             if crumbs.len() == 1 {
-                crumbs.insert(0, (String::new(), ws.name.clone()));
+                crumbs.insert(0, (ws.settings.icon.clone(), ws.name.clone()));
             }
             if view.library_open {
                 crumbs = vec![(String::new(), "Library".to_string())];
@@ -178,7 +178,7 @@ fn crumb(ui: &mut egui::Ui, icon: &str, text: &str, palette: &Palette) -> egui::
     draw_page_icon(
         ui.painter(),
         Rect::from_min_size(rect.min + Vec2::new(2.0, 2.0), Vec2::splat(16.0)),
-        icon,
+        &page_icon_letter(icon, text),
         palette,
         false,
     );
@@ -221,7 +221,13 @@ fn render_page(
             ui.set_width(width);
             let (icon_rect, icon_response) =
                 ui.allocate_exact_size(Vec2::splat(72.0), Sense::click());
-            draw_page_icon(ui.painter(), icon_rect, &page.icon, palette, true);
+            draw_page_icon(
+                ui.painter(),
+                icon_rect,
+                &page_icon_letter(&page.icon, &page.title),
+                palette,
+                true,
+            );
             if icon_response.hovered() {
                 ui.painter().rect_stroke(
                     icon_rect,

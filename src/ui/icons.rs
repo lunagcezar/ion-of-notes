@@ -498,6 +498,20 @@ pub fn glyph_visual_offset(font_size: f32) -> f32 {
     font_size * 0.08
 }
 
+/// The icon to draw for a page: the explicit icon when present, otherwise the
+/// uppercase first letter of the title (spec-065).
+pub fn page_icon_letter(icon: &str, title: &str) -> String {
+    if !icon.trim().is_empty() {
+        return icon.to_string();
+    }
+    title
+        .trim()
+        .chars()
+        .next()
+        .map(|ch| ch.to_uppercase().collect::<String>())
+        .unwrap_or_else(|| "?".to_string())
+}
+
 /// Draw the icon that identifies a page (spec-013).
 ///
 /// An empty icon (or the literal `"book"`) is the default: the original

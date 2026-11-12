@@ -9,7 +9,9 @@ use ion_of_notes::ui::{
     parse_invite_emails, plan_for, rows_for, section_matches, settings_matches, status_color,
     visible_rows,
 };
-use ion_of_notes::ui::{EMOJI, ICONS, app_bar_left_width, catalog_matches, glyph_visual_offset};
+use ion_of_notes::ui::{
+    EMOJI, ICONS, app_bar_left_width, catalog_matches, glyph_visual_offset, page_icon_letter,
+};
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
@@ -89,6 +91,15 @@ fn app_bar_follows_the_sidebar_but_keeps_a_compact_width() {
     assert_eq!(app_bar_left_width(266.0, 1.0), 266.0);
     assert_eq!(app_bar_left_width(266.0, 0.0), 92.0);
     assert_eq!(app_bar_left_width(266.0, 0.5), 133.0);
+}
+
+#[test]
+fn page_icons_fall_back_to_the_uppercase_title_letter() {
+    assert_eq!(page_icon_letter("", "home"), "H");
+    assert_eq!(page_icon_letter("  ", "  getting started"), "G");
+    assert_eq!(page_icon_letter("★", "home"), "★");
+    assert_eq!(page_icon_letter("", ""), "?");
+    assert_eq!(page_icon_letter("", "éclair"), "É");
 }
 
 #[test]

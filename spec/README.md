@@ -102,7 +102,7 @@ Status vocabulary:
 | [062](spec-062-customizable-sidebar-sections.md) | Customizable sidebar sections and shortcuts | implemented | Row settings/exclude/drag, Add shortcut/section menus, sidebar tabs |
 | [063](spec-063-sidebar-menus-breadcrumbs-and-gutter.md) | Sidebar menus, breadcrumbs and gutter alignment | implemented | Menu anchoring, breadcrumb padding, gutter centering, idle chevrons |
 | [064](spec-064-block-editor-drop-targets-and-enter-split.md) | Block editor drop targets and Enter split | implemented | Gap-based drops, Enter creates a block, localized placeholder |
-| [065](spec-065-page-icon-letter-fallback.md) | Page icon letter fallback | plan | Empty icon uses the uppercase title letter everywhere |
+| [065](spec-065-page-icon-letter-fallback.md) | Page icon letter fallback | implemented | Empty icon uses the uppercase title letter everywhere |
 | [066](spec-066-search-and-new-tab-filters.md) | Search and new-tab filters | plan | Title only, Created by, In, Has comments, show/hide; remove Ask AI |
 
 ## 3. Work status
