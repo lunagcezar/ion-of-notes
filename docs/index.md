@@ -20,8 +20,8 @@ in what order, and which document is the source of truth for each concern.
   `spec-016` is a plan with B5 done; `spec-057` is implemented (UI quality
   pass); `spec-058` .. `spec-062` are implemented (workspaces, chrome,
   editor/AI responsiveness, settings formats, customizable sidebar);
-  `spec-063` .. `spec-066` are the bug-bashing plans. The v2 foundation,
-  pagination, rich
+  `spec-063` .. `spec-066` are implemented (bug-bashing II). The v2
+  foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
   (spec-039), the WebSocket change feed (spec-040), TLS webhooks/shared limits

@@ -403,12 +403,27 @@ impl NotionApp {
             closed_tabs: Vec::new(),
             sidebar_open: demo != "appbar-closed",
             expanded: HashSet::new(),
-            search_open: demo == "search",
-            search_query: String::new(),
+            search_open: matches!(
+                demo.as_str(),
+                "search" | "filter-title" | "filter-created" | "filter-in" | "filter-hidden"
+            ),
+            search_query: if demo.starts_with("filter-") {
+                "o".to_string()
+            } else {
+                String::new()
+            },
             search_results: Arc::new(Vec::new()),
-            search_title_only: false,
-            search_created_by: None,
-            search_in: None,
+            search_title_only: demo == "filter-title",
+            search_created_by: if demo == "filter-created" {
+                Some("Workspace Owner".to_string())
+            } else {
+                None
+            },
+            search_in: if demo == "filter-in" {
+                Some("p-projects".to_string())
+            } else {
+                None
+            },
             search_has_comments: false,
             search_cache: SearchCache::default(),
             settings_open: matches!(
@@ -514,7 +529,7 @@ impl NotionApp {
             redo_stack: Vec::new(),
             search_selected: 0,
             highlight_pane: true,
-            filters: true,
+            filters: demo != "filter-hidden",
             icon_picker_open: matches!(
                 demo.as_str(),
                 "iconpicker" | "iconpicker-icons" | "iconpicker-search"
