@@ -78,6 +78,7 @@ flowchart TD
 | `tests/app.rs` | 4 | composition root wiring, replace-workspace, core-without-desktop feature seam |
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
 | `tests/deployment.rs` | 6 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
+| `tests/perf.rs` | 1 | opt-in load/serialize/search/CRDT timings at 1k/10k/50k blocks |
 | `tests/smoke.rs` | 1 | real listener: health/ready/metrics and authenticated v2 workspace |
 | `tests/screenshot.rs` | 2 | `ColorImage` → RGBA, PNG output |
 | `tests/integration.rs` | 1 | client → server → store end to end |
@@ -184,6 +185,20 @@ vulnerability fails it. `cargo deny` (licenses/bans) remains a future step.
   `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS=1` when running `--serve`.
 - Remote session file: `remote-session.json` beside `workspace.json`; delete it
   or use Disconnect to clear it. The password is never written.
+
+### 3.5 Performance harness
+
+`tests/perf.rs` is the deterministic load harness (spec-097). It is skipped in
+the default gate and only measures when explicitly enabled:
+
+```sh
+ION_OF_NOTES_PERF=1 cargo test --no-default-features --test perf -- --nocapture
+```
+
+It builds 1k, 10k and 50k blocks and prints serialize, deserialize, search,
+page lookup and CRDT-sync timings plus the JSON size. The assertions are
+correctness assertions, so the harness is safe on any machine; the numbers are
+indicators for the persistence roadmap, not release budgets.
 
 ## 4. What each layer tests
 

@@ -39,7 +39,8 @@ in what order, and which document is the source of truth for each concern.
   (CollaborationState grouping); `spec-094` is implemented
   (AiState/ServerState grouping); `spec-095` is implemented
   (SettingsState/SettingsView grouping); `spec-096` is implemented
-  (narrow settings view models). The
+  (narrow settings view models); `spec-097` is implemented
+  (deterministic performance harness). The
   v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite

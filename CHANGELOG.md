@@ -6,6 +6,12 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Added - spec-097 performance harness
+
+- Added `tests/perf.rs`, an opt-in (`ION_OF_NOTES_PERF=1`) harness that measures
+  serialize, deserialize, search, page lookup and CRDT sync at 1k/10k/50k
+  blocks and records the baseline in `docs/testing.md`.
+
 ### Changed - spec-096 narrow settings views
 
 - The AI, Server, Preferences, General and People settings pages now receive

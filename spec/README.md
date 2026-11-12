@@ -134,6 +134,7 @@ Status vocabulary:
 | [094](spec-094-ai-and-server-state.md) | AiState and ServerState grouping | implemented | AI and server-login runtime/view fields grouped |
 | [095](spec-095-settings-state-and-view.md) | SettingsState and SettingsView grouping | implemented | Settings dialog/preference runtime and view fields grouped |
 | [096](spec-096-narrow-settings-views.md) | Narrow settings view models | implemented | Settings pages receive only their slice |
+| [097](spec-097-performance-harness.md) | Deterministic performance harness | implemented | Opt-in 1k/10k/50k block timings |
 
 ## 3. Work status
 
