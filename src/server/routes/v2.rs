@@ -70,13 +70,19 @@ impl WorkspaceServer {
         if let Some(response) = self.handle_v2_crdt(request, path, request_id, &connection) {
             return Ok(response);
         }
-        if let Some(response) = self.handle_v2_auth(request, path, request_id, &connection) {
+        if let Some(response) = self
+            .handle_v2_auth(request, path, request_id, &connection)
+            .map_err(|error| handler_error(error, request_id))?
+        {
             return Ok(response);
         }
 
         self.workspace.ensure_data_sources();
         self.workspace.ensure_views();
-        if let Some(response) = self.handle_v2_webhook(request, path, request_id) {
+        if let Some(response) = self
+            .handle_v2_webhook(request, path, request_id)
+            .map_err(|error| handler_error(error, request_id))?
+        {
             return Ok(response);
         }
         if let Some(response) = self
@@ -85,18 +91,28 @@ impl WorkspaceServer {
         {
             return Ok(response);
         }
-        if let Some(response) =
-            self.handle_v2_user_file(request, path, query, request_id, &connection)
+        if let Some(response) = self
+            .handle_v2_user_file(request, path, query, request_id, &connection)
+            .map_err(|error| handler_error(error, request_id))?
         {
             return Ok(response);
         }
-        if let Some(response) = self.handle_v2_view(request, path, query, request_id) {
+        if let Some(response) = self
+            .handle_v2_view(request, path, query, request_id)
+            .map_err(|error| handler_error(error, request_id))?
+        {
             return Ok(response);
         }
-        if let Some(response) = self.handle_v2_database(request, path, query, request_id) {
+        if let Some(response) = self
+            .handle_v2_database(request, path, query, request_id)
+            .map_err(|error| handler_error(error, request_id))?
+        {
             return Ok(response);
         }
-        if let Some(response) = self.handle_v2_block(request, path, query, request_id) {
+        if let Some(response) = self
+            .handle_v2_block(request, path, query, request_id)
+            .map_err(|error| handler_error(error, request_id))?
+        {
             return Ok(response);
         }
         if let Some(response) = self.handle_v2_shared(request, path, request_id) {

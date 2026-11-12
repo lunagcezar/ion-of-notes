@@ -3,6 +3,7 @@
 use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
 };
+use super::super::error::{HandlerResult, fail, ok};
 use super::super::pagination::PageRequest;
 use super::super::response::{json, parse_body, v2_error, v2_list_response};
 use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
@@ -19,7 +20,7 @@ impl WorkspaceServer {
         path: &str,
         query: &str,
         request_id: &str,
-    ) -> Option<ApiResponse> {
+    ) -> HandlerResult<Option<ApiResponse>> {
         // Page properties: /api/v2/pages/{id}/properties
         if let Some(page_id) = path
             .strip_prefix("/api/v2/pages/")
@@ -28,7 +29,7 @@ impl WorkspaceServer {
             && request.method == Method::Get
         {
             let Some(page) = self.workspace.page_or_row(page_id) else {
-                return Some(v2_error(
+                return fail(v2_error(
                     404,
                     CODE_NOT_FOUND,
                     "page not found",
@@ -36,7 +37,7 @@ impl WorkspaceServer {
                     None,
                 ));
             };
-            return Some(json(200, Envelope::ok(page.properties.clone())));
+            return ok(json(200, Envelope::ok(page.properties.clone())));
         }
 
         // Page property write: /api/v2/pages/{id}/properties
@@ -49,12 +50,12 @@ impl WorkspaceServer {
             let input = match parse_body::<PagePropertiesInput>(request) {
                 Ok(input) => input,
                 Err(message) => {
-                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                    return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                 }
             };
             let dto = {
                 let Some(page) = self.workspace.page_or_row_mut(page_id) else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "page not found",
@@ -69,7 +70,7 @@ impl WorkspaceServer {
                 page.clone()
             };
             if let Err(error) = self.write(ChangeOp::Update, page_id) {
-                return Some(v2_error(
+                return fail(v2_error(
                     500,
                     CODE_INTERNAL,
                     error.to_string(),
@@ -77,7 +78,7 @@ impl WorkspaceServer {
                     None,
                 ));
             }
-            return Some(json(200, Envelope::ok(dto)));
+            return ok(json(200, Envelope::ok(dto)));
         }
 
         // Page property item: /api/v2/pages/{id}/properties/{property_id}
@@ -88,7 +89,7 @@ impl WorkspaceServer {
             && request.method == Method::Get
         {
             let Some(page) = self.workspace.page_or_row(page_id) else {
-                return Some(v2_error(
+                return fail(v2_error(
                     404,
                     CODE_NOT_FOUND,
                     "page not found",
@@ -101,7 +102,7 @@ impl WorkspaceServer {
                     .values()
                     .find(|property| property.id == property_id)
             }) else {
-                return Some(v2_error(
+                return fail(v2_error(
                     404,
                     CODE_NOT_FOUND,
                     "property not found",
@@ -112,7 +113,7 @@ impl WorkspaceServer {
             let page_request = match PageRequest::from_query(query) {
                 Ok(page) => page,
                 Err(error) => {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         400,
                         error.code(),
                         error.message(),
@@ -123,7 +124,7 @@ impl WorkspaceServer {
             };
             let items = property.items();
             let sort = format!("page_property:{page_id}:{property_id}");
-            return Some(v2_list_response(
+            return ok(v2_list_response(
                 items,
                 &page_request,
                 &sort,
@@ -137,17 +138,17 @@ impl WorkspaceServer {
 
         match (request.method, path, database_rest, data_source_rest) {
             (Method::Get, "/api/v2/databases", _, _) => {
-                Some(json(200, Envelope::ok(self.workspace.databases.clone())))
+                ok(json(200, Envelope::ok(self.workspace.databases.clone())))
             }
             (Method::Post, "/api/v2/databases", _, _) => {
                 let input = match parse_body::<DatabaseInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
-                        return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                        return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
                 if input.title.trim().is_empty() {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         400,
                         CODE_VALIDATION_ERROR,
                         "database title must not be empty",
@@ -175,7 +176,7 @@ impl WorkspaceServer {
                 };
                 self.workspace.databases.push(database.clone());
                 if let Err(error) = self.write(ChangeOp::Create, "__database__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -183,12 +184,12 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                Some(json(201, Envelope::ok(database)))
+                ok(json(201, Envelope::ok(database)))
             }
             (Method::Get, _, Some(id), _) if !id.is_empty() && !id.contains('/') => {
                 match self.workspace.database(id) {
-                    Some(database) => Some(json(200, Envelope::ok(database.clone()))),
-                    None => Some(v2_error(
+                    Some(database) => ok(json(200, Envelope::ok(database.clone()))),
+                    None => fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "database not found",
@@ -201,12 +202,12 @@ impl WorkspaceServer {
                 let input = match parse_body::<DatabaseInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
-                        return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                        return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
                 let dto = {
                     let Some(database) = self.workspace.database_mut(id) else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "database not found",
@@ -225,7 +226,7 @@ impl WorkspaceServer {
                     database.clone()
                 };
                 if let Err(error) = self.write(ChangeOp::Update, "__database__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -233,12 +234,12 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                Some(json(200, Envelope::ok(dto)))
+                ok(json(200, Envelope::ok(dto)))
             }
             (Method::Delete, _, Some(id), _) if !id.is_empty() && !id.contains('/') => {
                 let dto = {
                     let Some(database) = self.workspace.database_mut(id) else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "database not found",
@@ -251,7 +252,7 @@ impl WorkspaceServer {
                     database.clone()
                 };
                 if let Err(error) = self.write(ChangeOp::Delete, "__database__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -259,12 +260,12 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                Some(json(200, Envelope::ok(dto)))
+                ok(json(200, Envelope::ok(dto)))
             }
             (Method::Get, _, Some(id), _) if id.ends_with("/data_sources") => {
                 let database_id = id.trim_end_matches("/data_sources");
                 let Some(database) = self.workspace.database(database_id) else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "database not found",
@@ -285,12 +286,12 @@ impl WorkspaceServer {
                     .cloned()
                     .collect();
                 let _ = database;
-                Some(json(200, Envelope::ok(sources)))
+                ok(json(200, Envelope::ok(sources)))
             }
             (Method::Post, _, Some(id), _) if id.ends_with("/data_sources") => {
                 let database_id = id.trim_end_matches("/data_sources");
                 let Some(database) = self.workspace.database(database_id).cloned() else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "database not found",
@@ -301,7 +302,7 @@ impl WorkspaceServer {
                 let input = match parse_body::<DataSourceInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
-                        return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                        return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
                 let now = now_iso();
@@ -339,7 +340,7 @@ impl WorkspaceServer {
                     database.last_edited_time = now_iso();
                 }
                 if let Err(error) = self.write(ChangeOp::Create, "__data_source__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -347,12 +348,12 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                Some(json(201, Envelope::ok(data_source)))
+                ok(json(201, Envelope::ok(data_source)))
             }
             (Method::Get, _, _, Some(id)) if !id.is_empty() && !id.contains('/') => {
                 match self.workspace.data_source(id) {
-                    Some(data_source) => Some(json(200, Envelope::ok(data_source.clone()))),
-                    None => Some(v2_error(
+                    Some(data_source) => ok(json(200, Envelope::ok(data_source.clone()))),
+                    None => fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "data source not found",
@@ -365,12 +366,12 @@ impl WorkspaceServer {
                 let input = match parse_body::<DataSourceInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
-                        return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                        return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
                 let dto = {
                     let Some(data_source) = self.workspace.data_source_mut(id) else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "data source not found",
@@ -388,7 +389,7 @@ impl WorkspaceServer {
                     data_source.clone()
                 };
                 if let Err(error) = self.write(ChangeOp::Update, "__data_source__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -396,12 +397,12 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                Some(json(200, Envelope::ok(dto)))
+                ok(json(200, Envelope::ok(dto)))
             }
             (Method::Post, _, _, Some(id)) if id.ends_with("/query") => {
                 let data_source_id = id.trim_end_matches("/query");
                 let Some(data_source) = self.workspace.data_source(data_source_id) else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "data source not found",
@@ -412,7 +413,7 @@ impl WorkspaceServer {
                 let page_request = match PageRequest::from_query(query) {
                     Ok(page) => page,
                     Err(error) => {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             400,
                             error.code(),
                             error.message(),
@@ -423,7 +424,7 @@ impl WorkspaceServer {
                 };
                 let rows = data_source.rows.clone();
                 let sort = format!("data_source_rows:{data_source_id}");
-                Some(v2_list_response(
+                ok(v2_list_response(
                     rows,
                     &page_request,
                     &sort,
@@ -431,7 +432,7 @@ impl WorkspaceServer {
                     request_id,
                 ))
             }
-            _ => None,
+            _ => Ok(None),
         }
     }
 }

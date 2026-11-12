@@ -1,6 +1,7 @@
 //! Block read, append, update and delete v2 route use cases.
 
 use super::super::contract::{CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND};
+use super::super::error::{HandlerResult, fail, ok};
 use super::super::pagination::PageRequest;
 use super::super::response::{json, parse_body, v2_error, v2_list_response};
 use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
@@ -16,14 +17,16 @@ impl WorkspaceServer {
         path: &str,
         query: &str,
         request_id: &str,
-    ) -> Option<ApiResponse> {
-        let rest = path.strip_prefix("/api/v2/blocks/")?;
+    ) -> HandlerResult<Option<ApiResponse>> {
+        let Some(rest) = path.strip_prefix("/api/v2/blocks/") else {
+            return Ok(None);
+        };
         let (id, is_children) = match rest.strip_suffix("/children") {
             Some(id) => (id, true),
             None => (rest, false),
         };
         if id.is_empty() {
-            return Some(v2_error(
+            return fail(v2_error(
                 404,
                 CODE_NOT_FOUND,
                 "block not found",
@@ -35,7 +38,7 @@ impl WorkspaceServer {
         match (request.method, is_children) {
             (Method::Get, false) => {
                 let Some(page_id) = self.workspace.page_id_for_block(id) else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "block not found",
@@ -44,7 +47,7 @@ impl WorkspaceServer {
                     ));
                 };
                 let Some(block) = self.workspace.block(id) else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "block not found",
@@ -52,7 +55,7 @@ impl WorkspaceServer {
                         None,
                     ));
                 };
-                Some(json(200, Envelope::ok(block.to_dto(&page_id))))
+                ok(json(200, Envelope::ok(block.to_dto(&page_id))))
             }
             (Method::Get, true) => {
                 let page_id = self
@@ -60,7 +63,7 @@ impl WorkspaceServer {
                     .page_id_for_block(id)
                     .or_else(|| self.workspace.page(id).map(|page| page.id.clone()));
                 let Some(page_id) = page_id else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "block not found",
@@ -69,7 +72,7 @@ impl WorkspaceServer {
                     ));
                 };
                 let Some(children) = self.workspace.block_children(id) else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "block not found",
@@ -80,7 +83,7 @@ impl WorkspaceServer {
                 let page = match PageRequest::from_query(query) {
                     Ok(page) => page,
                     Err(error) => {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             400,
                             error.code(),
                             error.message(),
@@ -94,13 +97,13 @@ impl WorkspaceServer {
                     .map(|block| block.to_dto(&page_id))
                     .collect();
                 let sort = format!("block_children:{id}");
-                Some(v2_list_response(items, &page, &sort, "block", request_id))
+                ok(v2_list_response(items, &page, &sort, "block", request_id))
             }
             (Method::Patch, true) => {
                 let body = match parse_body::<BlockChildrenRequest>(request) {
                     Ok(body) => body,
                     Err(message) => {
-                        return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                        return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
                 let is_page_parent = self.workspace.page(id).is_some();
@@ -109,7 +112,7 @@ impl WorkspaceServer {
                     .page_id_for_block(id)
                     .or_else(|| is_page_parent.then(|| id.to_string()));
                 let Some(page_id) = page_id else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "block not found",
@@ -122,7 +125,7 @@ impl WorkspaceServer {
                 let mut created = Vec::new();
                 {
                     let Some(children) = self.workspace.block_children_mut(id) else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "block not found",
@@ -143,7 +146,7 @@ impl WorkspaceServer {
                     }
                 }
                 if let Err(error) = self.write(ChangeOp::Update, &page_id) {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -153,17 +156,17 @@ impl WorkspaceServer {
                 }
                 let items: Vec<BlockDto> =
                     created.iter().map(|block| block.to_dto(&page_id)).collect();
-                Some(json(200, Envelope::ok(items)))
+                ok(json(200, Envelope::ok(items)))
             }
             (Method::Patch, false) => {
                 let input = match parse_body::<BlockInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
-                        return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                        return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
                 let Some(page_id) = self.workspace.page_id_for_block(id) else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "block not found",
@@ -174,7 +177,7 @@ impl WorkspaceServer {
                 let actor = self.collab.owner_id();
                 let dto = {
                     let Some(block) = self.workspace.block_mut(id) else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "block not found",
@@ -211,7 +214,7 @@ impl WorkspaceServer {
                     block.to_dto(&page_id)
                 };
                 if let Err(error) = self.write(ChangeOp::Update, &page_id) {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -219,11 +222,11 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                Some(json(200, Envelope::ok(dto)))
+                ok(json(200, Envelope::ok(dto)))
             }
             (Method::Delete, false) => {
                 let Some(page_id) = self.workspace.page_id_for_block(id) else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "block not found",
@@ -234,7 +237,7 @@ impl WorkspaceServer {
                 let actor = self.collab.owner_id();
                 let dto = {
                     let Some(block) = self.workspace.block_mut(id) else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "block not found",
@@ -248,7 +251,7 @@ impl WorkspaceServer {
                     block.to_dto(&page_id)
                 };
                 if let Err(error) = self.write(ChangeOp::Update, &page_id) {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -256,9 +259,9 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                Some(json(200, Envelope::ok(dto)))
+                ok(json(200, Envelope::ok(dto)))
             }
-            _ => Some(v2_error(
+            _ => fail(v2_error(
                 404,
                 CODE_NOT_FOUND,
                 "unknown route",

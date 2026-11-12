@@ -6,6 +6,12 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-089 typed handlers for remaining families
+
+- Converted users/files, blocks, databases, views, webhooks and auth to
+  `HandlerResult` with `fail`/`ok` helpers; the dispatcher attaches the request
+  ID once. `crdt`, `lists` and `shared` remain on the legacy path.
+
 ### Changed - spec-088 search state and view
 
 - Grouped the nine search fields into `SearchState` on `NotionApp` and

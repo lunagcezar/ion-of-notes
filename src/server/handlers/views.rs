@@ -3,6 +3,7 @@
 use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
 };
+use super::super::error::{HandlerResult, fail, ok};
 use super::super::pagination::{PageRequest, paginate};
 use super::super::response::{json, parse_body, query_value, v2_error};
 use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
@@ -17,7 +18,7 @@ impl WorkspaceServer {
         path: &str,
         query: &str,
         request_id: &str,
-    ) -> Option<ApiResponse> {
+    ) -> HandlerResult<Option<ApiResponse>> {
         if path == "/api/v2/views" && request.method == Method::Get {
             let data_source = query_value(query, "data_source");
             let views: Vec<View> = self
@@ -30,17 +31,17 @@ impl WorkspaceServer {
                 })
                 .cloned()
                 .collect();
-            return Some(json(200, Envelope::ok(views)));
+            return ok(json(200, Envelope::ok(views)));
         }
         if path == "/api/v2/views" && request.method == Method::Post {
             let input = match parse_body::<ViewInput>(request) {
                 Ok(input) => input,
                 Err(message) => {
-                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                    return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                 }
             };
             let Some(data_source_id) = input.data_source_id.clone() else {
-                return Some(v2_error(
+                return fail(v2_error(
                     400,
                     CODE_VALIDATION_ERROR,
                     "data_source_id is required",
@@ -49,7 +50,7 @@ impl WorkspaceServer {
                 ));
             };
             let Some(data_source) = self.workspace.data_source(&data_source_id) else {
-                return Some(v2_error(
+                return fail(v2_error(
                     400,
                     CODE_VALIDATION_ERROR,
                     "data source not found",
@@ -79,7 +80,7 @@ impl WorkspaceServer {
             };
             self.workspace.views.push(view.clone());
             if let Err(error) = self.write(ChangeOp::Create, "__view__") {
-                return Some(v2_error(
+                return fail(v2_error(
                     500,
                     CODE_INTERNAL,
                     error.to_string(),
@@ -93,12 +94,14 @@ impl WorkspaceServer {
                 &view.id,
                 serde_json::json!({ "data_source_id": view.data_source_id }).to_string(),
             );
-            return Some(json(201, Envelope::ok(view)));
+            return ok(json(201, Envelope::ok(view)));
         }
 
-        let rest = path.strip_prefix("/api/v2/views/")?;
+        let Some(rest) = path.strip_prefix("/api/v2/views/") else {
+            return Ok(None);
+        };
         if rest.is_empty() {
-            return Some(v2_error(
+            return fail(v2_error(
                 404,
                 CODE_NOT_FOUND,
                 "view not found",
@@ -110,7 +113,7 @@ impl WorkspaceServer {
             && request.method == Method::Post
         {
             let Some(view) = self.workspace.view(id) else {
-                return Some(v2_error(
+                return fail(v2_error(
                     404,
                     CODE_NOT_FOUND,
                     "view not found",
@@ -122,7 +125,7 @@ impl WorkspaceServer {
                 match parse_body::<ViewQueryInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
-                        return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                        return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 }
             } else {
@@ -134,7 +137,7 @@ impl WorkspaceServer {
             let page_request = match PageRequest::from_query(query) {
                 Ok(page) => page,
                 Err(error) => {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         400,
                         error.code(),
                         error.message(),
@@ -147,7 +150,7 @@ impl WorkspaceServer {
             let page = match paginate(&rows, &page_request, &sort, "page") {
                 Ok(page) => page,
                 Err(error) => {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         400,
                         error.code(),
                         error.message(),
@@ -159,13 +162,13 @@ impl WorkspaceServer {
             let groups = self.workspace.group_view_rows(view, &rows);
             let result =
                 ViewQueryResult::new(view, groups, page.results, page.has_more, page.next_cursor);
-            return Some(json(200, Envelope::ok(result)));
+            return ok(json(200, Envelope::ok(result)));
         }
 
         match request.method {
             Method::Get => match self.workspace.view(rest) {
-                Some(view) => Some(json(200, Envelope::ok(view.clone()))),
-                None => Some(v2_error(
+                Some(view) => ok(json(200, Envelope::ok(view.clone()))),
+                None => fail(v2_error(
                     404,
                     CODE_NOT_FOUND,
                     "view not found",
@@ -177,7 +180,7 @@ impl WorkspaceServer {
                 let input = match parse_body::<ViewInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
-                        return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                        return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
                 let new_parent = input.data_source_id.as_ref().and_then(|data_source_id| {
@@ -187,7 +190,7 @@ impl WorkspaceServer {
                 });
                 let dto = {
                     let Some(view) = self.workspace.view_mut(rest) else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "view not found",
@@ -212,7 +215,7 @@ impl WorkspaceServer {
                     view.clone()
                 };
                 if let Err(error) = self.write(ChangeOp::Update, "__view__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -226,11 +229,11 @@ impl WorkspaceServer {
                     &dto.id,
                     serde_json::json!({ "data_source_id": dto.data_source_id }).to_string(),
                 );
-                Some(json(200, Envelope::ok(dto)))
+                ok(json(200, Envelope::ok(dto)))
             }
             Method::Delete => {
                 if self.workspace.view(rest).is_none() {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "view not found",
@@ -241,7 +244,7 @@ impl WorkspaceServer {
                 let deleted_id = rest.to_string();
                 self.workspace.views.retain(|view| view.id != rest);
                 if let Err(error) = self.write(ChangeOp::Delete, "__view__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -255,9 +258,9 @@ impl WorkspaceServer {
                     &deleted_id,
                     serde_json::json!({}).to_string(),
                 );
-                Some(json(200, Envelope::ok(deleted_id)))
+                ok(json(200, Envelope::ok(deleted_id)))
             }
-            _ => Some(v2_error(
+            _ => fail(v2_error(
                 404,
                 CODE_NOT_FOUND,
                 "unknown route",

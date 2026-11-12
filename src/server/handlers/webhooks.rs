@@ -1,6 +1,7 @@
 //! Webhook subscription, delivery and v2 route use cases.
 
 use super::super::contract::{CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR};
+use super::super::error::{HandlerResult, fail, ok};
 use super::super::response::{json, parse_body, v2_error};
 use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
 use crate::model::now_iso;
@@ -298,20 +299,20 @@ impl WorkspaceServer {
         request: &ApiRequest,
         path: &str,
         request_id: &str,
-    ) -> Option<ApiResponse> {
+    ) -> HandlerResult<Option<ApiResponse>> {
         if path == "/api/v2/webhooks" && request.method == Method::Get {
-            return Some(json(200, Envelope::ok(self.collab.webhooks.clone())));
+            return ok(json(200, Envelope::ok(self.collab.webhooks.clone())));
         }
         if path == "/api/v2/webhooks" && request.method == Method::Post {
             let input = match parse_body::<WebhookSubscriptionInput>(request) {
                 Ok(input) => input,
                 Err(message) => {
-                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                    return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                 }
             };
             return match self.create_webhook(input) {
-                Ok(subscription) => Some(json(201, Envelope::ok(subscription))),
-                Err(message) => Some(v2_error(
+                Ok(subscription) => ok(json(201, Envelope::ok(subscription))),
+                Err(message) => fail(v2_error(
                     400,
                     CODE_VALIDATION_ERROR,
                     message,
@@ -321,37 +322,39 @@ impl WorkspaceServer {
             };
         }
         if path == "/api/v2/webhook_deliveries" && request.method == Method::Get {
-            return Some(json(
+            return ok(json(
                 200,
                 Envelope::ok(self.collab.webhook_deliveries.clone()),
             ));
         }
         if path == "/api/v2/webhook_deliveries/retry" && request.method == Method::Post {
             self.retry_webhook_deliveries();
-            return Some(json(
+            return ok(json(
                 200,
                 Envelope::ok(self.collab.webhook_deliveries.clone()),
             ));
         }
         if path == "/api/v2/webhook_deliveries/dead_letters" && request.method == Method::Get {
-            return Some(json(200, Envelope::ok(self.dead_letter_deliveries())));
+            return ok(json(200, Envelope::ok(self.dead_letter_deliveries())));
         }
         if path == "/api/v2/webhook_deliveries/requeue" && request.method == Method::Post {
             let input = match parse_body::<WebhookRequeueInput>(request) {
                 Ok(input) => input,
                 Err(message) => {
-                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                    return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                 }
             };
             return match self.requeue_webhook_delivery(&input.id) {
-                Ok(delivery) => Some(json(200, Envelope::ok(delivery))),
-                Err(message) => Some(v2_error(404, CODE_NOT_FOUND, message, request_id, None)),
+                Ok(delivery) => ok(json(200, Envelope::ok(delivery))),
+                Err(message) => fail(v2_error(404, CODE_NOT_FOUND, message, request_id, None)),
             };
         }
-        let rest = path.strip_prefix("/api/v2/webhooks/")?;
+        let Some(rest) = path.strip_prefix("/api/v2/webhooks/") else {
+            return Ok(None);
+        };
         if let Some(id) = rest.strip_suffix("/verify") {
             if request.method != Method::Post || id.is_empty() {
-                return Some(v2_error(
+                return fail(v2_error(
                     404,
                     CODE_NOT_FOUND,
                     "webhook not found",
@@ -362,12 +365,12 @@ impl WorkspaceServer {
             let input = match parse_body::<WebhookVerificationInput>(request) {
                 Ok(input) => input,
                 Err(message) => {
-                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                    return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                 }
             };
             return match self.verify_webhook(id, &input.verification_token) {
-                Ok(()) => Some(json(200, Envelope::ok("verified".to_string()))),
-                Err(message) => Some(v2_error(
+                Ok(()) => ok(json(200, Envelope::ok("verified".to_string()))),
+                Err(message) => fail(v2_error(
                     400,
                     CODE_VALIDATION_ERROR,
                     message,
@@ -378,11 +381,11 @@ impl WorkspaceServer {
         }
         if request.method == Method::Delete && !rest.is_empty() && !rest.contains('/') {
             return match self.delete_webhook(rest) {
-                Ok(()) => Some(json(200, Envelope::ok("deleted".to_string()))),
-                Err(message) => Some(v2_error(404, CODE_NOT_FOUND, message, request_id, None)),
+                Ok(()) => ok(json(200, Envelope::ok("deleted".to_string()))),
+                Err(message) => fail(v2_error(404, CODE_NOT_FOUND, message, request_id, None)),
             };
         }
-        None
+        Ok(None)
     }
 }
 

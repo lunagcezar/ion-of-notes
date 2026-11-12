@@ -22,7 +22,7 @@ deliberately deferred. It complements `docs/architecture.md` and
 
 | Item | Why it is deferred | Suggested first slice |
 | ---- | ------------------ | --------------------- |
-| Typed handler errors | The `HandlerError`/`HandlerResult`/`body()` foundation and the comments handler are converted; users/files, databases, views, blocks, webhooks and auth still use `v2_error`. | Convert `user_file.rs`, then databases/views. |
+| Typed handler errors | Comments, user/file, blocks, databases, views, webhooks and auth are converted; `crdt.rs`, `lists.rs` and `shared.rs` still use the legacy path. | Convert `lists.rs`/`shared.rs`, then `crdt.rs`. |
 | Service split | `WorkspaceServer` still owns workspace, collaboration, auth, webhooks, limits, realtime and CRDT. | Extract `AuthService` and `WebhookService` first; keep `WorkspaceServer` as a facade. |
 | Domain events | Handlers still call `emit_webhook`, `write` and `persist_collab` by hand (about 24 sites). | Add an event list to the write path; persist/change-feed/webhook subscribers. |
 | Store ports | `WorkspaceStore` and `CollabStore` still have the same shape and separate null adapters. | Do not collapse them until a second backend needs the generic form; an abstraction for its own sake is not worth it. |

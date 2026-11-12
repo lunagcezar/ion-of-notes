@@ -3,6 +3,7 @@
 use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
 };
+use super::super::error::{HandlerResult, fail, ok};
 use super::super::pagination::PageRequest;
 use super::super::response::{json, parse_body, v2_error, v2_list_response};
 use super::super::{
@@ -20,7 +21,7 @@ impl WorkspaceServer {
         query: &str,
         request_id: &str,
         connection: &Connection,
-    ) -> Option<ApiResponse> {
+    ) -> HandlerResult<Option<ApiResponse>> {
         if path == "/api/v2/users" && request.method == Method::Get {
             let level = user_info_level(connection);
             let mut users: Vec<UserDto> = self
@@ -34,10 +35,10 @@ impl WorkspaceServer {
                 connection.workspace_id.clone(),
                 Some(self.workspace.name.clone()),
             ));
-            Some(json(200, Envelope::ok(users)))
+            ok(json(200, Envelope::ok(users)))
         } else if let Some(id) = path.strip_prefix("/api/v2/users/") {
             if request.method != Method::Get || id.is_empty() || id.contains('/') {
-                return Some(v2_error(
+                return fail(v2_error(
                     404,
                     CODE_NOT_FOUND,
                     "user not found",
@@ -46,13 +47,13 @@ impl WorkspaceServer {
                 ));
             }
             if let Some(member) = self.collab.members.iter().find(|member| member.id == id) {
-                return Some(json(
+                return ok(json(
                     200,
                     Envelope::ok(user_dto(member, user_info_level(connection))),
                 ));
             }
             if id == connection.id {
-                return Some(json(
+                return ok(json(
                     200,
                     Envelope::ok(UserDto::bot(
                         connection.id.clone(),
@@ -61,7 +62,7 @@ impl WorkspaceServer {
                     )),
                 ));
             }
-            Some(v2_error(
+            fail(v2_error(
                 404,
                 CODE_NOT_FOUND,
                 "user not found",
@@ -72,7 +73,7 @@ impl WorkspaceServer {
             let page = match PageRequest::from_query(query) {
                 Ok(page) => page,
                 Err(error) => {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         400,
                         error.code(),
                         error.message(),
@@ -81,7 +82,7 @@ impl WorkspaceServer {
                     ));
                 }
             };
-            Some(v2_list_response(
+            ok(v2_list_response(
                 self.workspace.file_uploads.clone(),
                 &page,
                 "file_uploads",
@@ -92,7 +93,7 @@ impl WorkspaceServer {
             let input = match parse_body::<FileUploadInput>(request) {
                 Ok(input) => input,
                 Err(message) => {
-                    return Some(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
+                    return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                 }
             };
             let now = now_iso();
@@ -112,7 +113,7 @@ impl WorkspaceServer {
             };
             self.workspace.file_uploads.push(upload.clone());
             if let Err(error) = self.write(ChangeOp::Create, "__file_upload__") {
-                return Some(v2_error(
+                return fail(v2_error(
                     500,
                     CODE_INTERNAL,
                     error.to_string(),
@@ -126,11 +127,11 @@ impl WorkspaceServer {
                 &upload.id,
                 serde_json::json!({ "status": "pending" }).to_string(),
             );
-            Some(json(201, Envelope::ok(upload)))
+            ok(json(201, Envelope::ok(upload)))
         } else if let Some(rest) = path.strip_prefix("/api/v2/file_uploads/") {
             if let Some(id) = rest.strip_suffix("/send") {
                 if request.method != Method::Post {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "unknown route",
@@ -139,7 +140,7 @@ impl WorkspaceServer {
                     ));
                 }
                 let Some(content) = request.body.as_ref() else {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         400,
                         CODE_VALIDATION_ERROR,
                         "file content is required",
@@ -154,7 +155,7 @@ impl WorkspaceServer {
                         .iter_mut()
                         .find(|upload| upload.id == id)
                     else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "file upload not found",
@@ -170,7 +171,7 @@ impl WorkspaceServer {
                     upload.clone()
                 };
                 if let Err(error) = self.write(ChangeOp::Update, "__file_upload__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -184,11 +185,11 @@ impl WorkspaceServer {
                     &dto.id,
                     serde_json::json!({ "status": "uploaded" }).to_string(),
                 );
-                return Some(json(200, Envelope::ok(dto)));
+                return ok(json(200, Envelope::ok(dto)));
             }
             if let Some(id) = rest.strip_suffix("/complete") {
                 if request.method != Method::Post {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "unknown route",
@@ -203,7 +204,7 @@ impl WorkspaceServer {
                         .iter_mut()
                         .find(|upload| upload.id == id)
                     else {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             404,
                             CODE_NOT_FOUND,
                             "file upload not found",
@@ -212,7 +213,7 @@ impl WorkspaceServer {
                         ));
                     };
                     if upload.status != UploadStatus::Pending {
-                        return Some(v2_error(
+                        return fail(v2_error(
                             400,
                             CODE_VALIDATION_ERROR,
                             "file upload is not pending",
@@ -228,7 +229,7 @@ impl WorkspaceServer {
                     upload.clone()
                 };
                 if let Err(error) = self.write(ChangeOp::Update, "__file_upload__") {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -242,7 +243,7 @@ impl WorkspaceServer {
                     &dto.id,
                     serde_json::json!({ "status": "uploaded" }).to_string(),
                 );
-                return Some(json(200, Envelope::ok(dto)));
+                return ok(json(200, Envelope::ok(dto)));
             }
             if request.method == Method::Get && !rest.is_empty() && !rest.contains('/') {
                 return match self
@@ -251,8 +252,8 @@ impl WorkspaceServer {
                     .iter()
                     .find(|upload| upload.id == rest)
                 {
-                    Some(upload) => Some(json(200, Envelope::ok(upload.clone()))),
-                    None => Some(v2_error(
+                    Some(upload) => ok(json(200, Envelope::ok(upload.clone()))),
+                    None => fail(v2_error(
                         404,
                         CODE_NOT_FOUND,
                         "file upload not found",
@@ -261,9 +262,9 @@ impl WorkspaceServer {
                     )),
                 };
             }
-            None
+            Ok(None)
         } else {
-            None
+            Ok(None)
         }
     }
 }

@@ -3,6 +3,7 @@
 use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_UNAUTHORIZED, CODE_VALIDATION_ERROR,
 };
+use super::super::error::{HandlerResult, fail, ok};
 use super::super::response::{json, parse_body, v2_error};
 use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::auth::{self, LoginInput, Session, SessionInfo, SessionResponse};
@@ -113,11 +114,11 @@ impl WorkspaceServer {
         path: &str,
         request_id: &str,
         connection: &Connection,
-    ) -> Option<ApiResponse> {
+    ) -> HandlerResult<Option<ApiResponse>> {
         if path == "/api/v2/auth/logout" && request.method == Method::Post {
             let token_hash = auth::hash_token(&connection.token);
             if let Err(error) = self.persistence.auth_store.delete_session(&token_hash) {
-                return Some(v2_error(
+                return fail(v2_error(
                     500,
                     CODE_INTERNAL,
                     error.to_string(),
@@ -131,14 +132,14 @@ impl WorkspaceServer {
                     .connections
                     .retain(|existing| existing.token != connection.token);
             }
-            return Some(json(200, Envelope::ok("logged_out".to_string())));
+            return ok(json(200, Envelope::ok("logged_out".to_string())));
         }
         if path == "/api/v2/auth/session" && request.method == Method::Get {
             let token_hash = auth::hash_token(&connection.token);
             let session = match self.persistence.auth_store.find_session(&token_hash) {
                 Ok(Some(session)) => session,
                 Ok(None) => {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         401,
                         CODE_UNAUTHORIZED,
                         "session not found",
@@ -147,7 +148,7 @@ impl WorkspaceServer {
                     ));
                 }
                 Err(error) => {
-                    return Some(v2_error(
+                    return fail(v2_error(
                         500,
                         CODE_INTERNAL,
                         error.to_string(),
@@ -158,7 +159,7 @@ impl WorkspaceServer {
             };
             if auth::session_is_expired(&session) {
                 let _ = self.persistence.auth_store.delete_session(&token_hash);
-                return Some(v2_error(
+                return fail(v2_error(
                     401,
                     CODE_UNAUTHORIZED,
                     "session expired",
@@ -172,7 +173,7 @@ impl WorkspaceServer {
                 .iter()
                 .find(|member| member.id == session.member_id)
             else {
-                return Some(v2_error(
+                return fail(v2_error(
                     401,
                     CODE_UNAUTHORIZED,
                     "session member not found",
@@ -180,7 +181,7 @@ impl WorkspaceServer {
                     None,
                 ));
             };
-            return Some(json(
+            return ok(json(
                 200,
                 Envelope::ok(SessionInfo {
                     member_id: member.id.clone(),
@@ -190,6 +191,6 @@ impl WorkspaceServer {
                 }),
             ));
         }
-        None
+        Ok(None)
     }
 }
