@@ -45,6 +45,7 @@ pub fn parse_http_request(bytes: &[u8]) -> Option<ApiRequest> {
         path,
         body,
         headers,
+        client_ip: None,
     })
 }
 

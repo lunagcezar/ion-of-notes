@@ -49,11 +49,26 @@ pub fn save_session_at(path: &Path, session: &RemoteSession) -> io::Result<()> {
     }
     let text = serde_json::to_string_pretty(session)
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-    std::fs::write(path, text)?;
+    write_private_file(path, &text)?;
+    Ok(())
+}
+
+fn write_private_file(path: &Path, text: &str) -> io::Result<()> {
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(path)?;
+        file.write_all(text.as_bytes())?;
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(path, text)?;
     }
     Ok(())
 }

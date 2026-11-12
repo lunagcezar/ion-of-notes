@@ -7,6 +7,7 @@
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use std::net::IpAddr;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -349,10 +350,73 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
     difference == 0
 }
 
-/// Accept HTTPS anywhere; allow loopback HTTP only for explicit development.
+/// Accept HTTPS anywhere public; allow loopback HTTP only for explicit
+/// development. Private, loopback and link-local HTTPS targets are rejected.
 pub fn is_allowed_url(url: &str, allow_insecure: bool) -> bool {
-    if url.starts_with("https://") {
+    let Some((scheme, host)) = url_host(url) else {
+        return false;
+    };
+    if scheme.eq_ignore_ascii_case("https") {
+        return !is_private_host(host);
+    }
+    allow_insecure && scheme.eq_ignore_ascii_case("http") && is_loopback_host(host)
+}
+
+/// Extract the scheme and host from a URL without a full parser.
+pub(crate) fn url_host(url: &str) -> Option<(&str, &str)> {
+    let (scheme, rest) = url.split_once("://")?;
+    let authority = rest.split(['/', '?', '#']).next()?;
+    let authority = authority.rsplit('@').next()?;
+    let host = if let Some(rest) = authority.strip_prefix('[') {
+        rest.split_once(']')?.0
+    } else {
+        authority.split(':').next()?
+    };
+    (!host.is_empty()).then_some((scheme, host))
+}
+
+/// Whether a host is a loopback name or address.
+pub(crate) fn is_loopback_host(host: &str) -> bool {
+    let host = host.trim_end_matches('.').to_ascii_lowercase();
+    if host == "localhost" {
         return true;
     }
-    allow_insecure && (url.starts_with("http://127.0.0.1:") || url.starts_with("http://localhost:"))
+    host.parse::<IpAddr>()
+        .map(|address| address.is_loopback())
+        .unwrap_or(false)
+}
+
+/// Whether a host is a private, loopback, link-local, unspecified or multicast
+/// address. Hostnames that are not IP literals are not resolved here; the
+/// production sender performs the resolution check.
+pub(crate) fn is_private_host(host: &str) -> bool {
+    let host = host.trim_end_matches('.').to_ascii_lowercase();
+    if host == "localhost" || host.ends_with(".localhost") {
+        return true;
+    }
+    host.parse::<IpAddr>().map(is_private_ip).unwrap_or(false)
+}
+
+/// Whether an IP address must not be used as an outbound webhook target.
+pub(crate) fn is_private_ip(address: IpAddr) -> bool {
+    match address {
+        IpAddr::V4(address) => {
+            let octets = address.octets();
+            address.is_loopback()
+                || address.is_private()
+                || address.is_link_local()
+                || address.is_unspecified()
+                || address.is_multicast()
+                || octets[0] == 0
+                || octets[0] == 255
+        }
+        IpAddr::V6(address) => {
+            let segments = address.segments();
+            address.is_loopback()
+                || address.is_unspecified()
+                || address.is_multicast()
+                || (segments[0] & 0xfe00) == 0xfc00
+                || (segments[0] & 0xffc0) == 0xfe80
+        }
+    }
 }

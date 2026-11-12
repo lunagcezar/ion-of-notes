@@ -98,9 +98,13 @@ fn empty_sqlite_database_migrates_json_documents() {
     save(&workspace_path, &workspace).expect("save workspace");
     save_collab(&collab_path, &collab).expect("save collab");
 
-    let server =
-        app::build_server_sqlite_at(db.clone(), workspace_path.clone(), collab_path.clone())
-            .expect("build");
+    let server = app::build_server_sqlite_at_with_password(
+        db.clone(),
+        workspace_path.clone(),
+        collab_path.clone(),
+        Some("test-password"),
+    )
+    .expect("build");
     drop(server);
 
     let store = SqliteStore::open(&db).expect("open");

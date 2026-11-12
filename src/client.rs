@@ -100,7 +100,10 @@ impl<A: WorkspaceApi> Client<A> {
             .with_header(AUTH_HEADER, format!("Bearer {token}")))
     }
 
-    fn call<T: DeserializeOwned>(&mut self, request: ApiRequest) -> Result<T, ClientError> {
+    fn call<T: DeserializeOwned>(&mut self, mut request: ApiRequest) -> Result<T, ClientError> {
+        if let Some(token) = &self.token {
+            request = request.with_header(AUTH_HEADER, format!("Bearer {token}"));
+        }
         let response = self.api.handle(&request);
         if response.status == 404 {
             return Err(ClientError::NotFound(response.body));

@@ -125,6 +125,16 @@ pub fn build_server_sqlite_at(
     workspace_path: PathBuf,
     collab_path: PathBuf,
 ) -> io::Result<WorkspaceServer> {
+    build_server_sqlite_at_with_password(database, workspace_path, collab_path, None)
+}
+
+/// Compose a SQLite server with an explicit first-run owner password.
+pub fn build_server_sqlite_at_with_password(
+    database: PathBuf,
+    workspace_path: PathBuf,
+    collab_path: PathBuf,
+    owner_password: Option<&str>,
+) -> io::Result<WorkspaceServer> {
     let sqlite = SqliteStore::open(&database)?;
     let workspace = match sqlite.load_workspace()? {
         Some(workspace) => workspace,
@@ -142,8 +152,9 @@ pub fn build_server_sqlite_at(
             collab
         }
     };
-    seed_owner_account(&sqlite, &collab)?;
+    seed_owner_account(&sqlite, &collab, owner_password)?;
     let shared_rate_store = Arc::new(sqlite.clone());
+    let snapshot_store = sqlite.clone();
     let mut server = WorkspaceServer::with_stores_and_auth(
         workspace,
         collab,
@@ -151,11 +162,16 @@ pub fn build_server_sqlite_at(
         sqlite.clone(),
         sqlite,
     );
+    server.use_snapshot_store(snapshot_store);
     server.use_shared_rate_limits(shared_rate_store);
     Ok(server)
 }
 
-fn seed_owner_account(store: &SqliteStore, collab: &CollabState) -> io::Result<()> {
+fn seed_owner_account(
+    store: &SqliteStore,
+    collab: &CollabState,
+    explicit_password: Option<&str>,
+) -> io::Result<()> {
     let Some(owner) = collab
         .members
         .iter()
@@ -167,7 +183,10 @@ fn seed_owner_account(store: &SqliteStore, collab: &CollabState) -> io::Result<(
     if store.find_account(&email)?.is_some() {
         return Ok(());
     }
-    let password = owner_password()?;
+    let password = match explicit_password {
+        Some(value) => auth::require_owner_password(Some(value.to_string()), false)?,
+        None => owner_password()?,
+    };
     let password_hash = auth::hash_password(&password).map_err(io::Error::other)?;
     store.upsert_account(&Account {
         id: format!("account-{}", owner.id),
@@ -178,6 +197,7 @@ fn seed_owner_account(store: &SqliteStore, collab: &CollabState) -> io::Result<(
     })?;
     if std::env::var_os("ION_OF_NOTES_OWNER_PASSWORD").is_none()
         && std::env::var_os("ION_OF_NOTES_OWNER_PASSWORD_FILE").is_none()
+        && explicit_password.is_none()
     {
         eprintln!(
             "warning: seeded the owner account with the development password; set ION_OF_NOTES_OWNER_PASSWORD or ION_OF_NOTES_OWNER_PASSWORD_FILE"
@@ -187,15 +207,26 @@ fn seed_owner_account(store: &SqliteStore, collab: &CollabState) -> io::Result<(
 }
 
 /// Resolve the first-run owner password: explicit environment variable first,
-/// then a Docker/Kubernetes secret file, then the development default.
+/// then a Docker/Kubernetes secret file. Production mode fails closed; the
+/// development default requires `ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD=1`.
 fn owner_password() -> io::Result<String> {
     if let Ok(value) = std::env::var("ION_OF_NOTES_OWNER_PASSWORD") {
-        return Ok(value);
+        return auth::require_owner_password(Some(value), false);
     }
     if let Ok(path) = std::env::var("ION_OF_NOTES_OWNER_PASSWORD_FILE") {
-        return auth::read_password_file(Path::new(&path));
+        let value = auth::read_password_file(Path::new(&path))?;
+        return auth::require_owner_password(Some(value), false);
     }
-    Ok(auth::DEFAULT_OWNER_PASSWORD.to_string())
+    let allow_default = std::env::var("ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD")
+        .ok()
+        .as_deref()
+        == Some("1");
+    if allow_default {
+        eprintln!(
+            "warning: using the development owner password; set ION_OF_NOTES_OWNER_PASSWORD or ION_OF_NOTES_OWNER_PASSWORD_FILE"
+        );
+    }
+    auth::require_owner_password(None, allow_default)
 }
 
 /// Compose the object graph for the desktop window.

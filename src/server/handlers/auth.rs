@@ -4,11 +4,17 @@ use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_UNAUTHORIZED, CODE_VALIDATION_ERROR,
 };
 use super::super::response::{json, parse_body, v2_error};
-use super::super::{
-    ApiRequest, ApiResponse, Capability, Connection, Envelope, Method, WorkspaceServer,
-};
+use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::auth::{self, LoginInput, Session, SessionInfo, SessionResponse};
 use crate::model::now_iso;
+use std::sync::OnceLock;
+
+fn dummy_password_hash() -> &'static str {
+    static HASH: OnceLock<String> = OnceLock::new();
+    HASH.get_or_init(|| {
+        auth::hash_password("ion-of-notes-dummy-password").unwrap_or_else(|_| String::new())
+    })
+}
 
 impl WorkspaceServer {
     /// `POST /api/v2/auth/login`: verify an account and create a session.
@@ -37,6 +43,9 @@ impl WorkspaceServer {
         let account = match self.persistence.auth_store.find_account(&email) {
             Ok(Some(account)) => account,
             Ok(None) => {
+                // Verify a dummy hash so an unknown email does not return
+                // noticeably faster than a wrong password (user enumeration).
+                let _ = auth::verify_password(dummy_password_hash(), &input.password);
                 return v2_error(
                     401,
                     CODE_UNAUTHORIZED,
@@ -83,13 +92,8 @@ impl WorkspaceServer {
         if let Err(error) = self.persistence.auth_store.save_session(&session) {
             return v2_error(500, CODE_INTERNAL, error.to_string(), request_id, None);
         }
-        self.runtime.connections.push(Connection::new(
-            format!("session-{}", member.id),
-            token.clone(),
-            member.id.clone(),
-            self.workspace.settings.id.clone(),
-            Capability::all(),
-        ));
+        // Sessions are resolved from the auth store on every request; do not
+        // retain one connection object per login (spec-073).
         json(
             200,
             Envelope::ok(SessionResponse {

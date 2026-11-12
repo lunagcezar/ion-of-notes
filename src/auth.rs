@@ -35,6 +35,29 @@ pub fn read_password_file(path: &Path) -> io::Result<String> {
     Ok(value)
 }
 
+/// Resolve the owner password from an explicit value.
+///
+/// Production server mode must fail closed: `None` is only accepted when
+/// `allow_default` is explicitly set for development.
+pub fn require_owner_password(value: Option<String>, allow_default: bool) -> io::Result<String> {
+    if let Some(value) = value {
+        if value.trim().is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "owner password must not be empty",
+            ));
+        }
+        return Ok(value);
+    }
+    if allow_default {
+        return Ok(DEFAULT_OWNER_PASSWORD.to_string());
+    }
+    Err(io::Error::new(
+        io::ErrorKind::InvalidInput,
+        "set ION_OF_NOTES_OWNER_PASSWORD or ION_OF_NOTES_OWNER_PASSWORD_FILE (or ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD=1 for development)",
+    ))
+}
+
 /// One local account. The password is an Argon2id PHC string.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Account {
@@ -88,6 +111,14 @@ pub trait AuthStore: Send + Sync {
     fn find_session(&self, token_hash: &str) -> io::Result<Option<Session>>;
     fn delete_session(&self, token_hash: &str) -> io::Result<()>;
     fn prune_sessions(&self, now: &str) -> io::Result<()>;
+
+    /// Whether requests must present a persisted session token.
+    ///
+    /// The local `NoAuthStore` is the only adapter that returns `false`; every
+    /// production-capable store defaults to requiring authentication.
+    fn requires_auth(&self) -> bool {
+        true
+    }
 }
 
 /// Null adapter: the demo owner token remains the only credential.
@@ -117,6 +148,10 @@ impl AuthStore for NoAuthStore {
 
     fn prune_sessions(&self, _now: &str) -> io::Result<()> {
         Ok(())
+    }
+
+    fn requires_auth(&self) -> bool {
+        false
     }
 }
 

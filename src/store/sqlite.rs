@@ -8,7 +8,7 @@
 use crate::auth::{Account, AuthStore, Session};
 use crate::collab::CollabState;
 use crate::model::{Workspace, now_iso};
-use crate::store::{CollabStore, RateLimitHit, RateLimitStore, WorkspaceStore};
+use crate::store::{CollabStore, RateLimitHit, RateLimitStore, SnapshotStore, WorkspaceStore};
 use rusqlite::{Connection, OptionalExtension, params};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -214,6 +214,10 @@ impl WorkspaceStore for SqliteStore {
         })?;
         Ok(())
     }
+
+    fn load(&self) -> io::Result<Option<Workspace>> {
+        self.load_workspace()
+    }
 }
 
 impl CollabStore for SqliteStore {
@@ -226,6 +230,35 @@ impl CollabStore for SqliteStore {
                  ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
                 params![json, now_iso()],
             )
+        })?;
+        Ok(())
+    }
+
+    fn load(&self) -> io::Result<Option<CollabState>> {
+        self.load_collab()
+    }
+}
+
+impl SnapshotStore for SqliteStore {
+    fn persist_snapshots(&self, workspace: &Workspace, collab: &CollabState) -> io::Result<()> {
+        let workspace_json = serde_json::to_string(workspace)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        let collab_json = serde_json::to_string(collab)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        let updated_at = now_iso();
+        self.with_connection_mut(|connection| {
+            let transaction = connection.transaction()?;
+            transaction.execute(
+                "INSERT INTO workspace (id, json, updated_at) VALUES (1, ?1, ?2)
+                 ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
+                params![workspace_json, updated_at],
+            )?;
+            transaction.execute(
+                "INSERT INTO collab (id, json, updated_at) VALUES (1, ?1, ?2)
+                 ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
+                params![collab_json, updated_at],
+            )?;
+            transaction.commit()
         })?;
         Ok(())
     }

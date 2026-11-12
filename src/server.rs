@@ -9,7 +9,7 @@
 //! `server::handlers`; shared response shaping lives in `server::response`.
 
 use crate::auth::{self, AuthStore, NoAuthStore};
-use crate::collab::{ChangeOp, CollabState};
+use crate::collab::{Access, ChangeOp, CollabState, Role, general_access};
 use crate::model::Workspace;
 use crate::store::{
     CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore,
@@ -99,6 +99,11 @@ pub struct ApiRequest {
     pub body: Option<String>,
     #[serde(default)]
     pub headers: BTreeMap<String, String>,
+    /// Best-effort client address for login rate limiting. The Axum adapter
+    /// fills it from the reverse proxy headers; in-process requests leave it
+    /// empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_ip: Option<String>,
 }
 
 impl ApiRequest {
@@ -108,6 +113,7 @@ impl ApiRequest {
             path: path.into(),
             body,
             headers: BTreeMap::new(),
+            client_ip: None,
         }
     }
 
@@ -115,6 +121,12 @@ impl ApiRequest {
     /// case-insensitively.
     pub fn with_header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         self.headers.insert(name.into(), value.into());
+        self
+    }
+
+    /// Attach the client address used by login rate limiting.
+    pub fn with_client_ip(mut self, ip: impl Into<String>) -> Self {
+        self.client_ip = Some(ip.into());
         self
     }
 
@@ -241,20 +253,29 @@ struct Persistence {
     workspace_store: Box<dyn WorkspaceStore>,
     collab_store: Box<dyn CollabStore>,
     auth_store: Box<dyn AuthStore>,
+    snapshot_store: Option<Box<dyn crate::store::SnapshotStore>>,
 }
 
 /// Per-process connections, request metrics and operational limits.
 struct Runtime {
     connections: Vec<Connection>,
     request_log: Vec<RequestLogEntry>,
+    request_log_cap: usize,
     plan: Plan,
     block_count_override: Option<u64>,
     block_count_baseline: u64,
     overloaded: bool,
     simulate_write_timeout: bool,
     rate_limiter: Box<dyn RateLimitPolicy>,
+    login_limiter: RateLimiter,
     shared_rate_store: Option<Arc<dyn crate::store::RateLimitStore>>,
 }
+
+/// Keep the in-memory request log bounded (spec-073).
+pub const DEFAULT_REQUEST_LOG_CAP: usize = 1000;
+/// Login attempts allowed per client and per account in one window.
+pub const DEFAULT_LOGIN_PER_CLIENT: u32 = 5;
+pub const DEFAULT_LOGIN_PER_WORKSPACE: u32 = 100;
 
 /// Webhook delivery state, separate from the collaboration records.
 struct WebhookRuntime {
@@ -326,6 +347,12 @@ impl WorkspaceServer {
     {
         let owner = collab.owner_id();
         let workspace_id = workspace.settings.id.clone();
+        let requires_auth = auth_store.requires_auth();
+        let connections = if requires_auth {
+            Vec::new()
+        } else {
+            vec![Connection::owner(owner, workspace_id)]
+        };
         Self {
             workspace,
             collab,
@@ -333,16 +360,23 @@ impl WorkspaceServer {
                 workspace_store: Box::new(store),
                 collab_store: Box::new(collab_store),
                 auth_store: Box::new(auth_store),
+                snapshot_store: None,
             },
             runtime: Runtime {
-                connections: vec![Connection::owner(owner, workspace_id)],
+                connections,
                 request_log: Vec::new(),
+                request_log_cap: DEFAULT_REQUEST_LOG_CAP,
                 plan: Plan::Free,
                 block_count_override: None,
                 block_count_baseline: 0,
                 overloaded: false,
                 simulate_write_timeout: false,
                 rate_limiter: Box::new(RateLimiter::for_plan(Plan::Free, Duration::from_secs(60))),
+                login_limiter: RateLimiter::new(
+                    DEFAULT_LOGIN_PER_CLIENT,
+                    DEFAULT_LOGIN_PER_WORKSPACE,
+                    Duration::from_secs(60),
+                ),
                 shared_rate_store: None,
             },
             webhooks: WebhookRuntime {
@@ -394,8 +428,63 @@ impl WorkspaceServer {
             token,
             member.id.clone(),
             self.workspace.settings.id.clone(),
-            Capability::all(),
+            capabilities_for_role(member.role),
         ))
+    }
+
+    /// The workspace role of a connection, if its member still exists.
+    pub fn role_for(&self, connection: &Connection) -> Option<Role> {
+        self.collab
+            .members
+            .iter()
+            .find(|member| member.id == connection.member_id)
+            .map(|member| member.role)
+    }
+
+    /// Whether the connection belongs to the workspace owner.
+    pub fn is_owner(&self, connection: &Connection) -> bool {
+        self.role_for(connection) == Some(Role::Owner)
+    }
+
+    /// Resolve the effective access a connection has to one page.
+    ///
+    /// Direct shares win over page-general rules, which win over the
+    /// workspace-general rule. An owner always has full access.
+    pub fn page_access(&self, connection: &Connection, page_id: &str) -> Access {
+        let Some(member) = self
+            .collab
+            .members
+            .iter()
+            .find(|member| member.id == connection.member_id)
+        else {
+            return Access::None;
+        };
+        if member.role == Role::Owner {
+            return Access::Full;
+        }
+        let direct = self
+            .collab
+            .shares
+            .iter()
+            .filter(|share| share.page_id == page_id)
+            .filter(|share| {
+                share.subject == member.id
+                    || share.subject.eq_ignore_ascii_case(&member.email)
+                    || share.subject == member.name
+            })
+            .max_by_key(|share| access_rank(share.access))
+            .map(|share| share.access);
+        direct.unwrap_or_else(|| general_access(&self.collab.shares, page_id))
+    }
+
+    /// Whether the connection may read a page.
+    pub fn can_read_page(&self, connection: &Connection, page_id: &str) -> bool {
+        self.page_access(connection, page_id) != Access::None
+    }
+
+    /// Whether the connection may modify a page.
+    pub fn can_write_page(&self, connection: &Connection, page_id: &str) -> bool {
+        self.page_access(connection, page_id).can_write()
     }
 
     /// In-memory request log for `/api/v2`; the same IDs are written to the
@@ -404,9 +493,35 @@ impl WorkspaceServer {
         &self.runtime.request_log
     }
 
+    /// Number of registered runtime connections (the demo owner only in local
+    /// mode; sessions are resolved from the auth store and are not retained).
+    pub fn connection_count(&self) -> usize {
+        self.runtime.connections.len()
+    }
+
+    /// Bound the in-memory request log (tests and deployment configuration).
+    pub fn set_request_log_cap(&mut self, cap: usize) {
+        self.runtime.request_log_cap = cap.max(1);
+        if self.runtime.request_log.len() > self.runtime.request_log_cap {
+            let excess = self.runtime.request_log.len() - self.runtime.request_log_cap;
+            self.runtime.request_log.drain(0..excess);
+        }
+    }
+
+    /// Replace the login-attempt budget (tests and deployment configuration).
+    pub fn configure_login_rate_limits(
+        &mut self,
+        per_client: u32,
+        per_workspace: u32,
+        window: Duration,
+    ) {
+        self.runtime.login_limiter = RateLimiter::new(per_client, per_workspace, window);
+    }
+
     /// Allow loopback HTTP webhook URLs for local development and tests.
     pub fn allow_insecure_webhooks(&mut self, allow: bool) {
         self.webhooks.allow_insecure = allow;
+        self.webhooks.sender.allow_private_targets(allow);
     }
 
     /// The workspace plan used for operational limits (not billing).
@@ -523,8 +638,33 @@ impl WorkspaceServer {
 
     /// Persist both documents.
     pub fn persist(&self) -> std::io::Result<()> {
+        if let Some(store) = &self.persistence.snapshot_store {
+            return store.persist_snapshots(&self.workspace, &self.collab);
+        }
         self.persistence.workspace_store.persist(&self.workspace)?;
         self.persistence.collab_store.persist(&self.collab)
+    }
+
+    /// Use an adapter that can commit workspace and collaboration state
+    /// atomically (SQLite today). Without it the two ports are written in
+    /// sequence.
+    pub fn use_snapshot_store<S>(&mut self, store: S)
+    where
+        S: crate::store::SnapshotStore + 'static,
+    {
+        self.persistence.snapshot_store = Some(Box::new(store));
+    }
+
+    /// Reload the durable snapshots after a failed write, when the adapters
+    /// can read them back. This keeps the in-memory state from drifting ahead
+    /// of the store.
+    fn reload_after_failure(&mut self) {
+        if let Ok(Some(workspace)) = self.persistence.workspace_store.load() {
+            self.workspace = workspace;
+        }
+        if let Ok(Some(collab)) = self.persistence.collab_store.load() {
+            self.collab = collab;
+        }
     }
 
     /// Persist only the collaboration document.
@@ -539,7 +679,10 @@ impl WorkspaceServer {
         self.workspace.bump_version();
         let actor = self.collab.owner_id();
         let change = self.collab.record(op, page_id, &actor);
-        self.persist()?;
+        if let Err(error) = self.persist() {
+            self.reload_after_failure();
+            return Err(error);
+        }
         // A REST write is the structure source of truth; re-seed the CRDT text
         // from the new snapshot instead of keeping a divergent document.
         if page_id == "*" {
@@ -573,7 +716,39 @@ impl WorkspaceServer {
         self.crdt.project(&mut self.workspace, page_id)?;
         self.workspace.bump_version();
         self.collab.record(ChangeOp::Update, page_id, actor);
-        self.persist().map_err(|error| error.to_string())?;
+        if let Err(error) = self.persist() {
+            self.reload_after_failure();
+            self.crdt.reset_page(page_id);
+            return Err(error.to_string());
+        }
         Ok(merged)
+    }
+}
+
+fn capabilities_for_role(role: Role) -> Vec<Capability> {
+    match role {
+        Role::Owner => Capability::all(),
+        Role::Member => vec![
+            Capability::ReadContent,
+            Capability::UpdateContent,
+            Capability::InsertContent,
+            Capability::ReadComments,
+            Capability::InsertComments,
+            Capability::UserInfoWithEmail,
+        ],
+        Role::Guest => vec![
+            Capability::ReadContent,
+            Capability::ReadComments,
+            Capability::UserInfoWithoutEmail,
+        ],
+    }
+}
+
+fn access_rank(access: Access) -> u8 {
+    match access {
+        Access::None => 0,
+        Access::View => 1,
+        Access::Edit => 2,
+        Access::Full => 3,
     }
 }

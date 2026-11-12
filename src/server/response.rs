@@ -24,6 +24,14 @@ pub(super) fn not_found(message: &str) -> ApiResponse {
     json::<()>(404, Envelope::err(message))
 }
 
+pub(super) fn unauthorized(message: &str) -> ApiResponse {
+    json::<()>(401, Envelope::err(message))
+}
+
+pub(super) fn forbidden(message: &str) -> ApiResponse {
+    json::<()>(403, Envelope::err(message))
+}
+
 pub(super) fn server_error(message: &str) -> ApiResponse {
     json::<()>(500, Envelope::err(message))
 }

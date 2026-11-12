@@ -1,12 +1,17 @@
 //! Legacy v1 route dispatch. Every route keeps the v1 envelope and status and
 //! delegates the actual work to the shared use cases.
 
-use super::super::response::{bad, json, not_found, parse_body, query_value, server_error};
+use super::super::contract::{AUTH_HEADER, OWNER_TOKEN, parse_bearer};
+use super::super::response::{
+    bad, forbidden, json, not_found, parse_body, query_value, server_error, unauthorized,
+};
 use super::super::usecases::{
     self, UseCaseError, create_page, delete_page, get_page, get_workspace, invite_member,
     list_members, list_pages, list_shares, page_versions, replace_workspace, search, set_share,
 };
-use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
+use super::super::{
+    ApiRequest, ApiResponse, Capability, Connection, Envelope, Method, WorkspaceServer,
+};
 use crate::collab::MemberDraft;
 use crate::model::{Page, PageDraft, Workspace};
 
@@ -16,6 +21,48 @@ impl WorkspaceServer {
             Some((p, q)) => (p, q),
             None => (request.path.as_str(), ""),
         };
+
+        // The local `NoAuthStore` keeps the in-process desktop flow public;
+        // every production-capable store requires a persisted session token.
+        let connection = if self.persistence.auth_store.requires_auth() {
+            let Some(token) = request.header(AUTH_HEADER).and_then(parse_bearer) else {
+                return unauthorized("missing or malformed bearer token");
+            };
+            match self.connection_for_token(token) {
+                Some(connection) => connection,
+                None => return unauthorized("invalid bearer token"),
+            }
+        } else {
+            self.connection_for_token(OWNER_TOKEN).unwrap_or_else(|| {
+                Connection::owner(self.collab.owner_id(), self.workspace.settings.id.clone())
+            })
+        };
+
+        if matches!(
+            (request.method, path),
+            (Method::Put, "/api/workspace")
+                | (Method::Post, "/api/members")
+                | (Method::Put, "/api/shares")
+        ) && !self.is_owner(&connection)
+        {
+            return forbidden("owner access required");
+        }
+
+        if request.method == Method::Post
+            && path == "/api/pages"
+            && !connection.has(Capability::InsertContent)
+        {
+            return forbidden("insert content capability required");
+        }
+
+        if let Some((page_id, write)) = page_target(request.method, path) {
+            if write && !self.can_write_page(&connection, page_id) {
+                return forbidden("write access to this page is not allowed");
+            }
+            if !write && !self.can_read_page(&connection, page_id) {
+                return forbidden("read access to this page is not allowed");
+            }
+        }
 
         match (request.method, path) {
             (Method::Get, "/health") => json(200, Envelope::ok("ok".to_string())),
@@ -119,4 +166,13 @@ fn v1_error(error: UseCaseError) -> ApiResponse {
         UseCaseError::NotFound(message) => not_found(&message),
         UseCaseError::Storage(message) => server_error(&message),
     }
+}
+
+fn page_target(method: Method, path: &str) -> Option<(&str, bool)> {
+    let rest = path.strip_prefix("/api/pages/")?;
+    let id = rest.strip_suffix("/versions").unwrap_or(rest);
+    if id.is_empty() || id.contains('/') {
+        return None;
+    }
+    Some((id, !matches!(method, Method::Get)))
 }

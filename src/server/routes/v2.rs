@@ -8,10 +8,11 @@ use super::super::contract::{
     parse_bearer, version_supported,
 };
 use super::super::limits;
-use super::super::rate_limit::REASON_CONNECTION;
+use super::super::rate_limit::{REASON_CONNECTION, RateDecision};
 use super::super::response::{parse_body, v2_error, write_timeout_response};
-use super::super::{ApiRequest, ApiResponse, Method, WorkspaceServer};
+use super::super::{ApiRequest, ApiResponse, Connection, Method, WorkspaceServer};
 use super::capabilities::route_capability;
+use crate::auth::LoginInput;
 use crate::model::{BlockChildrenRequest, Page};
 use std::time::Instant;
 
@@ -117,6 +118,10 @@ impl WorkspaceServer {
             path: request.path.clone(),
             status,
         });
+        if self.runtime.request_log.len() > self.runtime.request_log_cap {
+            let excess = self.runtime.request_log.len() - self.runtime.request_log_cap;
+            self.runtime.request_log.drain(0..excess);
+        }
         response
     }
 
@@ -147,23 +152,31 @@ impl WorkspaceServer {
         }
 
         if request.method == Method::Post && path == "/api/v2/auth/login" {
-            let decision = self.runtime.rate_limiter.check(
-                "auth-login",
-                &self.workspace.settings.id,
-                Instant::now(),
+            let email = request
+                .body
+                .as_deref()
+                .and_then(|body| serde_json::from_str::<LoginInput>(body).ok())
+                .map(|input| input.email.trim().to_lowercase())
+                .filter(|email| !email.is_empty())
+                .unwrap_or_else(|| "unknown".to_string());
+            let client = request.client_ip.as_deref().unwrap_or("local");
+            let now = Instant::now();
+            let workspace_key = format!("login:{}", self.workspace.settings.id);
+            let client_decision = self.runtime.login_limiter.check(
+                &format!("login-ip:{client}"),
+                &workspace_key,
+                now,
             );
-            if !decision.allowed {
-                let reason = decision.reason.unwrap_or(REASON_CONNECTION);
-                return v2_error(
-                    429,
-                    CODE_RATE_LIMITED,
-                    format!("rate limit exceeded: {reason}"),
-                    request_id,
-                    Some(serde_json::json!({
-                        "rate_limit_reason": reason,
-                        "retry_after": decision.retry_after.to_string(),
-                    })),
-                );
+            if !client_decision.allowed {
+                return login_rate_limit_response(client_decision, request_id);
+            }
+            let account_decision = self.runtime.login_limiter.check(
+                &format!("login-account:{email}"),
+                &workspace_key,
+                now,
+            );
+            if !account_decision.allowed {
+                return login_rate_limit_response(account_decision, request_id);
             }
             return self.login(request, request_id);
         }
@@ -245,6 +258,10 @@ impl WorkspaceServer {
             );
         }
 
+        if let Some(response) = self.authorize_v2_request(&connection, request, path, request_id) {
+            return response;
+        }
+
         if let Some(response) = self.handle_v2_crdt(request, path, request_id, &connection) {
             return response;
         }
@@ -280,4 +297,80 @@ impl WorkspaceServer {
 
         v2_error(404, CODE_NOT_FOUND, "unknown route", request_id, None)
     }
+}
+
+fn login_rate_limit_response(decision: RateDecision, request_id: &str) -> ApiResponse {
+    let reason = decision.reason.unwrap_or(REASON_CONNECTION);
+    v2_error(
+        429,
+        CODE_RATE_LIMITED,
+        format!("rate limit exceeded: {reason}"),
+        request_id,
+        Some(serde_json::json!({
+            "rate_limit_reason": reason,
+            "retry_after": decision.retry_after.to_string(),
+        })),
+    )
+}
+
+impl WorkspaceServer {
+    fn authorize_v2_request(
+        &self,
+        connection: &Connection,
+        request: &ApiRequest,
+        path: &str,
+        request_id: &str,
+    ) -> Option<ApiResponse> {
+        let owner_only = matches!(
+            (request.method, path),
+            (Method::Put, "/api/v2/workspace")
+                | (Method::Post, "/api/v2/members")
+                | (Method::Put, "/api/v2/shares")
+        );
+        if owner_only && !self.is_owner(connection) {
+            return Some(v2_error(
+                403,
+                CODE_RESTRICTED_RESOURCE,
+                "owner access required",
+                request_id,
+                Some(serde_json::json!({ "required_role": "owner" })),
+            ));
+        }
+        if let Some((page_id, write)) = page_target(request.method, path) {
+            if write && !self.can_write_page(connection, page_id) {
+                return Some(v2_error(
+                    403,
+                    CODE_RESTRICTED_RESOURCE,
+                    "write access to this page is not allowed",
+                    request_id,
+                    Some(serde_json::json!({
+                        "page_id": page_id,
+                        "required_access": "write",
+                    })),
+                ));
+            }
+            if !write && !self.can_read_page(connection, page_id) {
+                return Some(v2_error(
+                    403,
+                    CODE_RESTRICTED_RESOURCE,
+                    "read access to this page is not allowed",
+                    request_id,
+                    Some(serde_json::json!({
+                        "page_id": page_id,
+                        "required_access": "read",
+                    })),
+                ));
+            }
+        }
+        None
+    }
+}
+
+fn page_target(method: Method, path: &str) -> Option<(&str, bool)> {
+    let rest = path.strip_prefix("/api/v2/pages/")?;
+    let id = rest.strip_suffix("/versions").unwrap_or(rest);
+    if id.is_empty() || id.contains('/') {
+        return None;
+    }
+    Some((id, !matches!(method, Method::Get)))
 }

@@ -186,3 +186,27 @@ async fn remote_client_receives_changes_and_awareness() {
 
     handle.abort();
 }
+
+#[cfg(unix)]
+#[test]
+fn saved_session_is_private_on_unix() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let path = common::temp_path("remote-session-permissions", "json");
+    save_session_at(
+        &path,
+        &RemoteSession {
+            base_url: "http://127.0.0.1:8787".to_string(),
+            email: "owner@workspace.local".to_string(),
+            token: "secret-token".to_string(),
+        },
+    )
+    .expect("save");
+    let mode = std::fs::metadata(&path)
+        .expect("metadata")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode, 0o600);
+    common::remove(&path);
+}

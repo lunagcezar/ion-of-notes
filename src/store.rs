@@ -50,12 +50,28 @@ pub fn catalog_path() -> PathBuf {
 pub trait WorkspaceStore: Send + Sync {
     /// Persist one full workspace snapshot.
     fn persist(&self, workspace: &Workspace) -> io::Result<()>;
+
+    /// Reload the last durable workspace snapshot, when the adapter supports it.
+    fn load(&self) -> io::Result<Option<Workspace>> {
+        Ok(None)
+    }
 }
 
 /// Persistence port for collaboration state.
 pub trait CollabStore: Send + Sync {
     /// Persist one full collaboration snapshot.
     fn persist(&self, state: &CollabState) -> io::Result<()>;
+
+    /// Reload the last durable collaboration snapshot, when supported.
+    fn load(&self) -> io::Result<Option<CollabState>> {
+        Ok(None)
+    }
+}
+
+/// Atomic snapshot port for adapters that can commit both documents together.
+pub trait SnapshotStore: Send + Sync {
+    /// Persist workspace and collaboration state in one durable commit.
+    fn persist_snapshots(&self, workspace: &Workspace, collab: &CollabState) -> io::Result<()>;
 }
 
 /// One shared rate-limit decision.
@@ -113,6 +129,14 @@ impl WorkspaceStore for JsonStore {
     fn persist(&self, workspace: &Workspace) -> io::Result<()> {
         save(&self.path, workspace)
     }
+
+    fn load(&self) -> io::Result<Option<Workspace>> {
+        match load(&self.path) {
+            Ok(workspace) => Ok(Some(workspace)),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
 }
 
 /// JSON-file adapter for collaboration state.
@@ -136,6 +160,14 @@ impl JsonCollabStore {
 impl CollabStore for JsonCollabStore {
     fn persist(&self, state: &CollabState) -> io::Result<()> {
         save_collab(&self.path, state)
+    }
+
+    fn load(&self) -> io::Result<Option<CollabState>> {
+        match load_collab(&self.path) {
+            Ok(collab) => Ok(Some(collab)),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(error),
+        }
     }
 }
 

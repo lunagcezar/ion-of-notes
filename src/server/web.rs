@@ -28,12 +28,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
+use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
 /// Transport-level body cap. The v2 contract still enforces its own 500 KB
 /// limit below this, so clients see the documented `validation_error`.
 const MAX_BODY_BYTES: usize = 2 * 1024 * 1024;
+/// Upper bound for one HTTP request (the synchronous server runs in
+/// `spawn_blocking`, so this protects the proxy from hung requests).
+const REQUEST_TIMEOUT_SECS: u64 = 30;
 
 #[derive(Clone)]
 struct AppState {
@@ -65,6 +69,10 @@ pub fn router_with_server(server: Arc<Mutex<WorkspaceServer>>) -> Router {
         .route("/ws/workspace/{id}", get(ws_handler))
         .fallback(handle)
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(REQUEST_TIMEOUT_SECS),
+        ))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
@@ -202,11 +210,19 @@ async fn handle(State(state): State<AppState>, request: Request) -> Response {
                 .map(|value| (name.as_str().to_string(), value.to_string()))
         })
         .collect();
+    let client_ip = headers
+        .get("x-forwarded-for")
+        .and_then(|value| value.split(',').next())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .or_else(|| headers.get("x-real-ip").cloned());
     let api_request = ApiRequest {
         method,
         path,
         body,
         headers,
+        client_ip,
     };
 
     let server = Arc::clone(&state.server);
