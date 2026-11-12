@@ -3,9 +3,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 
-use super::block::{Block, ParentDto, find_block_in, find_block_in_mut};
-use super::comment::CommentDto;
+use super::block::{Block, find_block_in, find_block_in_mut};
 use super::database::{DataSource, DataSourceRef, Database};
+use super::dto::{CommentDto, ParentDto};
 use super::file::FileUpload;
 use super::index::WorkspaceIndex;
 use super::now_iso;

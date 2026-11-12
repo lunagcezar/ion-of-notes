@@ -6,6 +6,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-099 DTO/domain separation
+
+- Moved the block and comment v2 DTOs and their conversions into `model/dto/`;
+  `model.rs` keeps the historical public names stable.
+
 ### Changed - spec-098 sidebar commands
 
 - Grouped the twelve sidebar variants into `SidebarCmd` behind

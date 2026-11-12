@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::block::ParentDto;
+use super::dto::ParentDto;
 use super::page::Page;
 use super::property::{PageProperty, Property};
 use super::rich_text::RichText;

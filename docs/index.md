@@ -41,7 +41,8 @@ in what order, and which document is the source of truth for each concern.
   (SettingsState/SettingsView grouping); `spec-096` is implemented
   (narrow settings view models); `spec-097` is implemented
   (deterministic performance harness); `spec-098` is implemented
-  (sidebar command grouping). The
+  (sidebar command grouping); `spec-099` is implemented
+  (block/comment DTO separation). The
   v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite

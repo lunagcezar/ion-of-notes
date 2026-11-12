@@ -14,6 +14,7 @@ mod catalog;
 mod comment;
 mod database;
 mod diff;
+mod dto;
 mod file;
 mod index;
 mod page;
@@ -26,17 +27,19 @@ mod user;
 mod view;
 mod workspace;
 
-pub use block::{Block, BlockChildrenRequest, BlockDto, BlockInput, BlockKind, ParentDto};
+pub use block::{Block, BlockKind};
 pub(crate) use block::{walk_blocks, walk_blocks_mut};
 pub use catalog::{WorkspaceCatalog, WorkspaceSummary};
-pub use comment::{
-    AttachmentInput, Comment, CommentDisplayName, CommentDisplayNameDto, CommentDto, CommentInput,
-};
+pub use comment::{Comment, CommentDisplayName};
 pub use database::{
     DataSource, DataSourceInput, DataSourceRef, Database, DatabaseInput, PagePropertiesInput,
     TableRow,
 };
 pub use diff::PageDiff;
+pub use dto::{
+    AttachmentInput, BlockChildrenRequest, BlockDto, BlockInput, CommentDisplayNameDto, CommentDto,
+    CommentInput, ParentDto,
+};
 pub use file::{CommentAttachment, FileObject, FileUpload, FileUploadInput, UploadStatus};
 pub use page::{Page, PageDraft, PageSummary, SearchResult, WorkspaceError};
 pub use property::{

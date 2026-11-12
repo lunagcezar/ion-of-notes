@@ -119,12 +119,16 @@ src/
   model.rs         facade: module declarations, pub re-exports, time helpers
   model/
     rich_text.rs   annotations, mentions, equations, RichText
-    block.rs       BlockKind, Block, block DTOs and tree helpers
+    block.rs       BlockKind, Block and tree helpers
+    dto.rs         v2 DTO facade
+    dto/
+      block.rs     ParentDto, BlockDto, BlockInput and conversions
+      comment.rs   CommentDto, CommentInput and attachment inputs
     property.rs    typed properties, values and option/page refs
     database.rs    Database, DataSource, TableRow
     view.rs        views, filters, sorts and grouped queries
     file.rs        file objects, uploads and attachments
-    comment.rs     page comments and comment DTOs
+    comment.rs     page comments and the display-name rule
     user.rs        people, users, bots and partial user refs
     page.rs        Page, summaries, drafts and WorkspaceError
     workspace.rs   Workspace tree behavior and deserialization

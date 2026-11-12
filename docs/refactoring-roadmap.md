@@ -35,7 +35,7 @@ deliberately deferred. It complements `docs/architecture.md` and
 | Composable app state | `SearchState`, `SharingState`, `CollaborationState`, `AiState`, `ServerState` and `SettingsState` are grouped; the remaining flat fields are window/navigation state. | — |
 | Narrow view models | The settings pages now receive only `AiView`, `ServerView`, `SettingsView` or `SharingView`; the remaining renderers still receive `ViewState` for shared fields. | Narrow sidebar/content/chrome one renderer at a time. |
 | Command grouping | Sidebar commands are grouped into `SidebarCmd` behind `Command::Sidebar`; the other families remain flat. | Group page/block commands next if the flat enum becomes hard to scan. |
-| DTO/domain separation | `model` still exports domain entities and API DTOs together. | Add v2 mapping for comments or blocks, the resources most likely to evolve. |
+| DTO/domain separation | Block and comment DTOs live in `model/dto/` with their conversions; `model.rs` keeps the public names stable. Page/database/view/file/user DTOs remain in their domain modules. | Move the next family when its wire shape changes. |
 | Normalized SQLite | Workspace and collaboration are whole-document JSON snapshots. | Measure load/serialization at 1k/10k/50k blocks first; then add per-page rows or an operation log. |
 | Benchmarks/load tests | `tests/perf.rs` measures 1k/10k/50k blocks (serialize, deserialize, search, page lookup, CRDT sync) and is opt-in via `ION_OF_NOTES_PERF=1`. | Add release-build numbers and a CI job when a regression budget is needed. |
 

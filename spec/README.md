@@ -136,6 +136,7 @@ Status vocabulary:
 | [096](spec-096-narrow-settings-views.md) | Narrow settings view models | implemented | Settings pages receive only their slice |
 | [097](spec-097-performance-harness.md) | Deterministic performance harness | implemented | Opt-in 1k/10k/50k block timings |
 | [098](spec-098-sidebar-commands.md) | Group sidebar commands | implemented | `SidebarCmd` behind `Command::Sidebar` |
+| [099](spec-099-dto-domain-separation.md) | Separate block and comment DTOs | implemented | `model/dto/` owns the v2 shapes |
 
 ## 3. Work status
 

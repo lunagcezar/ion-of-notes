@@ -70,12 +70,16 @@ src/
   model.rs           facade: declarations, re-exports and time helpers
   model/
     rich_text.rs     rich text, mentions, annotations and equations
-    block.rs         block kinds, blocks, block DTOs and tree helpers
+    block.rs         block kinds, blocks and tree helpers
+    dto.rs           v2 DTO facade
+    dto/
+      block.rs       ParentDto, BlockDto, BlockInput and conversions
+      comment.rs     CommentDto, CommentInput and attachment inputs
     property.rs      typed properties, values and option/page refs
     database.rs      databases, data sources, table rows
     view.rs          views, filters, sorts and grouped queries
     file.rs          file objects, uploads and attachments
-    comment.rs       page comments and comment DTOs
+    comment.rs       page comments and the display-name rule
     user.rs          people, users, bots and partial user refs
     page.rs          pages, summaries, drafts and invariant errors
     workspace.rs     workspace tree behavior and deserialization

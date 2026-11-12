@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-use super::block::ParentDto;
 use super::database::DataSource;
+use super::dto::ParentDto;
 use super::page::Page;
 use super::property::{
     PropertyValue, property_value, value_as_number, value_as_string, value_is_empty,
