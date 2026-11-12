@@ -224,7 +224,6 @@ pub(crate) fn render_settings(
 
             ui.horizontal_top(|ui| {
                 ui.spacing_mut().item_spacing.x = 0.0;
-                ui.add_space(16.0);
                 // Left navigation column. Mail & Calendar is intentionally not
                 // implemented, so it is not offered in the rail.
                 ui.allocate_ui_with_layout(
@@ -315,8 +314,6 @@ pub(crate) fn render_settings(
                             });
                     },
                 );
-
-                ui.add_space(16.0);
 
                 // Right content column spans from the rail to the dialog's
                 // right border; the scrollbar sits on that border and the

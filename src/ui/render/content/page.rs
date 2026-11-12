@@ -34,62 +34,65 @@ pub(crate) fn render_content(
     let breadcrumb_pad = 16.0;
     ui.vertical(|ui| {
         ui.add_space(2.0);
-        ui.horizontal(|ui| {
-            ui.set_height(28.0);
-            ui.spacing_mut().item_spacing.x = 6.0;
-            ui.add_space(breadcrumb_pad);
-            if !view.sidebar_open && ui.add(egui::Button::new(">").frame(false)).clicked() {
-                commands.push(Command::ToggleSidebar);
-            }
-            let mut crumbs = crumb_chain(ws, &view.current_page);
-            if crumbs.is_empty() {
-                crumbs.push((String::new(), "Workspace".to_string()));
-            }
-            if crumbs.len() == 1 {
-                crumbs.insert(0, (ws.settings.icon.clone(), ws.name.clone()));
-            }
-            if view.library_open {
-                crumbs = vec![(String::new(), "Library".to_string())];
-            }
-            for (i, (icon, title)) in crumbs.iter().enumerate() {
-                if i > 0 {
-                    ui.label(egui::RichText::new("›").color(palette.muted));
+        ui.allocate_ui_with_layout(
+            Vec2::new(ui.available_width(), 28.0),
+            egui::Layout::left_to_right(egui::Align::Center),
+            |ui| {
+                ui.spacing_mut().item_spacing.x = 6.0;
+                ui.add_space(breadcrumb_pad);
+                if !view.sidebar_open && ui.add(egui::Button::new(">").frame(false)).clicked() {
+                    commands.push(Command::ToggleSidebar);
                 }
-                crumb(ui, icon, title, palette);
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.spacing_mut().item_spacing.x = 4.0;
-                ui.add_space(14.0);
-                if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_ellipsis)
-                    .on_hover_text("Page settings and actions")
-                    .clicked()
-                {
-                    commands.push(Command::OpenPageActions);
+                let mut crumbs = crumb_chain(ws, &view.current_page);
+                if crumbs.is_empty() {
+                    crumbs.push((String::new(), "Workspace".to_string()));
                 }
-                if !view.library_open
-                    && glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_star).clicked()
-                {
-                    commands.push(Command::ToggleFavorite(view.current_page.clone()));
+                if crumbs.len() == 1 {
+                    crumbs.insert(0, (ws.settings.icon.clone(), ws.name.clone()));
                 }
-                if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_link).clicked() {
-                    commands.push(Command::OpenShare);
+                if view.library_open {
+                    crumbs = vec![(String::new(), "Library".to_string())];
                 }
-                let share = ui.add(
-                    egui::Button::new(
-                        egui::RichText::new(i18n::t("share"))
-                            .size(13.0)
-                            .color(palette.text),
-                    )
-                    .frame(false),
-                );
-                if share.clicked() {
-                    commands.push(Command::OpenShare);
+                for (i, (icon, title)) in crumbs.iter().enumerate() {
+                    if i > 0 {
+                        ui.label(egui::RichText::new("›").color(palette.muted));
+                    }
+                    crumb(ui, icon, title, palette);
                 }
-                if glyph_button(ui, Vec2::new(20.0, 24.0), palette, draw_share).clicked() {
-                    commands.push(Command::OpenShare);
-                }
-            });
-        });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    ui.add_space(14.0);
+                    if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_ellipsis)
+                        .on_hover_text("Page settings and actions")
+                        .clicked()
+                    {
+                        commands.push(Command::OpenPageActions);
+                    }
+                    if !view.library_open
+                        && glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_star).clicked()
+                    {
+                        commands.push(Command::ToggleFavorite(view.current_page.clone()));
+                    }
+                    if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_link).clicked() {
+                        commands.push(Command::OpenShare);
+                    }
+                    let share = ui.add(
+                        egui::Button::new(
+                            egui::RichText::new(i18n::t("share"))
+                                .size(13.0)
+                                .color(palette.text),
+                        )
+                        .frame(false),
+                    );
+                    if share.clicked() {
+                        commands.push(Command::OpenShare);
+                    }
+                    if glyph_button(ui, Vec2::new(20.0, 24.0), palette, draw_share).clicked() {
+                        commands.push(Command::OpenShare);
+                    }
+                });
+            },
+        );
         ui.add_space(2.0);
     });
     ui.separator();

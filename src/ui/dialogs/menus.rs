@@ -546,7 +546,7 @@ pub(crate) fn render_grid_menu(
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .anchor(Align2::LEFT_BOTTOM, Vec2::new(234.0, -70.0))
+        .anchor(Align2::LEFT_BOTTOM, Vec2::new(234.0, -60.0))
         .default_width(180.0)
         .frame(
             egui::Frame::NONE
