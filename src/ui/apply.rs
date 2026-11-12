@@ -34,7 +34,7 @@ mod workspace;
 use super::crdt::CrdtSession;
 use super::edit_queue::{PendingEdits, execute_plan, plan_for};
 use super::search_cache::SearchCache;
-use super::view::{SearchView, SharingView, ViewState};
+use super::view::{AiView, SearchView, ServerView, SharingView, ViewState};
 
 pub(super) fn set_block_text(blocks: &mut [Block], block_id: &str, text: &str) -> bool {
     for block in blocks {
@@ -66,12 +66,14 @@ impl NotionApp {
             current_page: self.current_page.clone(),
             page_icon,
             remote_cursors: self.collaboration.remote_awareness.clone(),
-            server_url: self.server_url.clone(),
-            server_email: self.server_email.clone(),
-            server_password: self.server_password.clone(),
-            server_status: self.server_status.clone(),
-            server_connected: self.server_connected,
-            server_busy: self.server_busy,
+            server: ServerView {
+                url: self.server.url.clone(),
+                email: self.server.email.clone(),
+                password: self.server.password.clone(),
+                status: self.server.status.clone(),
+                connected: self.server.connected,
+                busy: self.server.busy,
+            },
             tabs: self.tabs.clone(),
             active_tab: self.active_tab,
             sidebar_open: self.sidebar_open,
@@ -131,15 +133,17 @@ impl NotionApp {
             new_tab_open: self.new_tab_open,
             new_tab_query: self.new_tab_query.clone(),
             new_tab_selected: self.new_tab_selected,
-            ai_answer: self.ai_answer.clone(),
-            ai_error: self.ai_error.clone(),
-            ai_busy: self.ai_busy,
-            ai_status: self.ai_status.label(),
-            ai_checking: self.ai_checking,
-            ai_connected: self.ai_status.connected(),
-            ai_endpoint: self.ai_config.endpoint.clone(),
-            ai_model: self.ai_config.model.clone(),
-            ai_prefer_cli: self.ai_config.prefer_cli,
+            ai: AiView {
+                answer: self.ai.answer.clone(),
+                error: self.ai.error.clone(),
+                busy: self.ai.busy,
+                status: self.ai.status.label(),
+                checking: self.ai.checking,
+                connected: self.ai.status.connected(),
+                endpoint: self.ai.config.endpoint.clone(),
+                model: self.ai.config.model.clone(),
+                prefer_cli: self.ai.config.prefer_cli,
+            },
             shortcuts_open: self.shortcuts_open,
             highlight_pane: self.highlight_pane,
             filters: self.filters,
@@ -218,50 +222,52 @@ impl NotionApp {
 
     pub(super) fn poll_ai(&mut self) {
         if let Some(status) = self
-            .ai_status_slot
+            .ai
+            .status_slot
             .lock()
             .ok()
             .and_then(|mut guard| guard.take())
         {
-            self.ai_status = status;
-            self.ai_checking = false;
+            self.ai.status = status;
+            self.ai.checking = false;
         }
-        if !self.ai_busy {
+        if !self.ai.busy {
             return;
         }
         // The CLI and HTTP transports can block; never leave the settings test
         // on "Waiting for Ollama" forever (spec-057).
         if self
-            .ai_started
+            .ai
+            .started
             .is_some_and(|started| started.elapsed() > std::time::Duration::from_secs(20))
         {
-            self.ai_busy = false;
-            self.ai_started = None;
-            self.ai_answer = None;
-            self.ai_error = Some(
+            self.ai.busy = false;
+            self.ai.started = None;
+            self.ai.answer = None;
+            self.ai.error = Some(
                 "Ollama did not answer within 20 seconds. Check that the service is running \
                  and the model is installed."
                     .to_string(),
             );
-            if let Ok(mut guard) = self.ai_slot.lock() {
+            if let Ok(mut guard) = self.ai.slot.lock() {
                 *guard = None;
             }
             return;
         }
-        let done = self.ai_slot.lock().ok().and_then(|mut guard| guard.take());
+        let done = self.ai.slot.lock().ok().and_then(|mut guard| guard.take());
         if let Some(result) = done {
             match result {
                 Ok(answer) => {
-                    self.ai_answer = Some(answer);
-                    self.ai_error = None;
+                    self.ai.answer = Some(answer);
+                    self.ai.error = None;
                 }
                 Err(error) => {
-                    self.ai_error = Some(error);
-                    self.ai_answer = None;
+                    self.ai.error = Some(error);
+                    self.ai.answer = None;
                 }
             }
-            self.ai_busy = false;
-            self.ai_started = None;
+            self.ai.busy = false;
+            self.ai.started = None;
         }
     }
 
@@ -467,7 +473,7 @@ impl NotionApp {
         self.collaboration.receiver = self.client.subscribe_realtime();
         self.collaboration.remote_awareness.clear();
         self.collaboration.last_awareness = None;
-        self.server_password.clear();
+        self.server.password.clear();
     }
 
     /// Save the active workspace snapshot and catalog to disk (spec-058).

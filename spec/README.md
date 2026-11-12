@@ -131,6 +131,7 @@ Status vocabulary:
 | [091](spec-091-server-service-modules.md) | Server service modules | implemented | Auth/webhook logic under `server/services/` |
 | [092](spec-092-sharing-state-and-view.md) | SharingState and SharingView grouping | implemented | Sharing/invite runtime and view fields grouped |
 | [093](spec-093-collaboration-state.md) | CollaborationState grouping | implemented | CRDT/realtime/awareness runtime fields grouped |
+| [094](spec-094-ai-and-server-state.md) | AiState and ServerState grouping | implemented | AI and server-login runtime/view fields grouped |
 
 ## 3. Work status
 

@@ -23,14 +23,14 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
         }
         match row.id {
             "connection" => {
-                let checking = view.ai_checking;
+                let checking = view.ai.checking;
                 let label = if checking {
                     "Checking…".to_string()
                 } else {
-                    view.ai_status.clone()
+                    view.ai.status.clone()
                 };
                 ui.horizontal(|ui| {
-                    let dot_color = if view.ai_connected && !checking {
+                    let dot_color = if view.ai.connected && !checking {
                         palette.accent
                     } else {
                         palette.muted
@@ -40,7 +40,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                     ui.label(
                         egui::RichText::new(label)
                             .size(metrics::FONT_CAPTION)
-                            .color(if view.ai_connected && !checking {
+                            .color(if view.ai.connected && !checking {
                                 palette.text
                             } else {
                                 palette.muted
@@ -62,7 +62,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                         .color(palette.text),
                 );
                 ui.add_space(metrics::SPACE_6);
-                let mut endpoint = view.ai_endpoint.clone();
+                let mut endpoint = view.ai.endpoint.clone();
                 if ui
                     .add(
                         egui::TextEdit::singleline(&mut endpoint)
@@ -91,7 +91,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                         .color(palette.text),
                 );
                 ui.add_space(metrics::SPACE_6);
-                let mut model = view.ai_model.clone();
+                let mut model = view.ai.model.clone();
                 if ui
                     .add(
                         egui::TextEdit::singleline(&mut model)
@@ -112,7 +112,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                             .color(palette.text),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let label = if view.ai_prefer_cli { "On" } else { "Off" };
+                        let label = if view.ai.prefer_cli { "On" } else { "Off" };
                         if ui.add(egui::Button::new(label)).clicked() {
                             commands.push(Command::ToggleAiCli);
                         }
@@ -127,13 +127,13 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                     ));
                 }
                 ui.add_space(metrics::SPACE_10);
-                if view.ai_busy {
+                if view.ai.busy {
                     ui.label(
                         egui::RichText::new("Waiting for Ollama…")
                             .size(metrics::FONT_CAPTION)
                             .color(palette.accent),
                     );
-                } else if let Some(answer) = &view.ai_answer {
+                } else if let Some(answer) = &view.ai.answer {
                     egui::Frame::NONE
                         .fill(palette.callout)
                         .corner_radius(CornerRadius::same(6))
@@ -145,7 +145,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                                     .color(palette.text),
                             );
                         });
-                } else if let Some(error) = &view.ai_error {
+                } else if let Some(error) = &view.ai.error {
                     ui.label(
                         egui::RichText::new(error)
                             .size(metrics::FONT_CAPTION)

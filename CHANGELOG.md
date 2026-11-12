@@ -6,6 +6,12 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-094 AI and server state
+
+- Grouped the AI assistant and server-login fields into `AiState`/`ServerState`
+  with `AiView`/`ServerView`; references use `self.ai.*`, `self.server.*`,
+  `view.ai.*` and `view.server.*`.
+
 ### Changed - spec-093 collaboration state
 
 - Grouped the CRDT, realtime and awareness fields into `CollaborationState`;

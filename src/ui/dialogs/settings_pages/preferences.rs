@@ -207,7 +207,7 @@ pub(in crate::ui::dialogs) fn render_preferences(
                 }
             }
             "server" => {
-                let state = if view.server_connected {
+                let state = if view.server.connected {
                     "connected"
                 } else {
                     "local mode"

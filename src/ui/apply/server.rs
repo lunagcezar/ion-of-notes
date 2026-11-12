@@ -15,12 +15,12 @@ impl NotionApp {
         password: Option<String>,
         token: Option<String>,
     ) {
-        if self.server_busy {
+        if self.server.busy {
             return;
         }
-        self.server_busy = true;
-        self.server_status = Some("Connecting...".to_string());
-        let slot = Arc::clone(&self.server_slot);
+        self.server.busy = true;
+        self.server.status = Some("Connecting...".to_string());
+        let slot = Arc::clone(&self.server.slot);
         std::thread::spawn(move || {
             let result = if let Some(token) = token {
                 crate::app::build_remote_desktop(&url, &token)
@@ -42,17 +42,17 @@ impl NotionApp {
 
     /// Connect with an explicit bearer token without blocking startup.
     pub fn connect_server_with_token(&mut self, server: String, token: String) {
-        self.server_url = server.clone();
-        self.start_server_connect(server, self.server_email.clone(), None, Some(token));
+        self.server.url = server.clone();
+        self.start_server_connect(server, self.server.email.clone(), None, Some(token));
     }
 
     /// Restore a remembered session for `server`, or open the login page when
     /// there is none. The actual connection stays off the UI thread.
     pub fn restore_server_session(&mut self, server: String) {
-        self.server_url = server.clone();
+        self.server.url = server.clone();
         if let Some(session) = crate::remote::load_session(&server) {
-            self.server_email = session.email;
-            self.start_server_connect(server, self.server_email.clone(), None, Some(session.token));
+            self.server.email = session.email;
+            self.start_server_connect(server, self.server.email.clone(), None, Some(session.token));
         } else {
             self.open_server_login(server);
         }
@@ -60,28 +60,29 @@ impl NotionApp {
 
     /// Apply a finished background connection.
     pub(crate) fn poll_server(&mut self) {
-        if !self.server_busy {
+        if !self.server.busy {
             return;
         }
         let done = self
-            .server_slot
+            .server
+            .slot
             .lock()
             .ok()
             .and_then(|mut guard| guard.take());
         let Some(result) = done else {
             return;
         };
-        self.server_busy = false;
+        self.server.busy = false;
         match result {
             Ok((client, workspace, url)) => {
                 self.replace_client(client, workspace);
-                self.server_connected = true;
-                self.server_password.clear();
-                self.server_status = Some(format!("Connected to {url}"));
+                self.server.connected = true;
+                self.server.password.clear();
+                self.server.status = Some(format!("Connected to {url}"));
             }
             Err(error) => {
                 let _ = crate::remote::clear_session();
-                self.server_status = Some(error);
+                self.server.status = Some(error);
                 self.settings_open = true;
                 self.settings_page = "Server".to_string();
             }
@@ -91,26 +92,26 @@ impl NotionApp {
     pub(super) fn apply_server(&mut self, command: Command) {
         match command {
             Command::SetServerUrl(value) => {
-                self.server_url = value;
-                self.server_status = None;
+                self.server.url = value;
+                self.server.status = None;
             }
             Command::SetServerEmail(value) => {
-                self.server_email = value;
-                self.server_status = None;
+                self.server.email = value;
+                self.server.status = None;
             }
             Command::SetServerPassword(value) => {
-                self.server_password = value;
-                self.server_status = None;
+                self.server.password = value;
+                self.server.status = None;
             }
             Command::ConnectServer => {
-                if self.server_busy {
+                if self.server.busy {
                     return;
                 }
-                let url = self.server_url.trim().trim_end_matches('/').to_string();
-                let email = self.server_email.trim().to_string();
-                let password = self.server_password.clone();
+                let url = self.server.url.trim().trim_end_matches('/').to_string();
+                let email = self.server.email.trim().to_string();
+                let password = self.server.password.clone();
                 if url.is_empty() || email.is_empty() || password.is_empty() {
-                    self.server_status =
+                    self.server.status =
                         Some("Server, email and password are required.".to_string());
                 } else {
                     self.start_server_connect(url, email, Some(password), None);
@@ -122,10 +123,10 @@ impl NotionApp {
                 self.catalog = catalog;
                 self.catalog_path = Some(crate::store::catalog_path());
                 self.replace_client(client, workspace);
-                self.server_busy = false;
-                self.server_connected = false;
-                self.server_password.clear();
-                self.server_status = Some("Using the local workspace.".to_string());
+                self.server.busy = false;
+                self.server.connected = false;
+                self.server.password.clear();
+                self.server.status = Some("Using the local workspace.".to_string());
             }
             other => debug_assert!(false, "unexpected server command: {other:?}"),
         }

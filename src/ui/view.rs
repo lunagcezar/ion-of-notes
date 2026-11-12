@@ -34,17 +34,35 @@ pub(super) struct SharingView {
     pub(super) general_access: Access,
 }
 
+/// AI assistant presentation data.
+pub(super) struct AiView {
+    pub(super) answer: Option<String>,
+    pub(super) error: Option<String>,
+    pub(super) busy: bool,
+    pub(super) status: String,
+    pub(super) checking: bool,
+    pub(super) connected: bool,
+    pub(super) endpoint: String,
+    pub(super) model: String,
+    pub(super) prefer_cli: bool,
+}
+
+/// Server login presentation data.
+pub(super) struct ServerView {
+    pub(super) url: String,
+    pub(super) email: String,
+    pub(super) password: String,
+    pub(super) status: Option<String>,
+    pub(super) connected: bool,
+    pub(super) busy: bool,
+}
+
 /// A snapshot of non-workspace app state passed to pure render functions.
 pub(super) struct ViewState {
     pub(super) current_page: String,
     pub(super) page_icon: String,
     pub(super) remote_cursors: Vec<Awareness>,
-    pub(super) server_url: String,
-    pub(super) server_email: String,
-    pub(super) server_password: String,
-    pub(super) server_status: Option<String>,
-    pub(super) server_connected: bool,
-    pub(super) server_busy: bool,
+    pub(super) server: ServerView,
     pub(super) tabs: Vec<String>,
     pub(super) active_tab: usize,
     pub(super) sidebar_open: bool,
@@ -83,15 +101,7 @@ pub(super) struct ViewState {
     pub(super) new_tab_open: bool,
     pub(super) new_tab_query: String,
     pub(super) new_tab_selected: usize,
-    pub(super) ai_answer: Option<String>,
-    pub(super) ai_error: Option<String>,
-    pub(super) ai_busy: bool,
-    pub(super) ai_status: String,
-    pub(super) ai_checking: bool,
-    pub(super) ai_connected: bool,
-    pub(super) ai_endpoint: String,
-    pub(super) ai_model: String,
-    pub(super) ai_prefer_cli: bool,
+    pub(super) ai: AiView,
     pub(super) shortcuts_open: bool,
     pub(super) highlight_pane: bool,
     pub(super) filters: bool,

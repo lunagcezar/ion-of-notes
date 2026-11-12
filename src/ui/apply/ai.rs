@@ -13,18 +13,18 @@ impl NotionApp {
                 self.close_overlays();
                 self.settings_open = true;
                 self.settings_page = "AI assistant".to_string();
-                self.ai_answer = None;
-                self.ai_error = None;
+                self.ai.answer = None;
+                self.ai.error = None;
             }
-            Command::SetAiQuery(query) => self.ai_query = query,
+            Command::SetAiQuery(query) => self.ai.query = query,
             Command::AskAi(prompt) => {
-                if !self.ai_busy {
-                    let config = self.ai_config.clone();
-                    let slot = Arc::clone(&self.ai_slot);
-                    self.ai_busy = true;
-                    self.ai_started = Some(std::time::Instant::now());
-                    self.ai_answer = None;
-                    self.ai_error = None;
+                if !self.ai.busy {
+                    let config = self.ai.config.clone();
+                    let slot = Arc::clone(&self.ai.slot);
+                    self.ai.busy = true;
+                    self.ai.started = Some(std::time::Instant::now());
+                    self.ai.answer = None;
+                    self.ai.error = None;
                     std::thread::spawn(move || {
                         let result = ollama::generate(&config, &prompt);
                         if let Ok(mut guard) = slot.lock() {
@@ -34,19 +34,19 @@ impl NotionApp {
                 }
             }
             Command::ClearAi => {
-                self.ai_query.clear();
-                self.ai_answer = None;
-                self.ai_error = None;
-                self.ai_busy = false;
-                self.ai_started = None;
+                self.ai.query.clear();
+                self.ai.answer = None;
+                self.ai.error = None;
+                self.ai.busy = false;
+                self.ai.started = None;
             }
-            Command::SetAiEndpoint(endpoint) => self.ai_config.endpoint = endpoint,
-            Command::SetAiModel(model) => self.ai_config.model = model,
-            Command::ToggleAiCli => self.ai_config.prefer_cli = !self.ai_config.prefer_cli,
+            Command::SetAiEndpoint(endpoint) => self.ai.config.endpoint = endpoint,
+            Command::SetAiModel(model) => self.ai.config.model = model,
+            Command::ToggleAiCli => self.ai.config.prefer_cli = !self.ai.config.prefer_cli,
             Command::RefreshAiStatus => {
-                self.ai_checking = true;
-                let config = self.ai_config.clone();
-                let slot = Arc::clone(&self.ai_status_slot);
+                self.ai.checking = true;
+                let config = self.ai.config.clone();
+                let slot = Arc::clone(&self.ai.status_slot);
                 std::thread::spawn(move || {
                     let status = ollama::detect(&config);
                     if let Ok(mut guard) = slot.lock() {

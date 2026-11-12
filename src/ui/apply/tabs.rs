@@ -51,9 +51,9 @@ impl NotionApp {
                 NewTabChoice::NewChat => {
                     self.close_overlays();
                     self.search.open = true;
-                    self.ai_query.clear();
-                    self.ai_answer = None;
-                    self.ai_error = None;
+                    self.ai.query.clear();
+                    self.ai.answer = None;
+                    self.ai.error = None;
                 }
                 NewTabChoice::NewPage => {
                     let draft = PageDraft {

@@ -80,6 +80,31 @@ pub(super) struct CollaborationState {
     pub last_awareness: Option<(String, usize, Option<usize>)>,
 }
 
+/// AI assistant state: configuration, probe status and the current answer.
+pub(super) struct AiState {
+    pub config: OllamaConfig,
+    pub status: OllamaStatus,
+    pub checking: bool,
+    pub status_slot: Arc<Mutex<Option<OllamaStatus>>>,
+    pub query: String,
+    pub answer: Option<String>,
+    pub error: Option<String>,
+    pub busy: bool,
+    pub started: Option<std::time::Instant>,
+    pub slot: Arc<Mutex<Option<Result<String, String>>>>,
+}
+
+/// Server login state.
+pub(super) struct ServerState {
+    pub url: String,
+    pub email: String,
+    pub password: String,
+    pub status: Option<String>,
+    pub connected: bool,
+    pub busy: bool,
+    pub slot: ServerSlot,
+}
+
 impl Default for SearchState {
     fn default() -> Self {
         Self {
@@ -142,16 +167,7 @@ pub struct NotionApp {
     pub(super) new_tab_query: String,
     pub(super) new_tab_selected: usize,
     // AI assistant.
-    pub(super) ai_config: OllamaConfig,
-    pub(super) ai_status: OllamaStatus,
-    pub(super) ai_checking: bool,
-    pub(super) ai_status_slot: Arc<Mutex<Option<OllamaStatus>>>,
-    pub(super) ai_query: String,
-    pub(super) ai_answer: Option<String>,
-    pub(super) ai_error: Option<String>,
-    pub(super) ai_busy: bool,
-    pub(super) ai_started: Option<std::time::Instant>,
-    pub(super) ai_slot: Arc<Mutex<Option<Result<String, String>>>>,
+    pub(super) ai: AiState,
     // Help / window.
     pub(super) shortcuts_open: bool,
     pub(super) zoom: f32,
@@ -191,13 +207,7 @@ pub struct NotionApp {
     // Real-time CRDT and awareness.
     pub(super) collaboration: CollaborationState,
     // Server login/settings.
-    pub(super) server_url: String,
-    pub(super) server_email: String,
-    pub(super) server_password: String,
-    pub(super) server_status: Option<String>,
-    pub(super) server_connected: bool,
-    pub(super) server_busy: bool,
-    pub(super) server_slot: ServerSlot,
+    pub(super) server: ServerState,
 }
 
 impl NotionApp {
@@ -215,19 +225,19 @@ impl NotionApp {
 
     /// Open the Server settings page with a prefilled URL (startup prompt).
     pub fn open_server_login(&mut self, server: String) {
-        self.server_url = server;
+        self.server.url = server;
         self.settings_open = true;
         self.settings_page = "Server".to_string();
-        self.server_busy = false;
-        self.server_status = Some("Enter your account and password.".to_string());
+        self.server.busy = false;
+        self.server.status = Some("Enter your account and password.".to_string());
     }
 
     /// Mark the current transport as a connected remote server.
     pub fn mark_server_connected(&mut self, server: String) {
-        self.server_url = server.clone();
-        self.server_connected = true;
-        self.server_busy = false;
-        self.server_status = Some(format!("Connected to {server}"));
+        self.server.url = server.clone();
+        self.server.connected = true;
+        self.server.busy = false;
+        self.server.status = Some(format!("Connected to {server}"));
     }
 
     pub fn with_client(
@@ -424,13 +434,15 @@ impl NotionApp {
                 color: "#4C8BF5".to_string(),
                 last_awareness: None,
             },
-            server_url: "http://127.0.0.1:8787".to_string(),
-            server_email: "owner@workspace.local".to_string(),
-            server_password: String::new(),
-            server_status: None,
-            server_connected: false,
-            server_busy: false,
-            server_slot: Arc::new(Mutex::new(None)),
+            server: ServerState {
+                url: "http://127.0.0.1:8787".to_string(),
+                email: "owner@workspace.local".to_string(),
+                password: String::new(),
+                status: None,
+                connected: false,
+                busy: false,
+                slot: Arc::new(Mutex::new(None)),
+            },
             tabs: vec![demo_current_page],
             active_tab: 0,
             closed_tabs: Vec::new(),
@@ -539,24 +551,26 @@ impl NotionApp {
             new_tab_open: demo == "newtab",
             new_tab_query: String::new(),
             new_tab_selected: 0,
-            ai_config,
-            ai_status,
-            ai_checking: true,
-            ai_status_slot,
-            ai_query: String::new(),
-            ai_answer: None,
-            ai_error: if demo == "ai-error" {
-                Some(
-                    "Ollama is not available. Install the `ollama` CLI in PATH, or start the \
-                     service and set OLLAMA_HOST to a reachable host:port."
-                        .to_string(),
-                )
-            } else {
-                None
+            ai: AiState {
+                config: ai_config,
+                status: ai_status,
+                checking: true,
+                status_slot: ai_status_slot,
+                query: String::new(),
+                answer: None,
+                error: if demo == "ai-error" {
+                    Some(
+                        "Ollama is not available. Install the `ollama` CLI in PATH, or start the \
+                         service and set OLLAMA_HOST to a reachable host:port."
+                            .to_string(),
+                    )
+                } else {
+                    None
+                },
+                busy: false,
+                started: None,
+                slot: Arc::new(Mutex::new(None)),
             },
-            ai_busy: false,
-            ai_started: None,
-            ai_slot: Arc::new(Mutex::new(None)),
             shortcuts_open: demo == "shortcuts",
             zoom: 1.0,
             zoom_dirty: false,

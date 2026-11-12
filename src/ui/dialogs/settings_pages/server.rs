@@ -30,7 +30,7 @@ pub(in crate::ui::dialogs) fn render_server_settings(
             .size(metrics::FONT_CAPTION)
             .color(palette.text),
     );
-    let mut url = view.server_url.clone();
+    let mut url = view.server.url.clone();
     if ui
         .add(
             egui::TextEdit::singleline(&mut url)
@@ -49,7 +49,7 @@ pub(in crate::ui::dialogs) fn render_server_settings(
             .size(metrics::FONT_CAPTION)
             .color(palette.text),
     );
-    let mut email = view.server_email.clone();
+    let mut email = view.server.email.clone();
     if ui
         .add(
             egui::TextEdit::singleline(&mut email)
@@ -68,7 +68,7 @@ pub(in crate::ui::dialogs) fn render_server_settings(
             .size(metrics::FONT_CAPTION)
             .color(palette.text),
     );
-    let mut password = view.server_password.clone();
+    let mut password = view.server.password.clone();
     if ui
         .add(
             egui::TextEdit::singleline(&mut password)
@@ -82,7 +82,7 @@ pub(in crate::ui::dialogs) fn render_server_settings(
     }
     ui.add_space(metrics::SPACE_16);
 
-    if view.server_connected {
+    if view.server.connected {
         ui.label(
             egui::RichText::new("Connected")
                 .size(metrics::FONT_CAPTION)
@@ -92,20 +92,20 @@ pub(in crate::ui::dialogs) fn render_server_settings(
             commands.push(Command::DisconnectServer);
         }
     } else {
-        let label = if view.server_busy {
+        let label = if view.server.busy {
             "Connecting..."
         } else {
             "Connect"
         };
         if ui
-            .add_enabled(!view.server_busy, egui::Button::new(label))
+            .add_enabled(!view.server.busy, egui::Button::new(label))
             .clicked()
         {
             commands.push(Command::ConnectServer);
         }
     }
 
-    if let Some(status) = &view.server_status {
+    if let Some(status) = &view.server.status {
         ui.add_space(metrics::SPACE_10);
         ui.label(
             egui::RichText::new(status)
