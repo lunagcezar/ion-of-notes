@@ -109,6 +109,7 @@ Status vocabulary:
 | [069](spec-069-dialog-sizing-scrolling-and-fixed-close.md) | Dialog sizing, scrolling and fixed close | implemented | Auto-shrink, rail/content scroll, border scrollbar, foreground close |
 | [070](spec-070-sidebar-tabs-drag-and-remove.md) | Sidebar tabs, drag and remove | implemented | Sidebar tabs, section/shortcut drag, remove actions |
 | [071](spec-071-popover-positioning-and-inbox.md) | Popover positioning and inbox | implemented | Anchored menus and full-height inbox panel |
+| [072](spec-072-centralized-ui-metrics.md) | Centralized UI metrics | implemented | Constants-only layout module, even spacing scale, shared sidebar tokens |
 
 ## 3. Work status
 

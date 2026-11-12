@@ -6,6 +6,21 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-072 centralized UI metrics
+
+- Added `src/ui/constants.rs`: a constants-only layout module with a base
+  even spacing scale, semantic shell/sidebar/settings/content/block/menu
+  tokens, radii, font sizes and hairline strokes.
+- The main sidebar and settings rail now share `SIDEBAR_CONTENT_PADDING`,
+  `ROW_HEIGHT`, `ROW_RADIUS`, `ICON_SIZE` and `SECTION_GAP`; the duplicate
+  settings spacing constants were removed.
+- Replaced structural literals in the shell, sidebar, settings, breadcrumb,
+  content page, blocks, menus, shared widgets, switcher and settings pages.
+- Layout values use even numbers; `FONT_SMALL = 13.0` and
+  `STROKE_HAIRLINE = 1.0` are the documented non-even tokens.
+- Added a policy test that keeps the constants module declaration-only and
+  even, plus a test proving both sidebars use the shared content padding.
+
 ### Changed - spec-068..071 bug-bashing III
 
 - Reverted the breadcrumb row to the content-pane padding and vertically

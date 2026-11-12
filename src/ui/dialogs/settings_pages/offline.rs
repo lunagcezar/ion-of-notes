@@ -2,6 +2,7 @@
 
 use crate::i18n;
 use crate::model::Workspace;
+use crate::ui::constants as metrics;
 
 use super::super::super::format::format_timestamp;
 use super::super::super::palette::Palette;
@@ -27,7 +28,7 @@ pub(in crate::ui::dialogs) fn render_offline_settings(
                 {
                     ws.settings.offline_auto_download = !ws.settings.offline_auto_download;
                 }
-                ui.add_space(14.0);
+                ui.add_space(metrics::SPACE_14);
             }
             "offline_pages" => {
                 let search_id = egui::Id::unique("offline_search");
@@ -58,7 +59,7 @@ pub(in crate::ui::dialogs) fn render_offline_settings(
                                     &page.updated_at,
                                     ws.settings.time_format,
                                 ))
-                                .size(11.0)
+                                .size(metrics::FONT_MICRO)
                                 .color(palette.muted),
                             );
                         });
@@ -67,7 +68,7 @@ pub(in crate::ui::dialogs) fn render_offline_settings(
                 if !found {
                     ui.label(
                         egui::RichText::new(i18n::t("no_offline"))
-                            .size(12.0)
+                            .size(metrics::FONT_CAPTION)
                             .color(palette.muted),
                     );
                 }

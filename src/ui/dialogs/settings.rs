@@ -18,10 +18,16 @@ use super::settings_pages::{
     render_server_settings, render_workspace_settings,
 };
 
-/// Dialog spacing constants shared by the rail, the content pane and the
-/// close control so they cannot drift (spec-061).
-const SETTINGS_PADDING: f32 = 20.0;
-const SETTINGS_RAIL_PADDING_Y: f32 = 18.0;
+use crate::ui::constants::{
+    CHIP_HEIGHT, CHIP_WIDTH, DIALOG_INSET, DIALOG_RADIUS, FONT_CAPTION, FONT_CLOSE, FONT_ROW,
+    FONT_TITLE, ICON_SIZE, RADIUS_PILL, ROW_HEIGHT, ROW_RADIUS, SETTINGS_CLOSE_INSET,
+    SETTINGS_CLOSE_SIZE, SETTINGS_CONTENT_MIN_WIDTH, SETTINGS_CONTENT_PADDING, SETTINGS_MAX_HEIGHT,
+    SETTINGS_MAX_WIDTH, SETTINGS_MIN_HEIGHT, SETTINGS_MIN_WIDTH, SETTINGS_NAV_GAP,
+    SETTINGS_NAV_ICON_INSET, SETTINGS_NAV_LABEL_INSET, SETTINGS_PADDING, SETTINGS_RAIL_PADDING_Y,
+    SETTINGS_RAIL_WIDTH, SETTINGS_SEARCH_HEIGHT, SETTINGS_SEARCH_ICON_INSET,
+    SETTINGS_SEARCH_TEXT_INSET, SETTINGS_SEARCH_WIDTH, SIDEBAR_CONTENT_PADDING, SPACE_4, SPACE_8,
+    SPACE_14, SPACE_26, SPACE_32, SPACE_46, SPACE_120, STROKE_HAIRLINE,
+};
 
 /// A settings navigation row with a leading glyph, as in the reference
 /// pictures (preferences window layout).
@@ -32,8 +38,8 @@ fn nav_item(
     palette: &Palette,
     draw: fn(&egui::Painter, Rect, Color32),
 ) -> egui::Response {
-    let width = ui.available_width().max(120.0);
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 30.0), Sense::click());
+    let width = ui.available_width().max(SPACE_120);
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click());
     let fill = if selected {
         palette.selected
     } else if response.hovered() {
@@ -42,15 +48,19 @@ fn nav_item(
         Color32::TRANSPARENT
     };
     if fill != Color32::TRANSPARENT {
-        ui.painter().rect_filled(rect, CornerRadius::same(6), fill);
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(ROW_RADIUS), fill);
     }
-    let icon_rect = Rect::from_min_size(rect.min + Vec2::new(12.0, 7.0), Vec2::splat(16.0));
+    let icon_rect = Rect::from_min_size(
+        rect.min + Vec2::new(SETTINGS_NAV_ICON_INSET, SPACE_8),
+        Vec2::splat(ICON_SIZE),
+    );
     draw(ui.painter(), icon_rect, palette.muted);
     ui.painter().text(
-        rect.min + Vec2::new(38.0, 15.0),
+        rect.min + Vec2::new(SETTINGS_NAV_LABEL_INSET, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
         label,
-        FontId::proportional(13.0),
+        FontId::proportional(FONT_ROW),
         if selected {
             palette.text
         } else {
@@ -189,8 +199,8 @@ pub(crate) fn render_settings(
 ) {
     let screen = ctx.viewport_rect();
     let size = Vec2::new(
-        (screen.width() - 80.0).clamp(720.0, 1200.0),
-        (screen.height() - 80.0).clamp(420.0, 720.0),
+        (screen.width() - 2.0 * DIALOG_INSET).clamp(SETTINGS_MIN_WIDTH, SETTINGS_MAX_WIDTH),
+        (screen.height() - 2.0 * DIALOG_INSET).clamp(SETTINGS_MIN_HEIGHT, SETTINGS_MAX_HEIGHT),
     );
     let resp = egui::Window::new("settings")
         .title_bar(false)
@@ -201,26 +211,26 @@ pub(crate) fn render_settings(
         .frame(
             egui::Frame::NONE
                 .fill(palette.content)
-                .corner_radius(CornerRadius::same(10))
-                .stroke(Stroke::new(1.0, palette.border)),
+                .corner_radius(CornerRadius::same(DIALOG_RADIUS))
+                .stroke(Stroke::new(STROKE_HAIRLINE, palette.border)),
         )
         .show(ctx, |ui| {
             let whole = ui.max_rect();
             // Two-column layout: a dimmed navigation rail and the content pane.
             ui.painter().rect_filled(
-                Rect::from_min_size(whole.min, Vec2::new(300.0, whole.height())),
+                Rect::from_min_size(whole.min, Vec2::new(SETTINGS_RAIL_WIDTH, whole.height())),
                 CornerRadius {
-                    nw: 10,
-                    sw: 10,
+                    nw: DIALOG_RADIUS,
+                    sw: DIALOG_RADIUS,
                     ne: 0,
                     se: 0,
                 },
                 palette.sidebar,
             );
             ui.painter().vline(
-                whole.min.x + 300.0,
+                whole.min.x + SETTINGS_RAIL_WIDTH,
                 whole.y_range(),
-                Stroke::new(1.0, palette.border),
+                Stroke::new(STROKE_HAIRLINE, palette.border),
             );
 
             ui.horizontal_top(|ui| {
@@ -228,51 +238,51 @@ pub(crate) fn render_settings(
                 // Left navigation column. Mail & Calendar is intentionally not
                 // implemented, so it is not offered in the rail.
                 ui.allocate_ui_with_layout(
-                    Vec2::new(300.0, whole.height()),
+                    Vec2::new(SETTINGS_RAIL_WIDTH, whole.height()),
                     egui::Layout::top_down(egui::Align::LEFT),
                     |ui| {
-                        ui.set_width(300.0);
+                        ui.set_width(SETTINGS_RAIL_WIDTH);
                         ui.set_min_height(whole.height());
                         ui.spacing_mut().scroll.fade.strength = 0.0;
                         ui.add_space(SETTINGS_RAIL_PADDING_Y);
                         // Search is fixed; only the navigation list scrolls.
                         ui.horizontal(|ui| {
-                            ui.add_space(16.0);
+                            ui.add_space(SIDEBAR_CONTENT_PADDING);
                             let (search, _) = ui.allocate_exact_size(
-                                Vec2::new(268.0, 30.0),
+                                Vec2::new(SETTINGS_SEARCH_WIDTH, SETTINGS_SEARCH_HEIGHT),
                                 Sense::hover(),
                             );
                             ui.painter().rect_filled(
                                 search,
-                                CornerRadius::same(6),
+                                CornerRadius::same(ROW_RADIUS),
                                 palette.hover,
                             );
                             draw_search(
                                 ui.painter(),
                                 Rect::from_min_size(
-                                    search.min + Vec2::new(8.0, 7.0),
-                                    Vec2::splat(16.0),
+                                    search.min + Vec2::new(SETTINGS_SEARCH_ICON_INSET, SPACE_8),
+                                    Vec2::splat(ICON_SIZE),
                                 ),
                                 palette.muted,
                             );
                             let mut query = view.settings_query.clone();
                             if query.is_empty() {
                                 ui.painter().text(
-                                    Pos2::new(search.min.x + 28.0, search.center().y),
+                                    Pos2::new(search.min.x + SETTINGS_SEARCH_TEXT_INSET, search.center().y),
                                     Align2::LEFT_CENTER,
                                     "Search settings",
-                                    FontId::proportional(13.0),
+                                    FontId::proportional(FONT_ROW),
                                     palette.muted,
                                 );
                             }
                             let edit = ui.put(
                                 Rect::from_min_size(
-                                    search.min + Vec2::new(28.0, 0.0),
-                                    Vec2::new(232.0, 30.0),
+                                    search.min + Vec2::new(SETTINGS_SEARCH_TEXT_INSET, 0.0),
+                                    Vec2::new(SETTINGS_SEARCH_WIDTH - SETTINGS_SEARCH_TEXT_INSET - SETTINGS_SEARCH_ICON_INSET, SETTINGS_SEARCH_HEIGHT),
                                 ),
                                 egui::TextEdit::singleline(&mut query)
                                     .frame(egui::Frame::NONE)
-                                    .margin(egui::Margin::symmetric(4, 4))
+                                    .margin(egui::Margin::symmetric(SPACE_4 as i8, SPACE_4 as i8))
                                     .align(egui::Align2::LEFT_CENTER)
                                     .text_color(palette.text),
                             );
@@ -285,8 +295,8 @@ pub(crate) fn render_settings(
                                 commands.push(Command::SetSettingsQuery(query));
                             }
                         });
-                        ui.add_space(14.0);
-                        let rail_height = ui.available_height().max(120.0);
+                        ui.add_space(SETTINGS_NAV_GAP);
+                        let rail_height = ui.available_height().max(SPACE_120);
                         egui::ScrollArea::vertical()
                             .id_salt("settings_rail_scroll")
                             .max_height(rail_height)
@@ -294,9 +304,9 @@ pub(crate) fn render_settings(
                             .show(ui, |ui| {
                                 ui.set_min_height(rail_height);
                                 egui::Frame::NONE
-                                    .inner_margin(egui::Margin::symmetric(16, 0))
+                                    .inner_margin(egui::Margin::symmetric(SIDEBAR_CONTENT_PADDING as i8, 0))
                                     .show(ui, |ui| {
-                                        ui.set_width(268.0);
+                                        ui.set_width(SETTINGS_SEARCH_WIDTH);
                                         for (section, items) in SETTINGS_NAV {
                                             let visible: Vec<_> = items
                                                 .iter()
@@ -317,7 +327,7 @@ pub(crate) fn render_settings(
                                                     ui, view, label, palette, commands,
                                                 );
                                             }
-                                            ui.add_space(14.0);
+                                            ui.add_space(SETTINGS_NAV_GAP);
                                         }
                                         ui.add_space(SETTINGS_RAIL_PADDING_Y);
                                     });
@@ -329,15 +339,15 @@ pub(crate) fn render_settings(
                 // right border; the scrollbar sits on that border and the
                 // frame supplies the internal content padding (spec-069).
                 ui.vertical(|ui| {
-                    ui.set_width(ui.available_width().max(320.0));
-                    let content_height = ui.available_height().max(120.0);
+                    ui.set_width(ui.available_width().max(SETTINGS_CONTENT_MIN_WIDTH));
+                    let content_height = ui.available_height().max(SPACE_120);
                     egui::ScrollArea::vertical()
                         .max_height(content_height)
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
-                            ui.add_space(24.0);
+                            ui.add_space(SETTINGS_CONTENT_PADDING);
                             egui::Frame::NONE
-                                .inner_margin(egui::Margin::symmetric(24, 0))
+                                .inner_margin(egui::Margin::symmetric(SETTINGS_CONTENT_PADDING as i8, 0))
                                 .show(ui, |ui| {
                             let page = view.settings_page.as_str();
                             let subtitle = if page == "Preferences" {
@@ -349,16 +359,16 @@ pub(crate) fn render_settings(
                             };
                             ui.label(
                                 egui::RichText::new(page_label(page))
-                                    .font(strong_font(28.0))
+                                    .font(strong_font(FONT_TITLE))
                                     .color(palette.text),
                             );
-                            ui.add_space(4.0);
+                            ui.add_space(SPACE_4);
                             ui.label(
                                 egui::RichText::new(subtitle)
-                                    .size(13.0)
+                                    .size(FONT_ROW)
                                     .color(palette.muted),
                             );
-                            ui.add_space(26.0);
+                            ui.add_space(SPACE_26);
                             let query = view.settings_query.trim();
                             let catalog = rows_for(page);
                             let rows = visible_rows(page, query);
@@ -372,7 +382,7 @@ pub(crate) fn render_settings(
                                     egui::RichText::new(format!(
                                         "No settings match “{query}”. Try a different word."
                                     ))
-                                    .size(13.0)
+                                    .size(FONT_ROW)
                                     .color(palette.muted),
                                 );
                             } else {
@@ -400,13 +410,13 @@ pub(crate) fn render_settings(
                                             egui::RichText::new(
                                                 "Not available in this version. This section is reserved for a future update.",
                                             )
-                                            .size(13.0)
+                                            .size(FONT_ROW)
                                             .color(palette.muted),
                                         );
                                     }
                                 }
                             }
-                            ui.add_space(24.0);
+                            ui.add_space(SETTINGS_CONTENT_PADDING);
                                 });
                         });
                 });
@@ -419,7 +429,7 @@ pub(crate) fn render_settings(
             // The close "x" lives in a foreground layer so scrolling content
             // can never paint over it (spec-069).
             let close_pos = Pos2::new(
-                whole.right() - SETTINGS_PADDING - 42.0,
+                whole.right() - SETTINGS_PADDING - SETTINGS_CLOSE_INSET,
                 whole.top() + SETTINGS_PADDING,
             );
             egui::Area::new(egui::Id::unique("settings_close"))
@@ -427,11 +437,11 @@ pub(crate) fn render_settings(
                 .fixed_pos(close_pos)
                 .show(ctx, |ui| {
                     let (rect, response) =
-                        ui.allocate_exact_size(Vec2::splat(28.0), Sense::click());
+                        ui.allocate_exact_size(Vec2::splat(SETTINGS_CLOSE_SIZE), Sense::click());
                     if response.hovered() {
                         ui.painter().rect_filled(
                             rect,
-                            CornerRadius::same(14),
+                            CornerRadius::same(RADIUS_PILL),
                             palette.hover,
                         );
                     }
@@ -439,7 +449,7 @@ pub(crate) fn render_settings(
                         rect.center(),
                         egui::Align2::CENTER_CENTER,
                         "×",
-                        egui::FontId::proportional(18.0),
+                        egui::FontId::proportional(FONT_CLOSE),
                         palette.muted,
                     );
                     if response.clicked() {
@@ -468,36 +478,37 @@ pub(super) fn display_row(
     value: &str,
     palette: &Palette,
 ) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 46.0), Sense::hover());
+    let (rect, _) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), SPACE_46), Sense::hover());
     ui.painter().text(
-        rect.min + Vec2::new(0.0, 14.0),
+        rect.min + Vec2::new(0.0, SPACE_14),
         Align2::LEFT_CENTER,
         title,
-        FontId::proportional(12.5),
+        FontId::proportional(FONT_CAPTION),
         palette.text,
     );
     ui.painter().text(
-        rect.min + Vec2::new(0.0, 32.0),
+        rect.min + Vec2::new(0.0, SPACE_32),
         Align2::LEFT_CENTER,
         description,
-        FontId::proportional(11.0),
+        FontId::proportional(FONT_CAPTION),
         palette.muted,
     );
     let chip = Rect::from_min_size(
-        Pos2::new(rect.max.x - 150.0, rect.min.y + 9.0),
-        Vec2::new(150.0, 26.0),
+        Pos2::new(rect.max.x - CHIP_WIDTH, rect.min.y + SPACE_8),
+        Vec2::new(CHIP_WIDTH, CHIP_HEIGHT),
     );
     ui.painter().rect_stroke(
         chip,
-        CornerRadius::same(6),
-        Stroke::new(1.0, palette.border),
+        CornerRadius::same(ROW_RADIUS),
+        Stroke::new(STROKE_HAIRLINE, palette.border),
         egui::StrokeKind::Inside,
     );
     ui.painter().text(
         chip.center(),
         Align2::CENTER_CENTER,
         value,
-        FontId::proportional(12.0),
+        FontId::proportional(FONT_CAPTION),
         palette.text,
     );
 }

@@ -2,6 +2,7 @@
 
 use crate::i18n;
 use crate::model::Workspace;
+use crate::ui::constants as metrics;
 use egui::Color32;
 
 use super::super::super::commands::Command;
@@ -51,28 +52,28 @@ pub(in crate::ui::dialogs) fn render_people_settings(
                 if view.share_members.is_empty() {
                     ui.label(
                         egui::RichText::new(i18n::t("no_members"))
-                            .size(12.0)
+                            .size(metrics::FONT_CAPTION)
                             .color(palette.muted),
                     );
                 }
                 for member in view.share_members.iter() {
                     ui.horizontal(|ui| {
                         ui.label(egui::RichText::new(&member.name).color(palette.text));
-                        ui.add_space(8.0);
+                        ui.add_space(metrics::SPACE_8);
                         ui.label(
                             egui::RichText::new(&member.email)
-                                .size(11.0)
+                                .size(metrics::FONT_MICRO)
                                 .color(palette.muted),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             ui.label(
                                 egui::RichText::new(member.role.label())
-                                    .size(11.0)
+                                    .size(metrics::FONT_MICRO)
                                     .color(palette.muted),
                             );
                         });
                     });
-                    ui.add_space(4.0);
+                    ui.add_space(metrics::SPACE_4);
                 }
                 if ui
                     .add(egui::Button::new(i18n::t("invite_members")))
@@ -80,7 +81,7 @@ pub(in crate::ui::dialogs) fn render_people_settings(
                 {
                     commands.push(Command::OpenShare);
                 }
-                ui.add_space(10.0);
+                ui.add_space(metrics::SPACE_10);
             }
             "danger_zone" => {
                 ui.horizontal(|ui| {
@@ -88,7 +89,7 @@ pub(in crate::ui::dialogs) fn render_people_settings(
                         egui::RichText::new(
                             "Permanently delete this workspace, including all pages and files.",
                         )
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .color(palette.muted),
                     );
                     if ui
@@ -102,22 +103,26 @@ pub(in crate::ui::dialogs) fn render_people_settings(
                     }
                 });
                 if let Some(status) = &view.settings_status {
-                    ui.label(egui::RichText::new(status).size(11.0).color(palette.accent));
+                    ui.label(
+                        egui::RichText::new(status)
+                            .size(metrics::FONT_MICRO)
+                            .color(palette.accent),
+                    );
                 }
-                ui.add_space(12.0);
+                ui.add_space(metrics::SPACE_12);
             }
             "workspace_id" => {
                 ui.label(
                     egui::RichText::new(i18n::t("workspace_id"))
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .color(palette.text),
                 );
                 ui.label(
                     egui::RichText::new(&ws.settings.id)
-                        .size(11.0)
+                        .size(metrics::FONT_MICRO)
                         .color(palette.muted),
                 );
-                ui.add_space(10.0);
+                ui.add_space(metrics::SPACE_10);
             }
             _ => {}
         }

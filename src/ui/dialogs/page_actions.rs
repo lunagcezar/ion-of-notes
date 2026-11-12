@@ -5,6 +5,7 @@
 
 use crate::i18n;
 use crate::model::{Page, Workspace};
+use crate::ui::constants as metrics;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
 use super::super::commands::{Command, FontStyle};
@@ -76,9 +77,9 @@ pub(crate) fn render_page_actions(
         .frame(
             egui::Frame::NONE
                 .fill(palette.content)
-                .corner_radius(CornerRadius::same(10))
+                .corner_radius(CornerRadius::same(metrics::DIALOG_RADIUS))
                 .inner_margin(Margin::same(12))
-                .stroke(Stroke::new(1.0, palette.border)),
+                .stroke(Stroke::new(metrics::STROKE_HAIRLINE, palette.border)),
         )
         .show(ctx, |ui| {
             // Search actions field (filters the list below).
@@ -93,7 +94,7 @@ pub(crate) fn render_page_actions(
             if field.changed() {
                 ctx.data_mut(|d| d.insert_temp(id, query.clone()));
             }
-            ui.add_space(8.0);
+            ui.add_space(metrics::SPACE_8);
 
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
@@ -116,18 +117,18 @@ pub(crate) fn render_page_actions(
                             }
                         }
                     }
-                    ui.add_space(8.0);
+                    ui.add_space(metrics::SPACE_8);
                     ui.separator();
-                    ui.add_space(6.0);
+                    ui.add_space(metrics::SPACE_6);
 
                     if q.is_empty() {
                         // Appearance & layout.
                         ui.label(
                             egui::RichText::new(i18n::t("appearance_layout"))
-                                .size(11.0)
+                                .size(metrics::FONT_MICRO)
                                 .color(palette.muted),
                         );
-                        ui.add_space(4.0);
+                        ui.add_space(metrics::SPACE_4);
                         ui.horizontal(|ui| {
                             for (label, style) in [
                                 ("Default", FontStyle::Default),
@@ -138,9 +139,13 @@ pub(crate) fn render_page_actions(
                                 if ui
                                     .add(
                                         egui::Button::new(
-                                            egui::RichText::new(label).size(12.0).color(
-                                                if active { palette.text } else { palette.muted },
-                                            ),
+                                            egui::RichText::new(label)
+                                                .size(metrics::FONT_CAPTION)
+                                                .color(if active {
+                                                    palette.text
+                                                } else {
+                                                    palette.muted
+                                                }),
                                         )
                                         .fill(if active {
                                             palette.selected
@@ -155,7 +160,7 @@ pub(crate) fn render_page_actions(
                                 }
                             }
                         });
-                        ui.add_space(4.0);
+                        ui.add_space(metrics::SPACE_4);
                         if toggle_button(ui, "Small text", view.small_text, palette).clicked() {
                             commands.push(Command::ToggleSmallText);
                         }
@@ -200,9 +205,9 @@ pub(crate) fn render_page_actions(
                         {
                             commands.push(Command::ToggleLockPage);
                         }
-                        ui.add_space(8.0);
+                        ui.add_space(metrics::SPACE_8);
                         ui.separator();
-                        ui.add_space(6.0);
+                        ui.add_space(metrics::SPACE_6);
 
                         // Last edited footer.
                         let words = ws
@@ -211,7 +216,7 @@ pub(crate) fn render_page_actions(
                             .unwrap_or(0);
                         ui.label(
                             egui::RichText::new(i18n::t("last_edited"))
-                                .size(11.0)
+                                .size(metrics::FONT_MICRO)
                                 .color(palette.muted),
                         );
                         ui.add_space(2.0);
@@ -219,15 +224,23 @@ pub(crate) fn render_page_actions(
                             .page(&view.current_page)
                             .map(|page| page.updated_at.clone())
                             .unwrap_or_else(|| "just now".to_string());
-                        ui.label(egui::RichText::new(updated).size(11.0).color(palette.text));
+                        ui.label(
+                            egui::RichText::new(updated)
+                                .size(metrics::FONT_MICRO)
+                                .color(palette.text),
+                        );
                         ui.label(
                             egui::RichText::new(format!("{words} {}", i18n::t("words")))
-                                .size(10.5)
+                                .size(metrics::FONT_MICRO)
                                 .color(palette.muted),
                         );
                         if let Some(status) = &view.page_status {
-                            ui.add_space(4.0);
-                            ui.label(egui::RichText::new(status).size(10.5).color(palette.accent));
+                            ui.add_space(metrics::SPACE_4);
+                            ui.label(
+                                egui::RichText::new(status)
+                                    .size(metrics::FONT_MICRO)
+                                    .color(palette.accent),
+                            );
                         }
                     }
                 });
@@ -281,9 +294,9 @@ pub(crate) fn render_version_history(
         .frame(
             egui::Frame::NONE
                 .fill(palette.content)
-                .corner_radius(CornerRadius::same(10))
+                .corner_radius(CornerRadius::same(metrics::DIALOG_RADIUS))
                 .inner_margin(Margin::same(16))
-                .stroke(Stroke::new(1.0, palette.border)),
+                .stroke(Stroke::new(metrics::STROKE_HAIRLINE, palette.border)),
         )
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -306,14 +319,14 @@ pub(crate) fn render_version_history(
                     }
                 });
             });
-            ui.add_space(8.0);
+            ui.add_space(metrics::SPACE_8);
             ui.separator();
-            ui.add_space(8.0);
+            ui.add_space(metrics::SPACE_8);
 
             if view.versions.is_empty() {
                 ui.label(
                     egui::RichText::new("No versions have been recorded for this page yet.")
-                        .size(13.0)
+                        .size(metrics::FONT_ROW)
                         .color(palette.muted),
                 );
                 return;
@@ -332,7 +345,7 @@ pub(crate) fn render_version_history(
                         if selected || response.hovered() {
                             ui.painter().rect_filled(
                                 rect,
-                                CornerRadius::same(6),
+                                CornerRadius::same(metrics::ROW_RADIUS),
                                 if selected {
                                     palette.selected
                                 } else {
@@ -344,7 +357,7 @@ pub(crate) fn render_version_history(
                             rect.min + Vec2::new(10.0, 14.0),
                             Align2::LEFT_CENTER,
                             format!("Version {} · {}", version.version, version.title),
-                            FontId::proportional(13.0),
+                            FontId::proportional(metrics::FONT_ROW),
                             palette.text,
                         );
                         ui.painter().text(
@@ -355,7 +368,7 @@ pub(crate) fn render_version_history(
                                 version.actor,
                                 format_timestamp(&version.updated_at, view.time_format)
                             ),
-                            FontId::proportional(11.0),
+                            FontId::proportional(metrics::FONT_MICRO),
                             palette.muted,
                         );
                         if response.clicked() {
@@ -364,28 +377,28 @@ pub(crate) fn render_version_history(
                     }
                 });
 
-            ui.add_space(10.0);
+            ui.add_space(metrics::SPACE_10);
             ui.separator();
-            ui.add_space(8.0);
+            ui.add_space(metrics::SPACE_8);
             if let Some(version) = view.versions.get(view.version_selected) {
                 ui.label(
                     egui::RichText::new("Snapshot preview")
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .strong()
                         .color(palette.text),
                 );
-                ui.add_space(4.0);
+                ui.add_space(metrics::SPACE_4);
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
                     .max_height(120.0)
                     .show(ui, |ui| {
                         ui.label(
                             egui::RichText::new(snapshot_preview(&version.snapshot))
-                                .size(12.0)
+                                .size(metrics::FONT_CAPTION)
                                 .color(palette.muted),
                         );
                     });
-                ui.add_space(8.0);
+                ui.add_space(metrics::SPACE_8);
                 if ui.add(egui::Button::new("Restore this version")).clicked() {
                     commands.push(Command::RestoreVersion(view.version_selected));
                 }

@@ -9,6 +9,8 @@
 use crate::model::Workspace;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
 
+use crate::ui::constants as metrics;
+
 use super::app::{Command, NewTabChoice};
 use super::icons::{draw_help, draw_page_icon, draw_search, draw_sliders, page_icon_letter};
 use super::palette::{Palette, strong_font};
@@ -70,12 +72,15 @@ fn draw_chat(painter: &egui::Painter, rect: Rect, color: Color32) {
 
 /// A group caption above a run of rows.
 fn group_label(ui: &mut egui::Ui, text: &str, palette: &Palette) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 24.0), Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(
+        Vec2::new(ui.available_width(), metrics::SPACE_24),
+        Sense::hover(),
+    );
     ui.painter().text(
-        rect.min + Vec2::new(0.0, 14.0),
+        rect.min + Vec2::new(0.0, metrics::SPACE_14),
         Align2::LEFT_CENTER,
         text,
-        FontId::proportional(11.0),
+        FontId::proportional(metrics::FONT_MICRO),
         palette.muted,
     );
 }
@@ -83,17 +88,25 @@ fn group_label(ui: &mut egui::Ui, text: &str, palette: &Palette) {
 /// The footer hint strip shared by both windows.
 fn switcher_footer(ui: &mut egui::Ui, palette: &Palette) {
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 18.0;
+        ui.spacing_mut().item_spacing.x = metrics::SECTION_GAP;
         for (keys, label) in [
             ("Ctrl+↵", "Open in new tab"),
             ("Ctrl+L", "Copy link"),
             ("Shift+Ctrl+K", "Command Search"),
         ] {
-            ui.label(egui::RichText::new(keys).size(11.0).color(palette.muted));
-            ui.label(egui::RichText::new(label).size(11.0).color(palette.muted));
+            ui.label(
+                egui::RichText::new(keys)
+                    .size(metrics::FONT_MICRO)
+                    .color(palette.muted),
+            );
+            ui.label(
+                egui::RichText::new(label)
+                    .size(metrics::FONT_MICRO)
+                    .color(palette.muted),
+            );
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let (rect, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
+            let (rect, _) = ui.allocate_exact_size(Vec2::splat(metrics::ICON_SIZE), Sense::hover());
             draw_sliders(ui.painter(), rect, palette.muted);
         });
     });
@@ -142,12 +155,19 @@ pub(super) fn render_switcher(
     commands: &mut Vec<Command>,
 ) {
     let screen = ctx.viewport_rect();
-    let width = (if spec.highlight { 1000.0_f32 } else { 600.0 }).min(screen.width() - 40.0);
-    let height = 690.0_f32.min(screen.height() - 120.0).max(360.0);
+    let width = (if spec.highlight {
+        metrics::SWITCHER_WIDTH_WIDE
+    } else {
+        metrics::SWITCHER_WIDTH
+    })
+    .min(screen.width() - metrics::SWITCHER_MARGIN);
+    let height = metrics::SWITCHER_MAX_HEIGHT
+        .min(screen.height() - metrics::SPACE_120)
+        .max(metrics::SWITCHER_MIN_HEIGHT);
     let size = Vec2::new(width, height);
     let pos = Pos2::new(
         screen.left() + ((screen.width() - size.x) / 2.0).max(0.0),
-        screen.top() + 110.0,
+        screen.top() + metrics::SWITCHER_TOP,
     );
     let resp = egui::Window::new(spec.id)
         .title_bar(false)
@@ -160,22 +180,23 @@ pub(super) fn render_switcher(
                 .fill(palette.content)
                 .corner_radius(CornerRadius::same(10))
                 .inner_margin(Margin::same(16))
-                .stroke(Stroke::new(1.0, palette.border)),
+                .stroke(Stroke::new(metrics::STROKE_HAIRLINE, palette.border)),
         )
         .show(ctx, |ui| {
             // Search header + the two pane toggles.
             ui.horizontal(|ui| {
-                ui.add_space(4.0);
-                let (icon, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
+                ui.add_space(metrics::SPACE_4);
+                let (icon, _) =
+                    ui.allocate_exact_size(Vec2::splat(metrics::SPACE_18), Sense::hover());
                 draw_search(ui.painter(), icon, palette.muted);
-                ui.add_space(6.0);
+                ui.add_space(metrics::SPACE_6);
                 let mut query = spec.query.to_string();
                 let field = ui.add(
                     egui::TextEdit::singleline(&mut query)
                         .id(egui::Id::unique(spec.id).with("query"))
                         .frame(egui::Frame::NONE)
-                        .font(FontId::proportional(16.0))
-                        .desired_width(width - 150.0)
+                        .font(FontId::proportional(metrics::FONT_BODY))
+                        .desired_width(width - metrics::SWITCHER_HINT_WIDTH)
                         .hint_text(spec.hint)
                         .text_color(palette.text),
                 );
@@ -188,7 +209,7 @@ pub(super) fn render_switcher(
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let (filter_rect, filter) =
-                        ui.allocate_exact_size(Vec2::splat(24.0), Sense::click());
+                        ui.allocate_exact_size(Vec2::splat(metrics::SPACE_24), Sense::click());
                     if filter.hovered() {
                         ui.painter()
                             .rect_filled(filter_rect, CornerRadius::same(4), palette.hover);
@@ -204,9 +225,11 @@ pub(super) fn render_switcher(
                     });
                     let highlight = ui
                         .add_sized(
-                            Vec2::new(24.0, 24.0),
+                            Vec2::splat(metrics::SPACE_24),
                             egui::Button::new(
-                                egui::RichText::new("▥").size(14.0).color(palette.muted),
+                                egui::RichText::new("▥")
+                                    .size(metrics::FONT_ROW)
+                                    .color(palette.muted),
                             )
                             .frame(false),
                         )
@@ -218,20 +241,21 @@ pub(super) fn render_switcher(
                     if highlight.clicked() {
                         commands.push(Command::ToggleHighlightPane);
                     }
-                    let (help, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
+                    let (help, _) =
+                        ui.allocate_exact_size(Vec2::splat(metrics::SPACE_18), Sense::hover());
                     draw_help(ui.painter(), help, palette.accent);
                 });
             });
-            ui.add_space(12.0);
+            ui.add_space(metrics::SPACE_12);
 
             if spec.filters {
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 12.0;
-                    ui.add_space(24.0);
+                    ui.spacing_mut().item_spacing.x = metrics::SPACE_12;
+                    ui.add_space(metrics::SPACE_24);
                     if ui
                         .selectable_label(
                             spec.title_only,
-                            egui::RichText::new("Aa  Title only").size(12.0),
+                            egui::RichText::new("Aa  Title only").size(metrics::FONT_CAPTION),
                         )
                         .clicked()
                     {
@@ -239,7 +263,7 @@ pub(super) fn render_switcher(
                     }
                     let created = spec.created_by.unwrap_or("Created by");
                     egui::ComboBox::from_id_salt((spec.id, "created_by"))
-                        .selected_text(egui::RichText::new(created).size(12.0))
+                        .selected_text(egui::RichText::new(created).size(metrics::FONT_CAPTION))
                         .show_ui(ui, |ui| {
                             if ui
                                 .selectable_label(spec.created_by.is_none(), "Anyone")
@@ -267,7 +291,7 @@ pub(super) fn render_switcher(
                         .map(|page| page.title.as_str())
                         .unwrap_or("In");
                     egui::ComboBox::from_id_salt((spec.id, "in_page"))
-                        .selected_text(egui::RichText::new(in_label).size(12.0))
+                        .selected_text(egui::RichText::new(in_label).size(metrics::FONT_CAPTION))
                         .show_ui(ui, |ui| {
                             if ui
                                 .selectable_label(spec.in_page.is_none(), "Anywhere")
@@ -291,27 +315,28 @@ pub(super) fn render_switcher(
                         if ui
                             .selectable_label(
                                 true,
-                                egui::RichText::new("Has comments  ×").size(12.0),
+                                egui::RichText::new("Has comments  ×").size(metrics::FONT_CAPTION),
                             )
                             .clicked()
                         {
                             commands.push(Command::ToggleSearchHasComments);
                         }
                     } else if ui
-                        .button(egui::RichText::new("+ Filter").size(12.0))
+                        .button(egui::RichText::new("+ Filter").size(metrics::FONT_CAPTION))
                         .clicked()
                     {
                         commands.push(Command::ToggleSearchHasComments);
                     }
                 });
-                ui.add_space(8.0);
+                ui.add_space(metrics::SPACE_8);
             }
             ui.separator();
-            ui.add_space(8.0);
+            ui.add_space(metrics::SPACE_8);
 
-            let body_height = (ui.available_height() - 92.0).max(200.0);
+            let body_height = (ui.available_height() - metrics::SWITCHER_BODY_OFFSET)
+                .max(metrics::SWITCHER_BODY_MIN);
             let list_width = if spec.highlight {
-                (width - 32.0) * 0.55
+                (width - metrics::SPACE_32) * (metrics::SWITCHER_LIST_PERCENT / 100.0)
             } else {
                 ui.available_width()
             };
@@ -331,7 +356,7 @@ pub(super) fn render_switcher(
                                     last_group = row.group;
                                 }
                                 let (rect, response) = ui.allocate_exact_size(
-                                    Vec2::new(ui.available_width(), 34.0),
+                                    Vec2::new(ui.available_width(), metrics::SWITCHER_ROW_HEIGHT),
                                     Sense::click(),
                                 );
                                 let selected = spec.selected == index;
@@ -349,8 +374,9 @@ pub(super) fn render_switcher(
                                     );
                                 }
                                 let icon_rect = Rect::from_min_size(
-                                    rect.min + Vec2::new(10.0, 9.0),
-                                    Vec2::splat(16.0),
+                                    rect.min
+                                        + Vec2::new(metrics::ROW_ICON_INSET, metrics::SPACE_10),
+                                    Vec2::splat(metrics::ICON_SIZE),
                                 );
                                 if row.special && row.id == "new-chat" {
                                     draw_chat(ui.painter(), icon_rect, palette.muted);
@@ -364,29 +390,31 @@ pub(super) fn render_switcher(
                                     );
                                 }
                                 ui.painter().text(
-                                    rect.min + Vec2::new(36.0, 17.0),
+                                    rect.min
+                                        + Vec2::new(metrics::ROW_LABEL_INSET, metrics::SPACE_18),
                                     Align2::LEFT_CENTER,
                                     &row.label,
-                                    FontId::proportional(13.5),
+                                    FontId::proportional(metrics::FONT_ROW),
                                     palette.text,
                                 );
                                 if !row.detail.is_empty() {
                                     let x =
                                         rect.min.x + 40.0 + row.label.chars().count() as f32 * 7.2;
                                     ui.painter().text(
-                                        Pos2::new(x, rect.min.y + 17.0),
+                                        Pos2::new(x, rect.min.y + metrics::SPACE_18),
                                         Align2::LEFT_CENTER,
                                         &row.detail,
-                                        FontId::proportional(12.0),
+                                        FontId::proportional(metrics::FONT_CAPTION),
                                         palette.muted,
                                     );
                                 }
                                 if selected {
                                     ui.painter().text(
-                                        rect.max + Vec2::new(-12.0, -17.0),
+                                        rect.max
+                                            + Vec2::new(-metrics::SPACE_12, -metrics::SPACE_18),
                                         Align2::RIGHT_CENTER,
                                         "↵",
-                                        FontId::proportional(13.0),
+                                        FontId::proportional(metrics::FONT_ROW),
                                         palette.muted,
                                     );
                                 }
@@ -409,8 +437,8 @@ pub(super) fn render_switcher(
 
                 // Preview ("highlight") pane.
                 if spec.highlight {
-                    ui.add_space(18.0);
-                    let preview_width = width - 32.0 - list_width - 18.0;
+                    ui.add_space(metrics::SECTION_GAP);
+                    let preview_width = width - metrics::SPACE_32 - list_width - metrics::SPACE_18;
                     ui.vertical(|ui| {
                         ui.set_width(preview_width);
                         let (card, _) = ui.allocate_exact_size(
@@ -422,7 +450,7 @@ pub(super) fn render_switcher(
                         ui.painter().rect_stroke(
                             card,
                             CornerRadius::same(8),
-                            Stroke::new(1.0, palette.border),
+                            Stroke::new(metrics::STROKE_HAIRLINE, palette.border),
                             egui::StrokeKind::Inside,
                         );
                         let selected = spec.rows.get(spec.selected);
@@ -444,14 +472,14 @@ pub(super) fn render_switcher(
                                         card.min + Vec2::new(24.0, 100.0),
                                         Align2::LEFT_CENTER,
                                         &spec.ws.name,
-                                        FontId::proportional(11.0),
+                                        FontId::proportional(metrics::FONT_MICRO),
                                         palette.muted,
                                     );
                                     ui.painter().text(
                                         card.min + Vec2::new(24.0, 126.0),
                                         Align2::LEFT_CENTER,
                                         &page.title,
-                                        strong_font(22.0),
+                                        strong_font(metrics::SPACE_22),
                                         palette.text,
                                     );
                                     let snippet: String =
@@ -462,11 +490,11 @@ pub(super) fn render_switcher(
                                             Pos2::new(card.min.x + 24.0, y),
                                             Align2::LEFT_CENTER,
                                             line,
-                                            FontId::proportional(12.5),
+                                            FontId::proportional(metrics::FONT_CAPTION),
                                             palette.muted,
                                         );
-                                        y += 20.0;
-                                        if y > card.max.y - 20.0 {
+                                        y += metrics::SPACE_20;
+                                        if y > card.max.y - metrics::SPACE_20 {
                                             break;
                                         }
                                     }
@@ -479,9 +507,9 @@ pub(super) fn render_switcher(
                     });
                 }
             });
-            ui.add_space(8.0);
+            ui.add_space(metrics::SPACE_8);
             ui.separator();
-            ui.add_space(6.0);
+            ui.add_space(metrics::SPACE_6);
             switcher_footer(ui, palette);
         });
     if let Some(inner) = resp {

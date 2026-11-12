@@ -9,6 +9,7 @@
 //! The Emoji tab searches a named emoji catalog and the Icons tab only shows
 //! the monochrome shapes bundled in `ui::icons` (spec-057).
 
+use crate::ui::constants as metrics;
 use egui::{Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
 use super::app::{Command, IconTab, ViewState};
@@ -16,9 +17,6 @@ use super::icon_catalog::{EMOJI, Emoji, ICONS, IconGlyph, catalog_matches};
 use super::icons::draw_glyph_centered;
 use super::palette::Palette;
 use std::sync::Arc;
-
-const ICON_COLUMNS: usize = 9;
-const ICON_ROW_HEIGHT: f32 = 32.0;
 
 fn filtered_emoji(query: &str) -> Vec<&'static Emoji> {
     EMOJI
@@ -131,9 +129,9 @@ pub(super) fn render_icon_picker(
         .frame(
             egui::Frame::NONE
                 .fill(palette.content)
-                .corner_radius(CornerRadius::same(10))
+                .corner_radius(CornerRadius::same(metrics::DIALOG_RADIUS))
                 .inner_margin(Margin::same(12))
-                .stroke(Stroke::new(1.0, palette.border)),
+                .stroke(Stroke::new(metrics::STROKE_HAIRLINE, palette.border)),
         )
         .show(ctx, |ui| {
             // Tabs + Remove. The active tab uses the normal selected
@@ -146,11 +144,9 @@ pub(super) fn render_icon_picker(
                     (IconTab::Upload, "Upload"),
                 ] {
                     let active = view.icon_picker_tab == tab;
-                    let text = egui::RichText::new(label).size(13.0).color(if active {
-                        palette.text
-                    } else {
-                        palette.muted
-                    });
+                    let text = egui::RichText::new(label)
+                        .size(metrics::FONT_ROW)
+                        .color(if active { palette.text } else { palette.muted });
                     if ui
                         .add(
                             egui::Button::new(text)
@@ -173,7 +169,7 @@ pub(super) fn render_icon_picker(
                         .add(
                             egui::Button::new(
                                 egui::RichText::new("Remove")
-                                    .size(12.0)
+                                    .size(metrics::FONT_CAPTION)
                                     .color(palette.muted),
                             )
                             .frame(false),
@@ -184,7 +180,7 @@ pub(super) fn render_icon_picker(
                     }
                 });
             });
-            ui.add_space(12.0);
+            ui.add_space(metrics::SPACE_12);
 
             // Filter field + shuffle.
             ui.horizontal(|ui| {
@@ -192,8 +188,11 @@ pub(super) fn render_icon_picker(
                     Vec2::new(ui.available_width() - 34.0, 30.0),
                     Sense::hover(),
                 );
-                ui.painter()
-                    .rect_filled(rect, CornerRadius::same(6), palette.hover);
+                ui.painter().rect_filled(
+                    rect,
+                    CornerRadius::same(metrics::ROW_RADIUS),
+                    palette.hover,
+                );
                 let mut query = view.icon_picker_query.clone();
                 let hint = if view.icon_picker_tab == IconTab::Emoji {
                     "Filter emoji…"
@@ -204,7 +203,7 @@ pub(super) fn render_icon_picker(
                     rect,
                     egui::TextEdit::singleline(&mut query)
                         .frame(egui::Frame::NONE)
-                        .font(FontId::proportional(13.0))
+                        .font(FontId::proportional(metrics::FONT_ROW))
                         .hint_text(hint)
                         .text_color(palette.text),
                 );
@@ -237,17 +236,17 @@ pub(super) fn render_icon_picker(
                     }
                 }
             });
-            ui.add_space(10.0);
+            ui.add_space(metrics::SPACE_10);
 
             match view.icon_picker_tab {
                 IconTab::Upload => {
                     ui.label(
                         egui::RichText::new("Upload an image")
-                            .size(12.0)
+                            .size(metrics::FONT_CAPTION)
                             .strong()
                             .color(palette.muted),
                     );
-                    ui.add_space(6.0);
+                    ui.add_space(metrics::SPACE_6);
                     let id = egui::Id::unique("icon_upload_reference");
                     let mut reference: String = ctx.data(|d| d.get_temp(id).unwrap_or_default());
                     let field = ui.add(
@@ -259,24 +258,24 @@ pub(super) fn render_icon_picker(
                     if field.changed() {
                         ctx.data_mut(|d| d.insert_temp(id, reference.clone()));
                     }
-                    ui.add_space(8.0);
+                    ui.add_space(metrics::SPACE_8);
                     ui.label(
                         egui::RichText::new(
                             "The image becomes the page icon and appears in the sidebar too.",
                         )
-                        .size(11.0)
+                        .size(metrics::FONT_MICRO)
                         .color(palette.muted),
                     );
-                    ui.add_space(10.0);
+                    ui.add_space(metrics::SPACE_10);
                     if ui
                         .add(
                             egui::Button::new(
                                 egui::RichText::new("Use image")
-                                    .size(12.0)
+                                    .size(metrics::FONT_CAPTION)
                                     .color(Color32::WHITE),
                             )
                             .fill(palette.accent)
-                            .corner_radius(CornerRadius::same(6)),
+                            .corner_radius(CornerRadius::same(metrics::ROW_RADIUS)),
                         )
                         .clicked()
                         && !reference.trim().is_empty()
@@ -293,17 +292,21 @@ pub(super) fn render_icon_picker(
                         } else {
                             format!("No icons match “{query}”")
                         };
-                        ui.label(egui::RichText::new(label).size(12.0).color(palette.muted));
+                        ui.label(
+                            egui::RichText::new(label)
+                                .size(metrics::FONT_CAPTION)
+                                .color(palette.muted),
+                        );
                     } else {
-                        let rows = indices.len().div_ceil(ICON_COLUMNS);
+                        let rows = indices.len().div_ceil(metrics::ICON_PICKER_COLUMNS);
                         egui::ScrollArea::vertical()
                             .auto_shrink([false, false])
-                            .show_rows(ui, ICON_ROW_HEIGHT, rows, |ui, range| {
+                            .show_rows(ui, metrics::ICON_PICKER_ROW_HEIGHT, rows, |ui, range| {
                                 for row in range {
                                     ui.horizontal(|ui| {
                                         ui.spacing_mut().item_spacing = Vec2::splat(2.0);
-                                        for column in 0..ICON_COLUMNS {
-                                            let slot = row * ICON_COLUMNS + column;
+                                        for column in 0..metrics::ICON_PICKER_COLUMNS {
+                                            let slot = row * metrics::ICON_PICKER_COLUMNS + column;
                                             let Some(&index) = indices.get(slot) else {
                                                 break;
                                             };

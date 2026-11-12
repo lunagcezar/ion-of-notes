@@ -1,6 +1,7 @@
 //! Inline table database: table view, status chips and board view.
 
 use crate::model::Page;
+use crate::ui::constants as metrics;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Rect, Sense, Vec2};
 
 use super::super::commands::Command;
@@ -42,17 +43,17 @@ pub(super) fn render_database(
         if board.clicked() {
             commands.push(Command::SetTableView(false));
         }
-        ui.add_space(12.0);
+        ui.add_space(metrics::SPACE_12);
         ui.label(
             egui::RichText::new(format!(
                 "{} rows",
                 format_number(page.rows.len() as f64, view.number_format)
             ))
-            .size(12.0)
+            .size(metrics::FONT_CAPTION)
             .color(palette.muted),
         );
     });
-    ui.add_space(8.0);
+    ui.add_space(metrics::SPACE_8);
     ui.separator();
 
     if view.table_view {
@@ -67,7 +68,7 @@ pub(super) fn header_cell(ui: &mut egui::Ui, width: f32, text: &str, palette: &P
         Vec2::new(width, 22.0),
         egui::Label::new(
             egui::RichText::new(text)
-                .size(12.0)
+                .size(metrics::FONT_CAPTION)
                 .strong()
                 .color(palette.muted),
         ),
@@ -104,7 +105,7 @@ fn render_table(
             } else {
                 Color32::TRANSPARENT
             })
-            .corner_radius(CornerRadius::same(4))
+            .corner_radius(CornerRadius::same(metrics::ICON_RADIUS))
             .inner_margin(Margin::symmetric(4, 2))
             .show(ui, |ui| {
                 let mut status_clicked = false;
@@ -124,14 +125,14 @@ fn render_table(
                     );
                     ui.painter().rect_filled(
                         chip,
-                        CornerRadius::same(4),
+                        CornerRadius::same(metrics::ICON_RADIUS),
                         status_color(&row.status),
                     );
                     ui.painter().text(
                         chip.min + Vec2::new(8.0, 10.0),
                         Align2::LEFT_CENTER,
                         &row.status,
-                        FontId::proportional(12.0),
+                        FontId::proportional(metrics::FONT_CAPTION),
                         palette.chip_text,
                     );
                     status_clicked = response.clicked();
@@ -155,7 +156,7 @@ fn render_table(
             commands.push(Command::CycleStatus(row_id));
         }
     }
-    ui.add_space(6.0);
+    ui.add_space(metrics::SPACE_6);
     if ui
         .add(egui::Button::new("+ New row").frame(false))
         .clicked()
@@ -173,7 +174,7 @@ fn render_board(ui: &mut egui::Ui, page: &mut Page, width: f32, palette: &Palett
             col.set_width(column_width);
             col.label(
                 egui::RichText::new(*status)
-                    .size(12.0)
+                    .size(metrics::FONT_CAPTION)
                     .strong()
                     .color(palette.muted),
             );
@@ -181,14 +182,14 @@ fn render_board(ui: &mut egui::Ui, page: &mut Page, width: f32, palette: &Palett
             for row in page.rows.iter().filter(|r| &r.status == status) {
                 egui::Frame::NONE
                     .fill(palette.callout)
-                    .corner_radius(CornerRadius::same(6))
+                    .corner_radius(CornerRadius::same(metrics::ROW_RADIUS))
                     .inner_margin(Margin::same(10))
                     .show(col, |ui| {
                         ui.set_width(column_width - 30.0);
                         ui.label(egui::RichText::new(&row.name).color(palette.text));
                         ui.label(
                             egui::RichText::new(format!("{}  {}", row.assignee, row.due))
-                                .size(11.0)
+                                .size(metrics::FONT_MICRO)
                                 .color(palette.muted),
                         );
                     });

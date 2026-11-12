@@ -15,6 +15,16 @@ use super::super::super::view::ViewState;
 use super::super::database::render_database;
 use super::super::library::render_library;
 use super::blocks::render_block;
+use crate::ui::constants::{
+    BLOCK_GAP, BLOCK_HEADING_GAP, BREADCRUMB_ACTION_HEIGHT, BREADCRUMB_ACTION_SIZE, BREADCRUMB_GAP,
+    BREADCRUMB_HEIGHT, BREADCRUMB_ICON_INSET, BREADCRUMB_ICON_SIZE, BREADCRUMB_LABEL_INSET,
+    BREADCRUMB_PADDING, CONTENT_BOTTOM_SPACE, CONTENT_COLUMN_MAX, CONTENT_COLUMN_MIN,
+    CONTENT_GUTTER, CONTENT_SIDE_MARGIN, CONTENT_TOP_SPACE, FLOATING_CONTROL_INSET,
+    FLOATING_CONTROL_SIZE, FLOATING_LINES_SIZE, FLOATING_LINES_TOP, FONT_CAPTION, FONT_MICRO,
+    FONT_PAGE_TITLE, FONT_ROW, FONT_SUBTITLE, PAGE_DISCUSSION_GAP, PAGE_ICON_RADIUS,
+    PAGE_ICON_SIZE, PAGE_TITLE_BOTTOM, PAGE_TITLE_GAP, PAGE_TOC_GAP, SPACE_2, SPACE_4, SPACE_6,
+    SPACE_8, SPACE_10, SPACE_12, SPACE_14, SPACE_20, SPACE_22, SPACE_24, SPACE_36, STROKE_HAIRLINE,
+};
 pub(crate) fn render_content(
     ui: &mut egui::Ui,
     ws: &mut Workspace,
@@ -25,20 +35,20 @@ pub(crate) fn render_content(
     // Compact breadcrumb bar (spec-013).
     let full_width = ui.available_width();
     let column_width = if view.full_width {
-        (full_width - 96.0).max(360.0)
+        (full_width - CONTENT_SIDE_MARGIN).max(CONTENT_COLUMN_MIN)
     } else {
-        (full_width - 96.0).clamp(360.0, 708.0)
+        (full_width - CONTENT_SIDE_MARGIN).clamp(CONTENT_COLUMN_MIN, CONTENT_COLUMN_MAX)
     };
-    let gutter = 48.0;
+    let gutter = CONTENT_GUTTER;
     let pad = ((full_width - column_width) / 2.0 - gutter).max(0.0);
-    let breadcrumb_pad = 16.0;
+    let breadcrumb_pad = BREADCRUMB_PADDING;
     ui.vertical(|ui| {
-        ui.add_space(2.0);
+        ui.add_space(SPACE_2);
         ui.allocate_ui_with_layout(
-            Vec2::new(ui.available_width(), 28.0),
+            Vec2::new(ui.available_width(), BREADCRUMB_HEIGHT),
             egui::Layout::left_to_right(egui::Align::Center),
             |ui| {
-                ui.spacing_mut().item_spacing.x = 6.0;
+                ui.spacing_mut().item_spacing.x = BREADCRUMB_GAP;
                 ui.add_space(breadcrumb_pad);
                 if !view.sidebar_open && ui.add(egui::Button::new(">").frame(false)).clicked() {
                     commands.push(Command::ToggleSidebar);
@@ -60,26 +70,44 @@ pub(crate) fn render_content(
                     crumb(ui, icon, title, palette);
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.spacing_mut().item_spacing.x = 4.0;
-                    ui.add_space(14.0);
-                    if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_ellipsis)
-                        .on_hover_text("Page settings and actions")
-                        .clicked()
+                    ui.spacing_mut().item_spacing.x = SPACE_4;
+                    ui.add_space(SPACE_14);
+                    if glyph_button(
+                        ui,
+                        Vec2::new(BREADCRUMB_ACTION_SIZE, BREADCRUMB_ACTION_HEIGHT),
+                        palette,
+                        draw_ellipsis,
+                    )
+                    .on_hover_text("Page settings and actions")
+                    .clicked()
                     {
                         commands.push(Command::OpenPageActions);
                     }
                     if !view.library_open
-                        && glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_star).clicked()
+                        && glyph_button(
+                            ui,
+                            Vec2::new(BREADCRUMB_ACTION_SIZE, BREADCRUMB_ACTION_HEIGHT),
+                            palette,
+                            draw_star,
+                        )
+                        .clicked()
                     {
                         commands.push(Command::ToggleFavorite(view.current_page.clone()));
                     }
-                    if glyph_button(ui, Vec2::new(26.0, 24.0), palette, draw_link).clicked() {
+                    if glyph_button(
+                        ui,
+                        Vec2::new(BREADCRUMB_ACTION_SIZE, BREADCRUMB_ACTION_HEIGHT),
+                        palette,
+                        draw_link,
+                    )
+                    .clicked()
+                    {
                         commands.push(Command::OpenShare);
                     }
                     let share = ui.add(
                         egui::Button::new(
                             egui::RichText::new(i18n::t("share"))
-                                .size(13.0)
+                                .size(FONT_ROW)
                                 .color(palette.text),
                         )
                         .frame(false),
@@ -87,13 +115,20 @@ pub(crate) fn render_content(
                     if share.clicked() {
                         commands.push(Command::OpenShare);
                     }
-                    if glyph_button(ui, Vec2::new(20.0, 24.0), palette, draw_share).clicked() {
+                    if glyph_button(
+                        ui,
+                        Vec2::new(SPACE_20, BREADCRUMB_ACTION_HEIGHT),
+                        palette,
+                        draw_share,
+                    )
+                    .clicked()
+                    {
                         commands.push(Command::OpenShare);
                     }
                 });
             },
         );
-        ui.add_space(2.0);
+        ui.add_space(SPACE_2);
     });
     ui.separator();
 
@@ -107,9 +142,9 @@ pub(crate) fn render_content(
                     ui.add_space(pad);
                     ui.vertical(|ui| {
                         ui.set_width(column_width + gutter);
-                        ui.add_space(88.0);
+                        ui.add_space(CONTENT_TOP_SPACE);
                         render_page(ui, ws, view, column_width, gutter, palette, commands);
-                        ui.add_space(80.0);
+                        ui.add_space(CONTENT_BOTTOM_SPACE);
                     });
                 });
             });
@@ -117,20 +152,29 @@ pub(crate) fn render_content(
 
     // Floating controls on the right edge of the content, as in the pictures.
     let screen = ui.ctx().viewport_rect();
-    let lines_center = Pos2::new(screen.right() - 42.0, screen.top() + 280.0);
+    let lines_center = Pos2::new(
+        screen.right() - FLOATING_CONTROL_INSET,
+        screen.top() + FLOATING_LINES_TOP,
+    );
     draw_lines(
         ui.painter(),
-        Rect::from_center_size(lines_center, Vec2::splat(20.0)),
+        Rect::from_center_size(lines_center, Vec2::splat(FLOATING_LINES_SIZE)),
         palette.muted,
     );
-    let button_center = Pos2::new(screen.right() - 44.0, screen.bottom() - 44.0);
+    let button_center = Pos2::new(
+        screen.right() - FLOATING_CONTROL_INSET,
+        screen.bottom() - FLOATING_CONTROL_INSET,
+    );
     ui.painter()
-        .circle_filled(button_center, 24.0, palette.hover);
-    ui.painter()
-        .circle_stroke(button_center, 24.0, Stroke::new(1.0, palette.border));
+        .circle_filled(button_center, FLOATING_CONTROL_SIZE, palette.hover);
+    ui.painter().circle_stroke(
+        button_center,
+        FLOATING_CONTROL_SIZE,
+        Stroke::new(STROKE_HAIRLINE, palette.border),
+    );
     draw_pen(
         ui.painter(),
-        Rect::from_center_size(button_center, Vec2::splat(24.0)),
+        Rect::from_center_size(button_center, Vec2::splat(FLOATING_CONTROL_SIZE)),
         palette.text,
     );
 }
@@ -169,24 +213,27 @@ pub(super) fn body_font(view: &ViewState, size: f32) -> FontId {
 }
 
 fn crumb(ui: &mut egui::Ui, icon: &str, text: &str, palette: &Palette) -> egui::Response {
-    let width = 16.0 + 8.0 + text.chars().count() as f32 * 7.0 + 10.0;
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 20.0), Sense::click());
+    let width = BREADCRUMB_ICON_SIZE + SPACE_8 + text.chars().count() as f32 * SPACE_8 + SPACE_10;
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, SPACE_20), Sense::click());
     if response.hovered() {
         ui.painter()
             .rect_filled(rect, CornerRadius::same(4), palette.hover);
     }
     draw_page_icon(
         ui.painter(),
-        Rect::from_min_size(rect.min + Vec2::new(2.0, 2.0), Vec2::splat(16.0)),
+        Rect::from_min_size(
+            rect.min + Vec2::new(BREADCRUMB_ICON_INSET, BREADCRUMB_ICON_INSET),
+            Vec2::splat(BREADCRUMB_ICON_SIZE),
+        ),
         &page_icon_letter(icon, text),
         palette,
         false,
     );
     ui.painter().text(
-        rect.min + Vec2::new(24.0, 10.0),
+        rect.min + Vec2::new(BREADCRUMB_LABEL_INSET, SPACE_10),
         Align2::LEFT_CENTER,
         text,
-        FontId::proportional(13.0),
+        FontId::proportional(FONT_ROW),
         palette.text,
     );
     response
@@ -220,7 +267,7 @@ fn render_page(
         ui.vertical(|ui| {
             ui.set_width(width);
             let (icon_rect, icon_response) =
-                ui.allocate_exact_size(Vec2::splat(72.0), Sense::click());
+                ui.allocate_exact_size(Vec2::splat(PAGE_ICON_SIZE), Sense::click());
             draw_page_icon(
                 ui.painter(),
                 icon_rect,
@@ -231,24 +278,24 @@ fn render_page(
             if icon_response.hovered() {
                 ui.painter().rect_stroke(
                     icon_rect,
-                    CornerRadius::same(10),
-                    Stroke::new(1.0, palette.border),
+                    CornerRadius::same(PAGE_ICON_RADIUS),
+                    Stroke::new(STROKE_HAIRLINE, palette.border),
                     egui::StrokeKind::Inside,
                 );
             }
             if icon_response.on_hover_text("Change icon").clicked() {
                 commands.push(Command::OpenIconPicker);
             }
-            ui.add_space(30.0);
+            ui.add_space(PAGE_TITLE_GAP);
             let _ = ui.add(
                 egui::TextEdit::singleline(&mut page.title)
-                    .font(strong_font(44.0))
+                    .font(strong_font(FONT_PAGE_TITLE))
                     .frame(egui::Frame::NONE)
                     .desired_width(width)
                     .text_color(palette.text)
                     .hint_text("Untitled"),
             );
-            ui.add_space(16.0);
+            ui.add_space(PAGE_TITLE_BOTTOM);
         });
     });
 
@@ -264,39 +311,43 @@ fn render_page(
                 ui.set_width(width);
                 ui.label(
                     egui::RichText::new(i18n::t("table_of_contents"))
-                        .size(12.0)
+                        .size(FONT_CAPTION)
                         .strong()
                         .color(palette.muted),
                 );
                 if headings.is_empty() {
                     ui.label(
                         egui::RichText::new("Add a heading to build the table of contents.")
-                            .size(12.0)
+                            .size(FONT_CAPTION)
                             .color(palette.muted),
                     );
                 }
                 for (text, kind) in &headings {
                     let indent = match kind {
-                        BlockKind::Heading2 => 12.0,
-                        BlockKind::Heading3 => 24.0,
-                        BlockKind::Heading4 => 36.0,
+                        BlockKind::Heading2 => SPACE_12,
+                        BlockKind::Heading3 => SPACE_24,
+                        BlockKind::Heading4 => SPACE_36,
                         _ => 0.0,
                     };
                     ui.horizontal(|ui| {
                         ui.add_space(indent);
-                        ui.label(egui::RichText::new(text).size(12.5).color(palette.accent));
+                        ui.label(
+                            egui::RichText::new(text)
+                                .size(FONT_CAPTION)
+                                .color(palette.accent),
+                        );
                     });
                 }
             });
         });
-        ui.add_space(20.0);
+        ui.add_space(PAGE_TOC_GAP);
     }
 
     let mut numbered: usize = 0;
     let block_count = page.blocks.len();
     for index in 0..page.blocks.len() {
         if page.blocks[index].kind.is_heading() {
-            ui.add_space(22.0);
+            ui.add_space(BLOCK_HEADING_GAP);
         }
         let block = &mut page.blocks[index];
         render_block(
@@ -311,38 +362,38 @@ fn render_page(
             commands,
             block_count,
         );
-        ui.add_space(14.0);
+        ui.add_space(BLOCK_GAP);
     }
 
     // Subtle add-block row.
     ui.horizontal(|ui| {
         ui.add_space(gutter);
-        if icon_button(ui, 22.0, palette, draw_plus).clicked() {
+        if icon_button(ui, SPACE_22, palette, draw_plus).clicked() {
             commands.push(Command::AppendBlock);
         }
         ui.label(
             egui::RichText::new("Click to add a block")
-                .size(13.0)
+                .size(FONT_ROW)
                 .color(palette.muted),
         );
     });
 
     if page.discussions {
-        ui.add_space(26.0);
+        ui.add_space(PAGE_DISCUSSION_GAP);
         ui.horizontal(|ui| {
             ui.add_space(gutter);
             ui.vertical(|ui| {
                 ui.set_width(width);
                 ui.label(
                     egui::RichText::new(i18n::t("page_discussions"))
-                        .font(strong_font(18.0))
+                        .font(strong_font(FONT_SUBTITLE))
                         .color(palette.text),
                 );
-                ui.add_space(6.0);
+                ui.add_space(SPACE_6);
                 if page.comments.is_empty() {
                     ui.label(
                         egui::RichText::new(i18n::t("no_comments"))
-                            .size(12.0)
+                            .size(FONT_CAPTION)
                             .color(palette.muted),
                     );
                 }
@@ -358,7 +409,7 @@ fn render_page(
                                 &comment.created_at,
                                 view.time_format,
                             ))
-                            .size(10.5)
+                            .size(FONT_MICRO)
                             .color(palette.muted),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -368,7 +419,7 @@ fn render_page(
                         });
                     });
                     ui.label(egui::RichText::new(&comment.text).color(palette.text));
-                    ui.add_space(6.0);
+                    ui.add_space(SPACE_6);
                 }
                 let mut input = view.comment_input.clone();
                 let edit = ui.add(
@@ -385,10 +436,10 @@ fn render_page(
                     commands.push(Command::AddPageComment);
                 }
                 if page.inline_comments {
-                    ui.add_space(6.0);
+                    ui.add_space(SPACE_6);
                     ui.label(
                         egui::RichText::new(i18n::t("inline_note"))
-                            .size(11.0)
+                            .size(FONT_CAPTION)
                             .color(palette.muted),
                     );
                 }
@@ -397,7 +448,7 @@ fn render_page(
     }
 
     if !page.rows.is_empty() || page.title == "Tasks" {
-        ui.add_space(26.0);
+        ui.add_space(PAGE_DISCUSSION_GAP);
         render_database(ui, page, view, width, gutter, palette, commands);
     }
 }

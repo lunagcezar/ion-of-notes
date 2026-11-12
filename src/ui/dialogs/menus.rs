@@ -2,13 +2,21 @@
 
 //! App, workspace, grid and slash menus.
 
-use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
+use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Vec2};
 
 use super::super::commands::{Command, SidebarMenu};
 use super::super::palette::Palette;
 use super::super::view::ViewState;
-use super::super::widgets::{menu_button, popover_frame};
+use super::super::widgets::{menu_button, popover_frame, popover_frame_compact};
 use crate::model::{BlockKind, Workspace};
+use crate::ui::constants::{
+    APP_MENU_HINT_WIDTH, APP_MENU_LABEL_WIDTH, APP_MENU_WIDTH, COMPOSE_MENU_LEFT, COMPOSE_MENU_TOP,
+    COMPOSE_MENU_WIDTH, FONT_CAPTION, FONT_MICRO, FONT_ROW, MENU_HINT_SIZE, MENU_TEXT_SIZE,
+    POPOVER_GRID_WIDTH, POPOVER_SIDEBAR_WIDTH, POPOVER_WORKSPACE_WIDTH, SIDEBAR_ACCOUNT_HEIGHT,
+    SIDEBAR_MENU_ROW_Y, SIDEBAR_MENU_SECTION_Y, SIDEBAR_MENU_SHORTCUT_Y, SIDEBAR_WIDTH,
+    SLASH_MENU_MAX_HEIGHT, SPACE_2, SPACE_4, SPACE_6, SPACE_8, SPACE_10, SPACE_12, SPACE_14,
+    SPACE_18, SPACE_28, SPACE_30, SPACE_32, SPACE_46, TITLE_BAR_HEIGHT,
+};
 
 /// One app-menu section: title plus label/hint/command rows.
 type AppMenuSection = (&'static str, Vec<(&'static str, &'static str, Command)>);
@@ -93,13 +101,16 @@ pub(crate) fn render_app_menu(ctx: &egui::Context, palette: &Palette, commands: 
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_pos(Pos2::new(screen.left() + 6.0, screen.top() + 38.0))
-        .default_width(430.0)
+        .fixed_pos(Pos2::new(
+            screen.left() + SPACE_6,
+            screen.top() + TITLE_BAR_HEIGHT + SPACE_2,
+        ))
+        .default_width(APP_MENU_WIDTH)
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
             ui.horizontal_top(|ui| {
                 ui.vertical(|ui| {
-                    ui.set_width(150.0);
+                    ui.set_width(APP_MENU_LABEL_WIDTH);
                     for (index, (title, _)) in sections.iter().enumerate() {
                         let response = menu_button(ui, title, "›", palette);
                         if response.hovered() || response.clicked() {
@@ -110,7 +121,7 @@ pub(crate) fn render_app_menu(ctx: &egui::Context, palette: &Palette, commands: 
                 });
                 ui.separator();
                 ui.vertical(|ui| {
-                    ui.set_width(250.0);
+                    ui.set_width(APP_MENU_HINT_WIDTH);
                     for (label, hint, cmd) in &sections[active].1 {
                         if *label == "---" {
                             ui.separator();
@@ -153,8 +164,11 @@ pub(crate) fn render_compose_menu(
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_pos(Pos2::new(screen.left() + 150.0, screen.top() + 42.0))
-        .default_width(230.0)
+        .fixed_pos(Pos2::new(
+            screen.left() + COMPOSE_MENU_LEFT,
+            screen.top() + COMPOSE_MENU_TOP,
+        ))
+        .default_width(COMPOSE_MENU_WIDTH)
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
             for (label, hint, cmd) in items {
@@ -186,8 +200,8 @@ pub(crate) fn render_workspace_menu(
         .data(|data| data.get_temp::<Rect>(egui::Id::unique("sidebar_account_rect")))
         .unwrap_or_else(|| {
             Rect::from_min_size(
-                Pos2::new(screen.left() + 10.0, screen.bottom() - 46.0),
-                Vec2::new(246.0, 40.0),
+                Pos2::new(screen.left() + SPACE_10, screen.bottom() - SPACE_46),
+                Vec2::new(SIDEBAR_WIDTH - 2.0 * SPACE_10, SIDEBAR_ACCOUNT_HEIGHT),
             )
         });
     let resp = egui::Window::new("workspace_menu")
@@ -195,15 +209,12 @@ pub(crate) fn render_workspace_menu(
         .collapsible(false)
         .resizable(false)
         .pivot(Align2::LEFT_BOTTOM)
-        .fixed_pos(Pos2::new(anchor.left(), anchor.top()))
-        .default_width(250.0)
-        .frame(
-            egui::Frame::NONE
-                .fill(palette.content)
-                .corner_radius(CornerRadius::same(8))
-                .inner_margin(Margin::same(6))
-                .stroke(Stroke::new(1.0, palette.border)),
-        )
+        .fixed_pos(Pos2::new(
+            anchor.left(),
+            anchor.top() - crate::ui::constants::POPOVER_GAP,
+        ))
+        .default_width(POPOVER_WORKSPACE_WIDTH)
+        .frame(popover_frame_compact(palette))
         .show(ctx, |ui| {
             let active_name = view
                 .workspaces
@@ -212,32 +223,32 @@ pub(crate) fn render_workspace_menu(
                 .map(|workspace| workspace.name.clone())
                 .unwrap_or_else(|| "Workspace".to_string());
             ui.horizontal(|ui| {
-                let (avatar, _) = ui.allocate_exact_size(Vec2::splat(30.0), Sense::hover());
+                let (avatar, _) = ui.allocate_exact_size(Vec2::splat(SPACE_30), Sense::hover());
                 ui.painter()
-                    .circle_filled(avatar.center(), 13.0, palette.accent);
+                    .circle_filled(avatar.center(), SPACE_14, palette.accent);
                 ui.painter().text(
                     avatar.center(),
                     Align2::CENTER_CENTER,
                     "N",
-                    FontId::proportional(12.0),
+                    FontId::proportional(FONT_CAPTION),
                     Color32::WHITE,
                 );
                 ui.vertical(|ui| {
                     ui.label(
                         egui::RichText::new(active_name)
-                            .size(13.0)
+                            .size(FONT_ROW)
                             .color(palette.text),
                     );
                     ui.label(
                         egui::RichText::new("owner@workspace.local")
-                            .size(10.5)
+                            .size(FONT_MICRO)
                             .color(palette.muted),
                     );
                 });
             });
-            ui.add_space(4.0);
+            ui.add_space(SPACE_4);
             ui.separator();
-            ui.add_space(2.0);
+            ui.add_space(SPACE_2);
             for (label, page, cmd) in [
                 ("Workspace settings", Some("General"), Command::OpenSettings),
                 ("Invite members", None, Command::OpenShare),
@@ -251,12 +262,12 @@ pub(crate) fn render_workspace_menu(
                     commands.push(Command::CloseWorkspaceMenu);
                 }
             }
-            ui.add_space(4.0);
+            ui.add_space(SPACE_4);
             ui.separator();
-            ui.add_space(2.0);
+            ui.add_space(SPACE_2);
             ui.label(
                 egui::RichText::new("Workspaces")
-                    .size(10.5)
+                    .size(FONT_MICRO)
                     .color(palette.muted),
             );
             for workspace in &view.workspaces {
@@ -276,9 +287,9 @@ pub(crate) fn render_workspace_menu(
             {
                 commands.push(Command::DeleteWorkspace(view.active_workspace.clone()));
             }
-            ui.add_space(4.0);
+            ui.add_space(SPACE_4);
             ui.separator();
-            ui.add_space(2.0);
+            ui.add_space(SPACE_2);
             if menu_button(ui, "Log out", "", palette).clicked() {
                 commands.push(Command::DisconnectServer);
                 commands.push(Command::CloseWorkspaceMenu);
@@ -307,17 +318,17 @@ pub(crate) fn render_sidebar_menu(
 ) {
     let screen = ctx.viewport_rect();
     let y = match menu {
-        SidebarMenu::Shortcut => screen.top() + 300.0,
-        SidebarMenu::Section => screen.top() + 420.0,
-        SidebarMenu::RowSettings { .. } => screen.top() + 360.0,
+        SidebarMenu::Shortcut => screen.top() + SIDEBAR_MENU_SHORTCUT_Y,
+        SidebarMenu::Section => screen.top() + SIDEBAR_MENU_SECTION_Y,
+        SidebarMenu::RowSettings { .. } => screen.top() + SIDEBAR_MENU_ROW_Y,
     };
     let query_id = egui::Id::unique(("sidebar_menu_query", menu));
     let resp = egui::Window::new("sidebar_menu")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_pos(Pos2::new(screen.left() + 12.0, y))
-        .default_width(260.0)
+        .fixed_pos(Pos2::new(screen.left() + SPACE_12, y))
+        .default_width(POPOVER_SIDEBAR_WIDTH)
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
             let title = match menu {
@@ -327,11 +338,11 @@ pub(crate) fn render_sidebar_menu(
             };
             ui.label(
                 egui::RichText::new(title)
-                    .size(12.0)
+                    .size(FONT_CAPTION)
                     .strong()
                     .color(palette.text),
             );
-            ui.add_space(4.0);
+            ui.add_space(SPACE_4);
             match menu {
                 SidebarMenu::Shortcut => {
                     let mut query: String =
@@ -376,7 +387,11 @@ pub(crate) fn render_sidebar_menu(
                         }
                     }
                     ui.separator();
-                    ui.label(egui::RichText::new("Pages").size(10.5).color(palette.muted));
+                    ui.label(
+                        egui::RichText::new("Pages")
+                            .size(FONT_MICRO)
+                            .color(palette.muted),
+                    );
                     for page in ws.pages.iter().filter(|page| matches(&page.title)) {
                         if menu_button(ui, &page.title, "", palette).clicked() {
                             commands.push(Command::AddSidebarShortcut(
@@ -430,10 +445,10 @@ pub(crate) fn render_sidebar_menu(
                             commands.push(Command::CloseSidebarMenu);
                         }
                     }
-                    ui.add_space(4.0);
+                    ui.add_space(SPACE_4);
                     ui.label(
                         egui::RichText::new("A section is a sidebar tab with its own shortcuts.")
-                            .size(10.5)
+                            .size(FONT_MICRO)
                             .color(palette.muted),
                     );
                 }
@@ -463,7 +478,11 @@ pub(crate) fn render_sidebar_menu(
                     };
                     let mut rename: String =
                         ctx.data(|data| data.get_temp(rename_id).unwrap_or(current));
-                    ui.label(egui::RichText::new("Name").size(10.5).color(palette.muted));
+                    ui.label(
+                        egui::RichText::new("Name")
+                            .size(FONT_MICRO)
+                            .color(palette.muted),
+                    );
                     if ui
                         .add(
                             egui::TextEdit::singleline(&mut rename)
@@ -560,8 +579,11 @@ pub(crate) fn render_grid_menu(
         .data(|data| data.get_temp::<Rect>(egui::Id::unique("sidebar_grid_rect")))
         .unwrap_or_else(|| {
             Rect::from_min_size(
-                Pos2::new(screen.left() + 234.0, screen.bottom() - 46.0),
-                Vec2::new(18.0, 40.0),
+                Pos2::new(
+                    screen.left() + SIDEBAR_WIDTH - SPACE_32,
+                    screen.bottom() - SPACE_46,
+                ),
+                Vec2::new(SPACE_18, SIDEBAR_ACCOUNT_HEIGHT),
             )
         });
     let resp = egui::Window::new("grid_menu")
@@ -569,15 +591,12 @@ pub(crate) fn render_grid_menu(
         .collapsible(false)
         .resizable(false)
         .pivot(Align2::LEFT_BOTTOM)
-        .fixed_pos(Pos2::new(anchor.left(), anchor.top()))
-        .default_width(180.0)
-        .frame(
-            egui::Frame::NONE
-                .fill(palette.content)
-                .corner_radius(CornerRadius::same(8))
-                .inner_margin(Margin::same(6))
-                .stroke(Stroke::new(1.0, palette.border)),
-        )
+        .fixed_pos(Pos2::new(
+            anchor.left(),
+            anchor.top() - crate::ui::constants::POPOVER_GAP,
+        ))
+        .default_width(POPOVER_GRID_WIDTH)
+        .frame(popover_frame_compact(palette))
         .show(ctx, |ui| {
             for (label, hint, cmd) in &items {
                 if *label == "---" {
@@ -607,24 +626,24 @@ pub(crate) fn render_grid_menu(
 /// deliberately out of scope (media, embeds, databases).
 fn slash_item(ui: &mut egui::Ui, label: &str, hint: &str, palette: &Palette) -> egui::Response {
     let (rect, response) =
-        ui.allocate_exact_size(Vec2::new(ui.available_width(), 28.0), Sense::click());
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), SPACE_28), Sense::click());
     if response.hovered() {
         ui.painter()
             .rect_filled(rect, CornerRadius::same(5), palette.hover);
     }
     ui.painter().text(
-        rect.min + Vec2::new(8.0, 14.0),
+        rect.min + Vec2::new(SPACE_8, SPACE_14),
         Align2::LEFT_CENTER,
         label,
-        FontId::proportional(13.0),
+        FontId::proportional(MENU_TEXT_SIZE),
         palette.text,
     );
     if !hint.is_empty() {
         ui.painter().text(
-            rect.max + Vec2::new(-8.0, -14.0),
+            rect.max + Vec2::new(-SPACE_8, -SPACE_14),
             Align2::RIGHT_CENTER,
             hint,
-            FontId::proportional(11.0),
+            FontId::proportional(MENU_HINT_SIZE),
             palette.muted,
         );
     }
@@ -632,9 +651,13 @@ fn slash_item(ui: &mut egui::Ui, label: &str, hint: &str, palette: &Palette) -> 
 }
 
 fn slash_group(ui: &mut egui::Ui, title: &str, palette: &Palette) {
-    ui.add_space(6.0);
-    ui.label(egui::RichText::new(title).size(10.5).color(palette.muted));
-    ui.add_space(2.0);
+    ui.add_space(SPACE_6);
+    ui.label(
+        egui::RichText::new(title)
+            .size(FONT_MICRO)
+            .color(palette.muted),
+    );
+    ui.add_space(SPACE_2);
 }
 
 /// The block menu opened by the "+", the six-dot handle or typing "/".
@@ -738,12 +761,12 @@ pub(crate) fn render_slash(
         .collapsible(false)
         .resizable(false)
         .fixed_pos(view.slash_pos)
-        .default_width(260.0)
+        .default_width(POPOVER_SIDEBAR_WIDTH)
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, true])
-                .max_height(330.0)
+                .max_height(SLASH_MENU_MAX_HEIGHT)
                 .show(ui, |ui| {
                     let mut shown = 0;
                     for (title, items) in groups {
@@ -765,17 +788,17 @@ pub(crate) fn render_slash(
                         }
                     }
                     if shown == 0 {
-                        ui.add_space(6.0);
+                        ui.add_space(SPACE_6);
                         ui.label(
                             egui::RichText::new(format!("No blocks match “{query}”"))
-                                .size(12.0)
+                                .size(FONT_CAPTION)
                                 .color(palette.muted),
                         );
                     }
                 });
-            ui.add_space(6.0);
+            ui.add_space(SPACE_6);
             ui.separator();
-            ui.add_space(4.0);
+            ui.add_space(SPACE_4);
             if slash_item(ui, "Delete block", "", palette).clicked() {
                 commands.push(Command::DeleteBlock(block.to_string()));
                 commands.push(Command::CloseSlash);
@@ -783,7 +806,7 @@ pub(crate) fn render_slash(
             ui.horizontal(|ui| {
                 ui.label(
                     egui::RichText::new("Type to filter…")
-                        .size(11.0)
+                        .size(FONT_CAPTION)
                         .color(palette.muted),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -791,7 +814,7 @@ pub(crate) fn render_slash(
                         .add(
                             egui::Button::new(
                                 egui::RichText::new("Close menu  esc")
-                                    .size(10.5)
+                                    .size(FONT_MICRO)
                                     .color(palette.muted),
                             )
                             .frame(false),

@@ -365,7 +365,10 @@ capabilities) is implemented; the rest are planned.
 - NFR-05: The UI stays responsive: a single-page edit is sent with `PATCH` and
   a 250 ms debounce, and the full snapshot is reserved for structural or
   settings changes (`spec-020`).
-- NFR-06: All colors, fonts, and spacing come from a single palette module.
+- NFR-06: All colors and fonts come from a single palette module
+  (`ui::Palette`); all layout metrics (spacing, sizes, padding, radii) come
+  from `ui::constants`. Layout constants use even numbers except the documented
+  `FONT_SMALL` 13 px and `STROKE_HAIRLINE` tokens.
 - NFR-07: The clean-room boundary is never crossed: no tool reads the original
   executable, its folder, its pages' code, or its assets.
 - NFR-08: Implementation files contain no test code. Tests live in `tests/` as

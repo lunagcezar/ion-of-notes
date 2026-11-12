@@ -1,5 +1,6 @@
 //! Starter template library (spec-027).
 
+use crate::ui::constants as metrics;
 use egui::{Align2, CornerRadius, FontId, Margin, Sense, Vec2};
 
 use crate::i18n;
@@ -44,16 +45,16 @@ pub(crate) fn render_templates(
                     }
                 });
             });
-            ui.add_space(10.0);
+            ui.add_space(metrics::SPACE_10);
             ui.separator();
-            ui.add_space(10.0);
+            ui.add_space(metrics::SPACE_10);
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     for template in templates::catalog() {
                         egui::Frame::NONE
                             .fill(palette.callout)
-                            .corner_radius(CornerRadius::same(8))
+                            .corner_radius(CornerRadius::same(metrics::POPOVER_RADIUS))
                             .inner_margin(Margin::same(12))
                             .show(ui, |ui| {
                                 ui.horizontal(|ui| {
@@ -74,7 +75,7 @@ pub(crate) fn render_templates(
                                         );
                                         ui.label(
                                             egui::RichText::new(template.description)
-                                                .size(12.0)
+                                                .size(metrics::FONT_CAPTION)
                                                 .color(palette.muted),
                                         );
                                     });
@@ -87,7 +88,7 @@ pub(crate) fn render_templates(
                                                         egui::RichText::new(i18n::t(
                                                             "use_template",
                                                         ))
-                                                        .size(12.0)
+                                                        .size(metrics::FONT_CAPTION)
                                                         .color(egui::Color32::WHITE),
                                                     )
                                                     .fill(palette.accent)
@@ -103,7 +104,7 @@ pub(crate) fn render_templates(
                                     );
                                 });
                             });
-                        ui.add_space(8.0);
+                        ui.add_space(metrics::SPACE_8);
                     }
                 });
         });

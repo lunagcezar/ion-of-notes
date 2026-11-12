@@ -180,6 +180,8 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
                    desktop feature)
   ui/
     palette.rs     colors, fonts, tab-title helper, theming (NFR-06)
+    constants.rs   layout metrics only: spacing scale, sizes, padding,
+                   radii, font sizes and strokes
     icons.rs       original shape artwork (chrome, sidebar, book, controls,
                    page icon)
     commands.rs    Command + flush/lock classification, IconTab, FontStyle,
@@ -193,7 +195,7 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
     render.rs      facade for the render submodules
     render/
       chrome.rs    tab strip and window controls
-      sidebar.rs   search, Library/Settings/Inbox, favorites, tree, bottom group
+      sidebar.rs   search, Library/Settings, favorites, tree, bottom group
       content.rs   facade: render_content entry point
       content/     page, blocks, cursors
       library.rs   Library table and tabs
@@ -202,8 +204,7 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
     dialogs/
       settings.rs       settings window, rail, search filtering
       settings_pages.rs  facade
-      settings_pages/    preferences, workspace, sidebar, offline, people, ai,
-                         server
+      settings_pages/    preferences, workspace, offline, people, ai, server
       sharing.rs        Share popover and Inbox
       page_actions.rs   page actions and version history
       menus.rs          app / workspace / grid / slash menus
@@ -580,7 +581,10 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
   adapter is the only code that touches the data file.
 - UI copy is short, neutral sample text. No brand names, logos, photos, or long
   passages copied from anywhere.
-- Colors and text styles are centralized in `ui::Palette`.
+- Colors and text styles are centralized in `ui::Palette`; layout metrics
+  (spacing, sizes, padding, radii, font sizes) are centralized in
+  `ui::constants` and use even numbers except the documented `FONT_SMALL`
+  13 px and `STROKE_HAIRLINE` tokens.
 - Every user-visible command is also reachable through the client API.
 
 ## Commands

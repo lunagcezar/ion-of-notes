@@ -1,5 +1,6 @@
 //! Create/rename workspace dialog for the local workspace catalog (spec-058).
 
+use crate::ui::constants as metrics;
 use egui::{Align2, CornerRadius, Vec2};
 
 use super::super::commands::{Command, WorkspaceDialogMode};
@@ -39,7 +40,7 @@ pub(crate) fn render_workspace_dialog(
             ui.horizontal(|ui| {
                 ui.label(
                     egui::RichText::new(title)
-                        .font(strong_font(18.0))
+                        .font(strong_font(metrics::FONT_SUBTITLE))
                         .color(palette.text),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -56,8 +57,12 @@ pub(crate) fn render_workspace_dialog(
                     }
                 });
             });
-            ui.add_space(8.0);
-            ui.label(egui::RichText::new("Name").size(11.0).color(palette.muted));
+            ui.add_space(metrics::SPACE_8);
+            ui.label(
+                egui::RichText::new("Name")
+                    .size(metrics::FONT_MICRO)
+                    .color(palette.muted),
+            );
             let mut name = view.workspace_name.clone();
             if ui
                 .add(
@@ -70,9 +75,13 @@ pub(crate) fn render_workspace_dialog(
             {
                 commands.push(Command::SetWorkspaceName(name));
             }
-            ui.add_space(8.0);
+            ui.add_space(metrics::SPACE_8);
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Icon").size(11.0).color(palette.muted));
+                ui.label(
+                    egui::RichText::new("Icon")
+                        .size(metrics::FONT_MICRO)
+                        .color(palette.muted),
+                );
                 let mut icon = view.workspace_icon.clone();
                 if ui
                     .add(
@@ -84,24 +93,24 @@ pub(crate) fn render_workspace_dialog(
                 {
                     commands.push(Command::SetWorkspaceIcon(icon));
                 }
-                ui.add_space(8.0);
+                ui.add_space(metrics::SPACE_8);
                 ui.label(
                     egui::RichText::new("A short glyph or emoji")
-                        .size(10.5)
+                        .size(metrics::FONT_MICRO)
                         .color(palette.muted),
                 );
             });
-            ui.add_space(18.0);
+            ui.add_space(metrics::SECTION_GAP);
             ui.horizontal(|ui| {
                 if ui
                     .add(
                         egui::Button::new(
                             egui::RichText::new(action)
-                                .size(12.5)
+                                .size(metrics::FONT_CAPTION)
                                 .color(egui::Color32::WHITE),
                         )
                         .fill(palette.accent)
-                        .corner_radius(CornerRadius::same(6)),
+                        .corner_radius(CornerRadius::same(metrics::ROW_RADIUS)),
                     )
                     .clicked()
                     && !view.workspace_name.trim().is_empty()
@@ -112,7 +121,7 @@ pub(crate) fn render_workspace_dialog(
                     .add(
                         egui::Button::new(
                             egui::RichText::new("Cancel")
-                                .size(12.0)
+                                .size(metrics::FONT_CAPTION)
                                 .color(palette.muted),
                         )
                         .frame(false),

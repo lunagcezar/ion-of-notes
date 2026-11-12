@@ -5,6 +5,16 @@ use crate::i18n;
 use crate::model::{SidebarSectionSource, Workspace};
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
+use crate::ui::constants::{
+    FONT_CAPTION, FONT_ROW, ICON_SIZE, ROW_HEIGHT, ROW_ICON_INSET, ROW_LABEL_INSET, ROW_RADIUS,
+    SECTION_GAP, SECTION_LABEL_HEIGHT, SIDEBAR_ACCOUNT_ACTIONS_WIDTH, SIDEBAR_ACCOUNT_HEIGHT,
+    SIDEBAR_BOTTOM_RESERVE, SIDEBAR_CONTENT_PADDING, SIDEBAR_CUSTOMIZE_HEIGHT, SIDEBAR_DONE_HEIGHT,
+    SIDEBAR_INVITE_HEIGHT, SIDEBAR_MIN_SCROLL_HEIGHT, SIDEBAR_SEARCH_HEIGHT,
+    SIDEBAR_SHORTCUT_HEIGHT, SPACE_4, SPACE_6, SPACE_8, SPACE_10, SPACE_12, SPACE_14, SPACE_18,
+    SPACE_20, SPACE_22, SPACE_24, SPACE_34, SPACE_38, SPACE_40, SPACE_42, SPACE_44, SPACE_46,
+    SPACE_64, STROKE_EMPHASIS, STROKE_HAIRLINE,
+};
+
 use super::super::commands::{Command, SidebarMenu};
 use super::super::icons::{
     draw_chevron, draw_close, draw_dots, draw_grid, draw_help, draw_inbox, draw_library, draw_page,
@@ -124,7 +134,7 @@ fn nearest_drop_target<'a>(
             let db = rect_distance(b.rect, pos);
             da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
         })
-        .filter(|target| rect_distance(target.rect, pos) <= 64.0)
+        .filter(|target| rect_distance(target.rect, pos) <= SPACE_64)
 }
 
 fn rect_distance(rect: Rect, pos: Pos2) -> f32 {
@@ -154,7 +164,7 @@ fn customize_row(
     palette: &Palette,
     draw: fn(&egui::Painter, Rect, Color32),
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 30.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click());
     let fill = if selected {
         palette.selected
     } else if response.hovered() {
@@ -163,23 +173,30 @@ fn customize_row(
         Color32::TRANSPARENT
     };
     if fill != Color32::TRANSPARENT {
-        ui.painter().rect_filled(rect, CornerRadius::same(6), fill);
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(ROW_RADIUS), fill);
     }
     draw_dots(
         ui.painter(),
-        Rect::from_min_size(rect.min + Vec2::new(4.0, 9.0), Vec2::splat(12.0)),
+        Rect::from_min_size(
+            rect.min + Vec2::new(SPACE_4, SPACE_10),
+            Vec2::splat(SPACE_12),
+        ),
         palette.muted,
     );
     draw(
         ui.painter(),
-        Rect::from_min_size(rect.min + Vec2::new(22.0, 7.0), Vec2::splat(16.0)),
+        Rect::from_min_size(
+            rect.min + Vec2::new(SPACE_22, SPACE_8),
+            Vec2::splat(ICON_SIZE),
+        ),
         palette.muted,
     );
     ui.painter().text(
-        rect.min + Vec2::new(46.0, 15.0),
+        rect.min + Vec2::new(SPACE_46, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
         label,
-        FontId::proportional(13.0),
+        FontId::proportional(FONT_ROW),
         palette.text,
     );
     response
@@ -198,7 +215,8 @@ fn customize_row_actions(
     shortcut: Option<&str>,
     commands: &mut Vec<Command>,
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 30.0), Sense::click_and_drag());
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click_and_drag());
     let fill = if selected {
         palette.selected
     } else if response.hovered() {
@@ -207,32 +225,39 @@ fn customize_row_actions(
         Color32::TRANSPARENT
     };
     if fill != Color32::TRANSPARENT {
-        ui.painter().rect_filled(rect, CornerRadius::same(6), fill);
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(ROW_RADIUS), fill);
     }
     draw_dots(
         ui.painter(),
-        Rect::from_min_size(rect.min + Vec2::new(4.0, 9.0), Vec2::splat(12.0)),
+        Rect::from_min_size(
+            rect.min + Vec2::new(SPACE_4, SPACE_10),
+            Vec2::splat(SPACE_12),
+        ),
         palette.muted,
     );
     draw(
         ui.painter(),
-        Rect::from_min_size(rect.min + Vec2::new(22.0, 7.0), Vec2::splat(16.0)),
+        Rect::from_min_size(
+            rect.min + Vec2::new(SPACE_22, SPACE_8),
+            Vec2::splat(ICON_SIZE),
+        ),
         palette.muted,
     );
     ui.painter().text(
-        rect.min + Vec2::new(46.0, 15.0),
+        rect.min + Vec2::new(SPACE_46, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
         label,
-        FontId::proportional(13.0),
+        FontId::proportional(FONT_ROW),
         palette.text,
     );
     let gear = Rect::from_center_size(
-        Pos2::new(rect.right() - 40.0, rect.center().y),
-        Vec2::splat(18.0),
+        Pos2::new(rect.right() - SPACE_40, rect.center().y),
+        Vec2::splat(SPACE_18),
     );
     let exclude = Rect::from_center_size(
-        Pos2::new(rect.right() - 18.0, rect.center().y),
-        Vec2::splat(18.0),
+        Pos2::new(rect.right() - SPACE_18, rect.center().y),
+        Vec2::splat(SPACE_18),
     );
     let gear_resp = ui.interact(
         gear,
@@ -279,7 +304,7 @@ fn nav_row_rect(
     selected: bool,
     palette: &Palette,
 ) -> (Rect, egui::Response) {
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 30.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click());
     let fill = if selected {
         palette.selected
     } else if response.hovered() {
@@ -288,7 +313,8 @@ fn nav_row_rect(
         Color32::TRANSPARENT
     };
     if fill != Color32::TRANSPARENT {
-        ui.painter().rect_filled(rect, CornerRadius::same(6), fill);
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(ROW_RADIUS), fill);
     }
     (rect, response)
 }
@@ -303,25 +329,31 @@ fn nav_row(
     draw: impl FnOnce(&egui::Painter, Rect, Color32),
 ) -> egui::Response {
     let (rect, response) = nav_row_rect(ui, width, selected, palette);
-    let icon_rect = Rect::from_min_size(rect.min + Vec2::new(10.0, 7.0), Vec2::splat(16.0));
+    let icon_rect = Rect::from_min_size(
+        rect.min + Vec2::new(ROW_ICON_INSET, SPACE_8),
+        Vec2::splat(ICON_SIZE),
+    );
     draw(ui.painter(), icon_rect, palette.muted);
     ui.painter().text(
-        rect.min + Vec2::new(36.0, 15.0),
+        rect.min + Vec2::new(ROW_LABEL_INSET, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
         label,
-        FontId::proportional(13.5),
+        FontId::proportional(FONT_ROW),
         palette.text,
     );
     response
 }
 
 fn section_label(ui: &mut egui::Ui, text: &str, palette: &Palette) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 24.0), Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(
+        Vec2::new(ui.available_width(), SECTION_LABEL_HEIGHT),
+        Sense::hover(),
+    );
     ui.painter().text(
-        rect.min + Vec2::new(12.0, 12.0),
+        rect.min + Vec2::new(SPACE_12, SPACE_12),
         Align2::LEFT_CENTER,
         text,
-        FontId::proportional(11.5),
+        FontId::proportional(FONT_CAPTION),
         palette.muted,
     );
 }
@@ -336,47 +368,51 @@ pub(crate) fn render_sidebar(
     commands: &mut Vec<Command>,
 ) {
     let width = ui.available_width();
-    ui.add_space(12.0);
+    ui.add_space(SIDEBAR_CONTENT_PADDING);
 
     // Search box with the Ctrl+K hint.
-    let (rect, search_resp) = ui.allocate_exact_size(Vec2::new(width, 34.0), Sense::click());
+    let (rect, search_resp) =
+        ui.allocate_exact_size(Vec2::new(width, SIDEBAR_SEARCH_HEIGHT), Sense::click());
     ui.painter()
-        .rect_filled(rect, CornerRadius::same(6), palette.hover);
+        .rect_filled(rect, CornerRadius::same(ROW_RADIUS), palette.hover);
     ui.painter().rect_stroke(
         rect,
-        CornerRadius::same(6),
-        Stroke::new(1.0, palette.border),
+        CornerRadius::same(ROW_RADIUS),
+        Stroke::new(STROKE_HAIRLINE, palette.border),
         egui::StrokeKind::Inside,
     );
     draw_search(
         ui.painter(),
-        Rect::from_min_size(rect.min + Vec2::new(9.0, 9.0), Vec2::splat(16.0)),
+        Rect::from_min_size(
+            rect.min + Vec2::new(SPACE_10, SPACE_10),
+            Vec2::splat(ICON_SIZE),
+        ),
         palette.muted,
     );
     ui.painter().text(
-        rect.min + Vec2::new(34.0, 17.0),
+        rect.min + Vec2::new(SPACE_34, SIDEBAR_SEARCH_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
         i18n::t("search_or_ask"),
-        FontId::proportional(13.0),
+        FontId::proportional(FONT_ROW),
         palette.muted,
     );
     ui.painter().text(
-        rect.max + Vec2::new(-10.0, -17.0),
+        rect.max + Vec2::new(-SPACE_10, -SIDEBAR_SEARCH_HEIGHT / 2.0),
         Align2::RIGHT_CENTER,
         "Ctrl+K",
-        FontId::proportional(11.0),
+        FontId::proportional(FONT_CAPTION),
         palette.muted,
     );
     if search_resp.clicked() {
         commands.push(Command::OpenSearch);
     }
 
-    ui.add_space(16.0);
+    ui.add_space(SIDEBAR_CONTENT_PADDING);
 
     // The page list scrolls when it grows beyond the space left above the
     // fixed bottom group (spec-013: sidebar overflow).
-    let bottom_reserve = 176.0;
-    let scroll_height = (ui.available_height() - bottom_reserve).max(120.0);
+    let bottom_reserve = SIDEBAR_BOTTOM_RESERVE;
+    let scroll_height = (ui.available_height() - bottom_reserve).max(SIDEBAR_MIN_SCROLL_HEIGHT);
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
         .max_height(scroll_height)
@@ -384,11 +420,14 @@ pub(crate) fn render_sidebar(
             ui.set_width(width);
             if view.sidebar_customize || view.sidebar_layout.tabs.len() > 1 {
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 4.0;
+                    ui.spacing_mut().item_spacing.x = SPACE_4;
                     for tab in &view.sidebar_layout.tabs {
                         let active = tab.id == view.sidebar_layout.active_tab;
                         if ui
-                            .selectable_label(active, egui::RichText::new(&tab.title).size(11.5))
+                            .selectable_label(
+                                active,
+                                egui::RichText::new(&tab.title).size(FONT_CAPTION),
+                            )
                             .clicked()
                         {
                             commands.push(Command::SwitchSidebarTab(tab.id.clone()));
@@ -398,7 +437,9 @@ pub(crate) fn render_sidebar(
                             && ui
                                 .add(
                                     egui::Button::new(
-                                        egui::RichText::new("×").size(11.0).color(palette.muted),
+                                        egui::RichText::new("×")
+                                            .size(FONT_CAPTION)
+                                            .color(palette.muted),
                                     )
                                     .frame(false),
                                 )
@@ -411,7 +452,7 @@ pub(crate) fn render_sidebar(
                         && ui
                             .add(
                                 egui::Button::new(
-                                    egui::RichText::new("+").size(13.0).color(palette.muted),
+                                    egui::RichText::new("+").size(FONT_ROW).color(palette.muted),
                                 )
                                 .frame(false),
                             )
@@ -421,7 +462,7 @@ pub(crate) fn render_sidebar(
                         commands.push(Command::AddSidebarTab);
                     }
                 });
-                ui.add_space(8.0);
+                ui.add_space(SPACE_8);
             }
             if view.sidebar_customize {
                 // Edit mode: every row has a handle, settings and exclude
@@ -503,7 +544,7 @@ pub(crate) fn render_sidebar(
                     commands.push(Command::OpenSidebarMenu(SidebarMenu::Shortcut));
                 }
 
-                ui.add_space(18.0);
+                ui.add_space(SECTION_GAP);
                 for (index, section) in view
                     .sidebar_layout
                     .sections
@@ -685,8 +726,8 @@ pub(crate) fn render_sidebar(
                     {
                         ui.painter().rect_stroke(
                             target.rect,
-                            CornerRadius::same(6),
-                            Stroke::new(2.0, palette.accent),
+                            CornerRadius::same(ROW_RADIUS),
+                            Stroke::new(STROKE_EMPHASIS, palette.accent),
                             egui::StrokeKind::Inside,
                         );
                     }
@@ -722,7 +763,7 @@ pub(crate) fn render_sidebar(
                 for section in view.sidebar_layout.visible_sections() {
                     match section.source {
                         SidebarSectionSource::Favorites if ws.settings.sidebar_favorites => {
-                            ui.add_space(18.0);
+                            ui.add_space(SECTION_GAP);
                             section_label(ui, &i18n::t("favorites"), palette);
                             let favorites = ws.favorites();
                             if favorites.is_empty() {
@@ -736,18 +777,18 @@ pub(crate) fn render_sidebar(
                                     draw_page_icon(
                                         ui.painter(),
                                         Rect::from_min_size(
-                                            rect.min + Vec2::new(10.0, 7.0),
-                                            Vec2::splat(16.0),
+                                            rect.min + Vec2::new(ROW_ICON_INSET, SPACE_8),
+                                            Vec2::splat(ICON_SIZE),
                                         ),
                                         &page_icon_letter(&page.icon, &page.title),
                                         palette,
                                         false,
                                     );
                                     ui.painter().text(
-                                        rect.min + Vec2::new(36.0, 15.0),
+                                        rect.min + Vec2::new(ROW_LABEL_INSET, ROW_HEIGHT / 2.0),
                                         Align2::LEFT_CENTER,
                                         &page.title,
-                                        FontId::proportional(13.5),
+                                        FontId::proportional(FONT_ROW),
                                         palette.text,
                                     );
                                     if response.clicked() {
@@ -757,7 +798,7 @@ pub(crate) fn render_sidebar(
                             }
                         }
                         SidebarSectionSource::Private if ws.settings.sidebar_private => {
-                            ui.add_space(18.0);
+                            ui.add_space(SECTION_GAP);
                             section_label(ui, &i18n::t("private"), palette);
                             render_tree(ui, ws, None, 0, width, view, palette, commands);
                             if nav_row(ui, width, &i18n::t("new_page"), false, palette, draw_plus)
@@ -767,7 +808,7 @@ pub(crate) fn render_sidebar(
                             }
                         }
                         SidebarSectionSource::Custom => {
-                            ui.add_space(18.0);
+                            ui.add_space(SECTION_GAP);
                             let title = if section.title.trim().is_empty() {
                                 "Shortcuts"
                             } else {
@@ -781,19 +822,21 @@ pub(crate) fn render_sidebar(
                                     .page_id
                                     .strip_prefix("nav:")
                                     .and_then(NavShortcut::from_id);
-                                let (rect, response) =
-                                    ui.allocate_exact_size(Vec2::new(width, 28.0), Sense::click());
+                                let (rect, response) = ui.allocate_exact_size(
+                                    Vec2::new(width, SIDEBAR_SHORTCUT_HEIGHT),
+                                    Sense::click(),
+                                );
                                 let selected = nav.is_some_and(|nav| nav.selected(view));
                                 if selected {
                                     ui.painter().rect_filled(
                                         rect,
-                                        CornerRadius::same(6),
+                                        CornerRadius::same(ROW_RADIUS),
                                         palette.selected,
                                     );
                                 } else if response.hovered() {
                                     ui.painter().rect_filled(
                                         rect,
-                                        CornerRadius::same(6),
+                                        CornerRadius::same(ROW_RADIUS),
                                         palette.hover,
                                     );
                                 }
@@ -801,16 +844,16 @@ pub(crate) fn render_sidebar(
                                     nav.draw()(
                                         ui.painter(),
                                         Rect::from_min_size(
-                                            rect.min + Vec2::new(10.0, 6.0),
-                                            Vec2::splat(16.0),
+                                            rect.min + Vec2::new(ROW_ICON_INSET, SPACE_6),
+                                            Vec2::splat(ICON_SIZE),
                                         ),
                                         palette.muted,
                                     );
                                     ui.painter().text(
-                                        rect.min + Vec2::new(36.0, 14.0),
+                                        rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
                                         Align2::LEFT_CENTER,
                                         nav.label(),
-                                        FontId::proportional(13.0),
+                                        FontId::proportional(FONT_ROW),
                                         palette.text,
                                     );
                                     if response.clicked()
@@ -822,18 +865,18 @@ pub(crate) fn render_sidebar(
                                     draw_page_icon(
                                         ui.painter(),
                                         Rect::from_min_size(
-                                            rect.min + Vec2::new(10.0, 6.0),
-                                            Vec2::splat(16.0),
+                                            rect.min + Vec2::new(ROW_ICON_INSET, SPACE_6),
+                                            Vec2::splat(ICON_SIZE),
                                         ),
                                         &page_icon_letter(&page.icon, &page.title),
                                         palette,
                                         false,
                                     );
                                     ui.painter().text(
-                                        rect.min + Vec2::new(36.0, 14.0),
+                                        rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
                                         Align2::LEFT_CENTER,
                                         &page.title,
-                                        FontId::proportional(13.0),
+                                        FontId::proportional(FONT_ROW),
                                         palette.text,
                                     );
                                     if response.clicked() {
@@ -841,10 +884,10 @@ pub(crate) fn render_sidebar(
                                     }
                                 } else {
                                     ui.painter().text(
-                                        rect.min + Vec2::new(36.0, 14.0),
+                                        rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
                                         Align2::LEFT_CENTER,
                                         &shortcut.label,
-                                        FontId::proportional(13.0),
+                                        FontId::proportional(FONT_ROW),
                                         palette.text,
                                     );
                                 }
@@ -860,15 +903,19 @@ pub(crate) fn render_sidebar(
     ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
         // Account row: the workspace switcher button is its own hit target;
         // Help and the four-point control sit outside its hover area.
-        let (row, _) = ui.allocate_exact_size(Vec2::new(width, 40.0), Sense::hover());
-        let account_rect = Rect::from_min_max(row.min, Pos2::new(row.right() - 52.0, row.bottom()));
+        let (row, _) =
+            ui.allocate_exact_size(Vec2::new(width, SIDEBAR_ACCOUNT_HEIGHT), Sense::hover());
+        let account_rect = Rect::from_min_max(
+            row.min,
+            Pos2::new(row.right() - SIDEBAR_ACCOUNT_ACTIONS_WIDTH, row.bottom()),
+        );
         let help_rect = Rect::from_center_size(
-            Pos2::new(row.right() - 38.0, row.center().y),
-            Vec2::splat(22.0),
+            Pos2::new(row.right() - SPACE_38, row.center().y),
+            Vec2::splat(SPACE_22),
         );
         let grid_rect = Rect::from_center_size(
-            Pos2::new(row.right() - 14.0, row.center().y),
-            Vec2::splat(22.0),
+            Pos2::new(row.right() - SPACE_14, row.center().y),
+            Vec2::splat(SPACE_22),
         );
         let account = ui.interact(
             account_rect,
@@ -891,7 +938,7 @@ pub(crate) fn render_sidebar(
         });
         if account.hovered() || view.workspace_menu_open {
             ui.painter()
-                .rect_filled(account_rect, CornerRadius::same(6), palette.hover);
+                .rect_filled(account_rect, CornerRadius::same(ROW_RADIUS), palette.hover);
         }
         if help.hovered() {
             ui.painter()
@@ -901,34 +948,37 @@ pub(crate) fn render_sidebar(
             ui.painter()
                 .rect_filled(grid_rect, CornerRadius::same(4), palette.hover);
         }
-        ui.painter()
-            .circle_filled(row.min + Vec2::new(22.0, 20.0), 13.0, palette.accent);
+        ui.painter().circle_filled(
+            row.min + Vec2::new(SPACE_22, SIDEBAR_ACCOUNT_HEIGHT / 2.0),
+            SPACE_14,
+            palette.accent,
+        );
         ui.painter().text(
-            row.min + Vec2::new(22.0, 20.0),
+            row.min + Vec2::new(SPACE_22, SIDEBAR_ACCOUNT_HEIGHT / 2.0),
             Align2::CENTER_CENTER,
             "N",
-            FontId::proportional(12.0),
+            FontId::proportional(FONT_CAPTION),
             Color32::WHITE,
         );
         ui.painter().text(
-            row.min + Vec2::new(44.0, 20.0),
+            row.min + Vec2::new(SPACE_44, SIDEBAR_ACCOUNT_HEIGHT / 2.0),
             Align2::LEFT_CENTER,
             i18n::t("local_workspace"),
-            FontId::proportional(13.0),
+            FontId::proportional(FONT_ROW),
             palette.text,
         );
         draw_chevron(
             ui.painter(),
             Rect::from_min_size(
-                Pos2::new(account_rect.right() - 24.0, row.min.y + 12.0),
-                Vec2::splat(16.0),
+                Pos2::new(account_rect.right() - SPACE_24, row.min.y + SPACE_12),
+                Vec2::splat(ICON_SIZE),
             ),
             view.workspace_menu_open,
             palette.muted,
         );
         draw_help(
             ui.painter(),
-            Rect::from_center_size(help_rect.center(), Vec2::splat(16.0)),
+            Rect::from_center_size(help_rect.center(), Vec2::splat(ICON_SIZE)),
             if help.hovered() {
                 palette.text
             } else {
@@ -937,7 +987,7 @@ pub(crate) fn render_sidebar(
         );
         draw_grid(
             ui.painter(),
-            Rect::from_center_size(grid_rect.center(), Vec2::splat(16.0)),
+            Rect::from_center_size(grid_rect.center(), Vec2::splat(ICON_SIZE)),
             if grid.hovered() {
                 palette.text
             } else {
@@ -957,82 +1007,90 @@ pub(crate) fn render_sidebar(
         // Invite-members card (same footprint as the pictured sidebar card).
         // Members, sharing and collaboration live on the self-hosted server.
         if ws.settings.sidebar_invite {
-            let (card, card_resp) = ui.allocate_exact_size(Vec2::new(width, 76.0), Sense::click());
+            let (card, card_resp) =
+                ui.allocate_exact_size(Vec2::new(width, SIDEBAR_INVITE_HEIGHT), Sense::click());
             ui.painter()
                 .rect_filled(card, CornerRadius::same(8), palette.callout);
             if card_resp.hovered() {
                 ui.painter().rect_stroke(
                     card,
                     CornerRadius::same(8),
-                    Stroke::new(1.0, palette.accent),
+                    Stroke::new(STROKE_HAIRLINE, palette.accent),
                     egui::StrokeKind::Inside,
                 );
             }
             draw_person(
                 ui.painter(),
-                Rect::from_min_size(card.min + Vec2::new(12.0, 12.0), Vec2::splat(16.0)),
+                Rect::from_min_size(
+                    card.min + Vec2::new(SPACE_12, SPACE_12),
+                    Vec2::splat(ICON_SIZE),
+                ),
                 palette.muted,
             );
             ui.painter().text(
-                card.min + Vec2::new(36.0, 20.0),
+                card.min + Vec2::new(ROW_LABEL_INSET, SPACE_20),
                 Align2::LEFT_CENTER,
                 i18n::t("invite_members"),
-                FontId::proportional(13.0),
+                FontId::proportional(FONT_ROW),
                 palette.accent,
             );
             ui.painter().text(
-                card.min + Vec2::new(12.0, 42.0),
+                card.min + Vec2::new(SPACE_12, SPACE_42),
                 Align2::LEFT_CENTER,
                 i18n::t("collaborate_team"),
-                FontId::proportional(11.0),
+                FontId::proportional(FONT_CAPTION),
                 palette.muted,
             );
             if card_resp.clicked() {
                 commands.push(Command::OpenShare);
             }
-            ui.add_space(8.0);
+            ui.add_space(SPACE_8);
         }
 
         // Customize sidebar toggles the in-place edit mode; the Done button
         // sits above the invite card, as in reference/customize-sidebar.png.
         if view.sidebar_customize {
-            let (done, done_resp) = ui.allocate_exact_size(Vec2::new(width, 32.0), Sense::click());
+            let (done, done_resp) =
+                ui.allocate_exact_size(Vec2::new(width, SIDEBAR_DONE_HEIGHT), Sense::click());
             ui.painter()
-                .rect_filled(done, CornerRadius::same(6), palette.accent);
+                .rect_filled(done, CornerRadius::same(ROW_RADIUS), palette.accent);
             ui.painter().text(
                 done.center(),
                 Align2::CENTER_CENTER,
                 "Done",
-                FontId::proportional(13.0),
+                FontId::proportional(FONT_ROW),
                 Color32::WHITE,
             );
             if done_resp.clicked() {
                 commands.push(Command::SetSidebarCustomize(false));
             }
-            ui.add_space(8.0);
+            ui.add_space(SPACE_8);
         } else if ws.settings.sidebar_customize {
             let (custom, custom_resp) =
-                ui.allocate_exact_size(Vec2::new(width, 28.0), Sense::click());
+                ui.allocate_exact_size(Vec2::new(width, SIDEBAR_CUSTOMIZE_HEIGHT), Sense::click());
             if custom_resp.hovered() {
                 ui.painter()
-                    .rect_filled(custom, CornerRadius::same(6), palette.hover);
+                    .rect_filled(custom, CornerRadius::same(ROW_RADIUS), palette.hover);
             }
             draw_sliders(
                 ui.painter(),
-                Rect::from_min_size(custom.min + Vec2::new(10.0, 6.0), Vec2::splat(16.0)),
+                Rect::from_min_size(
+                    custom.min + Vec2::new(ROW_ICON_INSET, SPACE_6),
+                    Vec2::splat(ICON_SIZE),
+                ),
                 palette.muted,
             );
             ui.painter().text(
-                custom.min + Vec2::new(36.0, 14.0),
+                custom.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
                 Align2::LEFT_CENTER,
                 i18n::t("customize_sidebar"),
-                FontId::proportional(12.5),
+                FontId::proportional(FONT_CAPTION),
                 palette.muted,
             );
             if custom_resp.clicked() {
                 commands.push(Command::SetSidebarCustomize(true));
             }
-            ui.add_space(10.0);
+            ui.add_space(SPACE_10);
         }
     });
 }
@@ -1055,8 +1113,9 @@ fn render_tree(
         }
         let has_children = !ws.children(Some(&page.id)).is_empty();
         let open = view.expanded.contains(&page.id);
-        let indent = 10.0 + depth as f32 * 16.0;
-        let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 28.0), Sense::click());
+        let indent = ROW_ICON_INSET + depth as f32 * ICON_SIZE;
+        let (rect, response) =
+            ui.allocate_exact_size(Vec2::new(width, SIDEBAR_SHORTCUT_HEIGHT), Sense::click());
         let fill = if view.current_page == page.id && !view.library_open {
             palette.selected
         } else if response.hovered() {
@@ -1065,9 +1124,13 @@ fn render_tree(
             Color32::TRANSPARENT
         };
         if fill != Color32::TRANSPARENT {
-            ui.painter().rect_filled(rect, CornerRadius::same(6), fill);
+            ui.painter()
+                .rect_filled(rect, CornerRadius::same(ROW_RADIUS), fill);
         }
-        let glyph_rect = Rect::from_min_size(rect.min + Vec2::new(indent, 6.0), Vec2::splat(16.0));
+        let glyph_rect = Rect::from_min_size(
+            rect.min + Vec2::new(indent, SPACE_6),
+            Vec2::splat(ICON_SIZE),
+        );
         if has_children {
             draw_chevron(ui.painter(), glyph_rect, open, palette.muted);
         } else {
@@ -1080,10 +1143,10 @@ fn render_tree(
             );
         }
         ui.painter().text(
-            rect.min + Vec2::new(indent + 24.0, 14.0),
+            rect.min + Vec2::new(indent + SPACE_24, SPACE_14),
             Align2::LEFT_CENTER,
             &page.title,
-            FontId::proportional(13.0),
+            FontId::proportional(FONT_ROW),
             palette.text,
         );
         if response.clicked() {

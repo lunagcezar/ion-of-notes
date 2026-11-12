@@ -1,5 +1,6 @@
 //! Settings page: ai.
 
+use crate::ui::constants as metrics;
 use egui::{Color32, CornerRadius, Margin, Sense, Vec2};
 
 use super::super::super::commands::Command;
@@ -36,29 +37,31 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                     };
                     let (dot, _) = ui.allocate_exact_size(Vec2::splat(10.0), Sense::hover());
                     ui.painter().circle_filled(dot.center(), 4.0, dot_color);
-                    ui.label(egui::RichText::new(label).size(12.0).color(
-                        if view.ai_connected && !checking {
-                            palette.text
-                        } else {
-                            palette.muted
-                        },
-                    ));
+                    ui.label(
+                        egui::RichText::new(label)
+                            .size(metrics::FONT_CAPTION)
+                            .color(if view.ai_connected && !checking {
+                                palette.text
+                            } else {
+                                palette.muted
+                            }),
+                    );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.add(egui::Button::new("Refresh")).clicked() {
                             commands.push(Command::RefreshAiStatus);
                         }
                     });
                 });
-                ui.add_space(18.0);
+                ui.add_space(metrics::SECTION_GAP);
             }
             "endpoint" => {
                 ui.label(
                     egui::RichText::new("Service endpoint (host:port on your network)")
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .strong()
                         .color(palette.text),
                 );
-                ui.add_space(6.0);
+                ui.add_space(metrics::SPACE_6);
                 let mut endpoint = view.ai_endpoint.clone();
                 if ui
                     .add(
@@ -70,24 +73,24 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                 {
                     commands.push(Command::SetAiEndpoint(endpoint));
                 }
-                ui.add_space(4.0);
+                ui.add_space(metrics::SPACE_4);
                 ui.label(
                     egui::RichText::new(
                         "Start Ollama (`ollama serve`) and point this at its port, or leave the default loopback. OLLAMA_HOST also works.",
                     )
-                    .size(11.0)
+                    .size(metrics::FONT_MICRO)
                     .color(palette.muted),
                 );
-                ui.add_space(16.0);
+                ui.add_space(metrics::SPACE_16);
             }
             "model" => {
                 ui.label(
                     egui::RichText::new("Model")
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .strong()
                         .color(palette.text),
                 );
-                ui.add_space(6.0);
+                ui.add_space(metrics::SPACE_6);
                 let mut model = view.ai_model.clone();
                 if ui
                     .add(
@@ -99,13 +102,13 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                 {
                     commands.push(Command::SetAiModel(model));
                 }
-                ui.add_space(16.0);
+                ui.add_space(metrics::SPACE_16);
             }
             "prefer_cli" => {
                 ui.horizontal(|ui| {
                     ui.label(
                         egui::RichText::new(row.title)
-                            .size(12.0)
+                            .size(metrics::FONT_CAPTION)
                             .color(palette.text),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -115,7 +118,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                         }
                     });
                 });
-                ui.add_space(22.0);
+                ui.add_space(metrics::SPACE_22);
             }
             "try_it" => {
                 if ui.add(egui::Button::new("Ask a test question")).clicked() {
@@ -123,11 +126,11 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                         "Say hello in one short sentence.".to_string(),
                     ));
                 }
-                ui.add_space(10.0);
+                ui.add_space(metrics::SPACE_10);
                 if view.ai_busy {
                     ui.label(
                         egui::RichText::new("Waiting for Ollama…")
-                            .size(12.0)
+                            .size(metrics::FONT_CAPTION)
                             .color(palette.accent),
                     );
                 } else if let Some(answer) = &view.ai_answer {
@@ -136,26 +139,30 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                         .corner_radius(CornerRadius::same(6))
                         .inner_margin(Margin::same(10))
                         .show(ui, |ui| {
-                            ui.label(egui::RichText::new(answer).size(12.5).color(palette.text));
+                            ui.label(
+                                egui::RichText::new(answer)
+                                    .size(metrics::FONT_CAPTION)
+                                    .color(palette.text),
+                            );
                         });
                 } else if let Some(error) = &view.ai_error {
                     ui.label(
                         egui::RichText::new(error)
-                            .size(11.5)
+                            .size(metrics::FONT_CAPTION)
                             .color(Color32::from_rgb(224, 108, 108)),
                     );
                 }
-                ui.add_space(18.0);
+                ui.add_space(metrics::SECTION_GAP);
             }
             "shortcut" => {
                 ui.label(
                     egui::RichText::new(
                         "Shortcut: Shift+Ctrl+J opens the assistant. Ask anything from Search or ask.",
                     )
-                    .size(11.0)
+                    .size(metrics::FONT_MICRO)
                     .color(palette.muted),
                 );
-                ui.add_space(10.0);
+                ui.add_space(metrics::SPACE_10);
             }
             _ => {}
         }

@@ -1,6 +1,7 @@
 //! Keyboard shortcut sheet.
 
 use crate::shortcuts::SHORTCUT_TABLE;
+use crate::ui::constants as metrics;
 use egui::{Align2, FontId, Sense, Vec2};
 
 use super::super::commands::Command;
@@ -25,7 +26,7 @@ pub(crate) fn render_shortcuts(
             ui.horizontal(|ui| {
                 ui.label(
                     egui::RichText::new("Keyboard shortcuts")
-                        .font(strong_font(18.0))
+                        .font(strong_font(metrics::FONT_SUBTITLE))
                         .color(palette.text),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -42,7 +43,7 @@ pub(crate) fn render_shortcuts(
                     }
                 });
             });
-            ui.add_space(6.0);
+            ui.add_space(metrics::SPACE_6);
             ui.separator();
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
@@ -56,14 +57,14 @@ pub(crate) fn render_shortcuts(
                             rect.min + Vec2::new(4.0, 11.0),
                             Align2::LEFT_CENTER,
                             doc.label,
-                            FontId::proportional(12.5),
+                            FontId::proportional(metrics::FONT_CAPTION),
                             palette.text,
                         );
                         ui.painter().text(
                             rect.max + Vec2::new(-4.0, -11.0),
                             Align2::RIGHT_CENTER,
                             doc.keys,
-                            FontId::proportional(12.0),
+                            FontId::proportional(metrics::FONT_CAPTION),
                             palette.accent,
                         );
                         ui.painter().text(

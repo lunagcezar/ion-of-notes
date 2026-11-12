@@ -2,6 +2,7 @@
 
 use crate::i18n;
 use crate::model::Workspace;
+use crate::ui::constants as metrics;
 
 use super::super::super::commands::Command;
 use super::super::super::palette::Palette;
@@ -26,7 +27,7 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
             "workspace_name" => {
                 ui.label(
                     egui::RichText::new(row.title)
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .color(palette.text),
                 );
                 ui.add(
@@ -34,13 +35,13 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                         .desired_width(320.0)
                         .text_color(palette.text),
                 );
-                ui.add_space(8.0);
+                ui.add_space(metrics::SPACE_8);
             }
             "icon" => {
                 ui.horizontal(|ui| {
                     ui.label(
                         egui::RichText::new(row.title)
-                            .size(12.0)
+                            .size(metrics::FONT_CAPTION)
                             .color(palette.text),
                     );
                     ui.add(
@@ -49,12 +50,12 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                             .text_color(palette.text),
                     );
                 });
-                ui.add_space(8.0);
+                ui.add_space(metrics::SPACE_8);
             }
             "landing_page" => {
                 ui.label(
                     egui::RichText::new(row.title)
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .color(palette.text),
                 );
                 let pages: Vec<(String, String)> = ws
@@ -86,7 +87,7 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                             );
                         }
                     });
-                ui.add_space(8.0);
+                ui.add_space(metrics::SPACE_8);
             }
             "allowed_domains" => {
                 let input_id = egui::Id::unique("allowed_domain_input");
@@ -118,7 +119,11 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                 let mut remove = None;
                 for (index, value) in ws.settings.allowed_domains.iter().enumerate() {
                     ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new(value).size(12.0).color(palette.text));
+                        ui.label(
+                            egui::RichText::new(value)
+                                .size(metrics::FONT_CAPTION)
+                                .color(palette.text),
+                        );
                         if ui.button(i18n::t("remove")).clicked() {
                             remove = Some(index);
                         }
@@ -127,13 +132,13 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                 if let Some(index) = remove {
                     ws.settings.allowed_domains.remove(index);
                 }
-                ui.add_space(12.0);
+                ui.add_space(metrics::SPACE_12);
             }
             "get_started" => {
                 if ui.button(i18n::t("get_started")).clicked() {
                     commands.push(Command::OpenOnboarding);
                 }
-                ui.add_space(12.0);
+                ui.add_space(metrics::SPACE_12);
             }
             "members_access" => {
                 if ui
@@ -142,12 +147,12 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                 {
                     commands.push(Command::OpenShare);
                 }
-                ui.add_space(12.0);
+                ui.add_space(metrics::SPACE_12);
             }
             "data_export" => {
                 ui.label(
                     egui::RichText::new(i18n::t("export_includes"))
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .color(palette.muted),
                 );
                 ui.horizontal(|ui| {
@@ -159,9 +164,13 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                     }
                 });
                 if let Some(status) = &view.settings_status {
-                    ui.label(egui::RichText::new(status).size(11.0).color(palette.accent));
+                    ui.label(
+                        egui::RichText::new(status)
+                            .size(metrics::FONT_MICRO)
+                            .color(palette.accent),
+                    );
                 }
-                ui.add_space(10.0);
+                ui.add_space(metrics::SPACE_10);
             }
             _ => {}
         }

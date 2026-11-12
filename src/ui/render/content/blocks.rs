@@ -4,6 +4,15 @@ use crate::model::{Block, BlockKind};
 use crate::server::realtime::Awareness;
 use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
 
+use crate::ui::constants::{
+    BLOCK_BODY_SIZE, BLOCK_BULLET_SIZE, BLOCK_CALLOUT_PADDING, BLOCK_CODE_PADDING,
+    BLOCK_CONTROL_GAP, BLOCK_CONTROL_HEIGHT, BLOCK_CONTROL_WIDTH, BLOCK_DIVIDER_HEIGHT,
+    BLOCK_DRAG_OVER, BLOCK_MONO_SIZE, BLOCK_ROW_HEIGHT, BLOCK_SMALL_SIZE, BLOCK_TODO_SIZE,
+    DRAG_GHOST_MAX_WIDTH, DRAG_GHOST_MIN_WIDTH, FONT_ROW, ICON_RADIUS, ROW_RADIUS, SPACE_2,
+    SPACE_4, SPACE_6, SPACE_8, SPACE_12, SPACE_16, SPACE_18, SPACE_20, SPACE_26, SPACE_60,
+    SPACE_70, STROKE_EMPHASIS, STROKE_HAIRLINE,
+};
+
 use super::super::super::commands::Command;
 use super::super::super::icons::{draw_bullet_dot, draw_dots, draw_page, draw_plus, icon_button};
 use super::super::super::palette::{Palette, strong_font};
@@ -28,12 +37,12 @@ pub(super) fn render_block(
     block_count: usize,
 ) {
     let row_min = ui.available_rect_before_wrap().min;
-    let row_rect = Rect::from_min_size(row_min, Vec2::new(width + gutter, 30.0));
+    let row_rect = Rect::from_min_size(row_min, Vec2::new(width + gutter, BLOCK_ROW_HEIGHT));
     let hover = ui
         .input(|i| i.pointer.hover_pos())
         .map(|p| row_rect.contains(p))
         .unwrap_or(false);
-    let menu_pos = Pos2::new(row_rect.min.x + 60.0, row_rect.min.y);
+    let menu_pos = Pos2::new(row_rect.min.x + SPACE_60, row_rect.min.y);
 
     // Page-level selection is painted after the block layout so the overlay
     // covers the full multi-line text rect, not just the first line.
@@ -52,7 +61,9 @@ pub(super) fn render_block(
     // below a block becomes the reorder target (spec-064).
     if view.drag_from.is_some()
         && let Some(p) = ui.ctx().pointer_interact_pos()
-        && row_rect.expand2(Vec2::new(0.0, 10.0)).contains(p)
+        && row_rect
+            .expand2(Vec2::new(0.0, BLOCK_DRAG_OVER))
+            .contains(p)
     {
         ui.ctx().data_mut(|data| {
             data.insert_temp(egui::Id::unique("block_drag_over"), true);
@@ -70,8 +81,11 @@ pub(super) fn render_block(
         } else {
             row_rect.max.y
         };
-        ui.painter()
-            .hline(row_rect.x_range(), y, Stroke::new(2.0, palette.accent));
+        ui.painter().hline(
+            row_rect.x_range(),
+            y,
+            Stroke::new(STROKE_EMPHASIS, palette.accent),
+        );
     }
 
     let mut delete_empty = false;
@@ -79,17 +93,17 @@ pub(super) fn render_block(
         ui.spacing_mut().item_spacing.x = 0.0;
         // Keep layout stable regardless of hover to avoid stealing TextEdit focus.
         let control_h = if block.kind.is_heading() {
-            block.kind.font_size().max(22.0)
+            block.kind.font_size().max(BLOCK_CONTROL_HEIGHT)
         } else {
-            22.0
+            BLOCK_CONTROL_HEIGHT
         };
         let plus_rect = ui
-            .allocate_exact_size(Vec2::new(22.0, control_h), Sense::hover())
+            .allocate_exact_size(Vec2::new(BLOCK_CONTROL_WIDTH, control_h), Sense::hover())
             .0;
         let handle_rect = ui
-            .allocate_exact_size(Vec2::new(22.0, control_h), Sense::hover())
+            .allocate_exact_size(Vec2::new(BLOCK_CONTROL_WIDTH, control_h), Sense::hover())
             .0;
-        ui.add_space(4.0);
+        ui.add_space(BLOCK_CONTROL_GAP);
         if hover && !view.lock_page {
             let plus = ui
                 .interact(
@@ -221,108 +235,121 @@ pub(super) fn render_block(
         let mut edit_response: Option<egui::widgets::text_edit::TextEditOutput> = None;
         match block.kind {
             BlockKind::Divider => {
-                let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 14.0), Sense::hover());
+                let (rect, _) =
+                    ui.allocate_exact_size(Vec2::new(width, BLOCK_DIVIDER_HEIGHT), Sense::hover());
                 ui.painter().hline(
                     rect.x_range(),
                     rect.center().y,
-                    Stroke::new(1.0, palette.border),
+                    Stroke::new(STROKE_HAIRLINE, palette.border),
                 );
             }
             BlockKind::Todo => {
                 let checked = block.checked;
-                let check = icon_button(ui, 18.0, palette, move |painter, rect, color| {
-                    if checked {
-                        painter.rect_filled(rect.shrink(2.0), CornerRadius::same(3), color);
-                        let c = rect.center();
-                        let stroke = Stroke::new(1.5, Color32::WHITE);
-                        painter.line(
-                            vec![
-                                c + Vec2::new(-3.0, 0.0),
-                                c + Vec2::new(-1.0, 2.0),
-                                c + Vec2::new(3.5, -2.5),
-                            ],
-                            stroke,
-                        );
-                    } else {
-                        painter.rect_stroke(
-                            rect.shrink(2.0),
-                            CornerRadius::same(3),
-                            Stroke::new(1.4, color),
-                            egui::StrokeKind::Inside,
-                        );
-                    }
-                });
+                let check =
+                    icon_button(ui, BLOCK_TODO_SIZE, palette, move |painter, rect, color| {
+                        if checked {
+                            painter.rect_filled(
+                                rect.shrink(SPACE_2),
+                                CornerRadius::same(ICON_RADIUS),
+                                color,
+                            );
+                            let c = rect.center();
+                            let stroke = Stroke::new(STROKE_EMPHASIS, Color32::WHITE);
+                            painter.line(
+                                vec![
+                                    c + Vec2::new(-3.0, 0.0),
+                                    c + Vec2::new(-1.0, 2.0),
+                                    c + Vec2::new(3.5, -2.5),
+                                ],
+                                stroke,
+                            );
+                        } else {
+                            painter.rect_stroke(
+                                rect.shrink(SPACE_2),
+                                CornerRadius::same(3),
+                                Stroke::new(STROKE_HAIRLINE, color),
+                                egui::StrokeKind::Inside,
+                            );
+                        }
+                    });
                 if check.clicked() && !locked {
                     commands.push(Command::ToggleTodo(block.id.clone()));
                 }
-                ui.add_space(6.0);
+                ui.add_space(SPACE_6);
                 edit_response = Some(edit(
                     ui,
                     &mut block.text,
-                    body_font(view, 15.0),
-                    width - 26.0,
+                    body_font(view, BLOCK_SMALL_SIZE),
+                    width - SPACE_26,
                 ));
             }
             BlockKind::Bulleted => {
-                let (rect, _) = ui.allocate_exact_size(Vec2::new(20.0, 22.0), Sense::hover());
+                let (rect, _) = ui
+                    .allocate_exact_size(Vec2::new(SPACE_20, BLOCK_CONTROL_HEIGHT), Sense::hover());
                 draw_bullet_dot(ui.painter(), rect, palette.accent);
                 edit_response = Some(edit(
                     ui,
                     &mut block.text,
-                    body_font(view, 15.0),
-                    width - 22.0,
+                    body_font(view, BLOCK_SMALL_SIZE),
+                    width - BLOCK_CONTROL_WIDTH,
                 ));
             }
             BlockKind::Numbered => {
                 *numbered += 1;
                 let n = *numbered;
-                let (rect, _) = ui.allocate_exact_size(Vec2::new(20.0, 22.0), Sense::hover());
+                let (rect, _) = ui
+                    .allocate_exact_size(Vec2::new(SPACE_20, BLOCK_CONTROL_HEIGHT), Sense::hover());
                 ui.painter().text(
                     rect.center(),
                     Align2::CENTER_CENTER,
                     format!("{n}."),
-                    FontId::proportional(14.0),
+                    FontId::proportional(BLOCK_SMALL_SIZE),
                     palette.text,
                 );
                 edit_response = Some(edit(
                     ui,
                     &mut block.text,
-                    body_font(view, 15.0),
-                    width - 22.0,
+                    body_font(view, BLOCK_SMALL_SIZE),
+                    width - BLOCK_CONTROL_WIDTH,
                 ));
             }
             BlockKind::Quote => {
-                let (rect, _) = ui.allocate_exact_size(Vec2::new(6.0, 22.0), Sense::hover());
+                let (rect, _) = ui.allocate_exact_size(
+                    Vec2::new(BLOCK_BULLET_SIZE, BLOCK_CONTROL_HEIGHT),
+                    Sense::hover(),
+                );
                 ui.painter().vline(
                     rect.center().x,
                     rect.y_range(),
-                    Stroke::new(3.0, palette.text),
+                    Stroke::new(SPACE_4, palette.text),
                 );
-                ui.add_space(8.0);
+                ui.add_space(SPACE_8);
                 edit_response = Some(edit(
                     ui,
                     &mut block.text,
-                    body_font(view, 16.0),
-                    width - 16.0,
+                    body_font(view, BLOCK_BODY_SIZE),
+                    width - SPACE_16,
                 ));
             }
             BlockKind::Callout => {
                 egui::Frame::NONE
                     .fill(palette.callout)
-                    .corner_radius(CornerRadius::same(6))
-                    .inner_margin(Margin::same(12))
+                    .corner_radius(CornerRadius::same(ROW_RADIUS))
+                    .inner_margin(Margin::same(BLOCK_CALLOUT_PADDING as i8))
                     .show(ui, |ui| {
-                        ui.set_width(width - 24.0);
+                        ui.set_width(width - 2.0 * BLOCK_CALLOUT_PADDING);
                         ui.horizontal(|ui| {
-                            let (icon, _) =
-                                ui.allocate_exact_size(Vec2::new(18.0, 18.0), Sense::hover());
+                            let (icon, _) = ui.allocate_exact_size(
+                                Vec2::new(BLOCK_TODO_SIZE, BLOCK_TODO_SIZE),
+                                Sense::hover(),
+                            );
                             draw_page(ui.painter(), icon, palette.muted);
-                            ui.add_space(8.0);
+                            ui.add_space(SPACE_8);
                             edit_response = Some(edit(
                                 ui,
                                 &mut block.text,
-                                body_font(view, 15.0),
-                                width - 70.0,
+                                body_font(view, BLOCK_SMALL_SIZE),
+                                width - SPACE_70,
                             ));
                         });
                     });
@@ -330,15 +357,15 @@ pub(super) fn render_block(
             BlockKind::Code => {
                 egui::Frame::NONE
                     .fill(palette.code_bg)
-                    .corner_radius(CornerRadius::same(6))
-                    .inner_margin(Margin::same(12))
+                    .corner_radius(CornerRadius::same(ROW_RADIUS))
+                    .inner_margin(Margin::same(BLOCK_CODE_PADDING as i8))
                     .show(ui, |ui| {
-                        ui.set_width(width - 24.0);
+                        ui.set_width(width - 2.0 * BLOCK_CODE_PADDING);
                         edit_response = Some(edit(
                             ui,
                             &mut block.text,
-                            FontId::monospace(13.0),
-                            width - 24.0,
+                            FontId::monospace(BLOCK_MONO_SIZE),
+                            width - 2.0 * BLOCK_CODE_PADDING,
                         ));
                     });
             }
@@ -357,7 +384,7 @@ pub(super) fn render_block(
                 let font = if block.kind.is_heading() {
                     strong_font(block.kind.font_size())
                 } else {
-                    body_font(view, 15.0)
+                    body_font(view, BLOCK_SMALL_SIZE)
                 };
                 edit_response = Some(edit(ui, &mut block.text, font, width));
             }
@@ -405,7 +432,7 @@ pub(super) fn render_block(
                     .unwrap_or("")
                     .to_string();
                 let pos = edit_response.as_ref().map_or(menu_pos, |resp| {
-                    resp.response.rect.left_bottom() + Vec2::new(0.0, 4.0)
+                    resp.response.rect.left_bottom() + Vec2::new(0.0, SPACE_4)
                 });
                 commands.push(Command::OpenSlash {
                     block: block.id.clone(),
@@ -422,8 +449,11 @@ pub(super) fn render_block(
         // Live drag preview: a floating copy of the block follows the pointer
         // while the insertion line marks the drop target (spec-057).
         let ghost = Rect::from_min_size(
-            pointer + Vec2::new(18.0, 8.0),
-            Vec2::new((width * 0.8).clamp(220.0, 420.0), 30.0),
+            pointer + Vec2::new(SPACE_18, SPACE_8),
+            Vec2::new(
+                (width * 0.8).clamp(DRAG_GHOST_MIN_WIDTH, DRAG_GHOST_MAX_WIDTH),
+                BLOCK_ROW_HEIGHT,
+            ),
         );
         let painter = ui.ctx().layer_painter(egui::LayerId::new(
             egui::Order::Tooltip,
@@ -431,9 +461,9 @@ pub(super) fn render_block(
         ));
         painter.rect(
             ghost,
-            CornerRadius::same(6),
+            CornerRadius::same(ROW_RADIUS),
             palette.content,
-            Stroke::new(1.0, palette.accent),
+            Stroke::new(STROKE_HAIRLINE, palette.accent),
             egui::StrokeKind::Inside,
         );
         let label = if block.text.is_empty() {
@@ -442,10 +472,10 @@ pub(super) fn render_block(
             block.text.lines().next().unwrap_or("").to_string()
         };
         painter.text(
-            ghost.min + Vec2::new(12.0, 15.0),
+            ghost.min + Vec2::new(SPACE_12, BLOCK_ROW_HEIGHT / 2.0),
             Align2::LEFT_CENTER,
             label,
-            FontId::proportional(13.0),
+            FontId::proportional(FONT_ROW),
             palette.text,
         );
     }

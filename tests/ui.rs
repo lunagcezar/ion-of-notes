@@ -17,6 +17,76 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 #[test]
+fn ui_constants_are_declaration_only_and_even() {
+    let source = include_str!("../src/ui/constants.rs");
+    assert!(
+        source.contains("//!"),
+        "constants module needs a doc comment"
+    );
+    for forbidden in ["fn ", "struct ", "enum ", "impl "] {
+        assert!(
+            !source.contains(forbidden),
+            "constants module must not contain `{forbidden}`"
+        );
+    }
+
+    let required = [
+        "SIDEBAR_CONTENT_PADDING",
+        "ROW_HEIGHT",
+        "ROW_RADIUS",
+        "ICON_SIZE",
+        "SECTION_GAP",
+        "SETTINGS_RAIL_WIDTH",
+        "BREADCRUMB_HEIGHT",
+        "BLOCK_ROW_HEIGHT",
+        "POPOVER_RADIUS",
+        "FONT_BODY",
+    ];
+    for name in required {
+        assert!(
+            source.contains(&format!("const {name}:")),
+            "missing shared metric {name}"
+        );
+    }
+
+    for line in source.lines() {
+        let line = line.trim();
+        let Some(rest) = line.strip_prefix("pub(crate) const ") else {
+            continue;
+        };
+        let Some((declaration, value)) = rest.split_once('=') else {
+            panic!("constant without a value: {line}");
+        };
+        let Some((name, kind)) = declaration.split_once(':') else {
+            panic!("constant without a type: {line}");
+        };
+        let name = name.trim();
+        if !matches!(kind.trim(), "f32" | "u8") {
+            continue;
+        }
+        let value = value.trim().trim_end_matches(';').trim();
+        if matches!(name, "STROKE_HAIRLINE" | "FONT_SMALL") {
+            continue;
+        }
+        if let Ok(number) = value.parse::<f64>() {
+            assert_eq!(
+                number % 2.0,
+                0.0,
+                "{name} must use an even value, found {number}"
+            );
+        }
+    }
+}
+
+#[test]
+fn shared_sidebar_metrics_are_used_by_both_sidebars() {
+    let main = include_str!("../src/ui/render/sidebar.rs");
+    let settings = include_str!("../src/ui/dialogs/settings.rs");
+    assert!(main.contains("SIDEBAR_CONTENT_PADDING"));
+    assert!(settings.contains("SIDEBAR_CONTENT_PADDING"));
+}
+
+#[test]
 fn palette_colors_are_distinct_per_theme() {
     let light = Palette::light();
     let dark = Palette::dark();

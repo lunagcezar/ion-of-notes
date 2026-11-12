@@ -1,6 +1,7 @@
 //! Settings page: preferences.
 
 use crate::i18n;
+use crate::ui::constants as metrics;
 use egui::{Align2, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::super::super::commands::Command;
@@ -32,34 +33,39 @@ fn choice_row(
     value: &str,
     palette: &Palette,
 ) -> bool {
-    let (rect, response) =
-        ui.allocate_exact_size(Vec2::new(ui.available_width(), 46.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(ui.available_width(), metrics::SPACE_46),
+        Sense::click(),
+    );
     if response.hovered() {
         ui.painter()
             .rect_filled(rect, CornerRadius::same(6), palette.hover);
     }
     ui.painter().text(
-        rect.min + Vec2::new(0.0, 14.0),
+        rect.min + Vec2::new(0.0, metrics::SPACE_14),
         Align2::LEFT_CENTER,
         title,
         FontId::proportional(12.5),
         palette.text,
     );
     ui.painter().text(
-        rect.min + Vec2::new(0.0, 32.0),
+        rect.min + Vec2::new(0.0, metrics::SPACE_32),
         Align2::LEFT_CENTER,
         description,
         FontId::proportional(11.0),
         palette.muted,
     );
     let chip = Rect::from_min_size(
-        Pos2::new(rect.max.x - 150.0, rect.min.y + 9.0),
-        Vec2::new(150.0, 26.0),
+        Pos2::new(
+            rect.max.x - metrics::CHIP_WIDTH,
+            rect.min.y + metrics::SPACE_8,
+        ),
+        Vec2::new(metrics::CHIP_WIDTH, metrics::CHIP_HEIGHT),
     );
     ui.painter().rect_stroke(
         chip,
         CornerRadius::same(6),
-        Stroke::new(1.0, palette.border),
+        Stroke::new(metrics::STROKE_HAIRLINE, palette.border),
         egui::StrokeKind::Inside,
     );
     ui.painter().text(
@@ -96,13 +102,13 @@ pub(in crate::ui::dialogs) fn render_preferences(
                         }
                     });
                 });
-                ui.add_space(6.0);
+                ui.add_space(metrics::SPACE_6);
                 ui.label(
                     egui::RichText::new(row.description)
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .color(palette.muted),
                 );
-                ui.add_space(10.0);
+                ui.add_space(metrics::SPACE_10);
             }
             "high_contrast" => display_row(
                 ui,
@@ -113,21 +119,23 @@ pub(in crate::ui::dialogs) fn render_preferences(
             ),
             "enter_new_line" => display_row(ui, row.title, row.description, "Off", palette),
             "language" => {
-                let (lang_rect, lang_resp) =
-                    ui.allocate_exact_size(Vec2::new(ui.available_width(), 46.0), Sense::click());
+                let (lang_rect, lang_resp) = ui.allocate_exact_size(
+                    Vec2::new(ui.available_width(), metrics::SPACE_46),
+                    Sense::click(),
+                );
                 if lang_resp.hovered() {
                     ui.painter()
                         .rect_filled(lang_rect, CornerRadius::same(6), palette.hover);
                 }
                 ui.painter().text(
-                    lang_rect.min + Vec2::new(0.0, 14.0),
+                    lang_rect.min + Vec2::new(0.0, metrics::SPACE_14),
                     Align2::LEFT_CENTER,
                     i18n::t("language"),
                     FontId::proportional(12.5),
                     palette.text,
                 );
                 ui.painter().text(
-                    lang_rect.min + Vec2::new(0.0, 32.0),
+                    lang_rect.min + Vec2::new(0.0, metrics::SPACE_32),
                     Align2::LEFT_CENTER,
                     i18n::t("language_description"),
                     FontId::proportional(11.0),
@@ -135,13 +143,16 @@ pub(in crate::ui::dialogs) fn render_preferences(
                 );
                 let lang_label = crate::i18n::label_for(&view.language);
                 let chip = Rect::from_min_size(
-                    Pos2::new(lang_rect.max.x - 170.0, lang_rect.min.y + 9.0),
-                    Vec2::new(170.0, 26.0),
+                    Pos2::new(
+                        lang_rect.max.x - metrics::LANGUAGE_CHIP_WIDTH,
+                        lang_rect.min.y + metrics::SPACE_8,
+                    ),
+                    Vec2::new(metrics::LANGUAGE_CHIP_WIDTH, metrics::CHIP_HEIGHT),
                 );
                 ui.painter().rect_stroke(
                     chip,
                     CornerRadius::same(6),
-                    Stroke::new(1.0, palette.border),
+                    Stroke::new(metrics::STROKE_HAIRLINE, palette.border),
                     egui::StrokeKind::Inside,
                 );
                 ui.painter().text(
@@ -203,16 +214,16 @@ pub(in crate::ui::dialogs) fn render_preferences(
                 };
                 ui.label(
                     egui::RichText::new(format!("Self-hosted server  ·  {state}"))
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .color(palette.accent),
                 );
-                ui.add_space(6.0);
+                ui.add_space(metrics::SPACE_6);
                 ui.label(
                     egui::RichText::new(row.description)
-                        .size(12.0)
+                        .size(metrics::FONT_CAPTION)
                         .color(palette.muted),
                 );
-                ui.add_space(10.0);
+                ui.add_space(metrics::SPACE_10);
             }
             "accounts" => info_row(ui, row.title, "1 owner · 2 guests", palette),
             "sharing" => info_row(
@@ -229,10 +240,10 @@ pub(in crate::ui::dialogs) fn render_preferences(
                     egui::RichText::new(
                         "Open source under the MIT license. Run your own server; your data stays yours.",
                     )
-                    .size(12.0)
+                    .size(metrics::FONT_CAPTION)
                     .color(palette.muted),
                 );
-                ui.add_space(12.0);
+                ui.add_space(metrics::SPACE_12);
             }
             "restore_demo" => {
                 if ui
@@ -241,7 +252,7 @@ pub(in crate::ui::dialogs) fn render_preferences(
                 {
                     commands.push(Command::ResetWorkspace);
                 }
-                ui.add_space(10.0);
+                ui.add_space(metrics::SPACE_10);
             }
             _ => {}
         }

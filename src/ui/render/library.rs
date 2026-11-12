@@ -4,6 +4,7 @@
 
 use crate::i18n;
 use crate::model::Workspace;
+use crate::ui::constants as metrics;
 use egui::{Align2, Color32, CornerRadius, FontId, Rect, Sense, Stroke, Vec2};
 
 use super::super::commands::Command;
@@ -53,11 +54,11 @@ pub(super) fn render_library(
                         .add(
                             egui::Button::new(
                                 egui::RichText::new("New page")
-                                    .size(13.0)
+                                    .size(metrics::FONT_ROW)
                                     .color(Color32::WHITE),
                             )
                             .fill(palette.accent)
-                            .corner_radius(CornerRadius::same(6)),
+                            .corner_radius(CornerRadius::same(metrics::ROW_RADIUS)),
                         )
                         .clicked()
                     {
@@ -65,13 +66,13 @@ pub(super) fn render_library(
                     }
                 });
             });
-            ui.add_space(6.0);
+            ui.add_space(metrics::SPACE_6);
             ui.label(
                 egui::RichText::new("Every page in this workspace")
-                    .size(13.0)
+                    .size(metrics::FONT_ROW)
                     .color(palette.muted),
             );
-            ui.add_space(22.0);
+            ui.add_space(metrics::SPACE_22);
 
             ui.horizontal(|ui| {
                 for tab in ["Recents", "Favorites", "Shared", "Private"] {
@@ -79,7 +80,7 @@ pub(super) fn render_library(
                     let btn = ui.add(
                         egui::Button::new(
                             egui::RichText::new(tab_label(tab))
-                                .size(13.0)
+                                .size(metrics::FONT_ROW)
                                 .color(if active { palette.text } else { palette.muted }),
                         )
                         .fill(if active {
@@ -87,7 +88,7 @@ pub(super) fn render_library(
                         } else {
                             Color32::TRANSPARENT
                         })
-                        .corner_radius(CornerRadius::same(6)),
+                        .corner_radius(CornerRadius::same(metrics::ROW_RADIUS)),
                     );
                     if btn.clicked() {
                         commands.push(Command::SetLibraryTab(tab.to_string()));
@@ -95,7 +96,7 @@ pub(super) fn render_library(
                 }
                 ui.menu_button(
                     egui::RichText::new(i18n::t("more"))
-                        .size(13.0)
+                        .size(metrics::FONT_ROW)
                         .color(palette.muted),
                     |ui| {
                         for tab in [
@@ -117,7 +118,7 @@ pub(super) fn render_library(
                     },
                 );
             });
-            ui.add_space(18.0);
+            ui.add_space(metrics::SECTION_GAP);
 
             let name_w = (full - 192.0) * 0.42;
             let created_w = (full - 192.0) * 0.24;
@@ -132,10 +133,10 @@ pub(super) fn render_library(
 
             let pages = pages_for_view(&ws.pages, &view.library_tab, &view.library_shared);
             if pages.is_empty() {
-                ui.add_space(20.0);
+                ui.add_space(metrics::SPACE_20);
                 ui.label(
                     egui::RichText::new(i18n::t("no_pages"))
-                        .size(13.0)
+                        .size(metrics::FONT_ROW)
                         .color(palette.muted),
                 );
             }
@@ -143,44 +144,53 @@ pub(super) fn render_library(
                 let (rect, response) =
                     ui.allocate_exact_size(Vec2::new(full - 192.0, 34.0), Sense::click());
                 if response.hovered() {
-                    ui.painter()
-                        .rect_filled(rect, CornerRadius::same(4), palette.hover);
+                    ui.painter().rect_filled(
+                        rect,
+                        CornerRadius::same(metrics::ICON_RADIUS),
+                        palette.hover,
+                    );
                 }
                 draw_page(
                     ui.painter(),
-                    Rect::from_min_size(rect.min + Vec2::new(8.0, 9.0), Vec2::splat(16.0)),
+                    Rect::from_min_size(
+                        rect.min + Vec2::new(8.0, 9.0),
+                        Vec2::splat(metrics::ICON_SIZE),
+                    ),
                     palette.muted,
                 );
                 ui.painter().text(
                     rect.min + Vec2::new(34.0, 17.0),
                     Align2::LEFT_CENTER,
                     &page.title,
-                    FontId::proportional(13.0),
+                    FontId::proportional(metrics::FONT_ROW),
                     palette.text,
                 );
                 ui.painter().text(
                     rect.min + Vec2::new(name_w + 12.0, 17.0),
                     Align2::LEFT_CENTER,
                     &view.library_owner,
-                    FontId::proportional(12.0),
+                    FontId::proportional(metrics::FONT_CAPTION),
                     palette.muted,
                 );
                 ui.painter().text(
                     rect.min + Vec2::new(name_w + created_w + 12.0, 17.0),
                     Align2::LEFT_CENTER,
                     &ws.name,
-                    FontId::proportional(12.0),
+                    FontId::proportional(metrics::FONT_CAPTION),
                     palette.muted,
                 );
                 ui.painter().text(
                     rect.min + Vec2::new(name_w + created_w + source_w + 12.0, 17.0),
                     Align2::LEFT_CENTER,
                     format_timestamp(&page.updated_at, view.time_format),
-                    FontId::proportional(12.0),
+                    FontId::proportional(metrics::FONT_CAPTION),
                     palette.muted,
                 );
-                ui.painter()
-                    .hline(rect.x_range(), rect.max.y, Stroke::new(1.0, palette.border));
+                ui.painter().hline(
+                    rect.x_range(),
+                    rect.max.y,
+                    Stroke::new(metrics::STROKE_HAIRLINE, palette.border),
+                );
                 if response.clicked() {
                     commands.push(Command::SelectPage(page.id.clone()));
                 }

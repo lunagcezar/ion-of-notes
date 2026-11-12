@@ -126,6 +126,7 @@ src/
   ui.rs              UI facade (desktop feature)
   ui/
     commands.rs      Command / NewTabChoice / IconTab / FontStyle
+    constants.rs     layout metrics: spacing, sizes, padding, radii, fonts
     view.rs          ViewState
     input.rs         egui keys -> shortcut actions
     app.rs           NotionApp shell + eframe::App
@@ -138,8 +139,8 @@ src/
     dialogs.rs       dialog facade
     dialogs/         settings, sharing, page actions, menus, help,
                      search window, onboarding, templates
-    dialogs/settings_pages/ preferences, workspace, sidebar, offline,
-                     people, ai, server
+    dialogs/settings_pages/ preferences, workspace, offline, people, ai,
+                     server
     widgets.rs       shared popover/menu/toggle/label primitives
     switcher.rs      shared search/new-tab renderer
     page_icon.rs     page-icon catalog/picker/renderer
@@ -294,6 +295,7 @@ Current state:
 - one `WorkspaceServer::write` path for mutations, version log and persistence;
 - one shared search/new-tab renderer (`ui/switcher.rs`);
 - one palette for colors/fonts (`ui/palette.rs`);
+- one constants module for layout metrics (`ui/constants.rs`);
 - one locale key table for core UI copy;
 - shared test helpers in `tests/common/mod.rs`.
 
