@@ -234,9 +234,13 @@
 
 - FR-74: Workspace settings (name, icon, landing page, allowed domains,
   sidebar visibility, analytics, offline downloads and People toggles) are
-  editable and persisted with the workspace; General / Sidebar / People /
-  Offline pages are functional (implemented in `spec-025`). Workspace deletion
-  remains disabled in this build.
+  editable and persisted with the workspace; General / People / Offline pages
+  are functional (implemented in `spec-025`). The former Sidebar page is
+  retired (2026-11-12): customize-sidebar mode owns the visibility controls and
+  persists tabs, sections and shortcuts in `WorkspaceSettings.sidebar_layout`.
+  That mode supports drag-and-drop reordering of sections and shortcuts, and a
+  custom shortcut may target Inbox, Library or Settings as well as a page.
+  Workspace deletion remains disabled in this build.
 
 ### 1.15 Page actions and comments (spec-026)
 

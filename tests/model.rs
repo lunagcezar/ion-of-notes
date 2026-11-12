@@ -397,6 +397,54 @@ fn sidebar_layout_starts_with_favorites_and_private_and_accepts_shortcuts() {
 }
 
 #[test]
+fn sidebar_shortcuts_can_be_reordered_and_moved_between_sections() {
+    let mut layout = SidebarLayout::default();
+    layout.add_shortcut("a", "A");
+    layout.add_shortcut("b", "B");
+    layout.add_shortcut("c", "C");
+    layout.add_shortcut("nav:inbox", "Inbox");
+    let custom = layout
+        .sections
+        .iter()
+        .find(|section| section.source == SidebarSectionSource::Custom)
+        .expect("custom section")
+        .id
+        .clone();
+
+    let order = |layout: &SidebarLayout, section: &str| {
+        layout
+            .sections
+            .iter()
+            .find(|item| item.id == section)
+            .map(|item| {
+                item.shortcuts
+                    .iter()
+                    .map(|shortcut| shortcut.page_id.clone())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    };
+    assert_eq!(order(&layout, &custom), ["a", "b", "c", "nav:inbox"]);
+
+    layout.move_shortcut(&custom, "c-2", &custom, Some(0));
+    assert_eq!(order(&layout, &custom), ["c", "a", "b", "nav:inbox"]);
+
+    layout.move_shortcut(&custom, "a-0", &custom, Some(2));
+    assert_eq!(order(&layout, &custom), ["c", "b", "a", "nav:inbox"]);
+
+    layout.add_section("Reading", SidebarSectionSource::Custom);
+    let reading = layout.sections.last().expect("reading").id.clone();
+    layout.move_shortcut(&custom, "b-1", &reading, None);
+    assert_eq!(order(&layout, &custom), ["c", "a", "nav:inbox"]);
+    assert_eq!(order(&layout, &reading), ["b"]);
+
+    let first = layout.sections[0].id.clone();
+    let last = layout.sections.len() - 1;
+    layout.move_section(&first, last);
+    assert_eq!(layout.sections[last].id, first);
+}
+
+#[test]
 fn workspace_catalog_adds_switches_and_refuses_to_remove_the_last_workspace() {
     let mut first = Workspace::seed("First");
     first.settings.id = "first".to_string();

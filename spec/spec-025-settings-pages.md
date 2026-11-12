@@ -1,4 +1,9 @@
-# spec-025 — Settings pages
+# spec-025 - Settings pages
+
+> **Status note (2026-11-12):** the Settings → Sidebar page was retired. The
+> sidebar visibility controls and the persisted tab/section/shortcut layout are
+> now owned by customize-sidebar mode (`spec-062`); data export stays on the
+> General page. The rest of this spec remains implemented.
 
 ## Purpose and scope
 

@@ -203,7 +203,7 @@ listeners left behind.
 `ION_OF_NOTES_SHOW` opens one pictured state for `--screenshot`:
 
 ```text
-library | share | inbox | settings | settings-general | settings-sidebar |
+library | share | inbox | settings | settings-general |
 settings-people | settings-offline | settings-server | search | tasks | newtab | ai |
 shortcuts | iconpicker | pageactions | discussions | onboarding | templates
 ```

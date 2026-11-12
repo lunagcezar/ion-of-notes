@@ -6,8 +6,8 @@ use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec
 
 use super::super::commands::Command;
 use super::super::icons::{
-    draw_grid, draw_help, draw_inbox, draw_link, draw_note, draw_page, draw_panel, draw_person,
-    draw_search, draw_settings,
+    draw_grid, draw_help, draw_inbox, draw_link, draw_note, draw_page, draw_person, draw_search,
+    draw_settings,
 };
 use super::super::palette::{Palette, strong_font};
 use super::super::settings_search::{rows_for, section_matches, settings_matches, visible_rows};
@@ -15,7 +15,7 @@ use super::super::view::ViewState;
 use super::super::widgets::section_label;
 use super::settings_pages::{
     render_ai_settings, render_offline_settings, render_people_settings, render_preferences,
-    render_server_settings, render_sidebar_settings, render_workspace_settings,
+    render_server_settings, render_workspace_settings,
 };
 
 /// Dialog spacing constants shared by the rail, the content pane and the
@@ -66,7 +66,6 @@ fn settings_icon(label: &str) -> fn(&egui::Painter, Rect, Color32) {
         "Local workspace" | "People" => draw_person,
         "Preferences" | "General" => draw_settings,
         "Notifications" | "Requests" => draw_inbox,
-        "Sidebar" => draw_panel,
         "Analytics" => draw_grid,
         "Import" | "Offline" => draw_note,
         "AI assistant" => draw_help,
@@ -81,7 +80,6 @@ fn settings_label(label: &str) -> String {
         "Preferences" => i18n::t("preferences"),
         "General" => i18n::t("general"),
         "People" => i18n::t("people"),
-        "Sidebar" => i18n::t("sidebar"),
         "Analytics" => i18n::t("analytics"),
         "AI assistant" => i18n::t("ai_assistant"),
         "Offline" => i18n::t("offline"),
@@ -135,7 +133,6 @@ const SETTINGS_NAV: &[(&str, &[(&str, &str)])] = &[
             ("General", "Workspace identity, members and data"),
             ("Requests", "Workspace access requests"),
             ("People", "Manage who can access this workspace"),
-            ("Sidebar", "Choose what appears in the sidebar"),
             ("Analytics", "Workspace analytics"),
             ("Import", "Import pages and data"),
         ],
@@ -176,7 +173,6 @@ fn page_label(page: &str) -> String {
     match page {
         "Preferences" => i18n::t("preferences"),
         "General" => i18n::t("general"),
-        "Sidebar" => i18n::t("sidebar"),
         "People" => i18n::t("people"),
         "Offline" => i18n::t("offline"),
         "AI assistant" => i18n::t("ai_assistant"),
@@ -213,7 +209,12 @@ pub(crate) fn render_settings(
             // Two-column layout: a dimmed navigation rail and the content pane.
             ui.painter().rect_filled(
                 Rect::from_min_size(whole.min, Vec2::new(300.0, whole.height())),
-                CornerRadius::ZERO,
+                CornerRadius {
+                    nw: 10,
+                    sw: 10,
+                    ne: 0,
+                    se: 0,
+                },
                 palette.sidebar,
             );
             ui.painter().vline(
@@ -288,9 +289,6 @@ pub(crate) fn render_settings(
                         let rail_height = ui.available_height().max(120.0);
                         egui::ScrollArea::vertical()
                             .id_salt("settings_rail_scroll")
-                            .scroll_bar_visibility(
-                                egui::scroll_area::ScrollBarVisibility::AlwaysVisible,
-                            )
                             .max_height(rail_height)
                             .auto_shrink([false, false])
                             .show(ui, |ui| {
@@ -332,11 +330,8 @@ pub(crate) fn render_settings(
                 // frame supplies the internal content padding (spec-069).
                 ui.vertical(|ui| {
                     ui.set_width(ui.available_width().max(320.0));
-                    let content_height = (ui.available_height() - 8.0).max(120.0);
+                    let content_height = ui.available_height().max(120.0);
                     egui::ScrollArea::vertical()
-                        .scroll_bar_visibility(
-                            egui::scroll_area::ScrollBarVisibility::AlwaysVisible,
-                        )
                         .max_height(content_height)
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
@@ -391,9 +386,6 @@ pub(crate) fn render_settings(
                                     "General" => render_workspace_settings(
                                         ui, ws, view, palette, commands, &rows,
                                     ),
-                                    "Sidebar" => {
-                                        render_sidebar_settings(ui, ws, view, palette, commands, &rows)
-                                    }
                                     "Offline" => {
                                         render_offline_settings(ui, ws, palette, &rows)
                                     }

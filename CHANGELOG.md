@@ -31,6 +31,23 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   padding. The settings rail now spans its full container width with internal
   padding, its scrollbar sits on the border, and the scroll fade is disabled.
 
+### Changed - sidebar customization and settings cleanup
+
+- Removed the Settings → Sidebar page; customize-sidebar mode owns those
+  controls while the layout stays in `WorkspaceSettings.sidebar_layout`.
+- Settings rail and content scrollbars now appear only when their content
+  overflows instead of being permanently visible.
+- Custom sidebar shortcuts accept navigation targets (`nav:inbox`,
+  `nav:library`, `nav:settings`) as well as pages, so Inbox/Home shortcuts can
+  live in a custom section; the Add shortcut menu now adds them.
+- Customize-sidebar drag and drop records row rects and reorders sections and
+  shortcuts against the nearest target on release, including moves between
+  sections and within one section.
+- Page-level select-all highlights the full multi-line block rect.
+- Removed the plus control that overlapped the Home row in customize mode.
+- Moved section/shortcut reordering into `SidebarLayout` and added a model test;
+  suite: 287 tests.
+
 ### Changed - spec-067 runtime smoke tests
 
 - Added `tests/smoke.rs`: a real Axum listener on an ephemeral port checks

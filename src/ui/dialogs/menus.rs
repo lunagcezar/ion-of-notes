@@ -362,13 +362,16 @@ pub(crate) fn render_sidebar_menu(
                         }
                     }
                     ui.separator();
-                    for (label, cmd) in [
-                        ("Settings", Command::OpenSettings),
-                        ("Library", Command::OpenLibrary),
-                        ("Inbox", Command::OpenInbox),
+                    for (label, id) in [
+                        ("Settings", "nav:settings"),
+                        ("Library", "nav:library"),
+                        ("Inbox", "nav:inbox"),
                     ] {
                         if matches(label) && menu_button(ui, label, "", palette).clicked() {
-                            commands.push(cmd);
+                            commands.push(Command::AddSidebarShortcut(
+                                id.to_string(),
+                                label.to_string(),
+                            ));
                             commands.push(Command::CloseSidebarMenu);
                         }
                     }

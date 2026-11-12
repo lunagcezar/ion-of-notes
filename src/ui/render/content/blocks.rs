@@ -35,19 +35,8 @@ pub(super) fn render_block(
         .unwrap_or(false);
     let menu_pos = Pos2::new(row_rect.min.x + 60.0, row_rect.min.y);
 
-    // Page-level selection (spec-057): the whole text row is tinted while a
-    // Ctrl+A selection or a cross-block drag is active.
-    if view.page_selection.iter().any(|id| id == &block.id) {
-        let highlight = Rect::from_min_size(
-            Pos2::new(row_rect.left() + gutter, row_rect.top()),
-            Vec2::new(width, 26.0),
-        );
-        ui.painter().rect_filled(
-            highlight,
-            CornerRadius::same(4),
-            Color32::from_rgba_unmultiplied(35, 131, 226, 48),
-        );
-    }
+    // Page-level selection is painted after the block layout so the overlay
+    // covers the full multi-line text rect, not just the first line.
     if view.block_selecting
         && ui.input(|i| i.pointer.primary_down())
         && let Some(p) = ui.ctx().pointer_interact_pos()
@@ -375,6 +364,16 @@ pub(super) fn render_block(
         }
 
         commands.append(&mut pending_commands.into_inner());
+
+        if view.page_selection.iter().any(|id| id == &block.id)
+            && let Some(resp) = &edit_response
+        {
+            ui.painter().rect_filled(
+                resp.response.rect,
+                CornerRadius::same(4),
+                Color32::from_rgba_unmultiplied(35, 131, 226, 42),
+            );
+        }
 
         if !locked {
             if let Some(ref resp) = edit_response

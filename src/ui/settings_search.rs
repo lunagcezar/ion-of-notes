@@ -164,69 +164,6 @@ const GENERAL_ROWS: &[SettingsRow] = &[
     },
 ];
 
-const SIDEBAR_ROWS: &[SettingsRow] = &[
-    SettingsRow {
-        id: "library",
-        section: "Sidebar items",
-        title: "Library",
-        description: "Show the Library entry",
-    },
-    SettingsRow {
-        id: "settings",
-        section: "Sidebar items",
-        title: "Settings",
-        description: "Show the Settings entry",
-    },
-    SettingsRow {
-        id: "inbox",
-        section: "Sidebar items",
-        title: "Inbox",
-        description: "Show the Inbox entry",
-    },
-    SettingsRow {
-        id: "favorites",
-        section: "Sidebar items",
-        title: "Favorites",
-        description: "Show the Favorites entry",
-    },
-    SettingsRow {
-        id: "private",
-        section: "Sidebar items",
-        title: "Private",
-        description: "Show the Private entry",
-    },
-    SettingsRow {
-        id: "invite_card",
-        section: "Sidebar items",
-        title: "Invite members card",
-        description: "Show the invite card",
-    },
-    SettingsRow {
-        id: "customize",
-        section: "Sidebar items",
-        title: "Customize sidebar",
-        description: "Show the customize control",
-    },
-    SettingsRow {
-        id: "other_apps",
-        section: "Sidebar items",
-        title: "Show other apps in sidebar",
-        description: "Show other app shortcuts",
-    },
-    SettingsRow {
-        id: "export",
-        section: "Export",
-        title: "Export",
-        description: "Export workspace and members",
-    },
-    SettingsRow {
-        id: "analytics",
-        section: "Analytics",
-        title: "Save analytics",
-        description: "Store workspace analytics preferences",
-    },
-];
-
 const OFFLINE_ROWS: &[SettingsRow] = &[
     SettingsRow {
         id: "auto_download",
@@ -326,7 +263,6 @@ pub fn rows_for(page: &str) -> &'static [SettingsRow] {
     match page {
         "Preferences" => PREFERENCES_ROWS,
         "General" => GENERAL_ROWS,
-        "Sidebar" => SIDEBAR_ROWS,
         "Offline" => OFFLINE_ROWS,
         "People" => PEOPLE_ROWS,
         "AI assistant" => AI_ROWS,

@@ -259,7 +259,7 @@ pub(super) enum Command {
     RenameSidebarSection(String, String),
     RenameSidebarShortcut(String, String, String),
     MoveSidebarSection(String, usize),
-    MoveSidebarShortcut(String, String, String),
+    MoveSidebarShortcut(String, String, String, Option<usize>),
     SetSidebarShowExcluded(bool),
     ToggleSidebarNav(String),
     AddSidebarTab,
@@ -487,7 +487,7 @@ impl Command {
             | Command::RenameSidebarSection(_, _)
             | Command::RenameSidebarShortcut(_, _, _)
             | Command::MoveSidebarSection(_, _)
-            | Command::MoveSidebarShortcut(_, _, _)
+            | Command::MoveSidebarShortcut(_, _, _, _)
             | Command::SetSidebarShowExcluded(_)
             | Command::ToggleSidebarNav(_)
             | Command::AddSidebarTab

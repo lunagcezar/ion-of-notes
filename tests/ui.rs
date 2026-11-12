@@ -201,9 +201,9 @@ fn settings_rows_filter_inside_the_open_section() {
     assert_eq!(language.len(), 1);
     assert_eq!(language[0].id, "language");
 
-    let export = visible_rows("Sidebar", "export");
-    assert!(export.iter().any(|row| row.id == "export"));
-    assert!(export.iter().all(|row| row.section == "Export"));
+    let export = visible_rows("General", "export");
+    assert!(export.iter().any(|row| row.id == "data_export"));
+    assert!(export.iter().all(|row| row.section == "Data export"));
 
     assert!(visible_rows("Preferences", "no-such-setting").is_empty());
     assert!(visible_rows("People", "zzz").is_empty());
@@ -227,7 +227,6 @@ fn every_settings_row_is_unique_and_searchable() {
     for page in [
         "Preferences",
         "General",
-        "Sidebar",
         "Offline",
         "People",
         "AI assistant",

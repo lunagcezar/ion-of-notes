@@ -220,6 +220,39 @@ impl SidebarLayout {
             tab,
         });
     }
+
+    /// Move a section to `index` in the persisted section list.
+    pub fn move_section(&mut self, id: &str, index: usize) {
+        let Some(position) = self.sections.iter().position(|section| section.id == id) else {
+            return;
+        };
+        let section = self.sections.remove(position);
+        let target = index.min(self.sections.len());
+        self.sections.insert(target, section);
+    }
+
+    /// Move a shortcut to another section, or reorder it inside one section.
+    /// `index` is the target position inside `to`; `None` appends.
+    pub fn move_shortcut(&mut self, from: &str, shortcut_id: &str, to: &str, index: Option<usize>) {
+        if !self.sections.iter().any(|section| section.id == to) {
+            return;
+        }
+        let Some(shortcut) = self.section_mut(from).and_then(|section| {
+            let index = section
+                .shortcuts
+                .iter()
+                .position(|item| item.id == shortcut_id)?;
+            Some(section.shortcuts.remove(index))
+        }) else {
+            return;
+        };
+        let Some(section) = self.section_mut(to) else {
+            return;
+        };
+        let target = index.unwrap_or(section.shortcuts.len());
+        let target = target.min(section.shortcuts.len());
+        section.shortcuts.insert(target, shortcut);
+    }
 }
 
 /// Settings shown in the General / Sidebar / People / Offline pages.

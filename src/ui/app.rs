@@ -434,7 +434,6 @@ impl NotionApp {
                     | "settings-12h"
                     | "settings-comma"
                     | "settings-general"
-                    | "settings-sidebar"
                     | "settings-people"
                     | "settings-offline"
                     | "settings-server"
@@ -444,7 +443,6 @@ impl NotionApp {
             settings_page: match demo.as_str() {
                 "ai" | "ai-error" => "AI assistant".to_string(),
                 "settings-general" => "General".to_string(),
-                "settings-sidebar" => "Sidebar".to_string(),
                 "settings-people" => "People".to_string(),
                 "settings-offline" => "Offline".to_string(),
                 "settings-server" => "Server".to_string(),

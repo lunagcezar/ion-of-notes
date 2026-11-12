@@ -62,7 +62,7 @@ Status vocabulary:
 | [022](spec-022-workspace-index-and-version-retention.md) | Workspace index and version retention | implemented | `WorkspaceIndex`, 50 versions/page |
 | [023](spec-023-add-members-sharing-dialog.md) | Add members / sharing dialog | implemented | Functional Share popover |
 | [024](spec-024-library-views.md) | Library views | implemented | Recents/Favorites/Shared/Private, More menu |
-| [025](spec-025-settings-pages.md) | Settings pages | implemented | General/Sidebar/People/Offline, persisted settings |
+| [025](spec-025-settings-pages.md) | Settings pages | implemented (Sidebar page retired 2026-11-12) | General/People/Offline, persisted settings; sidebar layout lives in customize mode |
 | [026](spec-026-page-actions-and-comments.md) | Page actions and comments | implemented | TOC, discussions, archive, copy contents |
 | [027](spec-027-onboarding-and-templates.md) | Onboarding and templates | implemented | Purpose modal, starter catalog |
 | [028](spec-028-i18n-coverage.md) | Internationalization coverage | implemented | en / pt-BR / eo key tables |

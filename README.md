@@ -305,7 +305,7 @@ ION_OF_NOTES_SHOW=settings-general cargo run -- --screenshot shots/settings.png
 ```
 
 Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
-`settings-sidebar`, `settings-people`, `settings-offline`, `settings-server`,
+`settings-people`, `settings-offline`, `settings-server`,
 `search`, `tasks`,
 `newtab`, `ai`, `shortcuts`, `iconpicker`, `pageactions`, `discussions`,
 `onboarding`, `templates`.

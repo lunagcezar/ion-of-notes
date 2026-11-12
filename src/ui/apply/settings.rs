@@ -142,28 +142,18 @@ impl NotionApp {
                 }
             }
             Command::MoveSidebarSection(id, index) => {
-                let layout = &mut self.workspace.settings.sidebar_layout;
-                if let Some(position) = layout.sections.iter().position(|section| section.id == id)
-                {
-                    let section = layout.sections.remove(position);
-                    let target = index.min(layout.sections.len());
-                    layout.sections.insert(target, section);
-                }
+                self.workspace
+                    .settings
+                    .sidebar_layout
+                    .move_section(&id, index);
             }
-            Command::MoveSidebarShortcut(from, shortcut_id, to) => {
-                let layout = &mut self.workspace.settings.sidebar_layout;
-                let moved = layout.section_mut(&from).and_then(|section| {
-                    let index = section
-                        .shortcuts
-                        .iter()
-                        .position(|shortcut| shortcut.id == shortcut_id)?;
-                    Some(section.shortcuts.remove(index))
-                });
-                if let Some(shortcut) = moved
-                    && let Some(section) = layout.section_mut(&to)
-                {
-                    section.shortcuts.push(shortcut);
-                }
+            Command::MoveSidebarShortcut(from, shortcut_id, to, index) => {
+                self.workspace.settings.sidebar_layout.move_shortcut(
+                    &from,
+                    &shortcut_id,
+                    &to,
+                    index,
+                );
             }
             Command::SetSidebarShowExcluded(_) => {}
             Command::AddSidebarTab => self.workspace.settings.sidebar_layout.add_tab(),
