@@ -199,42 +199,40 @@ impl<T> Envelope<T> {
     }
 }
 
-/// The seam between client and server.
-pub trait WorkspaceApi {
+/// Request/response transport seam.
+pub trait RequestTransport {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse;
+}
 
-    /// CRDT sync for the in-process desktop client. Remote transports override
-    /// this through their own adapter.
+/// Collaboration transport seam (CRDT, realtime, awareness).
+///
+/// These methods are required: a transport that cannot provide them should
+/// implement only `RequestTransport` instead of returning a runtime error.
+pub trait CollabTransport {
     fn crdt_sync(
         &mut self,
-        _page_id: &str,
-        _state_vector: Option<&[u8]>,
-    ) -> Result<(Vec<u8>, Vec<u8>), String> {
-        Err("CRDT is not available on this transport".to_string())
-    }
+        page_id: &str,
+        state_vector: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>), String>;
 
-    /// Apply one CRDT update.
     fn apply_crdt_update(
         &mut self,
-        _page_id: &str,
-        _update: &[u8],
-        _actor: &str,
-    ) -> Result<Vec<u8>, String> {
-        Err("CRDT is not available on this transport".to_string())
-    }
+        page_id: &str,
+        update: &[u8],
+        actor: &str,
+    ) -> Result<Vec<u8>, String>;
 
-    /// Subscribe to the in-process real-time hub, when available.
     fn subscribe_realtime(
         &self,
-    ) -> Option<tokio::sync::broadcast::Receiver<realtime::ServerMessage>> {
-        None
-    }
+    ) -> Option<tokio::sync::broadcast::Receiver<realtime::ServerMessage>>;
 
-    /// Publish cursor/selection awareness, when available.
-    fn publish_awareness(&mut self, _awareness: realtime::Awareness) -> Result<(), String> {
-        Err("awareness is not available on this transport".to_string())
-    }
+    fn publish_awareness(&mut self, awareness: realtime::Awareness) -> Result<(), String>;
 }
+
+/// Composite seam for transports that support both requests and collaboration.
+pub trait WorkspaceApi: RequestTransport + CollabTransport {}
+
+impl<T: RequestTransport + CollabTransport> WorkspaceApi for T {}
 
 /// Owns all workspace state. Persistence is injected through the
 /// `WorkspaceStore` and `CollabStore` ports, so the core never depends on a

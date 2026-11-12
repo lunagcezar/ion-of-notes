@@ -18,7 +18,7 @@ use crate::collab::{CollabState, Role};
 use crate::model::{Workspace, now_iso};
 use crate::remote::RemoteApi;
 use crate::server::realtime::{Awareness, ServerMessage};
-use crate::server::{ApiRequest, ApiResponse, WorkspaceApi, WorkspaceServer};
+use crate::server::{ApiRequest, ApiResponse, CollabTransport, RequestTransport, WorkspaceServer};
 use crate::store::{self, SqliteStore};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -30,14 +30,16 @@ pub enum DesktopApi {
     Remote(RemoteApi),
 }
 
-impl WorkspaceApi for DesktopApi {
+impl RequestTransport for DesktopApi {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
         match self {
             DesktopApi::Local(server) => server.handle(request),
             DesktopApi::Remote(remote) => remote.handle(request),
         }
     }
+}
 
+impl CollabTransport for DesktopApi {
     fn crdt_sync(
         &mut self,
         page_id: &str,

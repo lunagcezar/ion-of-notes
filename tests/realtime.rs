@@ -9,7 +9,7 @@ use ion_of_notes::server::realtime::{
     Awareness, ClientMessage, PresenceMember, RealtimeHub, ServerMessage,
 };
 use ion_of_notes::server::web::{router, router_with_server};
-use ion_of_notes::server::{Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{Method, RequestTransport, WorkspaceServer};
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;

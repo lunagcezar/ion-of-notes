@@ -8,7 +8,7 @@ use ion_of_notes::model::{
     Annotations, Block, BlockDto, BlockInput, BlockKind, Mention, ParentDto, RichText, TextContent,
     TextLink, Workspace,
 };
-use ion_of_notes::server::{ListResponse, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ListResponse, Method, RequestTransport, WorkspaceServer};
 
 fn rich_text_with_bold(text: &str) -> RichText {
     let annotations = Annotations {

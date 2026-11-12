@@ -5,8 +5,8 @@ mod common;
 use common::{data, page_draft_json, remove, temp_path};
 use ion_of_notes::model::{Page, SearchResult, Workspace};
 use ion_of_notes::server::{
-    ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi, WorkspaceServer, format_http_response,
-    parse_http_request, serve_on,
+    ApiRequest, ApiResponse, Envelope, Method, RequestTransport, WorkspaceServer,
+    format_http_response, parse_http_request, serve_on,
 };
 use ion_of_notes::store;
 use std::io::{Read, Write};

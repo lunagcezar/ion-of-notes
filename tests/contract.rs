@@ -6,7 +6,7 @@ use common::page_draft_json;
 use ion_of_notes::model::Workspace;
 use ion_of_notes::server::{
     API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, Envelope, Method,
-    OWNER_TOKEN, WorkspaceApi, WorkspaceServer, format_http_response, parse_http_request,
+    OWNER_TOKEN, RequestTransport, WorkspaceServer, format_http_response, parse_http_request,
     route_capability, serve_on,
 };
 use std::io::{Read, Write};

@@ -5,7 +5,7 @@ mod common;
 use common::{data, v2_request, v2_request_as};
 use ion_of_notes::model::{Page, Workspace};
 use ion_of_notes::server::{
-    ApiError, Capability, Connection, Method, WorkspaceApi, WorkspaceServer, limits,
+    ApiError, Capability, Connection, Method, RequestTransport, WorkspaceServer, limits,
 };
 use std::time::Duration;
 

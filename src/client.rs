@@ -15,8 +15,8 @@ use crate::model::{
     ViewQueryResult, Workspace,
 };
 use crate::server::{
-    API_VERSION, AUTH_HEADER, ApiError, ApiRequest, Envelope, ListResponse, Method, VERSION_HEADER,
-    WorkspaceApi, url_encode,
+    API_VERSION, AUTH_HEADER, ApiError, ApiRequest, Envelope, ListResponse, Method,
+    RequestTransport, VERSION_HEADER, WorkspaceApi, url_encode,
 };
 use crate::webhooks::{
     WebhookDelivery, WebhookSubscription, WebhookSubscriptionInput, WebhookVerificationInput,
@@ -66,12 +66,12 @@ mod retry;
 
 pub use retry::{RetryDecision, RetryPolicy};
 
-pub struct Client<A: WorkspaceApi> {
+pub struct Client<A> {
     api: A,
     token: Option<String>,
 }
 
-impl<A: WorkspaceApi> Client<A> {
+impl<A: RequestTransport> Client<A> {
     pub fn new(api: A) -> Self {
         Self { api, token: None }
     }
@@ -782,7 +782,9 @@ impl<A: WorkspaceApi> Client<A> {
     pub fn list_file_uploads_v2(&mut self) -> Result<Vec<FileUpload>, ClientError> {
         self.collect_all_v2("/api/v2/file_uploads", 100)
     }
+}
 
+impl<A: WorkspaceApi> Client<A> {
     /// Sync the in-process CRDT document for a page.
     pub fn crdt_sync(
         &mut self,

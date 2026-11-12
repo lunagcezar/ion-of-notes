@@ -2,7 +2,9 @@
 
 use ion_of_notes::client::{Client, ClientError, RetryPolicy, encode_body};
 use ion_of_notes::model::{Page, PageDraft, Workspace};
-use ion_of_notes::server::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{
+    ApiRequest, ApiResponse, CollabTransport, Method, RequestTransport, WorkspaceServer,
+};
 use serde::Serialize;
 
 struct Stub {
@@ -10,13 +12,46 @@ struct Stub {
     body: String,
 }
 
-impl WorkspaceApi for Stub {
+impl RequestTransport for Stub {
     fn handle(&mut self, _req: &ApiRequest) -> ApiResponse {
         ApiResponse {
             status: self.status,
             body: self.body.clone(),
             request_id: None,
         }
+    }
+}
+
+impl CollabTransport for Stub {
+    fn crdt_sync(
+        &mut self,
+        _page_id: &str,
+        _state_vector: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>), String> {
+        Err("not available".to_string())
+    }
+
+    fn apply_crdt_update(
+        &mut self,
+        _page_id: &str,
+        _update: &[u8],
+        _actor: &str,
+    ) -> Result<Vec<u8>, String> {
+        Err("not available".to_string())
+    }
+
+    fn subscribe_realtime(
+        &self,
+    ) -> Option<tokio::sync::broadcast::Receiver<ion_of_notes::server::realtime::ServerMessage>>
+    {
+        None
+    }
+
+    fn publish_awareness(
+        &mut self,
+        _awareness: ion_of_notes::server::realtime::Awareness,
+    ) -> Result<(), String> {
+        Err("not available".to_string())
     }
 }
 

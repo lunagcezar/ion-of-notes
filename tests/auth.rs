@@ -8,7 +8,7 @@ use ion_of_notes::auth::{
 };
 use ion_of_notes::collab::{CollabState, Role};
 use ion_of_notes::model::{Workspace, now_iso};
-use ion_of_notes::server::{ApiError, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ApiError, ApiResponse, Method, RequestTransport, WorkspaceServer};
 use ion_of_notes::store::{NoCollabStore, NoStore, SqliteStore};
 
 fn owner_account(collab: &CollabState, password: &str) -> Account {

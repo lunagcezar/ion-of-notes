@@ -8,7 +8,7 @@ mod common;
 
 use common::{remove, temp_path};
 use ion_of_notes::app::{build_desktop_at, build_desktop_catalog_at_paths, build_server_at};
-use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi};
+use ion_of_notes::server::{ApiRequest, Method, RequestTransport};
 
 #[test]
 fn build_desktop_at_seeds_and_serves_the_workspace() {
@@ -62,7 +62,7 @@ fn build_desktop_catalog_at_paths_returns_an_active_catalog() {
 #[cfg(not(feature = "desktop"))]
 #[test]
 fn core_build_exposes_the_data_stack_without_the_desktop_ui() {
-    fn assert_api<T: WorkspaceApi>() {}
+    fn assert_api<T: RequestTransport>() {}
     assert_api::<ion_of_notes::server::WorkspaceServer>();
     let _ = ion_of_notes::app::build_server;
 }

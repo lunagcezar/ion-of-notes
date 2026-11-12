@@ -3,7 +3,7 @@
 mod common;
 
 use ion_of_notes::model::Workspace;
-use ion_of_notes::server::{ApiError, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ApiError, ApiResponse, Method, RequestTransport, WorkspaceServer};
 use ion_of_notes::store::{RateLimitStore, SqliteStore};
 use std::sync::Arc;
 use std::time::Duration;

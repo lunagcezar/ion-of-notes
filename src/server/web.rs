@@ -11,7 +11,7 @@
 use super::http::retry_after_seconds;
 use super::realtime::{ClientMessage, PresenceMember, RealtimeHub, ServerMessage};
 use super::{
-    ApiRequest, ApiResponse, Connection, Method, WorkspaceApi, WorkspaceServer, parse_bearer,
+    ApiRequest, ApiResponse, Connection, Method, RequestTransport, WorkspaceServer, parse_bearer,
 };
 use crate::collab::Change;
 use axum::Router;

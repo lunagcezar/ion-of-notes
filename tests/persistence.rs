@@ -4,7 +4,7 @@ mod common;
 
 use ion_of_notes::collab::CollabState;
 use ion_of_notes::model::Workspace;
-use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ApiRequest, Method, RequestTransport, WorkspaceServer};
 use ion_of_notes::store::sqlite::SqliteStore;
 use ion_of_notes::store::{CollabStore, SnapshotStore, WorkspaceStore};
 use std::io;

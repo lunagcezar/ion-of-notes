@@ -1,7 +1,7 @@
-//! Route adapters: version dispatch and the `WorkspaceApi` implementation.
+//! Route adapters: version dispatch and the transport implementations.
 
 use super::realtime;
-use super::{ApiRequest, ApiResponse, WorkspaceApi, WorkspaceServer};
+use super::{ApiRequest, ApiResponse, CollabTransport, RequestTransport, WorkspaceServer};
 
 pub(crate) mod capabilities;
 mod pipeline;
@@ -9,7 +9,7 @@ mod policy;
 mod v1;
 mod v2;
 
-impl WorkspaceApi for WorkspaceServer {
+impl RequestTransport for WorkspaceServer {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
         if request.path.starts_with("/api/v2") {
             self.handle_v2(request)
@@ -17,7 +17,9 @@ impl WorkspaceApi for WorkspaceServer {
             self.handle_v1(request)
         }
     }
+}
 
+impl CollabTransport for WorkspaceServer {
     fn crdt_sync(
         &mut self,
         page_id: &str,

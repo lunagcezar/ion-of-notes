@@ -2,7 +2,9 @@
 
 use ion_of_notes::client::Client;
 use ion_of_notes::model::{BlockKind, NumberFormat, Page, PageDiff, TimeFormat, Workspace};
-use ion_of_notes::server::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceApi};
+use ion_of_notes::server::{
+    ApiRequest, ApiResponse, CollabTransport, Envelope, Method, RequestTransport,
+};
 use ion_of_notes::ui::{
     CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan,
     format_number, format_timestamp, is_valid_email, member_name_from_email, pages_for_view,
@@ -404,7 +406,7 @@ struct RecordingApi {
     requests: Arc<Mutex<Vec<ApiRequest>>>,
 }
 
-impl WorkspaceApi for RecordingApi {
+impl RequestTransport for RecordingApi {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
         self.requests.lock().unwrap().push(request.clone());
         let body = match request.method {
@@ -424,6 +426,39 @@ impl WorkspaceApi for RecordingApi {
             body,
             request_id: None,
         }
+    }
+}
+
+impl CollabTransport for RecordingApi {
+    fn crdt_sync(
+        &mut self,
+        _page_id: &str,
+        _state_vector: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>), String> {
+        Err("not available".to_string())
+    }
+
+    fn apply_crdt_update(
+        &mut self,
+        _page_id: &str,
+        _update: &[u8],
+        _actor: &str,
+    ) -> Result<Vec<u8>, String> {
+        Err("not available".to_string())
+    }
+
+    fn subscribe_realtime(
+        &self,
+    ) -> Option<tokio::sync::broadcast::Receiver<ion_of_notes::server::realtime::ServerMessage>>
+    {
+        None
+    }
+
+    fn publish_awareness(
+        &mut self,
+        _awareness: ion_of_notes::server::realtime::Awareness,
+    ) -> Result<(), String> {
+        Err("not available".to_string())
     }
 }
 

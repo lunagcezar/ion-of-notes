@@ -9,7 +9,7 @@ use ion_of_notes::model::{
     FileUploadInput, ParentDto, RichText, UploadStatus, UserDto, UserType, Workspace,
 };
 use ion_of_notes::server::{
-    Capability, Connection, ListResponse, Method, WorkspaceApi, WorkspaceServer,
+    Capability, Connection, ListResponse, Method, RequestTransport, WorkspaceServer,
 };
 
 fn upload(server: &mut WorkspaceServer, filename: &str) -> String {

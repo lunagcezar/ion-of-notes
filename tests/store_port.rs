@@ -8,7 +8,7 @@ mod common;
 
 use common::{page_draft_json, remove, temp_path};
 use ion_of_notes::model::Workspace;
-use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ApiRequest, Method, RequestTransport, WorkspaceServer};
 use ion_of_notes::store::{JsonStore, NoStore, WorkspaceStore, load};
 use std::sync::{Arc, Mutex};
 

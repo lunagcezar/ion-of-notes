@@ -8,15 +8,15 @@ companion to `AGENTS.md` and the ADRs.
 
 `ion-of-notes` is a desktop workspace application with a client/server split:
 
-- the **client** is the egui window plus `Client<A: WorkspaceApi>`;
+- the **client** is the egui window plus `Client<A: RequestTransport>` (collab methods require `WorkspaceApi`);
 - the **server** owns workspace and collaboration state and exposes the same
   contract in-process and through an optional Axum HTTP adapter.
 
 ```mermaid
 flowchart LR
     User[User] --> Window[egui desktop window]
-    Window --> Client[Client of WorkspaceApi]
-    Client --> API[WorkspaceApi contract]
+    Window --> Client[Client of RequestTransport]
+    Client --> API[RequestTransport / CollabTransport contract]
     API --> Server[WorkspaceServer]
     Server --> Workspace[(workspace.json)]
     Server --> Collab[(collab.json)]
@@ -38,7 +38,7 @@ flowchart TD
     Presentation --> Application[client and server use cases]
     Application --> Domain[model and collab domain]
     Infrastructure --> Application
-    Application --> Ports[WorkspaceApi, WorkspaceStore, CollabStore]
+    Application --> Ports[RequestTransport, CollabTransport, WorkspaceStore, CollabStore]
 ```
 
 | Layer | Responsibility | Main modules |
@@ -94,10 +94,10 @@ src/
   store/
     sqlite.rs        SQLite adapter for workspace, collaboration, auth and
                      atomic snapshots
-  server.rs          facade: contract DTOs, WorkspaceApi, WorkspaceServer state,
+  server.rs          facade: contract DTOs, transport traits, WorkspaceServer state,
                      constructors, persistence and top-level dispatch
   server/
-    routes.rs        WorkspaceApi implementation and route facade
+    routes.rs        transport implementations and route facade
     routes/
       v1.rs          legacy v1 adapter over the use cases; session token required
                      when an auth store is configured
@@ -118,7 +118,7 @@ src/
     pagination.rs    v2 ListResponse, opaque cursors, page_size validation
     limits.rs        plan/request budgets and size checks
     rate_limit.rs    in-process and SQLite-backed rate limiting
-  client.rs          typed client over WorkspaceApi
+  client.rs          typed client over RequestTransport/WorkspaceApi
   client/
     retry.rs         RetryPolicy + RetryDecision
   remote.rs          remote REST/WebSocket transport, login and remembered session
@@ -275,7 +275,7 @@ Current state:
   default, or in SQLite with `--database` (spec-039);
 - `--serve` uses the Axum/Tokio adapter (spec-038); the hand-written loopback
   listener remains for parser tests and as a fallback;
-- v1 and v2 routes are served through the same `WorkspaceApi` seam;
+- v1 and v2 routes are served through the same `RequestTransport` seam;
 - Argon2id accounts and opaque sessions are implemented (spec-039);
 - `GET /ws/workspace/{id}` streams the versioned change feed with presence and
   `?since=` resume (spec-040); full Yrs/CRDT merge is staged;
@@ -312,7 +312,7 @@ shared".
 - **SRP:** one cohesive responsibility per module; UI state, command
   application, rendering, dialogs and domain are separate.
 - **OCP/DIP:** new stores/transports implement `WorkspaceStore`, `CollabStore`,
-  `SnapshotStore` or `WorkspaceApi`; the server does not change.
+  `SnapshotStore`, `RequestTransport` or `CollabTransport`; the server does not change.
 - **ISP:** ports are tiny (`persist`, `handle`).
 - **LSP:** `NoStore`, `JsonStore`, `NoCollabStore`, `JsonCollabStore` and test
   stubs are interchangeable.

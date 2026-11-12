@@ -5,7 +5,7 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use super::{ApiRequest, ApiResponse, Method, WorkspaceApi, WorkspaceServer};
+use super::{ApiRequest, ApiResponse, Method, RequestTransport, WorkspaceServer};
 
 /// Parse one HTTP/1.1 request into an `ApiRequest`.
 pub fn parse_http_request(bytes: &[u8]) -> Option<ApiRequest> {
@@ -145,7 +145,7 @@ fn read_request(stream: &mut TcpStream) -> std::io::Result<ApiRequest> {
 }
 
 /// Handle one connection and write one response.
-pub fn serve_once<A: WorkspaceApi>(api: &mut A, stream: &mut TcpStream) -> std::io::Result<()> {
+pub fn serve_once<A: RequestTransport>(api: &mut A, stream: &mut TcpStream) -> std::io::Result<()> {
     let request = read_request(stream)?;
     let response = api.handle(&request);
     stream.write_all(&format_http_response(&response))?;

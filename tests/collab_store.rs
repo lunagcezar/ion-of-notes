@@ -5,7 +5,7 @@ mod common;
 use common::{page_draft_json, remove, temp_path};
 use ion_of_notes::collab::{Access, CollabState, MemberDraft, Role, Share};
 use ion_of_notes::model::Workspace;
-use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ApiRequest, Method, RequestTransport, WorkspaceServer};
 use ion_of_notes::store::{
     CollabStore, JsonCollabStore, NoCollabStore, NoStore, load_collab, load_collab_or_seed,
     save_collab,

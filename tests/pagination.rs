@@ -6,8 +6,8 @@ use common::{list_data, page_draft_json, v2_request};
 use ion_of_notes::client::Client;
 use ion_of_notes::model::{Page, PageSummary, Workspace};
 use ion_of_notes::server::{
-    ApiResponse, ListResponse, Method, PageRequest, PaginationError, WorkspaceApi, WorkspaceServer,
-    paginate,
+    ApiResponse, ListResponse, Method, PageRequest, PaginationError, RequestTransport,
+    WorkspaceServer, paginate,
 };
 
 fn v2_error_code(response: &ApiResponse) -> String {

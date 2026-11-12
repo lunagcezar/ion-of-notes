@@ -8,8 +8,9 @@ use crate::auth::{LoginInput, SessionResponse};
 use crate::model::Workspace;
 use crate::server::realtime::{Awareness, ClientMessage, ServerMessage};
 use crate::server::{
-    API_VERSION, AUTH_HEADER, ApiRequest, ApiResponse, CrdtSyncInput, CrdtSyncOutput,
-    CrdtUpdateInput, CrdtUpdateOutput, Envelope, Method, VERSION_HEADER, WorkspaceApi, url_encode,
+    API_VERSION, AUTH_HEADER, ApiRequest, ApiResponse, CollabTransport, CrdtSyncInput,
+    CrdtSyncOutput, CrdtUpdateInput, CrdtUpdateOutput, Envelope, Method, RequestTransport,
+    VERSION_HEADER, url_encode,
 };
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -209,7 +210,7 @@ impl RemoteApi {
     }
 }
 
-impl WorkspaceApi for RemoteApi {
+impl RequestTransport for RemoteApi {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
         let url = format!("{}{}", self.base, request.path);
         match execute(
@@ -231,7 +232,9 @@ impl WorkspaceApi for RemoteApi {
             },
         }
     }
+}
 
+impl CollabTransport for RemoteApi {
     fn crdt_sync(
         &mut self,
         page_id: &str,

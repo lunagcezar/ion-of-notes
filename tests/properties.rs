@@ -9,7 +9,7 @@ use ion_of_notes::model::{
     PagePropertiesInput, PageProperty, Property, PropertyConfig, PropertyType, PropertyValue,
     RichText, SelectOption, StatusGroup, Workspace,
 };
-use ion_of_notes::server::{ListResponse, Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{ListResponse, Method, RequestTransport, WorkspaceServer};
 use std::collections::BTreeMap;
 
 fn status_property() -> Property {

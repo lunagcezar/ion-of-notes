@@ -5,7 +5,7 @@ mod common;
 use ion_of_notes::client::Client;
 use ion_of_notes::model::Workspace;
 use ion_of_notes::server::webhook_sender::UreqWebhookSender;
-use ion_of_notes::server::{Method, WebhookSender, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{Method, RequestTransport, WebhookSender, WorkspaceServer};
 use ion_of_notes::webhooks::{
     SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType, WebhookSubscription,
     WebhookSubscriptionInput, is_allowed_url, sign, verify,

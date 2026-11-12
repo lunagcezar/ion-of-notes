@@ -4,8 +4,8 @@ use ion_of_notes::auth::{Account, AuthStore, MemoryAuthStore, hash_password};
 use ion_of_notes::collab::CollabState;
 use ion_of_notes::model::{Workspace, now_iso};
 use ion_of_notes::server::{
-    API_VERSION, ApiRequest, ApiResponse, Envelope, Method, OWNER_TOKEN, WorkspaceApi,
-    WorkspaceServer,
+    API_VERSION, ApiRequest, ApiResponse, CollabTransport, Envelope, Method, OWNER_TOKEN,
+    RequestTransport, WorkspaceServer,
 };
 use ion_of_notes::store::{NoCollabStore, NoStore};
 use std::sync::{Arc, Mutex};
@@ -107,7 +107,7 @@ fn remote_client_attaches_the_token_to_v1() {
         last: Arc<Mutex<Option<ApiRequest>>>,
     }
 
-    impl WorkspaceApi for RecordingApi {
+    impl RequestTransport for RecordingApi {
         fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
             *self.last.lock().expect("lock") = Some(request.clone());
             ApiResponse {
@@ -115,6 +115,39 @@ fn remote_client_attaches_the_token_to_v1() {
                 body: r#"{"data":null,"error":"test"}"#.to_string(),
                 request_id: None,
             }
+        }
+    }
+
+    impl CollabTransport for RecordingApi {
+        fn crdt_sync(
+            &mut self,
+            _page_id: &str,
+            _state_vector: Option<&[u8]>,
+        ) -> Result<(Vec<u8>, Vec<u8>), String> {
+            Err("not available".to_string())
+        }
+
+        fn apply_crdt_update(
+            &mut self,
+            _page_id: &str,
+            _update: &[u8],
+            _actor: &str,
+        ) -> Result<Vec<u8>, String> {
+            Err("not available".to_string())
+        }
+
+        fn subscribe_realtime(
+            &self,
+        ) -> Option<tokio::sync::broadcast::Receiver<ion_of_notes::server::realtime::ServerMessage>>
+        {
+            None
+        }
+
+        fn publish_awareness(
+            &mut self,
+            _awareness: ion_of_notes::server::realtime::Awareness,
+        ) -> Result<(), String> {
+            Err("not available".to_string())
         }
     }
 

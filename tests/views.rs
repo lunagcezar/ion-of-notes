@@ -8,7 +8,7 @@ use ion_of_notes::model::{
     Filter, Page, Sort, SortDirection, View, ViewConfig, ViewInput, ViewQueryInput,
     ViewQueryResult, ViewType, Workspace,
 };
-use ion_of_notes::server::{Method, WorkspaceApi, WorkspaceServer};
+use ion_of_notes::server::{Method, RequestTransport, WorkspaceServer};
 
 #[test]
 fn view_model_roundtrips() {

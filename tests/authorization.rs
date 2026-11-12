@@ -6,7 +6,7 @@ use ion_of_notes::auth::{Account, AuthStore, MemoryAuthStore, SessionResponse, h
 use ion_of_notes::collab::{Access, CollabState, Member, Role, Share};
 use ion_of_notes::model::{Workspace, now_iso};
 use ion_of_notes::server::{
-    API_VERSION, ApiRequest, Envelope, Method, WorkspaceApi, WorkspaceServer,
+    API_VERSION, ApiRequest, Envelope, Method, RequestTransport, WorkspaceServer,
 };
 use ion_of_notes::store::{NoCollabStore, NoStore};
 

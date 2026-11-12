@@ -258,7 +258,7 @@ fn collaborative_api_roundtrip_through_the_client() {
 
 #[test]
 fn empty_member_draft_is_rejected_by_the_server() {
-    use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi};
+    use ion_of_notes::server::{ApiRequest, Method, RequestTransport};
     let mut server = WorkspaceServer::new(Workspace::new("x"));
     let response = server.handle(&ApiRequest::new(
         Method::Post,
