@@ -6,6 +6,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-093 collaboration state
+
+- Grouped the CRDT, realtime and awareness fields into `CollaborationState`;
+  references use `self.collaboration.*`.
+
 ### Changed - spec-092 sharing state and view
 
 - Grouped the sharing/invite fields into `SharingState` and `SharingView`;

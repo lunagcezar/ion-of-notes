@@ -32,7 +32,7 @@ deliberately deferred. It complements `docs/architecture.md` and
 
 | Item | Why it is deferred | Suggested first slice |
 | ---- | ------------------ | --------------------- |
-| Composable app state | `SearchState` and `SharingState` are grouped; collaboration, settings and AI state remain flat on `NotionApp`. | Group `CollaborationState`, then `SettingsState`/`AiState`. |
+| Composable app state | `SearchState`, `SharingState` and `CollaborationState` are grouped; settings and AI state remain flat on `NotionApp`. | Group `SettingsState`/`AiState`. |
 | Narrow view models | `SearchView` and `SharingView` are grouped; the renderers still receive `ViewState` for shared fields. | Split the remaining feature views. |
 | Command grouping | `Command` still has one large family of variants. | Add `SidebarCmd` and route it through `apply/settings.rs`. |
 | DTO/domain separation | `model` still exports domain entities and API DTOs together. | Add v2 mapping for comments or blocks, the resources most likely to evolve. |

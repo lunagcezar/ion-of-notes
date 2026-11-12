@@ -65,7 +65,7 @@ impl NotionApp {
         ViewState {
             current_page: self.current_page.clone(),
             page_icon,
-            remote_cursors: self.remote_awareness.clone(),
+            remote_cursors: self.collaboration.remote_awareness.clone(),
             server_url: self.server_url.clone(),
             server_email: self.server_email.clone(),
             server_password: self.server_password.clone(),
@@ -396,24 +396,24 @@ impl NotionApp {
 
     #[allow(clippy::too_many_lines)]
     pub(super) fn sync_crdt(&mut self) {
-        if self.crdt_page != self.current_page
+        if self.collaboration.page != self.current_page
             && let Some(page) = self.workspace.page(&self.current_page).cloned()
         {
-            self.crdt_page = self.current_page.clone();
-            self.last_awareness = None;
-            self.crdt.open_empty(&self.current_page);
+            self.collaboration.page = self.current_page.clone();
+            self.collaboration.last_awareness = None;
+            self.collaboration.crdt.open_empty(&self.current_page);
             if let Ok((update, _)) = self.client.crdt_sync(&self.current_page, None)
-                && self.crdt.apply_update(&update).is_ok()
+                && self.collaboration.crdt.apply_update(&update).is_ok()
             {
-                self.crdt.baseline_page(&page);
+                self.collaboration.crdt.baseline_page(&page);
                 self.project_crdt_page();
             } else {
-                self.crdt.open_page(&page);
+                self.collaboration.crdt.open_page(&page);
             }
         }
 
         let mut messages = Vec::new();
-        if let Some(receiver) = &mut self.crdt_rx {
+        if let Some(receiver) = &mut self.collaboration.receiver {
             while let Ok(message) = receiver.try_recv() {
                 messages.push(message);
             }
@@ -424,17 +424,17 @@ impl NotionApp {
                 | ServerMessage::CrdtSync {
                     page_id, update, ..
                 } => {
-                    if page_id == self.crdt_page
+                    if page_id == self.collaboration.page
                         && let Ok(bytes) = BASE64.decode(update)
-                        && self.crdt.apply_update(&bytes).is_ok()
+                        && self.collaboration.crdt.apply_update(&bytes).is_ok()
                     {
                         self.project_crdt_page();
                     }
                 }
                 ServerMessage::Awareness { members } => {
-                    self.remote_awareness = members
+                    self.collaboration.remote_awareness = members
                         .into_iter()
-                        .filter(|member| member.session_id != self.awareness_session)
+                        .filter(|member| member.session_id != self.collaboration.session)
                         .collect();
                 }
                 _ => {}
@@ -462,11 +462,11 @@ impl NotionApp {
         self.nav_history = self.tabs.clone();
         self.nav_pos = 0;
         self.pending_edits = PendingEdits::new(0.25);
-        self.crdt = CrdtSession::new();
-        self.crdt_page.clear();
-        self.crdt_rx = self.client.subscribe_realtime();
-        self.remote_awareness.clear();
-        self.last_awareness = None;
+        self.collaboration.crdt = CrdtSession::new();
+        self.collaboration.page.clear();
+        self.collaboration.receiver = self.client.subscribe_realtime();
+        self.collaboration.remote_awareness.clear();
+        self.collaboration.last_awareness = None;
         self.server_password.clear();
     }
 
@@ -507,11 +507,11 @@ impl NotionApp {
         self.page_selection.clear();
         self.block_selecting = false;
         self.pending_edits = PendingEdits::new(0.25);
-        self.crdt = CrdtSession::new();
-        self.crdt_page.clear();
-        self.crdt_rx = self.client.subscribe_realtime();
-        self.remote_awareness.clear();
-        self.last_awareness = None;
+        self.collaboration.crdt = CrdtSession::new();
+        self.collaboration.page.clear();
+        self.collaboration.receiver = self.client.subscribe_realtime();
+        self.collaboration.remote_awareness.clear();
+        self.collaboration.last_awareness = None;
         self.search.cache = SearchCache::default();
         self.search.results = Arc::new(Vec::new());
     }
@@ -568,9 +568,9 @@ impl NotionApp {
     }
 
     fn project_crdt_page(&mut self) {
-        let page_id = self.crdt_page.clone();
+        let page_id = self.collaboration.page.clone();
         if let Some(mut page) = self.workspace.page(&page_id).cloned() {
-            self.crdt.project_page(&mut page);
+            self.collaboration.crdt.project_page(&mut page);
             if let Some(slot) = self.workspace.page_mut(&page_id) {
                 *slot = page.clone();
             }

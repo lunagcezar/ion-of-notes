@@ -69,6 +69,17 @@ pub(super) struct SharingState {
     pub general_access: Access,
 }
 
+/// CRDT, realtime and awareness state.
+pub(super) struct CollaborationState {
+    pub crdt: CrdtSession,
+    pub page: String,
+    pub receiver: Option<tokio::sync::broadcast::Receiver<ServerMessage>>,
+    pub remote_awareness: Vec<Awareness>,
+    pub session: String,
+    pub color: String,
+    pub last_awareness: Option<(String, usize, Option<usize>)>,
+}
+
 impl Default for SearchState {
     fn default() -> Self {
         Self {
@@ -178,13 +189,7 @@ pub struct NotionApp {
     pub(super) page_selection: Vec<String>,
     pub(super) block_selecting: bool,
     // Real-time CRDT and awareness.
-    pub(super) crdt: CrdtSession,
-    pub(super) crdt_page: String,
-    pub(super) crdt_rx: Option<tokio::sync::broadcast::Receiver<ServerMessage>>,
-    pub(super) remote_awareness: Vec<Awareness>,
-    pub(super) awareness_session: String,
-    pub(super) awareness_color: String,
-    pub(super) last_awareness: Option<(String, usize, Option<usize>)>,
+    pub(super) collaboration: CollaborationState,
     // Server login/settings.
     pub(super) server_url: String,
     pub(super) server_email: String,
@@ -410,13 +415,15 @@ impl NotionApp {
             pending_edits: PendingEdits::new(0.25),
             workspace,
             current_page: demo_current_page.clone(),
-            crdt,
-            crdt_page: demo_current_page.clone(),
-            crdt_rx,
-            remote_awareness: Vec::new(),
-            awareness_session,
-            awareness_color: "#4C8BF5".to_string(),
-            last_awareness: None,
+            collaboration: CollaborationState {
+                crdt,
+                page: demo_current_page.clone(),
+                receiver: crdt_rx,
+                remote_awareness: Vec::new(),
+                session: awareness_session,
+                color: "#4C8BF5".to_string(),
+                last_awareness: None,
+            },
             server_url: "http://127.0.0.1:8787".to_string(),
             server_email: "owner@workspace.local".to_string(),
             server_password: String::new(),

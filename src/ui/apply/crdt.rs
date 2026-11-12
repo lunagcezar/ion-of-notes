@@ -13,8 +13,8 @@ impl NotionApp {
                 block_id,
                 text,
             } => {
-                if page_id == self.crdt_page
-                    && let Ok(Some(update)) = self.crdt.local_text(&block_id, &text)
+                if page_id == self.collaboration.page
+                    && let Ok(Some(update)) = self.collaboration.crdt.local_text(&block_id, &text)
                     && self
                         .client
                         .apply_crdt_update(&page_id, &update, "m-owner")
@@ -31,13 +31,13 @@ impl NotionApp {
                 selection_end,
             } => {
                 let state = (block_id.clone(), index, selection_end);
-                if self.last_awareness.as_ref() != Some(&state) {
-                    self.last_awareness = Some(state);
+                if self.collaboration.last_awareness.as_ref() != Some(&state) {
+                    self.collaboration.last_awareness = Some(state);
                     let awareness = Awareness {
-                        session_id: self.awareness_session.clone(),
+                        session_id: self.collaboration.session.clone(),
                         member_id: "m-owner".to_string(),
                         name: "You".to_string(),
-                        color: self.awareness_color.clone(),
+                        color: self.collaboration.color.clone(),
                         page_id,
                         block_id,
                         index,

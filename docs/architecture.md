@@ -154,7 +154,7 @@ src/
     constants.rs     layout metrics: spacing, sizes, padding, radii, fonts
     view.rs          ViewState + SearchView + SharingView
     input.rs         egui keys -> shortcut actions
-    app.rs           NotionApp shell, SearchState/SharingState + eframe::App
+    app.rs           NotionApp shell, SearchState/SharingState/CollaborationState + eframe::App
     apply.rs         facade: apply_commands + shared helpers
     apply/           navigation, library, sharing, blocks, workspace, tabs,
                      ai, settings, page_actions, crdt, server
