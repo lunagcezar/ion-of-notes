@@ -119,6 +119,11 @@ Status vocabulary:
 | [079](spec-079-shared-crdt-helpers.md) | Shared CRDT text helpers | implemented | `crdt_text` module and model block-tree walkers |
 | [080](spec-080-sidebar-decomposition.md) | Sidebar rendering decomposition | implemented | Sidebar shell plus customize/default/bottom functions |
 | [081](spec-081-refactoring-roadmap.md) | Refactoring roadmap and implementation notes | implemented | Implemented/deferred refactors and next slices |
+| [082](spec-082-request-pipeline-stages.md) | Request pipeline stages | implemented | Version/auth/limits/capability/authorization stages |
+| [083](spec-083-workspace-api-segregation.md) | WorkspaceApi interface segregation | implemented | RequestTransport + CollabTransport |
+| [084](spec-084-client-resource-modules.md) | Resource-oriented client modules | implemented | Client split by resource |
+| [085](spec-085-transport-adapter-split.md) | Transport adapter split | implemented | `server/web/` and `remote/` modules |
+| [086](spec-086-refactoring-round-ii.md) | Refactoring round II | implemented | Status and deferred roadmap |
 
 ## 3. Work status
 

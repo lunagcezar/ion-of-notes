@@ -27,7 +27,9 @@ in what order, and which document is the source of truth for each concern.
   `spec-073` .. `spec-077` are implemented (authentication boundary, atomic
   persistence, webhook SSRF hardening, principal authorization and the review
   response); `spec-078` .. `spec-081` are implemented (route policy table,
-  shared CRDT helpers, sidebar decomposition and the refactoring roadmap). The
+  shared CRDT helpers, sidebar decomposition and the refactoring roadmap);
+  `spec-082` .. `spec-086` are implemented (pipeline stages, transport
+  segregation, client modules, adapter split and refactoring round II). The
   v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
@@ -40,7 +42,7 @@ in what order, and which document is the source of truth for each concern.
   (spec-051), deployment hardening II (spec-052), the supply-chain/tooling baseline
   (spec-053), webhook reliability (spec-054), remote-mode UX (spec-055) and the production
   Compose/TLS manifest (spec-056) are implemented.
-- **Tests:** 310 tests across the core and desktop passes (273 + 37); both
+- **Tests:** 312 tests across the core and desktop passes (275 + 37); both
   clippy feature passes and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
   selects SQLite with Argon2id accounts and sessions. The desktop can connect

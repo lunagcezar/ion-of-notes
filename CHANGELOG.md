@@ -6,6 +6,20 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-082..086 refactoring round II
+
+- Extracted the v2 version/auth/limits/capability/authorization stages into
+  `server/routes/pipeline.rs`; the dispatcher is now a short `?` sequence.
+- Split the transport seam into `RequestTransport` and `CollabTransport`, with
+  `WorkspaceApi` as the composite; request-only clients no longer need collab
+  methods.
+- Split `client.rs` into resource modules (`pages`, `sharing`, `blocks`,
+  `databases`, `views`, `comments`, `webhooks`, `collab`).
+- Split `server/web.rs` into router/state, HTTP, operations and WebSocket
+  modules; split `remote.rs` into session, HTTP, realtime and CRDT modules.
+- Updated the refactoring roadmap with implemented and deferred work. Suite:
+  312 tests.
+
 ### Changed - spec-078..081 general refactoring
 
 - Added a central v2 route-policy table for capability, block-limit kind,
