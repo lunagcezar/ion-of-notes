@@ -1,4 +1,5 @@
 //! Real-listener smoke test for the shipped Axum adapter (spec-067).
+//! No Docker is required; the listener is in-process and stopped at the end.
 
 use ion_of_notes::model::Workspace;
 use ion_of_notes::server::web::router;

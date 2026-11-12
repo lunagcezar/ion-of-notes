@@ -334,7 +334,9 @@ pwsh -File scripts/quality.ps1
 ### Smoke tests
 
 Smoke tests exercise the shipped artifacts, not just the in-process router.
-They are not part of the default gate because the Docker one builds an image.
+`cargo test --test smoke` needs no Docker and runs in the normal test passes;
+the two PowerShell scripts are separate artifact-level smokes and are opt-in
+because the Docker one builds an image.
 
 ```sh
 # Real Axum listener: /health, /ready, /metrics and an authenticated v2 request

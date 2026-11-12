@@ -121,9 +121,10 @@ own seam test.
 
 ### 3.2 Runtime smoke tests
 
-The Rust suite does not start the shipped binary or build Docker images. Run
-the smoke tests when startup wiring, the listener, `Dockerfile`, `compose.yml`
-or the headless binary changes (spec-067):
+The Rust suite does not start the shipped binary or build Docker images.
+`cargo test --test smoke` is the no-Docker listener smoke and runs in the normal
+test passes. Run the artifact smokes when startup wiring, the listener,
+`Dockerfile`, `compose.yml` or the headless binary changes (spec-067):
 
 ```sh
 cargo test --test smoke                 # real listener, health/ready/metrics/v2
