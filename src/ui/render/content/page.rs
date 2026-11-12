@@ -31,14 +31,11 @@ pub(crate) fn render_content(
     };
     let gutter = 48.0;
     let pad = ((full_width - column_width) / 2.0 - gutter).max(0.0);
-    let breadcrumb_pad = if view.library_open {
-        16.0
-    } else {
-        pad + gutter
-    };
+    let breadcrumb_pad = 16.0;
     ui.vertical(|ui| {
-        ui.add_space(6.0);
-        ui.horizontal(|ui| {
+        ui.add_space(2.0);
+        ui.horizontal_centered(|ui| {
+            ui.set_height(32.0);
             ui.spacing_mut().item_spacing.x = 6.0;
             ui.add_space(breadcrumb_pad);
             if !view.sidebar_open && ui.add(egui::Button::new(">").frame(false)).clicked() {
@@ -93,7 +90,7 @@ pub(crate) fn render_content(
                 }
             });
         });
-        ui.add_space(6.0);
+        ui.add_space(2.0);
     });
     ui.separator();
 

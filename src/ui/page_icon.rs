@@ -9,10 +9,11 @@
 //! The Emoji tab searches a named emoji catalog and the Icons tab only shows
 //! the monochrome shapes bundled in `ui::icons` (spec-057).
 
-use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
+use egui::{Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
 use super::app::{Command, IconTab, ViewState};
 use super::icon_catalog::{EMOJI, Emoji, ICONS, IconGlyph, catalog_matches};
+use super::icons::draw_glyph_centered;
 use super::palette::Palette;
 use std::sync::Arc;
 
@@ -77,17 +78,10 @@ fn emoji_button(
         ui.painter()
             .rect_filled(rect, CornerRadius::same(5), palette.hover);
     }
-    ui.painter().text(
-        rect.center(),
-        Align2::CENTER_CENTER,
-        entry.glyph,
-        FontId::proportional(19.0),
-        palette.text,
-    );
+    draw_glyph_centered(ui.painter(), rect, entry.glyph, 19.0, palette.text);
     if response.clicked() {
         commands.push(Command::SetPageIcon(entry.glyph.to_string()));
     }
-    response.on_hover_text(entry.name);
 }
 
 /// One selectable monochrome icon in the grid.
@@ -321,8 +315,9 @@ pub(super) fn render_icon_picker(
                                                 );
                                             } else {
                                                 let entry = &ICONS[index];
-                                                let selected = view.page_icon
-                                                    == format!("shape:{}", entry.name);
+                                                let selected =
+                                                    view.page_icon.strip_prefix("shape:")
+                                                        == Some(entry.name);
                                                 icon_button(ui, entry, selected, palette, commands);
                                             }
                                         }

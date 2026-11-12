@@ -40,11 +40,7 @@ pub(in crate::server) fn create_page(
     {
         return Err(UseCaseError::Invalid("unknown parent page".to_string()));
     }
-    let icon = if draft.icon.trim().is_empty() {
-        "P".to_string()
-    } else {
-        draft.icon
-    };
+    let icon = draft.icon;
     let mut page = Page::new(uuid::Uuid::new_v4().to_string(), title, icon);
     page.parent = draft.parent;
     server

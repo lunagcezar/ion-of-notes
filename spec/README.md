@@ -105,6 +105,10 @@ Status vocabulary:
 | [065](spec-065-page-icon-letter-fallback.md) | Page icon letter fallback | implemented | Empty icon uses the uppercase title letter everywhere |
 | [066](spec-066-search-and-new-tab-filters.md) | Search and new-tab filters | implemented | Title only, Created by, In, Has comments, show/hide; remove Ask AI |
 | [067](spec-067-runtime-smoke-tests.md) | Runtime smoke tests | implemented | Real listener, headless binary, Docker Compose smoke |
+| [068](spec-068-header-icons-and-emoji-rendering.md) | Header, icons and emoji rendering | implemented | Breadcrumb centering, empty-icon fallback, emoji alignment/perf |
+| [069](spec-069-dialog-sizing-scrolling-and-fixed-close.md) | Dialog sizing, scrolling and fixed close | implemented | Auto-shrink, rail/content scroll, border scrollbar, foreground close |
+| [070](spec-070-sidebar-tabs-drag-and-remove.md) | Sidebar tabs, drag and remove | implemented | Sidebar tabs, section/shortcut drag, remove actions |
+| [071](spec-071-popover-positioning-and-inbox.md) | Popover positioning and inbox | implemented | Anchored menus and full-height inbox panel |
 
 ## 3. Work status
 

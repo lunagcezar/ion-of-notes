@@ -45,6 +45,7 @@ fn create_page_returns_201_and_bumps_version() {
     let page: Page = data(&r);
     assert!(!page.id.is_empty());
     assert_eq!(page.title, "New");
+    assert!(page.icon.is_empty());
     assert_eq!(s.workspace.pages.len(), before + 1);
     assert_eq!(s.workspace.version, version + 1);
 }

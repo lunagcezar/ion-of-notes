@@ -58,7 +58,7 @@ impl NotionApp {
                 NewTabChoice::NewPage => {
                     let draft = PageDraft {
                         title: "Untitled".to_string(),
-                        icon: "P".to_string(),
+                        icon: String::new(),
                         parent: None,
                     };
                     if let Ok(page) = self.client.create_page(&draft) {

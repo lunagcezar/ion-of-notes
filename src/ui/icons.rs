@@ -495,7 +495,21 @@ pub(super) fn draw_bullet_dot(painter: &egui::Painter, rect: Rect, color: Color3
 /// Optical lift applied to text glyphs so their ink, not the font box, sits in
 /// the center of the icon well.
 pub fn glyph_visual_offset(font_size: f32) -> f32 {
-    font_size * 0.08
+    font_size * 0.14
+}
+
+/// Draw a text glyph centered by its laid-out galley with a small optical
+/// lift. Shared by page icons and emoji picker cells (spec-068).
+pub fn draw_glyph_centered(
+    painter: &egui::Painter,
+    rect: Rect,
+    label: &str,
+    size: f32,
+    color: Color32,
+) {
+    let galley = painter.layout_no_wrap(label.to_string(), egui::FontId::proportional(size), color);
+    let pos = rect.center() - galley.size() / 2.0 - Vec2::new(0.0, glyph_visual_offset(size));
+    painter.galley(pos, galley, color);
 }
 
 /// The icon to draw for a page: the explicit icon when present, otherwise the
@@ -555,11 +569,5 @@ pub(super) fn draw_page_icon(
     // the laid-out galley and apply a small optical lift so the ink, not the
     // font box, is centered in the icon well.
     let size = rect.height() * if large { 0.60 } else { 0.72 };
-    let galley = painter.layout_no_wrap(
-        label.to_string(),
-        egui::FontId::proportional(size),
-        palette.text,
-    );
-    let pos = rect.center() - galley.size() / 2.0 - Vec2::new(0.0, glyph_visual_offset(size));
-    painter.galley(pos, galley, palette.text);
+    draw_glyph_centered(painter, rect, label, size, palette.text);
 }

@@ -36,7 +36,7 @@ pub fn remove(path: &Path) {
 pub fn page_draft_json(title: &str, parent: Option<&str>) -> String {
     serde_json::to_string(&PageDraft {
         title: title.to_string(),
-        icon: "P".to_string(),
+        icon: String::new(),
         parent: parent.map(str::to_string),
     })
     .unwrap()
