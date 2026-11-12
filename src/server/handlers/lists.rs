@@ -1,5 +1,6 @@
 //! Cursor-paginated v2 list routes.
 
+use super::super::error::{HandlerResult, fail, ok};
 use super::super::pagination::PageRequest;
 use super::super::response::{query_value, v2_error, v2_list_response};
 use super::super::usecases::{list_members, list_pages, list_shares, page_versions, search, sync};
@@ -12,9 +13,9 @@ impl WorkspaceServer {
         path: &str,
         query: &str,
         request_id: &str,
-    ) -> Option<ApiResponse> {
+    ) -> HandlerResult<Option<ApiResponse>> {
         if request.method != Method::Get {
-            return None;
+            return Ok(None);
         }
         let is_list_path = matches!(
             path,
@@ -25,12 +26,12 @@ impl WorkspaceServer {
                 | "/api/v2/search"
         ) || (path.starts_with("/api/v2/pages/") && path.ends_with("/versions"));
         if !is_list_path {
-            return None;
+            return Ok(None);
         }
         let page = match PageRequest::from_query(query) {
             Ok(page) => page,
             Err(error) => {
-                return Some(v2_error(
+                return fail(v2_error(
                     400,
                     error.code(),
                     error.message(),
@@ -42,10 +43,10 @@ impl WorkspaceServer {
 
         if path == "/api/v2/pages" {
             let items = list_pages(self);
-            return Some(v2_list_response(items, &page, "pages", "page", request_id));
+            return ok(v2_list_response(items, &page, "pages", "page", request_id));
         }
         if path == "/api/v2/members" {
-            return Some(v2_list_response(
+            return ok(v2_list_response(
                 list_members(self),
                 &page,
                 "members",
@@ -57,13 +58,13 @@ impl WorkspaceServer {
             let page_id = query_value(query, "page");
             let shares = list_shares(self, Some(&page_id));
             let sort = format!("shares:{page_id}");
-            return Some(v2_list_response(shares, &page, &sort, "share", request_id));
+            return ok(v2_list_response(shares, &page, &sort, "share", request_id));
         }
         if path == "/api/v2/sync" {
             let since = query_value(query, "since").parse::<u64>().unwrap_or(0);
             let changes = sync(self, since).changes;
             let sort = format!("sync:{since}");
-            return Some(v2_list_response(
+            return ok(v2_list_response(
                 changes, &page, &sort, "change", request_id,
             ));
         }
@@ -71,7 +72,7 @@ impl WorkspaceServer {
             let q = query_value(query, "q");
             let results = search(self, &q);
             let sort = format!("search:{q}");
-            return Some(v2_list_response(
+            return ok(v2_list_response(
                 results,
                 &page,
                 &sort,
@@ -85,7 +86,7 @@ impl WorkspaceServer {
         {
             let versions = page_versions(self, id);
             let sort = format!("versions:{id}");
-            return Some(v2_list_response(
+            return ok(v2_list_response(
                 versions,
                 &page,
                 &sort,
@@ -93,6 +94,6 @@ impl WorkspaceServer {
                 request_id,
             ));
         }
-        None
+        Ok(None)
     }
 }

@@ -67,7 +67,10 @@ impl WorkspaceServer {
         pipeline::check_capability(&connection, request, path, request_id)?;
         pipeline::check_authorization(self, &connection, request, path, request_id)?;
 
-        if let Some(response) = self.handle_v2_crdt(request, path, request_id, &connection) {
+        if let Some(response) = self
+            .handle_v2_crdt(request, path, request_id, &connection)
+            .map_err(|error| handler_error(error, request_id))?
+        {
             return Ok(response);
         }
         if let Some(response) = self
@@ -115,10 +118,16 @@ impl WorkspaceServer {
         {
             return Ok(response);
         }
-        if let Some(response) = self.handle_v2_shared(request, path, request_id) {
+        if let Some(response) = self
+            .handle_v2_shared(request, path, request_id)
+            .map_err(|error| handler_error(error, request_id))?
+        {
             return Ok(response);
         }
-        if let Some(response) = self.handle_v2_list(request, path, query, request_id) {
+        if let Some(response) = self
+            .handle_v2_list(request, path, query, request_id)
+            .map_err(|error| handler_error(error, request_id))?
+        {
             return Ok(response);
         }
 

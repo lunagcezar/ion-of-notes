@@ -1,14 +1,12 @@
 //! v2 adapters for the page, workspace and sharing use cases.
 
-use super::super::response::{json, parse_body, v2_error};
+use super::super::error::{HandlerError, HandlerResult, body, ok};
+use super::super::response::json;
 use super::super::usecases::{
     self, UseCaseError, create_page, delete_page, get_page, get_workspace, invite_member,
     replace_workspace, set_share,
 };
-use super::super::{
-    ApiRequest, ApiResponse, CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND,
-    CODE_VALIDATION_ERROR, Envelope, Method, WorkspaceServer,
-};
+use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
 use crate::collab::MemberDraft;
 use crate::model::{Page, PageDraft, Workspace};
 
@@ -19,46 +17,44 @@ impl WorkspaceServer {
         request: &ApiRequest,
         path: &str,
         request_id: &str,
-    ) -> Option<ApiResponse> {
+    ) -> HandlerResult<Option<ApiResponse>> {
         match (request.method, path) {
             (Method::Get, "/api/v2/workspace") => {
-                Some(json(200, Envelope::ok(get_workspace(self))))
+                Ok(Some(json(200, Envelope::ok(get_workspace(self)))))
             }
-            (Method::Put, "/api/v2/workspace") => Some(match parse_body::<Workspace>(request) {
-                Ok(workspace) => match replace_workspace(self, workspace) {
-                    Ok(workspace) => json(200, Envelope::ok(workspace)),
-                    Err(error) => v2_use_case_error(error, request_id),
-                },
-                Err(message) => v2_error(400, CODE_INVALID_JSON, message, request_id, None),
-            }),
-            (Method::Post, "/api/v2/pages") => Some(match parse_body::<PageDraft>(request) {
-                Ok(draft) => match create_page(self, draft) {
-                    Ok(page) => json(201, Envelope::ok(page)),
-                    Err(error) => v2_use_case_error(error, request_id),
-                },
-                Err(message) => v2_error(400, CODE_INVALID_JSON, message, request_id, None),
-            }),
+            (Method::Put, "/api/v2/workspace") => {
+                let workspace: Workspace = body(request)?;
+                match replace_workspace(self, workspace) {
+                    Ok(workspace) => ok(json(200, Envelope::ok(workspace))),
+                    Err(error) => Err(use_case_error(error)),
+                }
+            }
+            (Method::Post, "/api/v2/pages") => {
+                let draft: PageDraft = body(request)?;
+                match create_page(self, draft) {
+                    Ok(page) => ok(json(201, Envelope::ok(page))),
+                    Err(error) => Err(use_case_error(error)),
+                }
+            }
             (Method::Get, "/api/v2/export") => {
-                Some(json(200, Envelope::ok(usecases::export(self))))
+                Ok(Some(json(200, Envelope::ok(usecases::export(self)))))
             }
             (Method::Get, "/api/v2/realtime") => {
-                Some(json(200, Envelope::ok(usecases::realtime_contract())))
+                Ok(Some(json(200, Envelope::ok(usecases::realtime_contract()))))
             }
-            (Method::Post, "/api/v2/members") => Some(match parse_body::<MemberDraft>(request) {
-                Ok(draft) => match invite_member(self, draft) {
-                    Ok(member) => json(201, Envelope::ok(member)),
-                    Err(error) => v2_use_case_error(error, request_id),
-                },
-                Err(message) => v2_error(400, CODE_INVALID_JSON, message, request_id, None),
-            }),
+            (Method::Post, "/api/v2/members") => {
+                let draft: MemberDraft = body(request)?;
+                match invite_member(self, draft) {
+                    Ok(member) => ok(json(201, Envelope::ok(member))),
+                    Err(error) => Err(use_case_error(error)),
+                }
+            }
             (Method::Put, "/api/v2/shares") => {
-                Some(match parse_body::<crate::collab::Share>(request) {
-                    Ok(share) => match set_share(self, share) {
-                        Ok(share) => json(200, Envelope::ok(share)),
-                        Err(error) => v2_use_case_error(error, request_id),
-                    },
-                    Err(message) => v2_error(400, CODE_INVALID_JSON, message, request_id, None),
-                })
+                let share: crate::collab::Share = body(request)?;
+                match set_share(self, share) {
+                    Ok(share) => ok(json(200, Envelope::ok(share))),
+                    Err(error) => Err(use_case_error(error)),
+                }
             }
             _ => self.handle_v2_page(request, path, request_id),
         }
@@ -69,40 +65,40 @@ impl WorkspaceServer {
         &mut self,
         request: &ApiRequest,
         path: &str,
-        request_id: &str,
-    ) -> Option<ApiResponse> {
-        let rest = path.strip_prefix("/api/v2/pages/")?;
+        _request_id: &str,
+    ) -> HandlerResult<Option<ApiResponse>> {
+        let Some(rest) = path.strip_prefix("/api/v2/pages/") else {
+            return Ok(None);
+        };
         if rest.is_empty() || rest.contains('/') {
-            return None;
+            return Ok(None);
         }
         match request.method {
-            Method::Get => Some(match get_page(self, rest) {
-                Ok(page) => json(200, Envelope::ok(page)),
-                Err(error) => v2_use_case_error(error, request_id),
-            }),
-            Method::Patch => Some(match parse_body::<Page>(request) {
-                Ok(page) => match usecases::update_page(self, rest, page) {
-                    Ok(page) => json(200, Envelope::ok(page)),
-                    Err(error) => v2_use_case_error(error, request_id),
-                },
-                Err(message) => v2_error(400, CODE_INVALID_JSON, message, request_id, None),
-            }),
-            Method::Delete => Some(match delete_page(self, rest) {
-                Ok(removed) => json(200, Envelope::ok(removed)),
-                Err(error) => v2_use_case_error(error, request_id),
-            }),
-            _ => None,
+            Method::Get => match get_page(self, rest) {
+                Ok(page) => ok(json(200, Envelope::ok(page))),
+                Err(error) => Err(use_case_error(error)),
+            },
+            Method::Patch => {
+                let page: Page = body(request)?;
+                match usecases::update_page(self, rest, page) {
+                    Ok(page) => ok(json(200, Envelope::ok(page))),
+                    Err(error) => Err(use_case_error(error)),
+                }
+            }
+            Method::Delete => match delete_page(self, rest) {
+                Ok(removed) => ok(json(200, Envelope::ok(removed))),
+                Err(error) => Err(use_case_error(error)),
+            },
+            _ => Ok(None),
         }
     }
 }
 
-/// Map one application error to the v2 structured error shape.
-fn v2_use_case_error(error: UseCaseError, request_id: &str) -> ApiResponse {
+/// Map one application error to the typed handler error.
+fn use_case_error(error: UseCaseError) -> HandlerError {
     match error {
-        UseCaseError::Invalid(message) => {
-            v2_error(400, CODE_VALIDATION_ERROR, message, request_id, None)
-        }
-        UseCaseError::NotFound(message) => v2_error(404, CODE_NOT_FOUND, message, request_id, None),
-        UseCaseError::Storage(message) => v2_error(500, CODE_INTERNAL, message, request_id, None),
+        UseCaseError::Invalid(message) => HandlerError::validation(message),
+        UseCaseError::NotFound(message) => HandlerError::not_found(message),
+        UseCaseError::Storage(message) => HandlerError::internal(message),
     }
 }

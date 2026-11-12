@@ -6,6 +6,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-090 complete typed handlers
+
+- Converted `crdt`, `lists` and `shared` to `HandlerResult` with `ok`/`fail`
+  and the `body()` extractor. Every v2 resource adapter now uses typed errors.
+
 ### Changed - spec-089 typed handlers for remaining families
 
 - Converted users/files, blocks, databases, views, webhooks and auth to

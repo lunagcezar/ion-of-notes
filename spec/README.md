@@ -127,6 +127,7 @@ Status vocabulary:
 | [087](spec-087-typed-handler-errors-and-comments.md) | Typed handler errors and comments use case | implemented | `HandlerResult`, comments use case, feature-specific handler |
 | [088](spec-088-search-state-and-view.md) | SearchState and SearchView grouping | implemented | Search runtime/view fields grouped |
 | [089](spec-089-typed-handlers-remaining.md) | Typed handlers for remaining families | implemented | User/file, blocks, databases, views, webhooks, auth |
+| [090](spec-090-complete-typed-handlers.md) | Complete typed handler conversion | implemented | CRDT, lists and shared adapters |
 
 ## 3. Work status
 
