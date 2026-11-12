@@ -3,6 +3,8 @@
 use crate::server::realtime::Awareness;
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Stroke};
 use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use std::sync::{Arc, Mutex};
 
 use super::super::super::palette::Palette;
 
@@ -59,12 +61,57 @@ pub(super) fn draw_remote_cursors(
     }
 }
 
+const CURSOR_WIDTH_CACHE_CAP: usize = 1024;
+
+type WidthCache = Arc<Mutex<HashMap<CursorWidthKey, f32>>>;
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct CursorWidthKey {
+    text_hash: u64,
+    chars: usize,
+    font_size: u32,
+    family: u64,
+}
+
 fn text_width(ui: &egui::Ui, text: &str, chars: usize, font: &FontId, color: Color32) -> f32 {
+    let mut hasher = DefaultHasher::new();
+    text.hash(&mut hasher);
+    let mut family = DefaultHasher::new();
+    std::mem::discriminant(&font.family).hash(&mut family);
+    let key = CursorWidthKey {
+        text_hash: hasher.finish(),
+        chars,
+        font_size: font.size.to_bits(),
+        family: family.finish(),
+    };
+    let id = egui::Id::unique("cursor_width_cache");
+    let cache = ui
+        .ctx()
+        .data(|data| data.get_temp::<WidthCache>(id))
+        .unwrap_or_else(|| {
+            let cache: WidthCache = Arc::new(Mutex::new(HashMap::new()));
+            ui.ctx()
+                .data_mut(|data| data.insert_temp(id, Arc::clone(&cache)));
+            cache
+        });
+    if let Ok(map) = cache.lock()
+        && let Some(width) = map.get(&key)
+    {
+        return *width;
+    }
     let prefix: String = text.chars().take(chars).collect();
-    ui.painter()
+    let width = ui
+        .painter()
         .layout_no_wrap(prefix, font.clone(), color)
         .size()
-        .x
+        .x;
+    if let Ok(mut map) = cache.lock() {
+        if map.len() >= CURSOR_WIDTH_CACHE_CAP {
+            map.clear();
+        }
+        map.insert(key, width);
+    }
+    width
 }
 
 fn parse_hex_color(value: &str) -> Option<Color32> {
