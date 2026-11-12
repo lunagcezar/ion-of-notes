@@ -231,58 +231,72 @@ pub(crate) fn render_settings(
                     Vec2::new(268.0, whole.height() - 2.0 * SETTINGS_RAIL_PADDING_Y),
                     egui::Layout::top_down(egui::Align::LEFT),
                     |ui| {
+                        ui.set_width(268.0);
+                        ui.set_min_height(whole.height() - 2.0 * SETTINGS_RAIL_PADDING_Y);
+                        ui.add_space(SETTINGS_RAIL_PADDING_Y);
+                        // The search field is fixed; only the navigation list
+                        // scrolls below it (spec-069).
+                        let (search, _) =
+                            ui.allocate_exact_size(Vec2::new(268.0, 30.0), Sense::hover());
+                        ui.painter()
+                            .rect_filled(search, CornerRadius::same(6), palette.hover);
+                        draw_search(
+                            ui.painter(),
+                            Rect::from_min_size(
+                                search.min + Vec2::new(8.0, 7.0),
+                                Vec2::splat(16.0),
+                            ),
+                            palette.muted,
+                        );
+                        let mut query = view.settings_query.clone();
+                        let edit = ui.put(
+                            Rect::from_min_size(
+                                search.min + Vec2::new(28.0, 0.0),
+                                Vec2::new(232.0, 30.0),
+                            ),
+                            egui::TextEdit::singleline(&mut query)
+                                .frame(egui::Frame::NONE)
+                                .hint_text("Search settings")
+                                .text_color(palette.text),
+                        );
+                        if edit.changed() {
+                            if !query.trim().is_empty()
+                                && let Some(first) = first_settings_match(&query)
+                            {
+                                commands.push(Command::SetSettingsPage(first.to_string()));
+                            }
+                            commands.push(Command::SetSettingsQuery(query));
+                        }
+                        ui.add_space(14.0);
+                        let rail_height =
+                            (ui.available_height() - SETTINGS_RAIL_PADDING_Y).max(120.0);
                         egui::ScrollArea::vertical()
                             .id_salt("settings_rail_scroll")
-                            .max_height(whole.height() - 2.0 * SETTINGS_RAIL_PADDING_Y)
+                            .max_height(rail_height)
                             .auto_shrink([false, false])
                             .show(ui, |ui| {
                                 ui.set_width(268.0);
+                                for (section, items) in SETTINGS_NAV {
+                                    let visible: Vec<_> = items
+                                        .iter()
+                                        .filter(|(label, description)| {
+                                            section_matches(
+                                                &view.settings_query,
+                                                label,
+                                                description,
+                                            )
+                                        })
+                                        .collect();
+                                    if visible.is_empty() {
+                                        continue;
+                                    }
+                                    section_label(ui, section, palette);
+                                    for (label, _) in visible {
+                                        settings_nav(ui, view, label, palette, commands);
+                                    }
+                                    ui.add_space(14.0);
+                                }
                                 ui.add_space(SETTINGS_RAIL_PADDING_Y);
-                    let (search, _) =
-                        ui.allocate_exact_size(Vec2::new(268.0, 30.0), Sense::hover());
-                    ui.painter().rect_filled(search, CornerRadius::same(6), palette.hover);
-                    draw_search(
-                        ui.painter(),
-                        Rect::from_min_size(search.min + Vec2::new(8.0, 7.0), Vec2::splat(16.0)),
-                        palette.muted,
-                    );
-                    let mut query = view.settings_query.clone();
-                    let edit = ui.put(
-                        Rect::from_min_size(search.min + Vec2::new(28.0, 4.0), Vec2::new(232.0, 22.0)),
-                        egui::TextEdit::singleline(&mut query)
-                            .frame(egui::Frame::NONE)
-                            .hint_text("Search settings")
-                            .text_color(palette.text),
-                    );
-                    if edit.changed() {
-                        // Typing a query narrows the rail and moves to the
-                        // first matching section (spec-015). An empty query
-                        // leaves the current section alone.
-                        if !query.trim().is_empty()
-                            && let Some(first) = first_settings_match(&query)
-                        {
-                            commands.push(Command::SetSettingsPage(first.to_string()));
-                        }
-                        commands.push(Command::SetSettingsQuery(query));
-                    }
-                    ui.add_space(14.0);
-                    for (section, items) in SETTINGS_NAV {
-                        let visible: Vec<_> = items
-                            .iter()
-                            .filter(|(label, description)| {
-                                section_matches(&view.settings_query, label, description)
-                            })
-                            .collect();
-                        if visible.is_empty() {
-                            continue;
-                        }
-                        section_label(ui, section, palette);
-                        for (label, _) in visible {
-                            settings_nav(ui, view, label, palette, commands);
-                        }
-                        ui.add_space(14.0);
-                    }
-                    ui.add_space(SETTINGS_RAIL_PADDING_Y);
                             });
                     },
                 );

@@ -24,6 +24,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Workspace, four-point and app-menu popovers are anchored to their controls;
   the inbox starts at the sidebar edge and fills the height below the tab bar.
 - Added sidebar-tab and legacy-P migration tests; suite: 286 tests.
+- Follow-up corrections: the breadcrumb strip is compact again with vertically
+  centered content, the four-point menu aligns with its button, the inbox fills
+  the height below the tab bar, the settings search is fixed above the rail
+  scroll, and the settings content spans to the right border with internal
+  padding.
 
 ### Changed - spec-067 runtime smoke tests
 

@@ -34,8 +34,8 @@ pub(crate) fn render_content(
     let breadcrumb_pad = 16.0;
     ui.vertical(|ui| {
         ui.add_space(2.0);
-        ui.horizontal_centered(|ui| {
-            ui.set_height(32.0);
+        ui.horizontal(|ui| {
+            ui.set_height(28.0);
             ui.spacing_mut().item_spacing.x = 6.0;
             ui.add_space(breadcrumb_pad);
             if !view.sidebar_open && ui.add(egui::Button::new(">").frame(false)).clicked() {

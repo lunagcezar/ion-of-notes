@@ -283,6 +283,7 @@ pub(crate) fn render_inbox(
         ))
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
+            ui.set_min_height(screen.height() - TITLE_BAR_HEIGHT - 32.0);
             ui.horizontal(|ui| {
                 ui.label(
                     egui::RichText::new("Inbox")
