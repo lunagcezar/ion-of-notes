@@ -49,8 +49,11 @@ impl CollabTransport for RemoteApi {
     }
 
     fn publish_awareness(&mut self, awareness: Awareness) -> Result<(), String> {
-        self.ws_tx
-            .send(WsCommand::Awareness(awareness))
-            .map_err(|error| error.to_string())
+        match self.ws_tx.try_send(WsCommand::Awareness(awareness)) {
+            Ok(()) | Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => Ok(()),
+            Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
+                Err("realtime channel closed".to_string())
+            }
+        }
     }
 }

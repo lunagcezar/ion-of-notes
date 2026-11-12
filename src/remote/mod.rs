@@ -78,7 +78,7 @@ pub struct RemoteApi {
     token: String,
     agent: ureq::Agent,
     realtime_rx: Arc<Mutex<Option<broadcast::Receiver<ServerMessage>>>>,
-    ws_tx: mpsc::UnboundedSender<WsCommand>,
+    ws_tx: mpsc::Sender<WsCommand>,
 }
 
 impl RemoteApi {
@@ -89,7 +89,7 @@ impl RemoteApi {
         let workspace: Workspace = get_json(&agent, &format!("{base}/api/workspace"), None)?;
         let workspace_id = workspace.settings.id;
         let (realtime_tx, realtime_rx) = broadcast::channel(256);
-        let (ws_tx, ws_rx) = mpsc::unbounded_channel();
+        let (ws_tx, ws_rx) = mpsc::channel(64);
         spawn_ws(
             base.clone(),
             token.to_string(),

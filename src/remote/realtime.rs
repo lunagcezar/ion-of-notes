@@ -5,7 +5,7 @@ pub(super) fn spawn_ws(
     token: String,
     workspace_id: String,
     realtime_tx: broadcast::Sender<ServerMessage>,
-    mut ws_rx: mpsc::UnboundedReceiver<WsCommand>,
+    mut ws_rx: mpsc::Receiver<WsCommand>,
 ) {
     std::thread::spawn(move || {
         let Ok(runtime) = tokio::runtime::Builder::new_current_thread()

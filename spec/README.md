@@ -144,6 +144,7 @@ Status vocabulary:
 | [104](spec-104-search-body-reuse.md) | Reuse the search body text | implemented | One body build per page |
 | [105](spec-105-ui-frame-tracing.md) | Trace the UI frame sections | implemented | `tracing` spans for view/commands/render/commit |
 | [106](spec-106-shared-expanded-set.md) | Share the expanded page set | implemented | `Arc<HashSet<String>>` in state/view |
+| [107](spec-107-bounded-awareness-channel.md) | Bound the remote awareness channel | implemented | Capacity 64 with latest-value drop |
 
 ## 3. Work status
 

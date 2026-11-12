@@ -21,6 +21,7 @@ the whole workspace.
 | `spec-104` | Build the search body text once per page. | Removes duplicate `plain_text()`/row work inside a search pass. |
 | `spec-105` | Trace the frame sections with `tracing` spans. | Separates render/command/persistence time from blocking I/O. |
 | `spec-106` | Share the expanded-page set through an `Arc`. | Stops deep-cloning the sidebar expansion set every frame. |
+| `spec-107` | Bound the remote awareness channel. | Prevents an unbounded cursor queue when the WebSocket worker falls behind. |
 
 The existing good decisions are preserved: cached filtered icon indices,
 `ScrollArea::show_rows` virtualization for the icon grid, the debounced edit
