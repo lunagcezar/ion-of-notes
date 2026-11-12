@@ -4,8 +4,8 @@
 //! dirty, so a query after an edit re-indexes the edited page instead of every
 //! page in the workspace (spec-109).
 
-use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, MutexGuard};
 
 use super::{Page, SearchResult, Workspace};
 
@@ -52,7 +52,7 @@ struct SearchCache {
 /// Runtime-only search cache. Cloning a workspace drops the cache so an undo
 /// snapshot does not duplicate every indexed body (spec-109).
 #[derive(Debug, Default)]
-pub(crate) struct SearchCacheCell(RefCell<SearchCache>);
+pub(crate) struct SearchCacheCell(Mutex<SearchCache>);
 
 impl Clone for SearchCacheCell {
     fn clone(&self) -> Self {
@@ -63,20 +63,29 @@ impl Clone for SearchCacheCell {
 impl SearchCacheCell {
     /// Mark one page for re-indexing.
     pub(crate) fn mark_dirty(&self, page_id: &str) {
-        let mut cache = self.0.borrow_mut();
+        let mut cache = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         cache.dirty.insert(page_id.to_string());
     }
 
     /// Drop a removed page from the cache.
     pub(crate) fn remove(&self, page_id: &str) {
-        let mut cache = self.0.borrow_mut();
+        let mut cache = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         cache.documents.remove(page_id);
         cache.dirty.remove(page_id);
     }
 
-    fn documents<'a>(&'a self, pages: &[Page]) -> Ref<'a, HashMap<String, SearchDocument>> {
+    fn documents<'a>(&'a self, pages: &[Page]) -> MutexGuard<'a, SearchCache> {
         {
-            let mut cache = self.0.borrow_mut();
+            let mut cache = self
+                .0
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             if !cache.initialized {
                 cache.documents.clear();
                 cache.dirty = pages.iter().map(|page| page.id.clone()).collect();
@@ -98,7 +107,9 @@ impl SearchCacheCell {
                 }
             }
         }
-        Ref::map(self.0.borrow(), |cache| &cache.documents)
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 }
 
@@ -110,13 +121,13 @@ impl Workspace {
         if q.is_empty() {
             return Vec::new();
         }
-        let documents = self.search_cache.documents(&self.pages);
+        let cache = self.search_cache.documents(&self.pages);
         let mut ranked: Vec<(u32, usize, SearchResult)> = Vec::new();
         for (index, page) in self.pages.iter().enumerate() {
             if page.archived {
                 continue;
             }
-            let Some(document) = documents.get(&page.id) else {
+            let Some(document) = cache.documents.get(&page.id) else {
                 continue;
             };
             let score = if document.title_lower.starts_with(&q) {

@@ -395,6 +395,11 @@ impl WorkspaceServer {
         &self.workspace
     }
 
+    /// Whether this server requires a persisted session token.
+    pub fn requires_auth(&self) -> bool {
+        self.persistence.auth_store.requires_auth()
+    }
+
     /// Register an additional connection (used by tests and, later, by the
     /// self-hosted session layer).
     pub fn register_connection(&mut self, connection: Connection) {

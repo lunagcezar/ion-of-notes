@@ -50,10 +50,12 @@ pub(super) async fn ws_handler(
         (connection, server.realtime(), backlog, seq, member_name)
     };
     let server = Arc::clone(&state.server);
+    let snapshot = Arc::clone(&state.snapshot);
     ws.on_upgrade(move |socket| {
         websocket_session(
             socket,
             server,
+            snapshot,
             connection,
             hub,
             backlog,
@@ -68,6 +70,7 @@ pub(super) async fn ws_handler(
 async fn websocket_session(
     mut socket: WebSocket,
     server: Arc<Mutex<WorkspaceServer>>,
+    snapshot: Arc<RwLock<Option<Arc<crate::model::Workspace>>>>,
     connection: Connection,
     hub: RealtimeHub,
     backlog: Vec<Change>,
@@ -141,6 +144,9 @@ async fn websocket_session(
                             .await
                             {
                                 break;
+                            }
+                            if let Ok(mut snapshot) = snapshot.write() {
+                                *snapshot = None;
                             }
                         }
                         Ok(ClientMessage::Awareness { mut awareness }) => {

@@ -25,6 +25,8 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Cache per-page search documents and re-index only dirty pages.
 - Cache measured block heights and skip unchanged offscreen blocks; cull
   offscreen table rows and group board columns once.
+- Serve the expensive v1 workspace/page reads from an immutable snapshot outside
+  the server mutex, invalidated after writes and WebSocket CRDT updates.
 
 ### Changed - spec-100 domain events
 

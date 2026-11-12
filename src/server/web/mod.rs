@@ -32,7 +32,7 @@ use http::handle;
 use operations::{health, metrics, ready};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
 use tower_http::timeout::TimeoutLayer;
@@ -50,6 +50,8 @@ const REQUEST_TIMEOUT_SECS: u64 = 30;
 #[derive(Clone)]
 struct AppState {
     server: Arc<Mutex<WorkspaceServer>>,
+    /// Immutable workspace snapshot for read-only v1 routes (spec-111).
+    snapshot: Arc<RwLock<Option<Arc<crate::model::Workspace>>>>,
     started: Instant,
     requests: Arc<AtomicU64>,
 }
@@ -67,6 +69,7 @@ pub fn router(server: WorkspaceServer) -> Router {
 pub fn router_with_server(server: Arc<Mutex<WorkspaceServer>>) -> Router {
     let state = AppState {
         server,
+        snapshot: Arc::new(RwLock::new(None)),
         started: Instant::now(),
         requests: Arc::new(AtomicU64::new(0)),
     };

@@ -25,6 +25,7 @@ the whole workspace.
 | `spec-108` | Background remote request worker for search, saves, replaces and CRDT. | Removes blocking `ureq` calls from the egui thread in remote mode. |
 | `spec-109` | Incremental search document cache in `Workspace`. | Re-indexes only pages mutated since the last query. |
 | `spec-110` | Block height cache + viewport culling; table row culling and board grouping. | Stops rendering unchanged offscreen blocks/rows after the first measured frame. |
+| `spec-111` | Immutable v1 read snapshots outside the server mutex. | `/api/workspace`, `/api/pages` and `/api/pages/{id}` serialize without holding the server lock; writes stay ordered. |
 
 The existing good decisions are preserved: cached filtered icon indices,
 `ScrollArea::show_rows` virtualization for the icon grid, the debounced edit
@@ -39,7 +40,7 @@ queue, the background WebSocket, and background webhook delivery.
 | 3 | Block virtualization with measured heights | Implemented conservatively in `spec-110`: measured heights plus viewport/overscan culling; the first frame still renders every block. |
 | 3 | Cursor geometry cache | Not implemented; cursor text widths are still measured during rendering. |
 | 3 | Database table/board virtualization | Implemented in `spec-110`: offscreen rows advance by a fixed height and board columns share one status grouping. |
-| 4 | Immutable server read snapshots + ordered writer | Not implemented; the Axum adapter still serializes through one `Mutex<WorkspaceServer>`. |
+| 4 | Immutable server read snapshots + ordered writer | Implemented for the expensive v1 reads in `spec-111`; writes still use the ordered mutex and v2 stays on the locked pipeline for policy/limits. |
 | 4 | Incremental SQLite persistence | Deferred by measurement: see `docs/performance-roadmap.md`. |
 
 ## 4. Measurement

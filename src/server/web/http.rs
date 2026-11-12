@@ -1,4 +1,9 @@
 use super::*;
+use crate::model::{Page, PageSummary, Workspace};
+use crate::server::contract::{AUTH_HEADER, OWNER_TOKEN, parse_bearer};
+use crate::server::response::{forbidden, json, not_found, unauthorized};
+use crate::server::{Connection, Envelope};
+use std::sync::RwLock;
 
 pub(super) async fn handle(State(state): State<AppState>, request: Request) -> Response {
     state.requests.fetch_add(1, Ordering::Relaxed);
@@ -43,6 +48,13 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
         client_ip,
     };
 
+    if api_request.method == Method::Get
+        && let Some(response) = snapshot_read(&state, &api_request).await
+    {
+        return to_http(response);
+    }
+
+    let is_read = api_request.method == Method::Get;
     let server = Arc::clone(&state.server);
     let response = match tokio::task::spawn_blocking(move || {
         let mut guard = server
@@ -60,7 +72,104 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
             );
         }
     };
+    if !is_read && let Ok(mut snapshot) = state.snapshot.write() {
+        *snapshot = None;
+    }
     to_http(response)
+}
+
+/// Serve the expensive read-only v1 routes from an immutable workspace snapshot
+/// without holding the server mutex during serialization (spec-111).
+async fn snapshot_read(state: &AppState, request: &ApiRequest) -> Option<ApiResponse> {
+    let path = request.path.split('?').next().unwrap_or("");
+    let page_id = path.strip_prefix("/api/pages/");
+    let is_page = page_id.is_some_and(|id| !id.is_empty() && !id.contains('/'));
+    if path != "/api/workspace" && path != "/api/pages" && !is_page {
+        return None;
+    }
+    let server = Arc::clone(&state.server);
+    let snapshot = Arc::clone(&state.snapshot);
+    let request = request.clone();
+    tokio::task::spawn_blocking(move || read_snapshot(&server, &snapshot, &request))
+        .await
+        .ok()
+        .flatten()
+}
+
+fn read_snapshot(
+    server: &std::sync::Mutex<WorkspaceServer>,
+    cache: &RwLock<Option<Arc<Workspace>>>,
+    request: &ApiRequest,
+) -> Option<ApiResponse> {
+    let path = request.path.split('?').next().unwrap_or("");
+    let guard = server
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let connection = match authenticate(&guard, request) {
+        Ok(connection) => connection,
+        Err(response) => return Some(response),
+    };
+    if path == "/api/workspace" {
+        let workspace = snapshot_for(&guard, cache);
+        drop(guard);
+        return Some(json(200, Envelope::ok(workspace.as_ref())));
+    }
+    if path == "/api/pages" {
+        let workspace = snapshot_for(&guard, cache);
+        drop(guard);
+        let pages: Vec<PageSummary> = workspace.pages.iter().map(Page::summary).collect();
+        return Some(json(200, Envelope::ok(pages)));
+    }
+    let page_id = path.strip_prefix("/api/pages/")?;
+    if page_id.is_empty() || page_id.contains('/') {
+        return None;
+    }
+    if !guard.can_read_page(&connection, page_id) {
+        drop(guard);
+        return Some(forbidden("read access to this page is not allowed"));
+    }
+    let workspace = snapshot_for(&guard, cache);
+    drop(guard);
+    match workspace.page(page_id) {
+        Some(page) => Some(json(200, Envelope::ok(page.clone()))),
+        None => Some(not_found("page not found")),
+    }
+}
+
+fn authenticate(server: &WorkspaceServer, request: &ApiRequest) -> Result<Connection, ApiResponse> {
+    if server.requires_auth() {
+        let Some(token) = request.header(AUTH_HEADER).and_then(parse_bearer) else {
+            return Err(unauthorized("missing or malformed bearer token"));
+        };
+        server
+            .connection_for_token(token)
+            .ok_or_else(|| unauthorized("invalid bearer token"))
+    } else {
+        Ok(server.connection_for_token(OWNER_TOKEN).unwrap_or_else(|| {
+            Connection::owner(
+                server.collab.owner_id(),
+                server.workspace.settings.id.clone(),
+            )
+        }))
+    }
+}
+
+fn snapshot_for(
+    server: &WorkspaceServer,
+    cache: &RwLock<Option<Arc<Workspace>>>,
+) -> Arc<Workspace> {
+    let version = server.workspace.version;
+    if let Ok(guard) = cache.read()
+        && let Some(cached) = guard.as_ref()
+        && cached.version == version
+    {
+        return Arc::clone(cached);
+    }
+    let workspace = Arc::new(server.workspace.clone());
+    if let Ok(mut guard) = cache.write() {
+        *guard = Some(Arc::clone(&workspace));
+    }
+    workspace
 }
 
 fn api_method(method: &str) -> Option<Method> {

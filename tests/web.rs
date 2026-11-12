@@ -3,11 +3,14 @@
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::{HeaderMap, Request, StatusCode};
+use ion_of_notes::auth::MemoryAuthStore;
+use ion_of_notes::collab::CollabState;
 use ion_of_notes::model::{PageSummary, Workspace};
 use ion_of_notes::server::web::router;
 use ion_of_notes::server::{
     API_VERSION, ApiError, Envelope, ListResponse, OWNER_TOKEN, WorkspaceServer,
 };
+use ion_of_notes::store::{NoCollabStore, NoStore};
 use ion_of_notes::webhooks::WebhookSubscription;
 use std::time::Duration;
 use tower::ServiceExt;
@@ -110,6 +113,59 @@ async fn v1_pages_route_works_through_axum() {
     assert_eq!(status, StatusCode::OK);
     let envelope: Envelope<Vec<PageSummary>> = serde_json::from_str(&body).unwrap();
     assert!(!envelope.data.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn snapshot_reads_stay_correct_after_a_write() {
+    let app = router(server());
+    let (status, _, body) = send(&app, request("GET", "/api/workspace", None)).await;
+    assert_eq!(status, StatusCode::OK);
+    let envelope: Envelope<Workspace> = serde_json::from_str(&body).unwrap();
+    let mut workspace = envelope.data.unwrap();
+    let page_id = workspace.pages[0].id.clone();
+    workspace.pages[0].title = "Snapshot title".to_string();
+    let page_json = serde_json::to_string(&workspace.pages[0]).unwrap();
+
+    let (status, _, _) = send(
+        &app,
+        request("PATCH", &format!("/api/pages/{page_id}"), Some(page_json)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _, body) = send(&app, request("GET", "/api/workspace", None)).await;
+    assert_eq!(status, StatusCode::OK);
+    let envelope: Envelope<Workspace> = serde_json::from_str(&body).unwrap();
+    assert_eq!(
+        envelope.data.unwrap().pages[0].title,
+        "Snapshot title",
+        "the read snapshot must be invalidated after a write"
+    );
+
+    let (status, _, body) =
+        send(&app, request("GET", &format!("/api/pages/{page_id}"), None)).await;
+    assert_eq!(status, StatusCode::OK);
+    let envelope: Envelope<ion_of_notes::model::Page> = serde_json::from_str(&body).unwrap();
+    assert_eq!(envelope.data.unwrap().title, "Snapshot title");
+
+    let (status, _, _) = send(&app, request("GET", "/api/pages/missing", None)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn snapshot_reads_require_auth_when_configured() {
+    let server = WorkspaceServer::with_stores_and_auth(
+        Workspace::seed("web-auth"),
+        CollabState::new(),
+        NoStore,
+        NoCollabStore,
+        MemoryAuthStore::default(),
+    );
+    let app = router(server);
+    let (status, _, body) = send(&app, request("GET", "/api/workspace", None)).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let envelope: Envelope<()> = serde_json::from_str(&body).unwrap();
+    assert!(envelope.data.is_none());
 }
 
 #[tokio::test]
