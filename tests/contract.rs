@@ -381,3 +381,23 @@ fn every_documented_v2_route_declares_a_capability() {
     }
     assert_eq!(route_capability(Method::Get, "/api/v2/unknown"), None);
 }
+
+#[test]
+fn version_error_wins_over_missing_token() {
+    let mut server = WorkspaceServer::new(Workspace::seed("pipeline"));
+    let response = server.handle(&ApiRequest::new(Method::Get, "/api/v2/workspace", None));
+    assert_eq!(response.status, 400);
+    assert_eq!(error(&response).code, "missing_version");
+}
+
+#[test]
+fn authentication_error_wins_over_overload() {
+    let mut server = WorkspaceServer::new(Workspace::seed("pipeline"));
+    server.set_overloaded(true);
+    let request = ApiRequest::new(Method::Get, "/api/v2/workspace", None)
+        .with_header("ion-of-notes-version", API_VERSION)
+        .with_header("authorization", "Bearer not-a-token");
+    let response = server.handle(&request);
+    assert_eq!(response.status, 401);
+    assert_eq!(error(&response).code, "unauthorized");
+}

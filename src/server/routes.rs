@@ -4,6 +4,7 @@ use super::realtime;
 use super::{ApiRequest, ApiResponse, WorkspaceApi, WorkspaceServer};
 
 pub(crate) mod capabilities;
+mod pipeline;
 mod policy;
 mod v1;
 mod v2;
