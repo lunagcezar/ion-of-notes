@@ -437,6 +437,7 @@ eframe, JSON files or sockets.
 | [`docs/persistence-integrity.md`](docs/persistence-integrity.md) | Atomic snapshots, failure reload and backup/restore |
 | [`docs/performance-roadmap.md`](docs/performance-roadmap.md) | Deferred performance/scale work and measurements |
 | [`docs/review-response.md`](docs/review-response.md) | Finding → response → spec → evidence map |
+| [`docs/refactoring-roadmap.md`](docs/refactoring-roadmap.md) | Implemented and deferred general refactors |
 | [`docs/testing.md`](docs/testing.md) | Test strategy, crates and fakes |
 | [`docs/glossary.md`](docs/glossary.md) | Shared vocabulary |
 | [`docs/api-contract.md`](docs/api-contract.md) | Implemented v1/v2 routes and WebSocket messages |

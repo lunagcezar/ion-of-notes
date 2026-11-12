@@ -88,6 +88,7 @@ src/
   collab/
     export.rs        markdown/CSV export tree
   auth.rs            accounts, Argon2id passwords, sessions, AuthStore port
+  crdt_text.rs       shared Yrs block-text walk and projection
   store.rs           WorkspaceStore + CollabStore + SnapshotStore + AuthStore
                      ports and JSON adapters
   store/
@@ -101,7 +102,8 @@ src/
       v1.rs          legacy v1 adapter over the use cases; session token required
                      when an auth store is configured
       v2.rs          version/auth/limit/capability/authorization pipeline
-      capabilities.rs public route_capability table
+      capabilities.rs route_capability facade over the policy table
+      policy.rs      one RoutePolicy table (capability, limits, flags)
     usecases/        pages, workspace and sharing use cases (typed results)
     handlers/        one module per v2 resource family; shared.rs adapts the
                      page/workspace/sharing use cases
@@ -344,7 +346,7 @@ Adapters implement the ports; the composition root wires them.
 | ------ | ---------- |
 | New page/block field | `src/model/page.rs` or `src/model/block.rs` + `docs/data-model.md` + migration test |
 | New pure rule | `src/model/*` or `src/collab.rs` + `tests/model.rs`/`tests/collab.rs` |
-| New server route/DTO | DTO in `src/model/*`, route in `src/server/routes/v2.rs`, handler in `src/server/handlers/`, capability in `src/server/routes/capabilities.rs`, client in `src/client.rs` |
+| New server route/DTO | DTO in `src/model/*`, route in `src/server/routes/v2.rs`, handler in `src/server/handlers/`, policy row in `src/server/routes/policy.rs`, client in `src/client.rs` |
 | New persistence backend | implement `WorkspaceStore`/`CollabStore`, wire in `src/app.rs` |
 | New UI surface | `ui/commands.rs` + `ui/view.rs` + `ui/apply/<family>.rs` + `ui/render/*` or `ui/dialogs/*` |
 | New translation | `locales/*.yml` + `i18n::t("key")` + `tests/i18n.rs` |

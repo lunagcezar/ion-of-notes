@@ -115,6 +115,10 @@ Status vocabulary:
 | [075](spec-075-webhook-ssrf-hardening.md) | Webhook SSRF hardening | implemented | Private-host policy and delivery-time DNS guard |
 | [076](spec-076-principal-authorization.md) | Principal-aware authorization | implemented | Role capabilities, page shares, owner-only routes |
 | [077](spec-077-review-response.md) | Review response documentation and roadmap | implemented | Security/authorization/persistence/performance docs and finding map |
+| [078](spec-078-route-policy-table.md) | Central route policy table | implemented | One table for capability, block limit, owner-only and page scope |
+| [079](spec-079-shared-crdt-helpers.md) | Shared CRDT text helpers | implemented | `crdt_text` module and model block-tree walkers |
+| [080](spec-080-sidebar-decomposition.md) | Sidebar rendering decomposition | implemented | Sidebar shell plus customize/default/bottom functions |
+| [081](spec-081-refactoring-roadmap.md) | Refactoring roadmap and implementation notes | implemented | Implemented/deferred refactors and next slices |
 
 ## 3. Work status
 

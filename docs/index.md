@@ -12,7 +12,7 @@ in what order, and which document is the source of truth for each concern.
 | Working on the server/API | `docs/api-contract.md` → `docs/security-hardening.md` → `docs/authorization.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014 |
 | Reviewing a security finding | `docs/review-response.md` → `docs/security-hardening.md` → `docs/authorization.md` → the relevant spec |
 | Deploying the server | `docs/deployment.md` → `compose.yml` → `Dockerfile` → `spec-050`/`spec-051` |
-| Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
+| Reviewing quality | `docs/review-findings.md` → `docs/refactoring-roadmap.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/ui-guidelines.md` → `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
 ## Current status (2026-11-12)
@@ -26,7 +26,9 @@ in what order, and which document is the source of truth for each concern.
   (bug-bashing III); `spec-072` is implemented (centralized UI metrics);
   `spec-073` .. `spec-077` are implemented (authentication boundary, atomic
   persistence, webhook SSRF hardening, principal authorization and the review
-  response). The v2 foundation, pagination, rich
+  response); `spec-078` .. `spec-081` are implemented (route policy table,
+  shared CRDT helpers, sidebar decomposition and the refactoring roadmap). The
+  v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
   (spec-039), the WebSocket change feed (spec-040), TLS webhooks/shared limits
@@ -38,7 +40,7 @@ in what order, and which document is the source of truth for each concern.
   (spec-051), deployment hardening II (spec-052), the supply-chain/tooling baseline
   (spec-053), webhook reliability (spec-054), remote-mode UX (spec-055) and the production
   Compose/TLS manifest (spec-056) are implemented.
-- **Tests:** 305 tests across the core and desktop passes (268 + 37); both
+- **Tests:** 310 tests across the core and desktop passes (273 + 37); both
   clippy feature passes and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
   selects SQLite with Argon2id accounts and sessions. The desktop can connect
@@ -81,6 +83,7 @@ flowchart TD
     INDEX --> PERSIST[docs/persistence-integrity.md]
     INDEX --> PERF[docs/performance-roadmap.md]
     INDEX --> REVIEWRESP[docs/review-response.md]
+    INDEX --> REFACTOR[docs/refactoring-roadmap.md]
     INDEX --> TEST[docs/testing.md]
     INDEX --> GLOSS[docs/glossary.md]
     INDEX --> REVIEW[docs/review-findings.md]
@@ -116,6 +119,7 @@ flowchart TD
 | `docs/persistence-integrity.md` | operators, contributors | Atomic snapshots, failure reload, JSON limits and backup/restore |
 | `docs/performance-roadmap.md` | contributors | Deferred performance/scale work and the measurement plan |
 | `docs/review-response.md` | reviewers, maintainers | Finding → response → spec → evidence map for the 2026-11-12 reviews |
+| `docs/refactoring-roadmap.md` | contributors | Implemented general refactors and the risk-ordered deferred work |
 | `docs/testing.md` | contributors, agents | Test strategy, test crates, fakes, red/green discipline |
 | `docs/glossary.md` | everyone | Shared vocabulary (domain, ports, adapters, DTOs, CRDT, clean room, …) |
 | `docs/review-findings.md` | maintainers, reviewers | Findings from the architecture/performance review and their resolution |

@@ -638,6 +638,11 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 - **Review response:** `docs/review-response.md` maps every 2026-11-12 review
   finding to its spec, status and evidence. Update it when a finding is fixed
   or explicitly deferred.
+- **Refactoring:** the v2 route table is the single source for capability,
+  block-limit, owner-only and page-scoped policy. Shared CRDT text logic lives
+  in `crate::crdt_text`; do not add a third copy. Refactor one resource family
+  at a time and keep the behavior-preserving test gate green. See
+  `docs/refactoring-roadmap.md`.
 
 ## Commands
 
@@ -646,9 +651,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
-| `cargo test --all-targets --no-default-features` | Core integration tests (268, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (273, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (37) |
-| `cargo test --all-targets`               | All default-feature tests (305; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (310; the core-only seam test is skipped) |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, core + desktop tests, docs |
@@ -710,6 +715,8 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
   `docs/persistence-integrity.md` or `docs/review-response.md` as applicable.
 - Performance/scale proposal → update `docs/performance-roadmap.md` with the
   measurement plan.
+- Refactoring or module-boundary change → update
+  `docs/refactoring-roadmap.md` and `docs/architecture.md`.
 - New term → update `docs/glossary.md`.
 - Each implemented spec → add a `CHANGELOG.md` entry and update
   `spec/README.md`.
@@ -739,6 +746,7 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
 - Security hardening, authorization, persistence integrity and the 2026-11-12
   review response: `docs/security-hardening.md`, `docs/authorization.md`,
   `docs/persistence-integrity.md`, `docs/review-response.md`.
+- General refactoring roadmap: `docs/refactoring-roadmap.md`.
 - The Rust Programming Language, ch. 7 "Managing Growing Projects with
   Packages, Crates, and Modules":
   https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html

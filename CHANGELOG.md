@@ -6,6 +6,17 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-078..081 general refactoring
+
+- Added a central v2 route-policy table for capability, block-limit kind,
+  owner-only and page-scoped checks; the pipeline and contract tests read it.
+- Moved the shared CRDT block walk, text collection and projection into
+  `src/crdt_text.rs`; added `walk_blocks` / `walk_blocks_mut` to the model.
+- Decomposed `render_sidebar` into a shell plus customize, default and bottom
+  functions.
+- Documented the implemented refactors and the deferred server/client/UI work
+  in `docs/refactoring-roadmap.md`.
+
 ### Changed - spec-073..077 review hardening
 
 - Added the authentication boundary: `AuthStore::requires_auth`, v1 token
