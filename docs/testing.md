@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (283 tests across the two feature passes, 2026-11-12)
+## 3. Test-crate map (284 tests across the two feature passes, 2026-11-12)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -78,6 +78,7 @@ flowchart TD
 | `tests/app.rs` | 4 | composition root wiring, replace-workspace, core-without-desktop feature seam |
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
 | `tests/deployment.rs` | 6 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
+| `tests/smoke.rs` | 1 | real listener: health/ready/metrics and authenticated v2 workspace |
 | `tests/screenshot.rs` | 2 | `ColorImage` → RGBA, PNG output |
 | `tests/integration.rs` | 1 | client → server → store end to end |
 
@@ -118,42 +119,41 @@ own seam test.
 - Incremental compilation stays enabled and Cargo keeps its default job count;
   the gate does not set `-j` or `CARGO_INCREMENTAL`.
 
-### 3.2 Server container smoke test
+### 3.2 Runtime smoke tests
 
-The Rust suite does not build Docker images, so run this smoke test when the
-server binary, `Dockerfile` or `compose.yml` changes (spec-050):
+The Rust suite does not start the shipped binary or build Docker images. Run
+the smoke tests when startup wiring, the listener, `Dockerfile`, `compose.yml`
+or the headless binary changes (spec-067):
 
 ```sh
-cargo build --release --no-default-features --bin ion-of-notes-server
-docker build -t ion-of-notes-server:test .
-docker run -d --name ion-test -p 18787:8787 \
-  -e ION_OF_NOTES_OWNER_PASSWORD=test-password \
-  -v ion-test-data:/data ion-of-notes-server:test
-curl http://127.0.0.1:18787/health          # {"data":"ok","error":null}
-curl http://127.0.0.1:18787/ready           # {"data":"ready","error":null}
-curl http://127.0.0.1:18787/metrics         # Prometheus text
-curl -s -X POST http://127.0.0.1:18787/api/pages \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Container test","icon":"box","parent":null}'
-docker stop ion-test                       # exits promptly on SIGTERM
-docker run -d --name ion-test2 -p 18787:8787 \
-  -e ION_OF_NOTES_OWNER_PASSWORD=test-password \
-  -v ion-test-data:/data ion-of-notes-server:test
-curl http://127.0.0.1:18787/api/pages      # contains "Container test"
-docker rm -f ion-test2
-docker volume rm ion-test-data
+cargo test --test smoke                 # real listener, health/ready/metrics/v2
+pwsh -File scripts/smoke-server.ps1     # headless binary + temp SQLite + page
+pwsh -File scripts/smoke-docker.ps1     # opt-in Compose build + volume restart
+```
+
+`smoke-server.ps1` builds the release server binary unless `-SkipBuild` is
+passed, uses a free loopback port and a temporary database, and always stops
+the process. `smoke-docker.ps1` exits cleanly when Docker is unavailable and
+uses an isolated `ion-of-notes-smoke-data` volume, so it never touches the
+normal `ion-data` volume. The Docker smoke checks `/health`, `/ready`,
+`/metrics`, the v2 workspace, a page write/read and persistence across
+`--force-recreate`.
+
+Manual container checks remain useful for TLS and multi-arch:
+
+```sh
 ION_OF_NOTES_OWNER_PASSWORD=test docker compose config
+ION_OF_NOTES_DOMAIN=notes.example.com docker compose -f compose.prod.yml config
+docker buildx bake --print
 ```
 
 `docker compose up --build` must become healthy on `/health`; create
 `secrets/owner_password.txt` from the example first. The hardened stack must
 show `127.0.0.1:8787:8787`, `read_only: true`, `cap_drop: [ALL]`,
 `no-new-privileges` and the `owner_password` secret in `docker compose config`.
-`/ready` and `/metrics` must respond; see `docs/deployment.md` for backups,
-TLS and upgrade checks. For the production manifest,
-`ION_OF_NOTES_DOMAIN=notes.example.com docker compose -f compose.prod.yml config`
-must show Caddy on 80/443 and no host port on the app; the `--profile backup`
-config must include the backup service.
+For the production manifest, `compose.prod.yml` must show Caddy on 80/443 and
+no host port on the app; the `--profile backup` config must include the backup
+service. See `docs/deployment.md` for backups, TLS and upgrade checks.
 
 ### 3.3 Supply-chain checks
 

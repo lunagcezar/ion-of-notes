@@ -96,6 +96,13 @@ set at the time.
   fixtures live in `tests/common/mod.rs` so no helper is duplicated (DRY).
 - Tests are deterministic: temporary files use unique names, no wall-clock
   assertions, no running listeners left behind.
+- **Smoke tests are part of the definition of done when the feature touches a
+  real seam.** If a feature changes startup wiring, a real listener/socket,
+  deployment, persistence across processes or another shipped artifact, add a
+  smoke test that exercises the built artifact end to end. A smoke test may be
+  opt-in when it needs Docker, TLS or external network access; document its
+  command and state why it is not in the default gate. If no smoke test is
+  needed, say so in the spec.
 - `cargo test` must be green before a spec is marked done in `CHANGELOG.md`.
 - The red step is recorded: tests are written, `cargo test` is run and observed
   to fail (or fail to compile), then the implementation is added.
@@ -250,6 +257,7 @@ tests/
   sqlite_store.rs  SQLite round-trip, accounts/sessions, JSON migration
   integration.rs   end-to-end client/server/store scenario
   deployment.rs    Docker/Compose/Caddy/build-profile drift tests
+  smoke.rs         real-listener HTTP smoke test
 Dockerfile         multi-stage server-only image
 compose.yml        development/self-hosted server stack
 compose.prod.yml   production app + Caddy TLS + optional backup profile
@@ -589,6 +597,8 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, core + desktop tests, docs |
 | `pwsh -File scripts/check-docs.ps1`      | Links, Mermaid fences and table columns  |
+| `pwsh -File scripts/smoke-server.ps1`    | Headless binary + real HTTP smoke test    |
+| `pwsh -File scripts/smoke-docker.ps1`    | Docker Compose build/health/persistence smoke (opt-in) |
 | `cargo run -- --screenshot shots/now.png`| Render ~120 frames, save PNG, exit       |
 | `cargo run -- --serve 127.0.0.1:8787`   | Run the Axum API server                  |
 | `cargo run -- --serve 127.0.0.1:8787 --database data.db` | Run with SQLite persistence |

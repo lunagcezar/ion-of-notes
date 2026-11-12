@@ -104,6 +104,7 @@ Status vocabulary:
 | [064](spec-064-block-editor-drop-targets-and-enter-split.md) | Block editor drop targets and Enter split | implemented | Gap-based drops, Enter creates a block, localized placeholder |
 | [065](spec-065-page-icon-letter-fallback.md) | Page icon letter fallback | implemented | Empty icon uses the uppercase title letter everywhere |
 | [066](spec-066-search-and-new-tab-filters.md) | Search and new-tab filters | implemented | Title only, Created by, In, Has comments, show/hide; remove Ask AI |
+| [067](spec-067-runtime-smoke-tests.md) | Runtime smoke tests | implemented | Real listener, headless binary, Docker Compose smoke |
 
 ## 3. Work status
 

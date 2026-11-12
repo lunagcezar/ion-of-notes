@@ -6,6 +6,22 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-067 runtime smoke tests
+
+- Added `tests/smoke.rs`: a real Axum listener on an ephemeral port checks
+  `/health`, `/ready`, `/metrics` and an authenticated v2 workspace request
+  with a request ID.
+- Added `scripts/smoke-server.ps1`: builds/runs the headless server binary with
+  a temporary SQLite database, checks the operational endpoints, creates and
+  reads a page, and always stops the process.
+- Added `scripts/smoke-docker.ps1`: opt-in Compose build/start, health/v2/page
+  checks and persistence across `--force-recreate` using an isolated smoke
+  volume.
+- Added the AGENTS rule requiring a smoke test when a feature touches startup,
+  a real listener, deployment or cross-process persistence.
+- Documented the commands in README, `docs/testing.md`, `scripts/README.md` and
+  AGENTS. Suite: 284 tests.
+
 ### Tests - 036-046 gap hardening
 
 - Added a production webhook sender test proving a 302 is returned without

@@ -314,15 +314,15 @@ Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
 
 ```sh
 cargo build
-# 235 core tests without eframe/egui/wgpu
+# 249 core tests without eframe/egui/wgpu
 cargo test --all-targets --no-default-features
-# 26 desktop tests with the default-on desktop feature
+# 35 desktop tests with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-`cargo test --all-targets` still runs all default-feature tests (260), but the
+`cargo test --all-targets` still runs all default-feature tests (284), but the
 two passes above avoid linking the window into the core test binaries.
 
 Full gate, including Markdown link/Mermaid/table checks:
@@ -330,6 +330,28 @@ Full gate, including Markdown link/Mermaid/table checks:
 ```sh
 pwsh -File scripts/quality.ps1
 ```
+
+### Smoke tests
+
+Smoke tests exercise the shipped artifacts, not just the in-process router.
+They are not part of the default gate because the Docker one builds an image.
+
+```sh
+# Real Axum listener: /health, /ready, /metrics and an authenticated v2 request
+cargo test --test smoke
+
+# Build/run the headless server binary with a temporary SQLite database,
+# check the operational endpoints and create/read a page
+pwsh -File scripts/smoke-server.ps1
+
+# Opt-in Docker Compose smoke: build, health, v2, page write/read, recreate and
+# verify the page survives in an isolated smoke volume
+pwsh -File scripts/smoke-docker.ps1
+```
+
+`smoke-server.ps1` accepts `-SkipBuild` when the release binary already exists.
+`smoke-docker.ps1` exits with a clear message when Docker is not running; it
+does not touch the normal `ion-data` volume.
 
 Screenshot mode renders about 120 frames, writes a PNG and exits:
 
