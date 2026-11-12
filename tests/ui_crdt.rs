@@ -1,6 +1,6 @@
 //! Client-side Yrs session tests (spec-043).
 
-use ion_of_notes::model::Workspace;
+use ion_of_notes::model::{Block, BlockKind, Workspace};
 use ion_of_notes::server::WorkspaceServer;
 use ion_of_notes::ui::CrdtSession;
 
@@ -103,4 +103,28 @@ fn unchanged_text_does_not_emit_an_update() {
             .expect("no-op")
             .is_none()
     );
+}
+
+#[test]
+fn a_block_created_by_split_can_sync_its_text() {
+    let workspace = Workspace::seed("ui-crdt");
+    let mut page = workspace.pages[0].clone();
+    let mut session = CrdtSession::new();
+    session.open_page(&page);
+
+    let new_block = Block::new("split-block", BlockKind::Paragraph, "");
+    page.blocks.insert(1, new_block.clone());
+    let update = session
+        .local_text(&new_block.id, "typed after Enter")
+        .expect("local edit")
+        .expect("changed");
+    assert!(!update.is_empty());
+
+    session.project_page(&mut page);
+    let projected = page
+        .blocks
+        .iter()
+        .find(|block| block.id == new_block.id)
+        .expect("new block");
+    assert_eq!(projected.text, "typed after Enter");
 }

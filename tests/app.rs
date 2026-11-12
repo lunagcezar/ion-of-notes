@@ -7,7 +7,7 @@
 mod common;
 
 use common::{remove, temp_path};
-use ion_of_notes::app::{build_desktop_at, build_server_at};
+use ion_of_notes::app::{build_desktop_at, build_desktop_catalog_at_paths, build_server_at};
 use ion_of_notes::server::{ApiRequest, Method, WorkspaceApi};
 
 #[test]
@@ -39,6 +39,24 @@ fn replace_workspace_moves_the_local_server_to_the_new_snapshot() {
     assert_ne!(workspace.name, loaded.name);
     remove(&path);
     remove(&collab);
+}
+
+#[test]
+fn build_desktop_catalog_at_paths_returns_an_active_catalog() {
+    let path = temp_path("bootstrap-catalog", "json");
+    let collab = path.with_extension("collab.json");
+    let catalog_path = path.with_file_name("workspaces.json");
+    remove(&path);
+    remove(&collab);
+    remove(&catalog_path);
+    let (mut client, workspace, catalog) =
+        build_desktop_catalog_at_paths(path.clone(), collab.clone());
+    assert_eq!(catalog.summaries().len(), 1);
+    assert!(catalog.summaries()[0].active);
+    assert_eq!(client.workspace().unwrap().name, workspace.name);
+    remove(&path);
+    remove(&collab);
+    remove(&catalog_path);
 }
 
 #[cfg(not(feature = "desktop"))]

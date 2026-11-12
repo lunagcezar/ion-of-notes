@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (274 tests across the two feature passes, 2026-11-12)
+## 3. Test-crate map (283 tests across the two feature passes, 2026-11-12)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -57,12 +57,12 @@ flowchart TD
 | `tests/properties.rs` | 9 | property schemas/values, clear rules, row migration, databases/data sources, property items |
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
 | `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
-| `tests/webhooks.rs` | 12 | subscriptions, verification, signatures, injected sender, delivery/retry, persistent outbox, dead letter/requeue |
+| `tests/webhooks.rs` | 13 | subscriptions, verification, signatures, injected sender, delivery/retry, persistent outbox, dead letter/requeue |
 | `tests/shared_limits.rs` | 2 | SQLite shared workspace budget and window reset |
 | `tests/web.rs` | 11 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, `/ready`, `/metrics` |
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
-| `tests/ui_crdt.rs` | 4 | client Yrs diff, empty-sync baseline, projection, convergence |
+| `tests/ui_crdt.rs` | 5 | client Yrs diff, empty-sync baseline, projection, convergence |
 | `tests/remote.rs` | 4 | login, remote REST/CRDT and WebSocket change/awareness, remembered session |
 | `tests/auth.rs` | 7 | Argon2id, login, logout, demo token, sessions, SQLite restart, password-file secret |
 | `tests/sqlite_store.rs` | 3 | workspace/collab round-trip, accounts/sessions, JSON migration |
@@ -75,7 +75,7 @@ flowchart TD
 | `tests/store.rs` | 5 | JSON save/load, atomic write, missing file seed, workspace catalog |
 | `tests/cli.rs` | 3 | argument parsing for desktop, screenshot and serve |
 | `tests/templates.rs` | 3 | template catalog, stable page building, purpose mapping |
-| `tests/app.rs` | 3 | composition root wiring, replace-workspace, core-without-desktop feature seam |
+| `tests/app.rs` | 4 | composition root wiring, replace-workspace, core-without-desktop feature seam |
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
 | `tests/deployment.rs` | 6 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
 | `tests/screenshot.rs` | 2 | `ColorImage` → RGBA, PNG output |

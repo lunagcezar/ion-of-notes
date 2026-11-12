@@ -6,6 +6,15 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Tests - 036-046 gap hardening
+
+- Added a production webhook sender test proving a 302 is returned without
+  following the redirect.
+- Added a CRDT test for a block created by the new Enter split, so its text
+  still syncs and projects.
+- Added a desktop-catalog composition test for the new workspace feature.
+- Suite: 283 tests.
+
 ### Tests - stability hardening
 
 - Added pure block drop/split index tests (first, last, gap, empty page, self

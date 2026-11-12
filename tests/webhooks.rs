@@ -4,6 +4,7 @@ mod common;
 
 use ion_of_notes::client::Client;
 use ion_of_notes::model::Workspace;
+use ion_of_notes::server::webhook_sender::UreqWebhookSender;
 use ion_of_notes::server::{Method, WebhookSender, WorkspaceApi, WorkspaceServer};
 use ion_of_notes::webhooks::{
     SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType, WebhookSubscription,
@@ -348,6 +349,28 @@ fn v2_webhook_api_and_client_roundtrip() {
     assert_eq!(client.list_webhooks_v2().unwrap().len(), 1);
     client.delete_webhook_v2(&subscription.id).unwrap();
     assert!(client.list_webhooks_v2().unwrap().is_empty());
+}
+
+#[test]
+fn production_sender_returns_redirect_status_without_following_it() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let _ = read_request(&mut stream);
+            let _ = write!(
+                stream,
+                "HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:1/\r\n\
+                 Content-Length: 0\r\nConnection: close\r\n\r\n"
+            );
+        }
+    });
+    let sender = UreqWebhookSender::new();
+    let status = sender
+        .send(&format!("http://127.0.0.1:{port}/hook"), "{}", "sig")
+        .expect("delivery");
+    assert_eq!(status, 302);
 }
 
 #[test]
