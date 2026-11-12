@@ -4,12 +4,12 @@ use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
 };
 use super::super::error::{HandlerResult, fail, ok};
+use super::super::events::DomainEvent;
 use super::super::pagination::{PageRequest, paginate};
 use super::super::response::{json, parse_body, query_value, v2_error};
 use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
 use crate::collab::ChangeOp;
 use crate::model::{View, ViewConfig, ViewInput, ViewQueryInput, ViewQueryResult, now_iso};
-use crate::webhooks::WebhookEventType;
 
 impl WorkspaceServer {
     pub(in crate::server) fn handle_v2_view(
@@ -88,12 +88,10 @@ impl WorkspaceServer {
                     None,
                 ));
             }
-            self.emit_webhook(
-                WebhookEventType::ViewCreated,
-                "view",
-                &view.id,
-                serde_json::json!({ "data_source_id": view.data_source_id }).to_string(),
-            );
+            self.notify(DomainEvent::ViewCreated {
+                view_id: view.id.clone(),
+                data_source_id: view.data_source_id.clone(),
+            });
             return ok(json(201, Envelope::ok(view)));
         }
 
@@ -223,12 +221,10 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                self.emit_webhook(
-                    WebhookEventType::ViewUpdated,
-                    "view",
-                    &dto.id,
-                    serde_json::json!({ "data_source_id": dto.data_source_id }).to_string(),
-                );
+                self.notify(DomainEvent::ViewUpdated {
+                    view_id: dto.id.clone(),
+                    data_source_id: dto.data_source_id.clone(),
+                });
                 ok(json(200, Envelope::ok(dto)))
             }
             Method::Delete => {
@@ -252,12 +248,9 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                self.emit_webhook(
-                    WebhookEventType::ViewDeleted,
-                    "view",
-                    &deleted_id,
-                    serde_json::json!({}).to_string(),
-                );
+                self.notify(DomainEvent::ViewDeleted {
+                    view_id: deleted_id.clone(),
+                });
                 ok(json(200, Envelope::ok(deleted_id)))
             }
             _ => fail(v2_error(

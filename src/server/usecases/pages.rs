@@ -1,8 +1,8 @@
 //! Page and search use cases.
 
+use super::super::events::DomainEvent;
 use crate::collab::ChangeOp;
 use crate::model::{Page, PageDraft, PageSummary, SearchResult};
-use crate::webhooks::WebhookEventType;
 
 use super::super::WorkspaceServer;
 use super::UseCaseError;
@@ -53,12 +53,10 @@ pub(in crate::server) fn create_page(
     server
         .write(ChangeOp::Create, &page_id)
         .map_err(|error| UseCaseError::Storage(error.to_string()))?;
-    server.emit_webhook(
-        WebhookEventType::PageCreated,
-        "page",
-        &page_id,
-        serde_json::json!({ "parent": page.parent }).to_string(),
-    );
+    server.notify(DomainEvent::PageCreated {
+        page_id,
+        parent: page.parent.clone(),
+    });
     Ok(page)
 }
 
@@ -86,23 +84,14 @@ pub(in crate::server) fn update_page(
         .write(ChangeOp::Update, id)
         .map_err(|error| UseCaseError::Storage(error.to_string()))?;
     if was_locked != page.locked {
-        server.emit_webhook(
-            if page.locked {
-                WebhookEventType::PageLocked
-            } else {
-                WebhookEventType::PageUnlocked
-            },
-            "page",
-            id,
-            serde_json::json!({}).to_string(),
-        );
+        server.notify(DomainEvent::PageLockChanged {
+            page_id: id.to_string(),
+            locked: page.locked,
+        });
     } else {
-        server.emit_webhook(
-            WebhookEventType::PageContentUpdated,
-            "page",
-            id,
-            serde_json::json!({}).to_string(),
-        );
+        server.notify(DomainEvent::PageContentUpdated {
+            page_id: id.to_string(),
+        });
     }
     Ok(page)
 }
@@ -119,12 +108,9 @@ pub(in crate::server) fn delete_page(
     server
         .write(ChangeOp::Delete, id)
         .map_err(|error| UseCaseError::Storage(error.to_string()))?;
-    server.emit_webhook(
-        WebhookEventType::PageDeleted,
-        "page",
-        id,
-        serde_json::json!({}).to_string(),
-    );
+    server.notify(DomainEvent::PageDeleted {
+        page_id: id.to_string(),
+    });
     Ok(removed)
 }
 

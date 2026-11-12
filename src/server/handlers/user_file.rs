@@ -4,6 +4,7 @@ use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
 };
 use super::super::error::{HandlerResult, fail, ok};
+use super::super::events::DomainEvent;
 use super::super::pagination::PageRequest;
 use super::super::response::{json, parse_body, v2_error, v2_list_response};
 use super::super::{
@@ -11,7 +12,6 @@ use super::super::{
 };
 use crate::collab::{ChangeOp, Member};
 use crate::model::{FileUpload, FileUploadInput, Person, UploadStatus, UserDto, UserType, now_iso};
-use crate::webhooks::WebhookEventType;
 
 impl WorkspaceServer {
     pub(in crate::server) fn handle_v2_user_file(
@@ -121,12 +121,9 @@ impl WorkspaceServer {
                     None,
                 ));
             }
-            self.emit_webhook(
-                WebhookEventType::FileUploadCreated,
-                "file_upload",
-                &upload.id,
-                serde_json::json!({ "status": "pending" }).to_string(),
-            );
+            self.notify(DomainEvent::FileUploadCreated {
+                upload_id: upload.id.clone(),
+            });
             ok(json(201, Envelope::ok(upload)))
         } else if let Some(rest) = path.strip_prefix("/api/v2/file_uploads/") {
             if let Some(id) = rest.strip_suffix("/send") {
@@ -179,12 +176,9 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                self.emit_webhook(
-                    WebhookEventType::FileUploadCompleted,
-                    "file_upload",
-                    &dto.id,
-                    serde_json::json!({ "status": "uploaded" }).to_string(),
-                );
+                self.notify(DomainEvent::FileUploadCompleted {
+                    upload_id: dto.id.clone(),
+                });
                 return ok(json(200, Envelope::ok(dto)));
             }
             if let Some(id) = rest.strip_suffix("/complete") {
@@ -237,12 +231,9 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                self.emit_webhook(
-                    WebhookEventType::FileUploadCompleted,
-                    "file_upload",
-                    &dto.id,
-                    serde_json::json!({ "status": "uploaded" }).to_string(),
-                );
+                self.notify(DomainEvent::FileUploadCompleted {
+                    upload_id: dto.id.clone(),
+                });
                 return ok(json(200, Envelope::ok(dto)));
             }
             if request.method == Method::Get && !rest.is_empty() && !rest.contains('/') {

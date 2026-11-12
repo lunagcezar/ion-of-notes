@@ -6,6 +6,12 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-100 domain events
+
+- Added `DomainEvent` and `WorkspaceServer::notify`; page, comment, view and
+  file-upload use cases now emit one domain event instead of spelling out the
+  webhook type, entity and payload at every site.
+
 ### Changed - spec-099 DTO/domain separation
 
 - Moved the block and comment v2 DTOs and their conversions into `model/dto/`;

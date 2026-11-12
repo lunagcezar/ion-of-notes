@@ -110,9 +110,10 @@ src/
       policy.rs      one RoutePolicy table (capability, limits, flags)
     usecases/        pages, workspace, sharing and comments use cases
                      (typed results)
-    handlers/        one module per v2 resource family; comments uses typed
-                     handler errors, user/file keeps the legacy adapter
+    handlers/        one module per v2 resource family, all on typed
+                     handler errors
     services/        auth and webhook service modules
+    events.rs        DomainEvent + notify for webhook-emitting writes
     error.rs         HandlerError, HandlerResult and body() for v2 handlers
     response.rs      Envelope/json/error helpers
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)

@@ -148,9 +148,11 @@ src/
     routes.rs      WorkspaceApi implementation and route facade
     routes/        v1 adapter, v2 pipeline, public route_capability table
     usecases/      pages, workspace and sharing use cases with typed results
-    handlers/      one module per v2 resource family (auth, crdt, webhooks,
-                   comments/users/files, views, databases, blocks, lists,
-                   shared page/workspace/sharing adapter)
+    handlers/      one module per v2 resource family (crdt, comments/users/
+                   files, views, databases, blocks, lists, shared adapter)
+    services/      auth and webhook service modules
+    events.rs      DomainEvent + notify for webhook-emitting writes
+    error.rs       HandlerError, HandlerResult and body() for v2 handlers
     response.rs    Envelope/json/error helpers
     http.rs        legacy loopback HTTP/1.1 adapter (parse/format/tests)
     url.rs         percent-encoding/decoding shared by client and server

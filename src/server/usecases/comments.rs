@@ -1,13 +1,13 @@
 //! Comment use cases shared by the v1 and v2 adapters.
 
 use super::super::WorkspaceServer;
+use super::super::events::DomainEvent;
 use super::UseCaseError;
 use crate::collab::ChangeOp;
 use crate::model::{
     AttachmentInput, CommentAttachment, CommentDisplayName, CommentDisplayNameDto, CommentDto,
     CommentInput, FileObject, ParentDto, UploadStatus, now_iso,
 };
-use crate::webhooks::WebhookEventType;
 
 /// The documented per-comment attachment limit.
 pub(in crate::server) const MAX_COMMENT_ATTACHMENTS: usize = 3;
@@ -82,12 +82,10 @@ pub(in crate::server) fn create_comment(
     server
         .write(ChangeOp::Create, &page_id)
         .map_err(|error| UseCaseError::Storage(error.to_string()))?;
-    server.emit_webhook(
-        WebhookEventType::CommentCreated,
-        "comment",
-        &comment.id,
-        serde_json::json!({ "page_id": page_id, "parent": comment.parent }).to_string(),
-    );
+    server.notify(DomainEvent::CommentCreated {
+        comment_id: comment.id.clone(),
+        data: serde_json::json!({ "page_id": page_id, "parent": comment.parent }).to_string(),
+    });
     Ok(comment)
 }
 
@@ -120,12 +118,10 @@ pub(in crate::server) fn update_comment(
     server
         .write(ChangeOp::Update, "__comment__")
         .map_err(|error| UseCaseError::Storage(error.to_string()))?;
-    server.emit_webhook(
-        WebhookEventType::CommentUpdated,
-        "comment",
-        &dto.id,
-        serde_json::json!({ "parent": dto.parent }).to_string(),
-    );
+    server.notify(DomainEvent::CommentUpdated {
+        comment_id: dto.id.clone(),
+        data: serde_json::json!({ "parent": dto.parent }).to_string(),
+    });
     Ok(dto)
 }
 
@@ -140,12 +136,10 @@ pub(in crate::server) fn delete_comment(
     server
         .write(ChangeOp::Delete, "__comment__")
         .map_err(|error| UseCaseError::Storage(error.to_string()))?;
-    server.emit_webhook(
-        WebhookEventType::CommentDeleted,
-        "comment",
-        &comment.id,
-        serde_json::json!({ "parent": comment.parent }).to_string(),
-    );
+    server.notify(DomainEvent::CommentDeleted {
+        comment_id: comment.id.clone(),
+        data: serde_json::json!({ "parent": comment.parent }).to_string(),
+    });
     Ok(comment)
 }
 

@@ -23,6 +23,7 @@ use std::time::Duration;
 mod contract;
 pub mod crdt;
 mod error;
+mod events;
 mod handlers;
 mod http;
 pub mod limits;
