@@ -9,6 +9,7 @@ use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec
 use super::super::commands::Command;
 use super::super::icons::{draw_inbox, draw_lock, draw_settings};
 use super::super::palette::{Palette, strong_font};
+use super::super::render::{SIDEBAR_WIDTH, TITLE_BAR_HEIGHT};
 use super::super::view::ViewState;
 use super::super::widgets::{popover_frame, section_label};
 
@@ -266,12 +267,20 @@ pub(crate) fn render_inbox(
     commands: &mut Vec<Command>,
 ) {
     let screen = ctx.viewport_rect();
+    let sidebar = if view.sidebar_open {
+        SIDEBAR_WIDTH
+    } else {
+        0.0
+    };
     let resp = egui::Window::new("inbox")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_size(Vec2::new(420.0, 600.0))
-        .fixed_pos(Pos2::new(screen.left() + 266.0, screen.top() + 78.0))
+        .fixed_size(Vec2::new(420.0, screen.height() - TITLE_BAR_HEIGHT))
+        .fixed_pos(Pos2::new(
+            screen.left() + sidebar,
+            screen.top() + TITLE_BAR_HEIGHT,
+        ))
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
             ui.horizontal(|ui| {

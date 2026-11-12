@@ -93,7 +93,7 @@ pub(crate) fn render_app_menu(ctx: &egui::Context, palette: &Palette, commands: 
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .fixed_pos(Pos2::new(screen.left() + 38.0, screen.top() + 42.0))
+        .fixed_pos(Pos2::new(screen.left() + 6.0, screen.top() + 38.0))
         .default_width(430.0)
         .frame(popover_frame(palette))
         .show(ctx, |ui| {
@@ -185,7 +185,7 @@ pub(crate) fn render_workspace_menu(
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .anchor(Align2::LEFT_BOTTOM, Vec2::new(12.0, -75.0))
+        .anchor(Align2::LEFT_BOTTOM, Vec2::new(10.0, -70.0))
         .default_width(250.0)
         .frame(
             egui::Frame::NONE
@@ -546,7 +546,7 @@ pub(crate) fn render_grid_menu(
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .anchor(Align2::LEFT_BOTTOM, Vec2::new(120.0, -75.0))
+        .anchor(Align2::RIGHT_BOTTOM, Vec2::new(-8.0, -70.0))
         .default_width(180.0)
         .frame(
             egui::Frame::NONE
