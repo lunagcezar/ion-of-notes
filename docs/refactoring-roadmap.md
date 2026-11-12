@@ -23,7 +23,7 @@ deliberately deferred. It complements `docs/architecture.md` and
 | Item | Why it is deferred | Suggested first slice |
 | ---- | ------------------ | --------------------- |
 | Typed handler errors | All v2 resource adapters now return `HandlerResult<Option<ApiResponse>>`; the dispatcher attaches the request ID once. | — |
-| Service split | Auth and webhook logic now live in `server/services/`; the methods are still inherent on `WorkspaceServer`. | Extract owned `AuthService`/`WebhookService` structs and move state into them. |
+| Service split | Auth and webhook logic lives in `server/services/` and the methods are inherent on `WorkspaceServer`. | Extract owned `AuthService`/`WebhookService` only if `CollabState`/`AuthStore` ownership moves with them; the current seam already isolates the logic. |
 | Domain events | Page, comment, view and file-upload webhook events go through `DomainEvent`/`notify`; `write`, persistence and change-feed calls stay explicit, and block/database/share events still call `emit_webhook` directly. | Extend `DomainEvent` to the remaining families, then fold `write` into the event. |
 | Store ports | `WorkspaceStore` and `CollabStore` still have the same shape and separate null adapters. | Do not collapse them until a second backend needs the generic form; an abstraction for its own sake is not worth it. |
 | Second HTTP adapter | `server/http.rs` remains a hand-written HTTP/1.1 parser used by tests and `serve_once`. | Keep it as an explicit compatibility adapter or move it under test support after checking every caller. |
@@ -36,7 +36,7 @@ deliberately deferred. It complements `docs/architecture.md` and
 | Narrow view models | The settings pages now receive only `AiView`, `ServerView`, `SettingsView` or `SharingView`; the remaining renderers still receive `ViewState` for shared fields. | Narrow sidebar/content/chrome one renderer at a time. |
 | Command grouping | Sidebar commands are grouped into `SidebarCmd` behind `Command::Sidebar`; the other families remain flat. | Group page/block commands next if the flat enum becomes hard to scan. |
 | DTO/domain separation | Block and comment DTOs live in `model/dto/` with their conversions; `model.rs` keeps the public names stable. Page/database/view/file/user DTOs remain in their domain modules. | Move the next family when its wire shape changes. |
-| Normalized SQLite | Workspace and collaboration are whole-document JSON snapshots. | Measure load/serialization at 1k/10k/50k blocks first; then add per-page rows or an operation log. |
+| Normalized SQLite | Workspace and collaboration are whole-document JSON snapshots. `tests/perf.rs` measures ~1.3 s serialize / ~0.9 s deserialize at 50k blocks (debug), ~32 MiB JSON; 1k/10k stay cheap. | Add per-page rows or an operation log when a workspace is expected above ~20k blocks or write latency becomes user-visible; keep snapshots below that. |
 | Benchmarks/load tests | `tests/perf.rs` measures 1k/10k/50k blocks (serialize, deserialize, search, page lookup, CRDT sync) and is opt-in via `ION_OF_NOTES_PERF=1`. | Add release-build numbers and a CI job when a regression budget is needed. |
 
 ## 4. Rules for the next refactor
