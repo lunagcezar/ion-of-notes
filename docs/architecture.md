@@ -45,7 +45,7 @@ flowchart TD
 | ----- | -------------- | ------------ |
 | Domain | entities, invariants, pure rules | `model.rs`, `model/*`, `collab.rs`, `collab/export.rs` |
 | Application | use cases, orchestration, contracts | `server/usecases/*`, `server/routes/*`, `client.rs`, `collab.rs` state methods |
-| Infrastructure | filesystem, HTTP, external AI service | `store.rs`, `server/http.rs`, `server/web.rs`, `ollama.rs` |
+| Infrastructure | filesystem, HTTP, external AI service | `store.rs`, `server/http.rs`, `server/web/`, `remote/`, `ollama.rs` |
 | Presentation | window, commands, view state, rendering | `ui.rs`, `ui/*` (`desktop` feature) |
 | Bootstrap | compose concrete adapters into the core | `app.rs` |
 
@@ -109,7 +109,11 @@ src/
                      page/workspace/sharing use cases
     response.rs      Envelope/json/error helpers
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
-    web.rs           Axum/Tokio HTTP + WebSocket adapter for --serve
+    web/             Axum/Tokio HTTP + WebSocket adapter for --serve
+      mod.rs         router, state, startup, webhook worker
+      http.rs        HTTP translation and response helpers
+      operations.rs  health, readiness and metrics
+      websocket.rs   WebSocket session and CRDT messages
     realtime.rs      change-feed hub, protocol messages and presence
     crdt.rs          Yrs per-page text documents and projection
     webhook_sender.rs WebhookSender port and ureq/rustls adapter
@@ -129,7 +133,12 @@ src/
     webhooks.rs      webhook endpoints
     collab.rs        CRDT and realtime transport methods
     retry.rs         RetryPolicy + RetryDecision
-  remote.rs          remote REST/WebSocket transport, login and remembered session
+  remote/            remote REST/WebSocket transport
+    mod.rs           RemoteApi, login and transport impls
+    session.rs       remembered session persistence
+    http.rs          ureq agent and request helpers
+    realtime.rs      background WebSocket and reconnection
+    crdt.rs          CRDT transport methods
   templates.rs       starter template catalog
   ollama.rs          AI assistant adapter
   shortcuts.rs       pure shortcut table
