@@ -118,8 +118,16 @@ src/
     pagination.rs    v2 ListResponse, opaque cursors, page_size validation
     limits.rs        plan/request budgets and size checks
     rate_limit.rs    in-process and SQLite-backed rate limiting
-  client.rs          typed client over RequestTransport/WorkspaceApi
-  client/
+  client/            typed client over RequestTransport/WorkspaceApi
+    mod.rs           Client, constructors, request/pagination plumbing
+    pages.rs         workspace, pages and search
+    sharing.rs       members, shares, sync and export
+    blocks.rs        block endpoints
+    databases.rs     databases, data sources and properties
+    views.rs         view endpoints
+    comments.rs      comments, users and file uploads
+    webhooks.rs      webhook endpoints
+    collab.rs        CRDT and realtime transport methods
     retry.rs         RetryPolicy + RetryDecision
   remote.rs          remote REST/WebSocket transport, login and remembered session
   templates.rs       starter template catalog
