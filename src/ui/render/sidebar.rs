@@ -465,441 +465,468 @@ pub(crate) fn render_sidebar(
                 ui.add_space(SPACE_8);
             }
             if view.sidebar_customize {
-                // Edit mode: every row has a handle, settings and exclude
-                // actions; sections and shortcuts can be reordered by dragging
-                // (spec-062).
-                let drag_id = egui::Id::unique("sidebar_drag");
-                let targets_id = egui::Id::unique("sidebar_drop_targets");
-                ui.ctx().data_mut(|data| {
-                    data.insert_temp(targets_id, Vec::<SidebarDropTarget>::new());
-                });
-                let home_id = ws
-                    .pages
-                    .iter()
-                    .find(|page| page.title == "Home")
-                    .or_else(|| ws.pages.first())
-                    .map(|page| page.id.clone());
-                let home = customize_row_actions(
-                    ui,
-                    width,
-                    "Home",
-                    home_id.as_deref() == Some(view.current_page.as_str()) && !view.library_open,
-                    palette,
-                    draw_page,
-                    "nav:home",
-                    None,
-                    commands,
-                );
-                if home.clicked()
-                    && let Some(id) = home_id
-                {
-                    commands.push(Command::SelectPage(id));
-                }
-                if customize_row_actions(
-                    ui,
-                    width,
-                    &i18n::t("library"),
-                    view.library_open,
-                    palette,
-                    draw_library,
-                    "nav:library",
-                    None,
-                    commands,
-                )
-                .clicked()
-                {
-                    commands.push(Command::OpenLibrary);
-                }
-                if customize_row_actions(
-                    ui,
-                    width,
-                    &i18n::t("settings"),
-                    view.settings_open,
-                    palette,
-                    draw_settings,
-                    "nav:settings",
-                    None,
-                    commands,
-                )
-                .clicked()
-                {
-                    commands.push(Command::OpenSettings);
-                }
-                if let Some(page) = ws.page(&view.current_page)
-                    && page.title != "Home"
-                {
-                    customize_row_actions(
-                        ui,
-                        width,
-                        &page.title,
-                        !view.library_open,
-                        palette,
-                        draw_page,
-                        "nav:page",
-                        None,
-                        commands,
-                    );
-                }
-                if customize_row(ui, width, "Add shortcut", false, palette, draw_plus).clicked() {
-                    commands.push(Command::OpenSidebarMenu(SidebarMenu::Shortcut));
-                }
-
-                ui.add_space(SECTION_GAP);
-                for (index, section) in view
-                    .sidebar_layout
-                    .sections
-                    .iter()
-                    .filter(|section| section.tab == view.sidebar_layout.active_tab)
-                    .enumerate()
-                {
-                    let section_index = view
-                        .sidebar_layout
-                        .sections
-                        .iter()
-                        .position(|item| item.id == section.id)
-                        .unwrap_or(index);
-                    let title = if section.hidden {
-                        format!("{} (hidden)", section.title)
-                    } else {
-                        section.title.clone()
-                    };
-                    let header = customize_row_actions(
-                        ui,
-                        width,
-                        &title,
-                        false,
-                        palette,
-                        draw_page,
-                        &section.id,
-                        None,
-                        commands,
-                    );
-                    if header.drag_started() {
-                        ui.ctx().data_mut(|data| {
-                            data.insert_temp(drag_id, SidebarDrag::Section(section.id.clone()));
-                        });
-                    }
-                    record_drop_target(
-                        ui,
-                        targets_id,
-                        header.rect,
-                        SidebarDropKind::Section {
-                            id: section.id.clone(),
-                            index: section_index,
-                        },
-                    );
-                    if section.source == crate::model::SidebarSectionSource::Favorites {
-                        for page in ws.favorites() {
-                            if customize_row_actions(
-                                ui,
-                                width,
-                                &page.title,
-                                view.current_page == page.id && !view.library_open,
-                                palette,
-                                draw_page,
-                                "favorites",
-                                Some(&page.id),
-                                commands,
-                            )
-                            .clicked()
-                            {
-                                commands.push(Command::SelectPage(page.id.clone()));
-                            }
-                        }
-                    } else if section.source == crate::model::SidebarSectionSource::Custom {
-                        for (shortcut_index, shortcut) in section.shortcuts.iter().enumerate() {
-                            let nav = shortcut
-                                .page_id
-                                .strip_prefix("nav:")
-                                .and_then(NavShortcut::from_id);
-                            let (label, draw): (String, fn(&egui::Painter, Rect, Color32)) =
-                                if let Some(nav) = nav {
-                                    (nav.label(), nav.draw())
-                                } else {
-                                    let label = ws
-                                        .page(&shortcut.page_id)
-                                        .map(|page| page.title.clone())
-                                        .unwrap_or_else(|| shortcut.label.clone());
-                                    (label, draw_page)
-                                };
-                            let row = customize_row_actions(
-                                ui,
-                                width,
-                                &label,
-                                !shortcut.hidden,
-                                palette,
-                                draw,
-                                &section.id,
-                                Some(&shortcut.id),
-                                commands,
-                            );
-                            if row.drag_started() {
-                                ui.ctx().data_mut(|data| {
-                                    data.insert_temp(
-                                        drag_id,
-                                        SidebarDrag::Shortcut {
-                                            section: section.id.clone(),
-                                            shortcut: shortcut.id.clone(),
-                                        },
-                                    );
-                                });
-                            }
-                            record_drop_target(
-                                ui,
-                                targets_id,
-                                row.rect,
-                                SidebarDropKind::Shortcut {
-                                    section: section.id.clone(),
-                                    shortcut: shortcut.id.clone(),
-                                    index: shortcut_index,
-                                },
-                            );
-                            if row.clicked() {
-                                if let Some(nav) = nav {
-                                    if let Some(command) = nav.command(ws) {
-                                        commands.push(command);
-                                    }
-                                } else if let Some(page) = ws.page(&shortcut.page_id) {
-                                    commands.push(Command::SelectPage(page.id.clone()));
-                                }
-                            }
-                        }
-                    }
-                }
-                if customize_row(ui, width, "Add section", false, palette, draw_plus).clicked() {
-                    commands.push(Command::OpenSidebarMenu(SidebarMenu::Section));
-                }
-
-                let drag = ui.ctx().data(|data| data.get_temp::<SidebarDrag>(drag_id));
-                if let Some(drag) = drag {
-                    let pointer = ui.ctx().input(|input| input.pointer.latest_pos());
-                    let targets = ui.ctx().data(|data| {
-                        data.get_temp::<Vec<SidebarDropTarget>>(targets_id)
-                            .unwrap_or_default()
-                    });
-                    if ui.ctx().input(|input| input.pointer.any_released()) {
-                        if let Some(pos) = pointer
-                            && let Some(target) = nearest_drop_target(&targets, pos, &drag)
-                        {
-                            match (&drag, &target.kind) {
-                                (
-                                    SidebarDrag::Section(id),
-                                    SidebarDropKind::Section { index, .. },
-                                ) => {
-                                    commands.push(Command::MoveSidebarSection(id.clone(), *index));
-                                }
-                                (
-                                    SidebarDrag::Shortcut { section, shortcut },
-                                    SidebarDropKind::Section { id, .. },
-                                ) => {
-                                    if section != id {
-                                        commands.push(Command::MoveSidebarShortcut(
-                                            section.clone(),
-                                            shortcut.clone(),
-                                            id.clone(),
-                                            None,
-                                        ));
-                                    }
-                                }
-                                (
-                                    SidebarDrag::Shortcut { section, shortcut },
-                                    SidebarDropKind::Shortcut {
-                                        section: to,
-                                        shortcut: target_shortcut,
-                                        index,
-                                    },
-                                ) if shortcut != target_shortcut => {
-                                    commands.push(Command::MoveSidebarShortcut(
-                                        section.clone(),
-                                        shortcut.clone(),
-                                        to.clone(),
-                                        Some(*index),
-                                    ));
-                                }
-                                _ => {}
-                            }
-                        }
-                        ui.ctx()
-                            .data_mut(|data| data.remove::<SidebarDrag>(drag_id));
-                    } else if let Some(pos) = pointer
-                        && let Some(target) = nearest_drop_target(&targets, pos, &drag)
-                    {
-                        ui.painter().rect_stroke(
-                            target.rect,
-                            CornerRadius::same(ROW_RADIUS),
-                            Stroke::new(STROKE_EMPHASIS, palette.accent),
-                            egui::StrokeKind::Inside,
-                        );
-                    }
-                }
+                render_sidebar_customize(ui, ws, view, palette, commands, width);
             } else {
-                if ws.settings.sidebar_library
-                    && nav_row(
-                        ui,
-                        width,
-                        &i18n::t("library"),
-                        view.library_open,
-                        palette,
-                        draw_library,
-                    )
-                    .clicked()
-                {
-                    commands.push(Command::OpenLibrary);
-                }
-                if ws.settings.sidebar_settings
-                    && nav_row(
-                        ui,
-                        width,
-                        &i18n::t("settings"),
-                        false,
-                        palette,
-                        draw_settings,
-                    )
-                    .clicked()
-                {
-                    commands.push(Command::OpenSettings);
-                }
-
-                for section in view.sidebar_layout.visible_sections() {
-                    match section.source {
-                        SidebarSectionSource::Favorites if ws.settings.sidebar_favorites => {
-                            ui.add_space(SECTION_GAP);
-                            section_label(ui, &i18n::t("favorites"), palette);
-                            let favorites = ws.favorites();
-                            if favorites.is_empty() {
-                                section_label(ui, &i18n::t("no_favorites"), palette);
-                            } else {
-                                for page in favorites {
-                                    let selected =
-                                        view.current_page == page.id && !view.library_open;
-                                    let (rect, response) =
-                                        nav_row_rect(ui, width, selected, palette);
-                                    draw_page_icon(
-                                        ui.painter(),
-                                        Rect::from_min_size(
-                                            rect.min + Vec2::new(ROW_ICON_INSET, SPACE_8),
-                                            Vec2::splat(ICON_SIZE),
-                                        ),
-                                        &page_icon_letter(&page.icon, &page.title),
-                                        palette,
-                                        false,
-                                    );
-                                    ui.painter().text(
-                                        rect.min + Vec2::new(ROW_LABEL_INSET, ROW_HEIGHT / 2.0),
-                                        Align2::LEFT_CENTER,
-                                        &page.title,
-                                        FontId::proportional(FONT_ROW),
-                                        palette.text,
-                                    );
-                                    if response.clicked() {
-                                        commands.push(Command::SelectPage(page.id.clone()));
-                                    }
-                                }
-                            }
-                        }
-                        SidebarSectionSource::Private if ws.settings.sidebar_private => {
-                            ui.add_space(SECTION_GAP);
-                            section_label(ui, &i18n::t("private"), palette);
-                            render_tree(ui, ws, None, 0, width, view, palette, commands);
-                            if nav_row(ui, width, &i18n::t("new_page"), false, palette, draw_plus)
-                                .clicked()
-                            {
-                                commands.push(Command::NewPage(None));
-                            }
-                        }
-                        SidebarSectionSource::Custom => {
-                            ui.add_space(SECTION_GAP);
-                            let title = if section.title.trim().is_empty() {
-                                "Shortcuts"
-                            } else {
-                                &section.title
-                            };
-                            section_label(ui, title, palette);
-                            for shortcut in
-                                section.shortcuts.iter().filter(|shortcut| !shortcut.hidden)
-                            {
-                                let nav = shortcut
-                                    .page_id
-                                    .strip_prefix("nav:")
-                                    .and_then(NavShortcut::from_id);
-                                let (rect, response) = ui.allocate_exact_size(
-                                    Vec2::new(width, SIDEBAR_SHORTCUT_HEIGHT),
-                                    Sense::click(),
-                                );
-                                let selected = nav.is_some_and(|nav| nav.selected(view));
-                                if selected {
-                                    ui.painter().rect_filled(
-                                        rect,
-                                        CornerRadius::same(ROW_RADIUS),
-                                        palette.selected,
-                                    );
-                                } else if response.hovered() {
-                                    ui.painter().rect_filled(
-                                        rect,
-                                        CornerRadius::same(ROW_RADIUS),
-                                        palette.hover,
-                                    );
-                                }
-                                if let Some(nav) = nav {
-                                    nav.draw()(
-                                        ui.painter(),
-                                        Rect::from_min_size(
-                                            rect.min + Vec2::new(ROW_ICON_INSET, SPACE_6),
-                                            Vec2::splat(ICON_SIZE),
-                                        ),
-                                        palette.muted,
-                                    );
-                                    ui.painter().text(
-                                        rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
-                                        Align2::LEFT_CENTER,
-                                        nav.label(),
-                                        FontId::proportional(FONT_ROW),
-                                        palette.text,
-                                    );
-                                    if response.clicked()
-                                        && let Some(command) = nav.command(ws)
-                                    {
-                                        commands.push(command);
-                                    }
-                                } else if let Some(page) = ws.page(&shortcut.page_id) {
-                                    draw_page_icon(
-                                        ui.painter(),
-                                        Rect::from_min_size(
-                                            rect.min + Vec2::new(ROW_ICON_INSET, SPACE_6),
-                                            Vec2::splat(ICON_SIZE),
-                                        ),
-                                        &page_icon_letter(&page.icon, &page.title),
-                                        palette,
-                                        false,
-                                    );
-                                    ui.painter().text(
-                                        rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
-                                        Align2::LEFT_CENTER,
-                                        &page.title,
-                                        FontId::proportional(FONT_ROW),
-                                        palette.text,
-                                    );
-                                    if response.clicked() {
-                                        commands.push(Command::SelectPage(page.id.clone()));
-                                    }
-                                } else {
-                                    ui.painter().text(
-                                        rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
-                                        Align2::LEFT_CENTER,
-                                        &shortcut.label,
-                                        FontId::proportional(FONT_ROW),
-                                        palette.text,
-                                    );
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                }
+                render_sidebar_default(ui, ws, view, palette, commands, width);
             }
         });
 
     // Bottom group: anchored to the bottom of the sidebar.
+    render_sidebar_bottom(ui, ws, view, palette, commands, width);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_sidebar_customize(
+    ui: &mut egui::Ui,
+    ws: &Workspace,
+    view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+    width: f32,
+) {
+    // Edit mode: every row has a handle, settings and exclude
+    // actions; sections and shortcuts can be reordered by dragging
+    // (spec-062).
+    let drag_id = egui::Id::unique("sidebar_drag");
+    let targets_id = egui::Id::unique("sidebar_drop_targets");
+    ui.ctx().data_mut(|data| {
+        data.insert_temp(targets_id, Vec::<SidebarDropTarget>::new());
+    });
+    let home_id = ws
+        .pages
+        .iter()
+        .find(|page| page.title == "Home")
+        .or_else(|| ws.pages.first())
+        .map(|page| page.id.clone());
+    let home = customize_row_actions(
+        ui,
+        width,
+        "Home",
+        home_id.as_deref() == Some(view.current_page.as_str()) && !view.library_open,
+        palette,
+        draw_page,
+        "nav:home",
+        None,
+        commands,
+    );
+    if home.clicked()
+        && let Some(id) = home_id
+    {
+        commands.push(Command::SelectPage(id));
+    }
+    if customize_row_actions(
+        ui,
+        width,
+        &i18n::t("library"),
+        view.library_open,
+        palette,
+        draw_library,
+        "nav:library",
+        None,
+        commands,
+    )
+    .clicked()
+    {
+        commands.push(Command::OpenLibrary);
+    }
+    if customize_row_actions(
+        ui,
+        width,
+        &i18n::t("settings"),
+        view.settings_open,
+        palette,
+        draw_settings,
+        "nav:settings",
+        None,
+        commands,
+    )
+    .clicked()
+    {
+        commands.push(Command::OpenSettings);
+    }
+    if let Some(page) = ws.page(&view.current_page)
+        && page.title != "Home"
+    {
+        customize_row_actions(
+            ui,
+            width,
+            &page.title,
+            !view.library_open,
+            palette,
+            draw_page,
+            "nav:page",
+            None,
+            commands,
+        );
+    }
+    if customize_row(ui, width, "Add shortcut", false, palette, draw_plus).clicked() {
+        commands.push(Command::OpenSidebarMenu(SidebarMenu::Shortcut));
+    }
+
+    ui.add_space(SECTION_GAP);
+    for (index, section) in view
+        .sidebar_layout
+        .sections
+        .iter()
+        .filter(|section| section.tab == view.sidebar_layout.active_tab)
+        .enumerate()
+    {
+        let section_index = view
+            .sidebar_layout
+            .sections
+            .iter()
+            .position(|item| item.id == section.id)
+            .unwrap_or(index);
+        let title = if section.hidden {
+            format!("{} (hidden)", section.title)
+        } else {
+            section.title.clone()
+        };
+        let header = customize_row_actions(
+            ui,
+            width,
+            &title,
+            false,
+            palette,
+            draw_page,
+            &section.id,
+            None,
+            commands,
+        );
+        if header.drag_started() {
+            ui.ctx().data_mut(|data| {
+                data.insert_temp(drag_id, SidebarDrag::Section(section.id.clone()));
+            });
+        }
+        record_drop_target(
+            ui,
+            targets_id,
+            header.rect,
+            SidebarDropKind::Section {
+                id: section.id.clone(),
+                index: section_index,
+            },
+        );
+        if section.source == crate::model::SidebarSectionSource::Favorites {
+            for page in ws.favorites() {
+                if customize_row_actions(
+                    ui,
+                    width,
+                    &page.title,
+                    view.current_page == page.id && !view.library_open,
+                    palette,
+                    draw_page,
+                    "favorites",
+                    Some(&page.id),
+                    commands,
+                )
+                .clicked()
+                {
+                    commands.push(Command::SelectPage(page.id.clone()));
+                }
+            }
+        } else if section.source == crate::model::SidebarSectionSource::Custom {
+            for (shortcut_index, shortcut) in section.shortcuts.iter().enumerate() {
+                let nav = shortcut
+                    .page_id
+                    .strip_prefix("nav:")
+                    .and_then(NavShortcut::from_id);
+                let (label, draw): (String, fn(&egui::Painter, Rect, Color32)) =
+                    if let Some(nav) = nav {
+                        (nav.label(), nav.draw())
+                    } else {
+                        let label = ws
+                            .page(&shortcut.page_id)
+                            .map(|page| page.title.clone())
+                            .unwrap_or_else(|| shortcut.label.clone());
+                        (label, draw_page)
+                    };
+                let row = customize_row_actions(
+                    ui,
+                    width,
+                    &label,
+                    !shortcut.hidden,
+                    palette,
+                    draw,
+                    &section.id,
+                    Some(&shortcut.id),
+                    commands,
+                );
+                if row.drag_started() {
+                    ui.ctx().data_mut(|data| {
+                        data.insert_temp(
+                            drag_id,
+                            SidebarDrag::Shortcut {
+                                section: section.id.clone(),
+                                shortcut: shortcut.id.clone(),
+                            },
+                        );
+                    });
+                }
+                record_drop_target(
+                    ui,
+                    targets_id,
+                    row.rect,
+                    SidebarDropKind::Shortcut {
+                        section: section.id.clone(),
+                        shortcut: shortcut.id.clone(),
+                        index: shortcut_index,
+                    },
+                );
+                if row.clicked() {
+                    if let Some(nav) = nav {
+                        if let Some(command) = nav.command(ws) {
+                            commands.push(command);
+                        }
+                    } else if let Some(page) = ws.page(&shortcut.page_id) {
+                        commands.push(Command::SelectPage(page.id.clone()));
+                    }
+                }
+            }
+        }
+    }
+    if customize_row(ui, width, "Add section", false, palette, draw_plus).clicked() {
+        commands.push(Command::OpenSidebarMenu(SidebarMenu::Section));
+    }
+
+    let drag = ui.ctx().data(|data| data.get_temp::<SidebarDrag>(drag_id));
+    if let Some(drag) = drag {
+        let pointer = ui.ctx().input(|input| input.pointer.latest_pos());
+        let targets = ui.ctx().data(|data| {
+            data.get_temp::<Vec<SidebarDropTarget>>(targets_id)
+                .unwrap_or_default()
+        });
+        if ui.ctx().input(|input| input.pointer.any_released()) {
+            if let Some(pos) = pointer
+                && let Some(target) = nearest_drop_target(&targets, pos, &drag)
+            {
+                match (&drag, &target.kind) {
+                    (SidebarDrag::Section(id), SidebarDropKind::Section { index, .. }) => {
+                        commands.push(Command::MoveSidebarSection(id.clone(), *index));
+                    }
+                    (
+                        SidebarDrag::Shortcut { section, shortcut },
+                        SidebarDropKind::Section { id, .. },
+                    ) => {
+                        if section != id {
+                            commands.push(Command::MoveSidebarShortcut(
+                                section.clone(),
+                                shortcut.clone(),
+                                id.clone(),
+                                None,
+                            ));
+                        }
+                    }
+                    (
+                        SidebarDrag::Shortcut { section, shortcut },
+                        SidebarDropKind::Shortcut {
+                            section: to,
+                            shortcut: target_shortcut,
+                            index,
+                        },
+                    ) if shortcut != target_shortcut => {
+                        commands.push(Command::MoveSidebarShortcut(
+                            section.clone(),
+                            shortcut.clone(),
+                            to.clone(),
+                            Some(*index),
+                        ));
+                    }
+                    _ => {}
+                }
+            }
+            ui.ctx()
+                .data_mut(|data| data.remove::<SidebarDrag>(drag_id));
+        } else if let Some(pos) = pointer
+            && let Some(target) = nearest_drop_target(&targets, pos, &drag)
+        {
+            ui.painter().rect_stroke(
+                target.rect,
+                CornerRadius::same(ROW_RADIUS),
+                Stroke::new(STROKE_EMPHASIS, palette.accent),
+                egui::StrokeKind::Inside,
+            );
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_sidebar_default(
+    ui: &mut egui::Ui,
+    ws: &Workspace,
+    view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+    width: f32,
+) {
+    if ws.settings.sidebar_library
+        && nav_row(
+            ui,
+            width,
+            &i18n::t("library"),
+            view.library_open,
+            palette,
+            draw_library,
+        )
+        .clicked()
+    {
+        commands.push(Command::OpenLibrary);
+    }
+    if ws.settings.sidebar_settings
+        && nav_row(
+            ui,
+            width,
+            &i18n::t("settings"),
+            false,
+            palette,
+            draw_settings,
+        )
+        .clicked()
+    {
+        commands.push(Command::OpenSettings);
+    }
+
+    for section in view.sidebar_layout.visible_sections() {
+        match section.source {
+            SidebarSectionSource::Favorites if ws.settings.sidebar_favorites => {
+                ui.add_space(SECTION_GAP);
+                section_label(ui, &i18n::t("favorites"), palette);
+                let favorites = ws.favorites();
+                if favorites.is_empty() {
+                    section_label(ui, &i18n::t("no_favorites"), palette);
+                } else {
+                    for page in favorites {
+                        let selected = view.current_page == page.id && !view.library_open;
+                        let (rect, response) = nav_row_rect(ui, width, selected, palette);
+                        draw_page_icon(
+                            ui.painter(),
+                            Rect::from_min_size(
+                                rect.min + Vec2::new(ROW_ICON_INSET, SPACE_8),
+                                Vec2::splat(ICON_SIZE),
+                            ),
+                            &page_icon_letter(&page.icon, &page.title),
+                            palette,
+                            false,
+                        );
+                        ui.painter().text(
+                            rect.min + Vec2::new(ROW_LABEL_INSET, ROW_HEIGHT / 2.0),
+                            Align2::LEFT_CENTER,
+                            &page.title,
+                            FontId::proportional(FONT_ROW),
+                            palette.text,
+                        );
+                        if response.clicked() {
+                            commands.push(Command::SelectPage(page.id.clone()));
+                        }
+                    }
+                }
+            }
+            SidebarSectionSource::Private if ws.settings.sidebar_private => {
+                ui.add_space(SECTION_GAP);
+                section_label(ui, &i18n::t("private"), palette);
+                render_tree(ui, ws, None, 0, width, view, palette, commands);
+                if nav_row(ui, width, &i18n::t("new_page"), false, palette, draw_plus).clicked() {
+                    commands.push(Command::NewPage(None));
+                }
+            }
+            SidebarSectionSource::Custom => {
+                ui.add_space(SECTION_GAP);
+                let title = if section.title.trim().is_empty() {
+                    "Shortcuts"
+                } else {
+                    &section.title
+                };
+                section_label(ui, title, palette);
+                for shortcut in section.shortcuts.iter().filter(|shortcut| !shortcut.hidden) {
+                    let nav = shortcut
+                        .page_id
+                        .strip_prefix("nav:")
+                        .and_then(NavShortcut::from_id);
+                    let (rect, response) = ui.allocate_exact_size(
+                        Vec2::new(width, SIDEBAR_SHORTCUT_HEIGHT),
+                        Sense::click(),
+                    );
+                    let selected = nav.is_some_and(|nav| nav.selected(view));
+                    if selected {
+                        ui.painter().rect_filled(
+                            rect,
+                            CornerRadius::same(ROW_RADIUS),
+                            palette.selected,
+                        );
+                    } else if response.hovered() {
+                        ui.painter().rect_filled(
+                            rect,
+                            CornerRadius::same(ROW_RADIUS),
+                            palette.hover,
+                        );
+                    }
+                    if let Some(nav) = nav {
+                        nav.draw()(
+                            ui.painter(),
+                            Rect::from_min_size(
+                                rect.min + Vec2::new(ROW_ICON_INSET, SPACE_6),
+                                Vec2::splat(ICON_SIZE),
+                            ),
+                            palette.muted,
+                        );
+                        ui.painter().text(
+                            rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
+                            Align2::LEFT_CENTER,
+                            nav.label(),
+                            FontId::proportional(FONT_ROW),
+                            palette.text,
+                        );
+                        if response.clicked()
+                            && let Some(command) = nav.command(ws)
+                        {
+                            commands.push(command);
+                        }
+                    } else if let Some(page) = ws.page(&shortcut.page_id) {
+                        draw_page_icon(
+                            ui.painter(),
+                            Rect::from_min_size(
+                                rect.min + Vec2::new(ROW_ICON_INSET, SPACE_6),
+                                Vec2::splat(ICON_SIZE),
+                            ),
+                            &page_icon_letter(&page.icon, &page.title),
+                            palette,
+                            false,
+                        );
+                        ui.painter().text(
+                            rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
+                            Align2::LEFT_CENTER,
+                            &page.title,
+                            FontId::proportional(FONT_ROW),
+                            palette.text,
+                        );
+                        if response.clicked() {
+                            commands.push(Command::SelectPage(page.id.clone()));
+                        }
+                    } else {
+                        ui.painter().text(
+                            rect.min + Vec2::new(ROW_LABEL_INSET, SPACE_14),
+                            Align2::LEFT_CENTER,
+                            &shortcut.label,
+                            FontId::proportional(FONT_ROW),
+                            palette.text,
+                        );
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_sidebar_bottom(
+    ui: &mut egui::Ui,
+    ws: &Workspace,
+    view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+    width: f32,
+) {
     ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
         // Account row: the workspace switcher button is its own hit target;
         // Help and the four-point control sit outside its hover area.
