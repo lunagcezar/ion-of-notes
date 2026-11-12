@@ -6,6 +6,25 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-068..071 bug-bashing III
+
+- Reverted the breadcrumb row to the content-pane padding and vertically
+  centered the crumbs with the Share/favorite/ellipsis controls.
+- Removed the server-side `"P"` icon default so Untitled/aaaa pages use their
+  title letter; added a create-page assertion.
+- Increased the emoji optical lift, shared one centered-glyph helper between
+  page icons and picker cells, and removed per-cell tooltips from the
+  virtualized picker.
+- Settings and search/new-tab dialogs now shrink to the viewport; the settings
+  rail scrolls with a full-height background; content spans to the right border
+  with internal padding; the close control is in a foreground layer.
+- Sidebar layout now has tabs (each owning sections/shortcuts), a tab strip,
+  add/remove tab actions, always-visible settings/remove row actions, and
+  persisted tab/section state.
+- Workspace, four-point and app-menu popovers are anchored to their controls;
+  the inbox starts at the sidebar edge and fills the height below the tab bar.
+- Added a sidebar-tab model test; suite: 285 tests.
+
 ### Changed - spec-067 runtime smoke tests
 
 - Added `tests/smoke.rs`: a real Axum listener on an ephemeral port checks

@@ -42,11 +42,11 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (284 tests across the two feature passes, 2026-11-12)
+## 3. Test-crate map (285 tests across the two feature passes, 2026-11-12)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
-| `tests/model.rs` | 24 | entities, tree, search, diff, index, settings, comments, JSON round-trip |
+| `tests/model.rs` | 25 | entities, tree, search, diff, index, settings, comments, JSON round-trip |
 | `tests/server.rs` | 12 | routes, envelopes, status codes, HTTP parse/format, concurrent loopback |
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
 | `tests/ui.rs` | 22 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, desktop feature seam |
