@@ -52,6 +52,7 @@ pub(super) fn set_block_text(blocks: &mut [Block], block_id: &str, text: &str) -
 
 impl NotionApp {
     pub(super) fn view_state(&self) -> ViewState {
+        let _span = tracing::trace_span!("ui.view_state").entered();
         let (available_offline, lock_page) = self
             .workspace
             .page(&self.current_page)
@@ -375,6 +376,7 @@ impl NotionApp {
     /// use the full snapshot fallback. The debounce window keeps rapid typing
     /// from sending one request per frame (spec-020).
     pub(super) fn commit_edits(&mut self, now: f64, force: bool) {
+        let _span = tracing::trace_span!("ui.commit_edits").entered();
         let diff = self.last_committed.diff(&self.workspace);
         if diff.is_empty() {
             self.pending_edits.flushed();
@@ -596,6 +598,7 @@ impl NotionApp {
         ctx: &egui::Context,
         frame_before: Option<Workspace>,
     ) {
+        let _span = tracing::trace_span!("ui.apply_commands").entered();
         let now = ctx.input(|i| i.time);
         let force_flush = commands.iter().any(Command::forces_flush);
         if force_flush {

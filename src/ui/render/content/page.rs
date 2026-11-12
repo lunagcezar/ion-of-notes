@@ -32,6 +32,7 @@ pub(crate) fn render_content(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    let _span = tracing::trace_span!("ui.render_content").entered();
     // Compact breadcrumb bar (spec-013).
     let full_width = ui.available_width();
     let column_width = if view.settings.full_width {

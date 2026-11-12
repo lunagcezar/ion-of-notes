@@ -369,6 +369,7 @@ pub(crate) fn render_sidebar(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    let _span = tracing::trace_span!("ui.render_sidebar").entered();
     let width = ui.available_width();
     ui.add_space(SIDEBAR_CONTENT_PADDING);
 

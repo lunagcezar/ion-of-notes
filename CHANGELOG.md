@@ -6,14 +6,17 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
-### Performance - spec-101..spec-104
+### Performance - spec-101..spec-105
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames
   (`frame_may_mutate`, optional undo snapshot, gated `commit_edits`).
 - Normalize the emoji query once and scan lowercase catalog metadata; reuse the
   cached indices for random selection.
-- Index remote cursors by block once per page instead of filtering per block.
+- Index remote cursors by block once per page instead of filtering per block,
+  and share the awareness vector through an `Arc`.
 - Build the search body text once per page and reuse it for the excerpt.
+- Trace `ui.view_state`, `ui.apply_commands`, `ui.commit_edits`,
+  `ui.render_sidebar` and `ui.render_content` with `tracing` spans.
 
 ### Changed - spec-100 domain events
 

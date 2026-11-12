@@ -38,9 +38,10 @@ queue, the background WebSocket, and background webhook delivery.
 ## 4. Measurement
 
 `tests/perf.rs` measures model load/serialize/search/CRDT at 1k/10k/50k blocks.
-Frame-level instrumentation is not part of the default gate; use the `tracing`
-spans or a temporary `Instant` around `view_state`, `render_*`, `apply_commands`
-and `commit_edits` when profiling a specific build.
+The UI now emits `tracing` spans at the section boundaries
+(`ui.view_state`, `ui.apply_commands`, `ui.commit_edits`, `ui.render_sidebar`,
+`ui.render_content`), so a trace subscriber can separate CPU rendering from
+blocking I/O. Frame timing is not part of the default gate.
 
 ## 5. Verification
 

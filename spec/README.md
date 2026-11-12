@@ -142,6 +142,7 @@ Status vocabulary:
 | [102](spec-102-normalized-emoji-filter.md) | Normalize the emoji query once | implemented | One lowercase pass per catalog scan |
 | [103](spec-103-cursor-index.md) | Index remote cursors by block | implemented | `O(blocks + cursors)` lookup per page |
 | [104](spec-104-search-body-reuse.md) | Reuse the search body text | implemented | One body build per page |
+| [105](spec-105-ui-frame-tracing.md) | Trace the UI frame sections | implemented | `tracing` spans for view/commands/render/commit |
 
 ## 3. Work status
 
