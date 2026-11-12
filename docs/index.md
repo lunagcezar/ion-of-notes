@@ -43,10 +43,10 @@ in what order, and which document is the source of truth for each concern.
   (deterministic performance harness); `spec-098` is implemented
   (sidebar command grouping); `spec-099` is implemented
   (block/comment DTO separation); `spec-100` is implemented
-  (domain events for webhook-emitting writes); `spec-101`-`spec-107` implement
+  (domain events for webhook-emitting writes); `spec-101`-`spec-108` implement
   the performance pass (frame mutation gating, normalized emoji filtering,
-  cursor indexing, search-body reuse, frame tracing, a shared expanded set and
-  a bounded awareness queue). The
+  cursor indexing, search-body reuse, frame tracing, a shared expanded set, a
+  bounded awareness queue and the background remote request worker). The
   v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite

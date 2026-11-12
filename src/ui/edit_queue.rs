@@ -99,6 +99,11 @@ impl PendingEdits {
         self.last_change.is_some() || self.force
     }
 
+    /// Clear a forced flush while keeping the change pending (remote in-flight).
+    pub fn waiting(&mut self) {
+        self.force = false;
+    }
+
     /// Clear the pending state after a successful flush.
     pub fn flushed(&mut self) {
         self.last_change = None;

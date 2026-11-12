@@ -17,7 +17,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use super::app::NotionApp;
+use super::app::{NotionApp, RemoteState};
 use super::commands::{Command, CommandFamily, SidebarCmd};
 
 mod ai;
@@ -26,6 +26,7 @@ mod crdt;
 mod library;
 mod navigation;
 mod page_actions;
+mod remote;
 mod server;
 mod settings;
 mod sharing;
@@ -377,6 +378,9 @@ impl NotionApp {
     /// from sending one request per frame (spec-020).
     pub(super) fn commit_edits(&mut self, now: f64, force: bool) {
         let _span = tracing::trace_span!("ui.commit_edits").entered();
+        if self.remote.is_remote() && self.remote_commit_busy() {
+            return;
+        }
         let diff = self.last_committed.diff(&self.workspace);
         if diff.is_empty() {
             self.pending_edits.flushed();
@@ -392,6 +396,14 @@ impl NotionApp {
         }
 
         let plan = plan_for(&diff);
+        if self.remote.is_remote() {
+            if self.remote_commit_busy() {
+                return;
+            }
+            self.dispatch_plan(&plan);
+            self.pending_edits.waiting();
+            return;
+        }
         let sent = execute_plan(&mut self.client, &self.workspace, &plan);
 
         if sent {
@@ -412,7 +424,11 @@ impl NotionApp {
             self.collaboration.page = self.current_page.clone();
             self.collaboration.last_awareness = None;
             self.collaboration.crdt.open_empty(&self.current_page);
-            if let Ok((update, _)) = self.client.crdt_sync(&self.current_page, None)
+            if self.remote.is_remote() {
+                if !self.dispatch_crdt_sync(self.current_page.clone()) {
+                    self.collaboration.crdt.open_page(&page);
+                }
+            } else if let Ok((update, _)) = self.client.crdt_sync(&self.current_page, None)
                 && self.collaboration.crdt.apply_update(&update).is_ok()
             {
                 self.collaboration.crdt.baseline_page(&page);
@@ -456,6 +472,7 @@ impl NotionApp {
 
     fn replace_client(&mut self, client: Client<crate::app::DesktopApi>, workspace: Workspace) {
         self.client = client;
+        self.remote = RemoteState::for_client(&self.client);
         self.workspace = workspace;
         self.last_committed = self.workspace.clone();
         self.current_page = self

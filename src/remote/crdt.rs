@@ -1,6 +1,6 @@
 use super::*;
 
-impl CollabTransport for RemoteApi {
+impl CollabTransport for RemoteRest {
     fn crdt_sync(
         &mut self,
         page_id: &str,
@@ -39,6 +39,33 @@ impl CollabTransport for RemoteApi {
         BASE64
             .decode(output.update)
             .map_err(|error| error.to_string())
+    }
+
+    fn subscribe_realtime(&self) -> Option<broadcast::Receiver<ServerMessage>> {
+        None
+    }
+
+    fn publish_awareness(&mut self, _awareness: Awareness) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl CollabTransport for RemoteApi {
+    fn crdt_sync(
+        &mut self,
+        page_id: &str,
+        state_vector: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>), String> {
+        self.rest.crdt_sync(page_id, state_vector)
+    }
+
+    fn apply_crdt_update(
+        &mut self,
+        page_id: &str,
+        update: &[u8],
+        actor: &str,
+    ) -> Result<Vec<u8>, String> {
+        self.rest.apply_crdt_update(page_id, update, actor)
     }
 
     fn subscribe_realtime(&self) -> Option<broadcast::Receiver<ServerMessage>> {

@@ -72,8 +72,8 @@ pub use ollama::{
     parse_tags_response, service_reachable,
 };
 pub use remote::{
-    RemoteApi, RemoteSession, clear_session, clear_session_at, load_session, load_session_at,
-    save_session, save_session_at, session_path,
+    RemoteApi, RemoteRest, RemoteSession, clear_session, clear_session_at, load_session,
+    load_session_at, save_session, save_session_at, session_path,
 };
 pub use server::{
     API_VERSION, ApiError, ApiRequest, ApiResponse, Capability, Connection, LimitViolation,

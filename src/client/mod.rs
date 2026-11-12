@@ -96,6 +96,16 @@ impl<A: RequestTransport> Client<A> {
         self.api
     }
 
+    /// Borrow the transport (used by the desktop to start the remote worker).
+    pub fn api(&self) -> &A {
+        &self.api
+    }
+
+    /// Mutably borrow the transport.
+    pub fn api_mut(&mut self) -> &mut A {
+        &mut self.api
+    }
+
     fn v2_request(
         &self,
         method: Method,

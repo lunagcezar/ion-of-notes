@@ -105,6 +105,43 @@ pub(super) struct ServerState {
     pub slot: ServerSlot,
 }
 
+/// Background remote request state (spec-108).
+pub(super) struct RemoteState {
+    pub worker: Option<super::remote_worker::RemoteWorker>,
+    pub search_in_flight: Option<String>,
+    pub search_queued: Option<String>,
+    pub saves_in_flight: usize,
+    pub replace_in_flight: bool,
+    pub crdt_sync_in_flight: Option<String>,
+    pub crdt_updates_in_flight: usize,
+}
+
+impl RemoteState {
+    /// Spawn a worker when the transport is remote; local mode stays synchronous.
+    pub(super) fn for_client(client: &Client<app::DesktopApi>) -> Self {
+        let worker = match client.api() {
+            app::DesktopApi::Remote(remote) => {
+                Some(super::remote_worker::RemoteWorker::spawn(remote.rest()))
+            }
+            app::DesktopApi::Local(_) => None,
+        };
+        Self {
+            worker,
+            search_in_flight: None,
+            search_queued: None,
+            saves_in_flight: 0,
+            replace_in_flight: false,
+            crdt_sync_in_flight: None,
+            crdt_updates_in_flight: 0,
+        }
+    }
+
+    /// True when the worker is active.
+    pub(super) fn is_remote(&self) -> bool {
+        self.worker.is_some()
+    }
+}
+
 /// Settings dialog and preference state.
 pub(super) struct SettingsState {
     pub open: bool,
@@ -211,6 +248,8 @@ pub struct NotionApp {
     pub(super) block_selecting: bool,
     // Real-time CRDT and awareness.
     pub(super) collaboration: CollaborationState,
+    // Background remote requests (spec-108).
+    pub(super) remote: RemoteState,
     // Server login/settings.
     pub(super) server: ServerState,
 }
@@ -403,6 +442,7 @@ impl NotionApp {
         }
         let crdt_rx = client.subscribe_realtime();
         let awareness_session = format!("ui-{}", uuid::Uuid::new_v4());
+        let remote = RemoteState::for_client(&client);
         let catalog =
             catalog.unwrap_or_else(|| crate::model::WorkspaceCatalog::new(workspace.clone()));
         let mut catalog = catalog;
@@ -439,6 +479,7 @@ impl NotionApp {
                 color: "#4C8BF5".to_string(),
                 last_awareness: None,
             },
+            remote,
             server: ServerState {
                 url: "http://127.0.0.1:8787".to_string(),
                 email: "owner@workspace.local".to_string(),
@@ -641,6 +682,7 @@ impl eframe::App for NotionApp {
         }
         self.poll_ai();
         self.poll_server();
+        self.poll_remote(ctx.input(|i| i.time));
         self.sync_crdt();
         // Reset the per-frame "pointer is over a block" flag used by the
         // release-based drag drop (spec-060).
@@ -712,10 +754,15 @@ impl eframe::App for NotionApp {
                         score: 0,
                     })
                     .collect()
+            } else if self.remote.is_remote() {
+                self.dispatch_search(self.search.query.clone());
+                Vec::new()
             } else {
                 self.client.search(&self.search.query).unwrap_or_default()
             };
-            self.search.results = Arc::new(results);
+            if !self.remote.is_remote() || self.search.query.trim().is_empty() {
+                self.search.results = Arc::new(results);
+            }
         }
 
         let palette = Palette::for_theme(self.settings.dark);

@@ -42,14 +42,14 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (316 tests across the two feature passes, 2026-11-12)
+## 3. Test-crate map (318 tests across the two feature passes, 2026-11-12)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
 | `tests/model.rs` | 26 | entities, tree, search, diff, index, settings, comments, JSON round-trip |
 | `tests/server.rs` | 12 | routes, envelopes, status codes, HTTP parse/format, concurrent loopback |
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
-| `tests/ui.rs` | 25 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, catalog normalization |
+| `tests/ui.rs` | 28 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, catalog normalization |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
 | `tests/contract.rs` | 18 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/pagination.rs` | 11 | list envelopes, cursor round-trip, page bounds, v2 pages/search/sync/versions |
@@ -63,7 +63,7 @@ flowchart TD
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 5 | client Yrs diff, empty-sync baseline, projection, convergence |
-| `tests/remote.rs` | 4 | login, remote REST/CRDT and WebSocket change/awareness, remembered session |
+| `tests/remote.rs` | 5 | login, remote REST/CRDT and WebSocket change/awareness, remembered session |
 | `tests/auth.rs` | 7 | Argon2id, login, logout, demo token, sessions, SQLite restart, password-file secret |
 | `tests/sqlite_store.rs` | 3 | workspace/collab round-trip, accounts/sessions, JSON migration |
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |

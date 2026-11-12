@@ -15,13 +15,24 @@ impl NotionApp {
             } => {
                 if page_id == self.collaboration.page
                     && let Ok(Some(update)) = self.collaboration.crdt.local_text(&block_id, &text)
-                    && self
+                {
+                    if self.remote.is_remote() {
+                        if !self.dispatch_crdt_update(
+                            page_id.clone(),
+                            block_id.clone(),
+                            text.clone(),
+                            update.clone(),
+                        ) {
+                            let _ = self.client.apply_crdt_update(&page_id, &update, "m-owner");
+                        }
+                    } else if self
                         .client
                         .apply_crdt_update(&page_id, &update, "m-owner")
                         .is_ok()
-                    && let Some(page) = self.last_committed.page_mut(&page_id)
-                {
-                    set_block_text(&mut page.blocks, &block_id, &text);
+                        && let Some(page) = self.last_committed.page_mut(&page_id)
+                    {
+                        set_block_text(&mut page.blocks, &block_id, &text);
+                    }
                 }
             }
             Command::CrdtCursor {

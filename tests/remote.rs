@@ -8,7 +8,7 @@ use ion_of_notes::client::Client;
 use ion_of_notes::collab::{ChangeOp, CollabState, Role};
 use ion_of_notes::model::{PageDraft, Workspace, now_iso};
 use ion_of_notes::remote::{
-    RemoteApi, RemoteSession, clear_session_at, load_session_at, login, save_session_at,
+    RemoteApi, RemoteRest, RemoteSession, clear_session_at, load_session_at, login, save_session_at,
 };
 use ion_of_notes::server::WorkspaceServer;
 use ion_of_notes::server::realtime::{Awareness, ServerMessage};
@@ -184,6 +184,20 @@ async fn remote_client_receives_changes_and_awareness() {
             .any(|member| member.page_id == page.id && member.block_id == page.blocks[0].id)
     );
 
+    handle.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn remote_rest_client_roundtrips_without_the_websocket() {
+    let (base, handle) = start().await;
+    let rest = RemoteRest::connect(&base, "owner-token");
+    let mut client = Client::with_token(rest, "owner-token");
+    let workspace = client.workspace().expect("workspace");
+    let page_id = workspace.pages[0].id.clone();
+    let page = client.get_page(&page_id).expect("page");
+    assert_eq!(page.id, page_id);
+    let results = client.search("Home").expect("search");
+    assert!(!results.is_empty());
     handle.abort();
 }
 

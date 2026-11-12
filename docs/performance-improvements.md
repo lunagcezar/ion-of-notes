@@ -22,6 +22,7 @@ the whole workspace.
 | `spec-105` | Trace the frame sections with `tracing` spans. | Separates render/command/persistence time from blocking I/O. |
 | `spec-106` | Share the expanded-page set through an `Arc`. | Stops deep-cloning the sidebar expansion set every frame. |
 | `spec-107` | Bound the remote awareness channel. | Prevents an unbounded cursor queue when the WebSocket worker falls behind. |
+| `spec-108` | Background remote request worker for search, saves, replaces and CRDT. | Removes blocking `ureq` calls from the egui thread in remote mode. |
 
 The existing good decisions are preserved: cached filtered icon indices,
 `ScrollArea::show_rows` virtualization for the icon grid, the debounced edit
@@ -31,7 +32,7 @@ queue, the background WebSocket, and background webhook delivery.
 
 | Phase | Item | Status / trigger |
 | ----- | ---- | ---------------- |
-| 2 | Bounded remote API worker for REST, search and CRDT sync | Not implemented; needs a request/result channel and stale-result rules. High impact in remote mode. |
+| 2 | Bounded remote API worker for REST, search and CRDT sync | Implemented in `spec-108`: one worker per connection, latest-search coalescing, in-flight commit coalescing and a synchronous CRDT fallback when the queue is full. |
 | 3 | Incremental search index | Not implemented; current UI caches results by query + workspace version, and the model now avoids duplicate body work. |
 | 3 | Block virtualization with measured heights | Not implemented; variable-height blocks need a layout cache and stable widget ids. High impact on very long pages. |
 | 3 | Cursor geometry cache | Not implemented; cursor text widths are still measured during rendering. |

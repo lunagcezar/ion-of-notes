@@ -24,6 +24,7 @@ mod invite;
 mod library_filter;
 mod page_icon;
 mod palette;
+mod remote_worker;
 mod render;
 mod search_cache;
 mod settings_search;

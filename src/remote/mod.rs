@@ -72,38 +72,31 @@ pub fn login(base_url: &str, email: &str, password: &str) -> Result<SessionRespo
     })
 }
 
-/// Remote transport used by the desktop when `--server` is set.
-pub struct RemoteApi {
+/// REST-only remote transport, safe to move into a background worker.
+///
+/// It deliberately has no real-time state: the UI keeps the WebSocket in
+/// [`RemoteApi`], while blocking REST/CRDT calls run on the worker thread
+/// (spec-108).
+#[derive(Clone)]
+pub struct RemoteRest {
     base: String,
     token: String,
     agent: ureq::Agent,
-    realtime_rx: Arc<Mutex<Option<broadcast::Receiver<ServerMessage>>>>,
-    ws_tx: mpsc::Sender<WsCommand>,
 }
 
-impl RemoteApi {
-    /// Connect the REST client and start the background WebSocket.
-    pub fn connect(base: &str, token: &str) -> Result<Self, String> {
-        let base = base.trim_end_matches('/').to_string();
-        let agent = agent();
-        let workspace: Workspace = get_json(&agent, &format!("{base}/api/workspace"), None)?;
-        let workspace_id = workspace.settings.id;
-        let (realtime_tx, realtime_rx) = broadcast::channel(256);
-        let (ws_tx, ws_rx) = mpsc::channel(64);
-        spawn_ws(
-            base.clone(),
-            token.to_string(),
-            workspace_id,
-            realtime_tx.clone(),
-            ws_rx,
-        );
-        Ok(Self {
-            base,
+impl RemoteRest {
+    /// Build a REST client for an existing base URL and token.
+    pub fn connect(base: &str, token: &str) -> Self {
+        Self {
+            base: base.trim_end_matches('/').to_string(),
             token: token.to_string(),
-            agent,
-            realtime_rx: Arc::new(Mutex::new(Some(realtime_rx))),
-            ws_tx,
-        })
+            agent: agent(),
+        }
+    }
+
+    /// The bearer token this client sends.
+    pub fn token(&self) -> &str {
+        &self.token
     }
 
     fn post_json<T: Serialize, R: DeserializeOwned>(
@@ -138,7 +131,7 @@ impl RemoteApi {
     }
 }
 
-impl RequestTransport for RemoteApi {
+impl RequestTransport for RemoteRest {
     fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
         let url = format!("{}{}", self.base, request.path);
         match execute(
@@ -159,5 +152,47 @@ impl RequestTransport for RemoteApi {
                 request_id: None,
             },
         }
+    }
+}
+
+/// Remote transport used by the desktop when `--server` is set.
+pub struct RemoteApi {
+    rest: RemoteRest,
+    realtime_rx: Arc<Mutex<Option<broadcast::Receiver<ServerMessage>>>>,
+    ws_tx: mpsc::Sender<WsCommand>,
+}
+
+impl RemoteApi {
+    /// Connect the REST client and start the background WebSocket.
+    pub fn connect(base: &str, token: &str) -> Result<Self, String> {
+        let rest = RemoteRest::connect(base, token);
+        let workspace: Workspace =
+            get_json(&rest.agent, &format!("{}/api/workspace", rest.base), None)?;
+        let workspace_id = workspace.settings.id;
+        let (realtime_tx, realtime_rx) = broadcast::channel(256);
+        let (ws_tx, ws_rx) = mpsc::channel(64);
+        spawn_ws(
+            rest.base.clone(),
+            rest.token.clone(),
+            workspace_id,
+            realtime_tx.clone(),
+            ws_rx,
+        );
+        Ok(Self {
+            rest,
+            realtime_rx: Arc::new(Mutex::new(Some(realtime_rx))),
+            ws_tx,
+        })
+    }
+
+    /// A REST-only clone for the background request worker.
+    pub fn rest(&self) -> RemoteRest {
+        self.rest.clone()
+    }
+}
+
+impl RequestTransport for RemoteApi {
+    fn handle(&mut self, request: &ApiRequest) -> ApiResponse {
+        self.rest.handle(request)
     }
 }

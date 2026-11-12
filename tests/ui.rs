@@ -450,6 +450,17 @@ fn pending_edits_debounces_and_forces_flush() {
     assert!(!pending.should_flush(2.0));
 }
 
+#[test]
+fn pending_edits_waiting_clears_force_but_keeps_the_change() {
+    let mut pending = PendingEdits::new(0.25);
+    pending.mark(1.0);
+    pending.force();
+    pending.waiting();
+    assert!(pending.is_pending());
+    assert!(!pending.should_flush(1.1));
+    assert!(pending.should_flush(1.25));
+}
+
 #[derive(Clone, Default)]
 struct RecordingApi {
     requests: Arc<Mutex<Vec<ApiRequest>>>,
