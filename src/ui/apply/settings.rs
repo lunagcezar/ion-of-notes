@@ -166,6 +166,13 @@ impl NotionApp {
                 }
             }
             Command::SetSidebarShowExcluded(_) => {}
+            Command::AddSidebarTab => self.workspace.settings.sidebar_layout.add_tab(),
+            Command::SwitchSidebarTab(id) => {
+                self.workspace.settings.sidebar_layout.switch_tab(&id);
+            }
+            Command::RemoveSidebarTab(id) => {
+                self.workspace.settings.sidebar_layout.remove_tab(&id);
+            }
             Command::ToggleSidebarNav(id) => match id.as_str() {
                 "library" => {
                     self.workspace.settings.sidebar_library =

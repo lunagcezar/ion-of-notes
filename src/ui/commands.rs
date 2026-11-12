@@ -262,6 +262,9 @@ pub(super) enum Command {
     MoveSidebarShortcut(String, String, String),
     SetSidebarShowExcluded(bool),
     ToggleSidebarNav(String),
+    AddSidebarTab,
+    SwitchSidebarTab(String),
+    RemoveSidebarTab(String),
     OpenWorkspaceCreate,
     OpenWorkspaceRename,
     CloseWorkspaceDialog,
@@ -487,6 +490,9 @@ impl Command {
             | Command::MoveSidebarShortcut(_, _, _)
             | Command::SetSidebarShowExcluded(_)
             | Command::ToggleSidebarNav(_)
+            | Command::AddSidebarTab
+            | Command::SwitchSidebarTab(_)
+            | Command::RemoveSidebarTab(_)
             | Command::OpenWorkspaceCreate
             | Command::OpenWorkspaceRename
             | Command::CloseWorkspaceDialog

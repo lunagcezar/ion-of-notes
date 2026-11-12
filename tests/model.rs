@@ -331,6 +331,22 @@ fn new_pages_default_to_the_workspace_owner_and_hidden_sections_are_skipped() {
 }
 
 #[test]
+fn sidebar_tabs_own_sections_and_keep_at_least_one_tab() {
+    let mut layout = SidebarLayout::default();
+    assert_eq!(layout.tabs.len(), 1);
+    layout.add_tab();
+    assert_eq!(layout.tabs.len(), 2);
+    let active = layout.active_tab.clone();
+    layout.add_section("Reading", SidebarSectionSource::Custom);
+    let section = layout.sections.last().expect("section");
+    assert_eq!(section.tab, active);
+    assert!(layout.remove_tab(&active));
+    assert_eq!(layout.tabs.len(), 1);
+    let only = layout.tabs[0].id.clone();
+    assert!(!layout.remove_tab(&only));
+}
+
+#[test]
 fn sidebar_layout_starts_with_favorites_and_private_and_accepts_shortcuts() {
     let mut layout = SidebarLayout::default();
     assert_eq!(layout.visible_sections().count(), 2);

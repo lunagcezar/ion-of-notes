@@ -44,8 +44,8 @@ pub use property::{
 };
 pub use rich_text::{Annotations, Equation, Mention, RichText, TextContent, TextLink};
 pub use settings::{
-    NumberFormat, SidebarLayout, SidebarSection, SidebarSectionSource, SidebarShortcut, TimeFormat,
-    WorkspaceSettings,
+    NumberFormat, SidebarLayout, SidebarSection, SidebarSectionSource, SidebarShortcut, SidebarTab,
+    TimeFormat, WorkspaceSettings,
 };
 pub use user::{Bot, BotOwner, Person, UserDto, UserRef, UserType, WorkspaceLimits};
 pub use view::{

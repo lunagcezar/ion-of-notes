@@ -56,7 +56,7 @@ pub struct SidebarShortcut {
     pub hidden: bool,
 }
 
-/// One sidebar section (a tab with its own shortcut set).
+/// One sidebar section (a group inside a tab).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SidebarSection {
     #[serde(default)]
@@ -69,18 +69,46 @@ pub struct SidebarSection {
     pub shortcuts: Vec<SidebarShortcut>,
     #[serde(default)]
     pub hidden: bool,
+    #[serde(default = "default_tab_id")]
+    pub tab: String,
+}
+
+fn default_tab_id() -> String {
+    "workspace".to_string()
+}
+
+/// One sidebar tab: a named group of sections and shortcuts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SidebarTab {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub title: String,
 }
 
 /// The persisted sidebar layout.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SidebarLayout {
+    #[serde(default = "default_tabs")]
+    pub tabs: Vec<SidebarTab>,
+    #[serde(default = "default_tab_id")]
+    pub active_tab: String,
     #[serde(default)]
     pub sections: Vec<SidebarSection>,
+}
+
+fn default_tabs() -> Vec<SidebarTab> {
+    vec![SidebarTab {
+        id: "workspace".to_string(),
+        title: "Workspace".to_string(),
+    }]
 }
 
 impl Default for SidebarLayout {
     fn default() -> Self {
         Self {
+            tabs: default_tabs(),
+            active_tab: "workspace".to_string(),
             sections: vec![
                 SidebarSection {
                     id: "favorites".to_string(),
@@ -88,6 +116,7 @@ impl Default for SidebarLayout {
                     source: SidebarSectionSource::Favorites,
                     shortcuts: Vec::new(),
                     hidden: false,
+                    tab: "workspace".to_string(),
                 },
                 SidebarSection {
                     id: "private".to_string(),
@@ -95,6 +124,7 @@ impl Default for SidebarLayout {
                     source: SidebarSectionSource::Private,
                     shortcuts: Vec::new(),
                     hidden: false,
+                    tab: "workspace".to_string(),
                 },
             ],
         }
@@ -103,27 +133,66 @@ impl Default for SidebarLayout {
 
 impl SidebarLayout {
     pub fn visible_sections(&self) -> impl Iterator<Item = &SidebarSection> {
-        self.sections.iter().filter(|section| !section.hidden)
+        self.sections
+            .iter()
+            .filter(|section| !section.hidden && section.tab == self.active_tab)
     }
 
     pub fn section_mut(&mut self, id: &str) -> Option<&mut SidebarSection> {
         self.sections.iter_mut().find(|section| section.id == id)
     }
 
-    /// Add a shortcut to the first custom section, creating a Shortcuts
-    /// section when none exists yet.
+    pub fn add_tab(&mut self) {
+        let id = format!("tab-{}", self.tabs.len());
+        let title = format!("Tab {}", self.tabs.len());
+        self.tabs.push(SidebarTab {
+            id: id.clone(),
+            title,
+        });
+        self.active_tab = id;
+    }
+
+    pub fn switch_tab(&mut self, id: &str) -> bool {
+        if self.tabs.iter().any(|tab| tab.id == id) {
+            self.active_tab = id.to_string();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn remove_tab(&mut self, id: &str) -> bool {
+        if self.tabs.len() <= 1 {
+            return false;
+        }
+        let Some(index) = self.tabs.iter().position(|tab| tab.id == id) else {
+            return false;
+        };
+        self.tabs.remove(index);
+        self.sections.retain(|section| section.tab != id);
+        if self.active_tab == id
+            && let Some(first) = self.tabs.first()
+        {
+            self.active_tab = first.id.clone();
+        }
+        true
+    }
+
+    /// Add a shortcut to the first custom section in the active tab, creating
+    /// a Shortcuts section when none exists yet.
     pub fn add_shortcut(&mut self, page_id: &str, label: &str) {
-        let index = self
-            .sections
-            .iter()
-            .position(|section| section.source == SidebarSectionSource::Custom);
+        let tab = self.active_tab.clone();
+        let index = self.sections.iter().position(|section| {
+            section.tab == tab && section.source == SidebarSectionSource::Custom
+        });
         let index = index.unwrap_or_else(|| {
             self.sections.push(SidebarSection {
-                id: "shortcuts".to_string(),
+                id: format!("shortcuts-{tab}"),
                 title: "Shortcuts".to_string(),
                 source: SidebarSectionSource::Custom,
                 shortcuts: Vec::new(),
                 hidden: false,
+                tab: tab.clone(),
             });
             self.sections.len() - 1
         });
@@ -141,12 +210,14 @@ impl SidebarLayout {
 
     pub fn add_section(&mut self, title: &str, source: SidebarSectionSource) {
         let id = format!("section-{}", self.sections.len());
+        let tab = self.active_tab.clone();
         self.sections.push(SidebarSection {
             id,
             title: title.to_string(),
             source,
             shortcuts: Vec::new(),
             hidden: false,
+            tab,
         });
     }
 }

@@ -95,48 +95,46 @@ fn customize_row_actions(
         FontId::proportional(13.0),
         palette.text,
     );
-    if response.hovered() {
-        let gear = Rect::from_center_size(
-            Pos2::new(rect.right() - 40.0, rect.center().y),
-            Vec2::splat(18.0),
-        );
-        let exclude = Rect::from_center_size(
-            Pos2::new(rect.right() - 18.0, rect.center().y),
-            Vec2::splat(18.0),
-        );
-        let gear_resp = ui.interact(
-            gear,
-            ui.scope_id().with(("sidebar_gear", section, shortcut)),
-            Sense::click(),
-        );
-        let exclude_resp = ui.interact(
-            exclude,
-            ui.scope_id().with(("sidebar_exclude", section, shortcut)),
-            Sense::click(),
-        );
-        draw_settings(ui.painter(), gear, palette.muted);
-        draw_close(ui.painter(), exclude, palette.muted);
-        if gear_resp.clicked() {
-            commands.push(Command::OpenSidebarMenu(SidebarMenu::RowSettings {
-                section: section.to_string(),
-                shortcut: shortcut.map(str::to_string),
-            }));
-        }
-        if exclude_resp.clicked() {
-            if let Some(shortcut) = shortcut {
-                if section == "favorites" {
-                    commands.push(Command::ToggleFavorite(shortcut.to_string()));
-                } else {
-                    commands.push(Command::ToggleSidebarShortcutHidden(
-                        section.to_string(),
-                        shortcut.to_string(),
-                    ));
-                }
-            } else if let Some(nav) = section.strip_prefix("nav:") {
-                commands.push(Command::ToggleSidebarNav(nav.to_string()));
+    let gear = Rect::from_center_size(
+        Pos2::new(rect.right() - 40.0, rect.center().y),
+        Vec2::splat(18.0),
+    );
+    let exclude = Rect::from_center_size(
+        Pos2::new(rect.right() - 18.0, rect.center().y),
+        Vec2::splat(18.0),
+    );
+    let gear_resp = ui.interact(
+        gear,
+        ui.scope_id().with(("sidebar_gear", section, shortcut)),
+        Sense::click(),
+    );
+    let exclude_resp = ui.interact(
+        exclude,
+        ui.scope_id().with(("sidebar_exclude", section, shortcut)),
+        Sense::click(),
+    );
+    draw_settings(ui.painter(), gear, palette.muted);
+    draw_close(ui.painter(), exclude, palette.muted);
+    if gear_resp.clicked() {
+        commands.push(Command::OpenSidebarMenu(SidebarMenu::RowSettings {
+            section: section.to_string(),
+            shortcut: shortcut.map(str::to_string),
+        }));
+    }
+    if exclude_resp.clicked() {
+        if let Some(shortcut) = shortcut {
+            if section == "favorites" {
+                commands.push(Command::ToggleFavorite(shortcut.to_string()));
             } else {
-                commands.push(Command::ToggleSidebarSectionHidden(section.to_string()));
+                commands.push(Command::RemoveSidebarShortcut(
+                    section.to_string(),
+                    shortcut.to_string(),
+                ));
             }
+        } else if let Some(nav) = section.strip_prefix("nav:") {
+            commands.push(Command::ToggleSidebarNav(nav.to_string()));
+        } else {
+            commands.push(Command::RemoveSidebarSection(section.to_string()));
         }
     }
     response
@@ -253,6 +251,47 @@ pub(crate) fn render_sidebar(
         .max_height(scroll_height)
         .show(ui, |ui| {
             ui.set_width(width);
+            if view.sidebar_customize || view.sidebar_layout.tabs.len() > 1 {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    for tab in &view.sidebar_layout.tabs {
+                        let active = tab.id == view.sidebar_layout.active_tab;
+                        if ui
+                            .selectable_label(active, egui::RichText::new(&tab.title).size(11.5))
+                            .clicked()
+                        {
+                            commands.push(Command::SwitchSidebarTab(tab.id.clone()));
+                        }
+                        if view.sidebar_customize
+                            && active
+                            && ui
+                                .add(
+                                    egui::Button::new(
+                                        egui::RichText::new("×").size(11.0).color(palette.muted),
+                                    )
+                                    .frame(false),
+                                )
+                                .clicked()
+                        {
+                            commands.push(Command::RemoveSidebarTab(tab.id.clone()));
+                        }
+                    }
+                    if view.sidebar_customize
+                        && ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("+").size(13.0).color(palette.muted),
+                                )
+                                .frame(false),
+                            )
+                            .on_hover_text("Add tab")
+                            .clicked()
+                    {
+                        commands.push(Command::AddSidebarTab);
+                    }
+                });
+                ui.add_space(8.0);
+            }
             if view.sidebar_customize {
                 // Edit mode: every row has a handle, settings and exclude
                 // actions; sections can be reordered and extended (spec-062).
@@ -361,7 +400,13 @@ pub(crate) fn render_sidebar(
                 let drop_id = egui::Id::unique("sidebar_drop_section");
                 let shortcut_drag_id = egui::Id::unique("sidebar_drag_shortcut");
                 let shortcut_target_id = egui::Id::unique("sidebar_shortcut_target");
-                for (index, section) in view.sidebar_layout.sections.iter().enumerate() {
+                for (index, section) in view
+                    .sidebar_layout
+                    .sections
+                    .iter()
+                    .filter(|section| section.tab == view.sidebar_layout.active_tab)
+                    .enumerate()
+                {
                     let title = if section.hidden {
                         format!("{} (hidden)", section.title)
                     } else {
