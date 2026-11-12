@@ -55,7 +55,9 @@ pub use rate_limit::{
     REASON_CONNECTION, REASON_WORKSPACE, RateDecision, RateLimitPolicy, RateLimiter,
     SqliteRateLimiter,
 };
-pub use routes::capabilities::route_capability;
+pub use routes::capabilities::{
+    BlockLimit, MatchKind, RoutePolicy, route_capability, route_policy,
+};
 pub use url::url_encode;
 pub use web::serve_axum;
 pub use webhook_sender::{UreqWebhookSender, WebhookSender};

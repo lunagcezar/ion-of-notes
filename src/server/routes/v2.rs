@@ -11,7 +11,7 @@ use super::super::limits;
 use super::super::rate_limit::{REASON_CONNECTION, RateDecision};
 use super::super::response::{parse_body, v2_error, write_timeout_response};
 use super::super::{ApiRequest, ApiResponse, Connection, Method, WorkspaceServer};
-use super::capabilities::route_capability;
+use super::capabilities::{BlockLimit, route_capability, route_policy};
 use crate::auth::LoginInput;
 use crate::model::{BlockChildrenRequest, Page};
 use std::time::Instant;
@@ -63,18 +63,14 @@ impl WorkspaceServer {
     /// How many new blocks a request would add, or `None` when it cannot
     /// create blocks. The page itself counts as one block.
     fn blocks_created_by(&self, request: &ApiRequest, path: &str) -> Option<u64> {
-        match (request.method, path) {
-            (Method::Post, "/api/v2/pages") | (Method::Post, "/api/v2/databases") => Some(1),
-            (Method::Patch, p) if p.starts_with("/api/v2/blocks/") && p.ends_with("/children") => {
-                parse_body::<BlockChildrenRequest>(request)
-                    .ok()
-                    .map(|children| children.children.len() as u64)
-            }
-            (Method::Patch, p) => {
-                let rest = p.strip_prefix("/api/v2/pages/")?;
-                if rest.is_empty() || rest.contains('/') {
-                    return None;
-                }
+        let policy = route_policy(request.method, path)?;
+        match policy.block_limit {
+            BlockLimit::None => None,
+            BlockLimit::PageCreate | BlockLimit::DatabaseCreate => Some(1),
+            BlockLimit::BlockChildren => parse_body::<BlockChildrenRequest>(request)
+                .ok()
+                .map(|children| children.children.len() as u64),
+            BlockLimit::PageReplace => {
                 let page = parse_body::<Page>(request).ok()?;
                 let previous = self
                     .workspace
@@ -83,7 +79,6 @@ impl WorkspaceServer {
                     .unwrap_or(0);
                 Some(page.block_count().saturating_sub(previous))
             }
-            _ => None,
         }
     }
 
@@ -321,13 +316,8 @@ impl WorkspaceServer {
         path: &str,
         request_id: &str,
     ) -> Option<ApiResponse> {
-        let owner_only = matches!(
-            (request.method, path),
-            (Method::Put, "/api/v2/workspace")
-                | (Method::Post, "/api/v2/members")
-                | (Method::Put, "/api/v2/shares")
-        );
-        if owner_only && !self.is_owner(connection) {
+        let policy = route_policy(request.method, path)?;
+        if policy.owner_only && !self.is_owner(connection) {
             return Some(v2_error(
                 403,
                 CODE_RESTRICTED_RESOURCE,
@@ -336,7 +326,10 @@ impl WorkspaceServer {
                 Some(serde_json::json!({ "required_role": "owner" })),
             ));
         }
-        if let Some((page_id, write)) = page_target(request.method, path) {
+        if policy.page_scoped
+            && let Some(page_id) = page_id(path)
+        {
+            let write = !matches!(request.method, Method::Get);
             if write && !self.can_write_page(connection, page_id) {
                 return Some(v2_error(
                     403,
@@ -366,11 +359,11 @@ impl WorkspaceServer {
     }
 }
 
-fn page_target(method: Method, path: &str) -> Option<(&str, bool)> {
+fn page_id(path: &str) -> Option<&str> {
     let rest = path.strip_prefix("/api/v2/pages/")?;
     let id = rest.strip_suffix("/versions").unwrap_or(rest);
     if id.is_empty() || id.contains('/') {
         return None;
     }
-    Some((id, !matches!(method, Method::Get)))
+    Some(id)
 }
