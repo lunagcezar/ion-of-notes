@@ -2,7 +2,7 @@
 
 //! App, workspace, grid and slash menus.
 
-use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
+use egui::{Align2, Color32, CornerRadius, FontId, Margin, Pos2, Rect, Sense, Stroke, Vec2};
 
 use super::super::commands::{Command, SidebarMenu};
 use super::super::palette::Palette;
@@ -181,11 +181,21 @@ pub(crate) fn render_workspace_menu(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    let screen = ctx.viewport_rect();
+    let anchor = ctx
+        .data(|data| data.get_temp::<Rect>(egui::Id::unique("sidebar_account_rect")))
+        .unwrap_or_else(|| {
+            Rect::from_min_size(
+                Pos2::new(screen.left() + 10.0, screen.bottom() - 46.0),
+                Vec2::new(246.0, 40.0),
+            )
+        });
     let resp = egui::Window::new("workspace_menu")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .anchor(Align2::LEFT_BOTTOM, Vec2::new(10.0, -70.0))
+        .pivot(Align2::LEFT_BOTTOM)
+        .fixed_pos(Pos2::new(anchor.left(), anchor.top()))
         .default_width(250.0)
         .frame(
             egui::Frame::NONE
@@ -542,11 +552,21 @@ pub(crate) fn render_grid_menu(
         ("---", "", Command::NoOp),
         ("Settings", "", Command::OpenSettings),
     ];
+    let screen = ctx.viewport_rect();
+    let anchor = ctx
+        .data(|data| data.get_temp::<Rect>(egui::Id::unique("sidebar_grid_rect")))
+        .unwrap_or_else(|| {
+            Rect::from_min_size(
+                Pos2::new(screen.left() + 234.0, screen.bottom() - 46.0),
+                Vec2::new(18.0, 40.0),
+            )
+        });
     let resp = egui::Window::new("grid_menu")
         .title_bar(false)
         .collapsible(false)
         .resizable(false)
-        .anchor(Align2::LEFT_BOTTOM, Vec2::new(234.0, -60.0))
+        .pivot(Align2::LEFT_BOTTOM)
+        .fixed_pos(Pos2::new(anchor.left(), anchor.top()))
         .default_width(180.0)
         .frame(
             egui::Frame::NONE

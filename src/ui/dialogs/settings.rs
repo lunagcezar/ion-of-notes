@@ -227,11 +227,11 @@ pub(crate) fn render_settings(
                 // Left navigation column. Mail & Calendar is intentionally not
                 // implemented, so it is not offered in the rail.
                 ui.allocate_ui_with_layout(
-                    Vec2::new(300.0, whole.height() - 2.0 * SETTINGS_RAIL_PADDING_Y),
+                    Vec2::new(300.0, whole.height()),
                     egui::Layout::top_down(egui::Align::LEFT),
                     |ui| {
                         ui.set_width(300.0);
-                        ui.set_min_height(whole.height() - 2.0 * SETTINGS_RAIL_PADDING_Y);
+                        ui.set_min_height(whole.height());
                         ui.spacing_mut().scroll.fade.strength = 0.0;
                         ui.add_space(SETTINGS_RAIL_PADDING_Y);
                         // Search is fixed; only the navigation list scrolls.
@@ -255,6 +255,15 @@ pub(crate) fn render_settings(
                                 palette.muted,
                             );
                             let mut query = view.settings_query.clone();
+                            if query.is_empty() {
+                                ui.painter().text(
+                                    Pos2::new(search.min.x + 28.0, search.center().y),
+                                    Align2::LEFT_CENTER,
+                                    "Search settings",
+                                    FontId::proportional(13.0),
+                                    palette.muted,
+                                );
+                            }
                             let edit = ui.put(
                                 Rect::from_min_size(
                                     search.min + Vec2::new(28.0, 0.0),
@@ -262,8 +271,8 @@ pub(crate) fn render_settings(
                                 ),
                                 egui::TextEdit::singleline(&mut query)
                                     .frame(egui::Frame::NONE)
-                                    .margin(egui::Margin::symmetric(4, 6))
-                                    .hint_text("Search settings")
+                                    .margin(egui::Margin::symmetric(4, 4))
+                                    .align(egui::Align2::LEFT_CENTER)
                                     .text_color(palette.text),
                             );
                             if edit.changed() {
@@ -279,6 +288,9 @@ pub(crate) fn render_settings(
                         let rail_height = ui.available_height().max(120.0);
                         egui::ScrollArea::vertical()
                             .id_salt("settings_rail_scroll")
+                            .scroll_bar_visibility(
+                                egui::scroll_area::ScrollBarVisibility::AlwaysVisible,
+                            )
                             .max_height(rail_height)
                             .auto_shrink([false, false])
                             .show(ui, |ui| {

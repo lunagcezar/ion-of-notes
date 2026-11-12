@@ -695,6 +695,10 @@ pub(crate) fn render_sidebar(
             ui.scope_id().with("sidebar_grid"),
             Sense::click(),
         );
+        ui.ctx().data_mut(|data| {
+            data.insert_temp(egui::Id::unique("sidebar_account_rect"), account_rect);
+            data.insert_temp(egui::Id::unique("sidebar_grid_rect"), grid_rect);
+        });
         if account.hovered() || view.workspace_menu_open {
             ui.painter()
                 .rect_filled(account_rect, CornerRadius::same(6), palette.hover);
