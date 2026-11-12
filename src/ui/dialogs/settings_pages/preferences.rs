@@ -7,7 +7,7 @@ use egui::{Align2, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 use super::super::super::commands::Command;
 use super::super::super::palette::Palette;
 use super::super::super::settings_search::SettingsRow;
-use super::super::super::view::ViewState;
+use super::super::super::view::{ServerView, SettingsView};
 use super::{display_row, info_row, section_heading};
 fn format_label(format: crate::model::NumberFormat) -> &'static str {
     match format {
@@ -80,7 +80,8 @@ fn choice_row(
 
 pub(in crate::ui::dialogs) fn render_preferences(
     ui: &mut egui::Ui,
-    view: &ViewState,
+    settings: &SettingsView,
+    server: &ServerView,
     palette: &Palette,
     commands: &mut Vec<Command>,
     rows: &[&SettingsRow],
@@ -96,7 +97,7 @@ pub(in crate::ui::dialogs) fn render_preferences(
                 ui.horizontal(|ui| {
                     ui.label(egui::RichText::new(row.title).color(palette.text));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let label = if view.settings.dark { "Dark" } else { "Light" };
+                        let label = if settings.dark { "Dark" } else { "Light" };
                         if ui.add(egui::Button::new(label)).clicked() {
                             commands.push(Command::ToggleTheme);
                         }
@@ -141,7 +142,7 @@ pub(in crate::ui::dialogs) fn render_preferences(
                     FontId::proportional(11.0),
                     palette.muted,
                 );
-                let lang_label = crate::i18n::label_for(&view.settings.language);
+                let lang_label = crate::i18n::label_for(&settings.language);
                 let chip = Rect::from_min_size(
                     Pos2::new(
                         lang_rect.max.x - metrics::LANGUAGE_CHIP_WIDTH,
@@ -166,7 +167,7 @@ pub(in crate::ui::dialogs) fn render_preferences(
                     let codes: Vec<&str> = crate::i18n::SUPPORTED.iter().map(|(c, _)| *c).collect();
                     let idx = codes
                         .iter()
-                        .position(|c| *c == view.settings.language)
+                        .position(|c| *c == settings.language)
                         .unwrap_or(0);
                     let next = codes[(idx + 1) % codes.len()];
                     commands.push(Command::SetLanguage(next.to_string()));
@@ -177,10 +178,10 @@ pub(in crate::ui::dialogs) fn render_preferences(
                     ui,
                     row.title,
                     row.description,
-                    format_label(view.settings.number_format),
+                    format_label(settings.number_format),
                     palette,
                 ) {
-                    let next = match view.settings.number_format {
+                    let next = match settings.number_format {
                         crate::model::NumberFormat::Automatic => {
                             crate::model::NumberFormat::DotThousands
                         }
@@ -199,10 +200,10 @@ pub(in crate::ui::dialogs) fn render_preferences(
                     ui,
                     row.title,
                     row.description,
-                    time_label(view.settings.time_format),
+                    time_label(settings.time_format),
                     palette,
                 ) {
-                    let next = match view.settings.time_format {
+                    let next = match settings.time_format {
                         crate::model::TimeFormat::Hour24 => crate::model::TimeFormat::Hour12,
                         crate::model::TimeFormat::Hour12 => crate::model::TimeFormat::Hour24,
                     };
@@ -210,7 +211,7 @@ pub(in crate::ui::dialogs) fn render_preferences(
                 }
             }
             "server" => {
-                let state = if view.server.connected {
+                let state = if server.connected {
                     "connected"
                 } else {
                     "local mode"

@@ -6,11 +6,11 @@ use egui::{Color32, CornerRadius, Margin, Sense, Vec2};
 use super::super::super::commands::Command;
 use super::super::super::palette::Palette;
 use super::super::super::settings_search::SettingsRow;
-use super::super::super::view::ViewState;
+use super::super::super::view::AiView;
 use super::section_heading;
 pub(in crate::ui::dialogs) fn render_ai_settings(
     ui: &mut egui::Ui,
-    view: &ViewState,
+    ai: &AiView,
     palette: &Palette,
     commands: &mut Vec<Command>,
     rows: &[&SettingsRow],
@@ -23,14 +23,14 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
         }
         match row.id {
             "connection" => {
-                let checking = view.ai.checking;
+                let checking = ai.checking;
                 let label = if checking {
                     "Checking…".to_string()
                 } else {
-                    view.ai.status.clone()
+                    ai.status.clone()
                 };
                 ui.horizontal(|ui| {
-                    let dot_color = if view.ai.connected && !checking {
+                    let dot_color = if ai.connected && !checking {
                         palette.accent
                     } else {
                         palette.muted
@@ -40,7 +40,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                     ui.label(
                         egui::RichText::new(label)
                             .size(metrics::FONT_CAPTION)
-                            .color(if view.ai.connected && !checking {
+                            .color(if ai.connected && !checking {
                                 palette.text
                             } else {
                                 palette.muted
@@ -62,7 +62,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                         .color(palette.text),
                 );
                 ui.add_space(metrics::SPACE_6);
-                let mut endpoint = view.ai.endpoint.clone();
+                let mut endpoint = ai.endpoint.clone();
                 if ui
                     .add(
                         egui::TextEdit::singleline(&mut endpoint)
@@ -91,7 +91,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                         .color(palette.text),
                 );
                 ui.add_space(metrics::SPACE_6);
-                let mut model = view.ai.model.clone();
+                let mut model = ai.model.clone();
                 if ui
                     .add(
                         egui::TextEdit::singleline(&mut model)
@@ -112,7 +112,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                             .color(palette.text),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let label = if view.ai.prefer_cli { "On" } else { "Off" };
+                        let label = if ai.prefer_cli { "On" } else { "Off" };
                         if ui.add(egui::Button::new(label)).clicked() {
                             commands.push(Command::ToggleAiCli);
                         }
@@ -127,13 +127,13 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                     ));
                 }
                 ui.add_space(metrics::SPACE_10);
-                if view.ai.busy {
+                if ai.busy {
                     ui.label(
                         egui::RichText::new("Waiting for Ollama…")
                             .size(metrics::FONT_CAPTION)
                             .color(palette.accent),
                     );
-                } else if let Some(answer) = &view.ai.answer {
+                } else if let Some(answer) = &ai.answer {
                     egui::Frame::NONE
                         .fill(palette.callout)
                         .corner_radius(CornerRadius::same(6))
@@ -145,7 +145,7 @@ pub(in crate::ui::dialogs) fn render_ai_settings(
                                     .color(palette.text),
                             );
                         });
-                } else if let Some(error) = &view.ai.error {
+                } else if let Some(error) = &ai.error {
                     ui.label(
                         egui::RichText::new(error)
                             .size(metrics::FONT_CAPTION)

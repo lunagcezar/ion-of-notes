@@ -133,6 +133,7 @@ Status vocabulary:
 | [093](spec-093-collaboration-state.md) | CollaborationState grouping | implemented | CRDT/realtime/awareness runtime fields grouped |
 | [094](spec-094-ai-and-server-state.md) | AiState and ServerState grouping | implemented | AI and server-login runtime/view fields grouped |
 | [095](spec-095-settings-state-and-view.md) | SettingsState and SettingsView grouping | implemented | Settings dialog/preference runtime and view fields grouped |
+| [096](spec-096-narrow-settings-views.md) | Narrow settings view models | implemented | Settings pages receive only their slice |
 
 ## 3. Work status
 

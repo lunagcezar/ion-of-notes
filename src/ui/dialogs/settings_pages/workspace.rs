@@ -7,12 +7,12 @@ use crate::ui::constants as metrics;
 use super::super::super::commands::Command;
 use super::super::super::palette::Palette;
 use super::super::super::settings_search::SettingsRow;
-use super::super::super::view::ViewState;
+use super::super::super::view::SettingsView;
 use super::section_heading;
 pub(in crate::ui::dialogs) fn render_workspace_settings(
     ui: &mut egui::Ui,
     ws: &mut Workspace,
-    view: &ViewState,
+    settings: &SettingsView,
     palette: &Palette,
     commands: &mut Vec<Command>,
     rows: &[&SettingsRow],
@@ -163,7 +163,7 @@ pub(in crate::ui::dialogs) fn render_workspace_settings(
                         commands.push(Command::ExportMembers);
                     }
                 });
-                if let Some(status) = &view.settings.status {
+                if let Some(status) = &settings.status {
                     ui.label(
                         egui::RichText::new(status)
                             .size(metrics::FONT_MICRO)

@@ -8,13 +8,14 @@ use egui::Color32;
 use super::super::super::commands::Command;
 use super::super::super::palette::Palette;
 use super::super::super::settings_search::SettingsRow;
-use super::super::super::view::ViewState;
+use super::super::super::view::{SettingsView, SharingView};
 use super::super::super::widgets::toggle_button;
 use super::section_heading;
 pub(in crate::ui::dialogs) fn render_people_settings(
     ui: &mut egui::Ui,
     ws: &mut Workspace,
-    view: &ViewState,
+    sharing: &SharingView,
+    settings: &SettingsView,
     palette: &Palette,
     commands: &mut Vec<Command>,
     rows: &[&SettingsRow],
@@ -49,14 +50,14 @@ pub(in crate::ui::dialogs) fn render_people_settings(
                 }
             }
             "members" => {
-                if view.sharing.members.is_empty() {
+                if sharing.members.is_empty() {
                     ui.label(
                         egui::RichText::new(i18n::t("no_members"))
                             .size(metrics::FONT_CAPTION)
                             .color(palette.muted),
                     );
                 }
-                for member in view.sharing.members.iter() {
+                for member in sharing.members.iter() {
                     ui.horizontal(|ui| {
                         ui.label(egui::RichText::new(&member.name).color(palette.text));
                         ui.add_space(metrics::SPACE_8);
@@ -102,7 +103,7 @@ pub(in crate::ui::dialogs) fn render_people_settings(
                         commands.push(Command::SetSettingsStatus(i18n::t("delete_disabled")));
                     }
                 });
-                if let Some(status) = &view.settings.status {
+                if let Some(status) = &settings.status {
                     ui.label(
                         egui::RichText::new(status)
                             .size(metrics::FONT_MICRO)

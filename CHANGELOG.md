@@ -6,6 +6,12 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-096 narrow settings views
+
+- The AI, Server, Preferences, General and People settings pages now receive
+  only the `AiView`, `ServerView`, `SettingsView` and `SharingView` slices they
+  read instead of the whole `ViewState`.
+
 ### Changed - spec-095 settings state and view
 
 - Grouped the settings dialog and preference fields into `SettingsState` and

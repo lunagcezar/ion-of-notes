@@ -387,23 +387,43 @@ pub(crate) fn render_settings(
                                 );
                             } else {
                                 match page {
-                                    "AI assistant" => {
-                                        render_ai_settings(ui, view, palette, commands, &rows)
-                                    }
-                                    "Preferences" => {
-                                        render_preferences(ui, view, palette, commands, &rows)
-                                    }
+                                    "AI assistant" => render_ai_settings(
+                                        ui,
+                                        &view.ai,
+                                        palette,
+                                        commands,
+                                        &rows,
+                                    ),
+                                    "Preferences" => render_preferences(
+                                        ui,
+                                        &view.settings,
+                                        &view.server,
+                                        palette,
+                                        commands,
+                                        &rows,
+                                    ),
                                     "General" => render_workspace_settings(
-                                        ui, ws, view, palette, commands, &rows,
+                                        ui,
+                                        ws,
+                                        &view.settings,
+                                        palette,
+                                        commands,
+                                        &rows,
                                     ),
                                     "Offline" => {
                                         render_offline_settings(ui, ws, palette, &rows)
                                     }
-                                    "People" => {
-                                        render_people_settings(ui, ws, view, palette, commands, &rows)
-                                    }
+                                    "People" => render_people_settings(
+                                        ui,
+                                        ws,
+                                        &view.sharing,
+                                        &view.settings,
+                                        palette,
+                                        commands,
+                                        &rows,
+                                    ),
                                     "Server" => {
-                                        render_server_settings(ui, view, palette, commands)
+                                        render_server_settings(ui, &view.server, palette, commands)
                                     }
                                     _ => {
                                         ui.label(
