@@ -6,6 +6,15 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Performance - spec-101..spec-104
+
+- Skip the per-frame workspace clone and diff on idle and popup-only frames
+  (`frame_may_mutate`, optional undo snapshot, gated `commit_edits`).
+- Normalize the emoji query once and scan lowercase catalog metadata; reuse the
+  cached indices for random selection.
+- Index remote cursors by block once per page instead of filtering per block.
+- Build the search body text once per page and reuse it for the excerpt.
+
 ### Changed - spec-100 domain events
 
 - Added `DomainEvent` and `WorkspaceServer::notify`; page, comment, view and

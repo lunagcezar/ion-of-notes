@@ -13,44 +13,33 @@ use crate::ui::constants as metrics;
 use egui::{Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
 use super::app::{Command, IconTab, ViewState};
-use super::icon_catalog::{EMOJI, Emoji, ICONS, IconGlyph, catalog_matches};
+use super::icon_catalog::{EMOJI, Emoji, ICONS, IconGlyph, catalog_matches_normalized};
 use super::icons::draw_glyph_centered;
 use super::palette::Palette;
 use std::sync::Arc;
 
-fn filtered_emoji(query: &str) -> Vec<&'static Emoji> {
-    EMOJI
-        .iter()
-        .filter(|entry| catalog_matches(entry.name, entry.keywords, query))
-        .collect()
-}
-
-fn filtered_icons(query: &str) -> Vec<&'static IconGlyph> {
-    ICONS
-        .iter()
-        .filter(|entry| catalog_matches(entry.name, "", query))
-        .collect()
-}
-
 /// Filtered catalog indices cached per tab and query. The grid only paints the
 /// visible rows, so a large catalog no longer costs one widget per entry on
-/// every frame (spec-060).
+/// every frame (spec-060). The query is normalized once per scan (spec-102).
 fn cached_indices(ctx: &egui::Context, tab: IconTab, query: &str) -> Arc<Vec<usize>> {
     let id = egui::Id::unique(("icon_picker_indices", tab, query));
     if let Some(cached) = ctx.data(|data| data.get_temp::<Arc<Vec<usize>>>(id)) {
         return cached;
     }
+    let normalized = query.trim().to_lowercase();
     let indices: Vec<usize> = match tab {
         IconTab::Emoji => EMOJI
             .iter()
             .enumerate()
-            .filter(|(_, entry)| catalog_matches(entry.name, entry.keywords, query))
+            .filter(|(_, entry)| {
+                catalog_matches_normalized(entry.name, entry.keywords, &normalized)
+            })
             .map(|(index, _)| index)
             .collect(),
         IconTab::Icons => ICONS
             .iter()
             .enumerate()
-            .filter(|(_, entry)| catalog_matches(entry.name, "", query))
+            .filter(|(_, entry)| catalog_matches_normalized(entry.name, "", &normalized))
             .map(|(index, _)| index)
             .collect(),
         IconTab::Upload => Vec::new(),
@@ -218,17 +207,18 @@ pub(super) fn render_icon_picker(
                     )
                     .clicked()
                 {
+                    let indices =
+                        cached_indices(ui.ctx(), view.icon_picker_tab, &view.icon_picker_query);
+                    let pick_index = indices
+                        .get((view.icon_picker_query.len() + 3) % indices.len().max(1))
+                        .copied();
                     let pick = match view.icon_picker_tab {
-                        IconTab::Emoji => {
-                            let list = filtered_emoji(&view.icon_picker_query);
-                            list.get((view.icon_picker_query.len() + 3) % list.len().max(1))
-                                .map(|entry| entry.glyph.to_string())
-                        }
-                        IconTab::Icons => {
-                            let list = filtered_icons(&view.icon_picker_query);
-                            list.get((view.icon_picker_query.len() + 3) % list.len().max(1))
-                                .map(|entry| format!("shape:{}", entry.name))
-                        }
+                        IconTab::Emoji => pick_index
+                            .and_then(|index| EMOJI.get(index))
+                            .map(|entry| entry.glyph.to_string()),
+                        IconTab::Icons => pick_index
+                            .and_then(|index| ICONS.get(index))
+                            .map(|entry| format!("shape:{}", entry.name)),
                         IconTab::Upload => None,
                     };
                     if let Some(icon) = pick {

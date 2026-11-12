@@ -2,6 +2,7 @@
 
 use ion_of_notes::client::Client;
 use ion_of_notes::model::{BlockKind, NumberFormat, Page, PageDiff, TimeFormat, Workspace};
+use ion_of_notes::server::realtime::Awareness;
 use ion_of_notes::server::{
     ApiRequest, ApiResponse, CollabTransport, Envelope, Method, RequestTransport,
 };
@@ -12,8 +13,8 @@ use ion_of_notes::ui::{
     visible_rows,
 };
 use ion_of_notes::ui::{
-    EMOJI, ICONS, app_bar_left_width, catalog_matches, drop_index, glyph_visual_offset,
-    page_icon_letter, search_page_matches, split_index,
+    EMOJI, ICONS, app_bar_left_width, catalog_matches, drop_index, frame_may_mutate,
+    glyph_visual_offset, index_cursors, page_icon_letter, search_page_matches, split_index,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -126,6 +127,54 @@ fn glyphs_are_lifted_in_proportion_to_their_font_size() {
     assert!(glyph_visual_offset(20.0) > 0.0);
     assert!(glyph_visual_offset(40.0) > glyph_visual_offset(20.0));
     assert_eq!(glyph_visual_offset(0.0), 0.0);
+}
+
+#[test]
+fn catalog_metadata_is_lowercase_for_normalized_search() {
+    for entry in EMOJI {
+        assert_eq!(entry.name, entry.name.to_lowercase(), "emoji name");
+        assert_eq!(
+            entry.keywords,
+            entry.keywords.to_lowercase(),
+            "emoji keywords"
+        );
+    }
+    for entry in ICONS {
+        assert_eq!(entry.name, entry.name.to_lowercase(), "icon name");
+    }
+}
+
+#[test]
+fn idle_and_popup_frames_skip_the_undo_snapshot() {
+    assert!(!frame_may_mutate(true, false, false, false));
+    assert!(!frame_may_mutate(true, false, true, true));
+    assert!(frame_may_mutate(true, false, true, false));
+    assert!(frame_may_mutate(true, true, false, true));
+    assert!(frame_may_mutate(false, false, false, true));
+}
+
+#[test]
+fn cursor_index_groups_by_page_and_block() {
+    let cursor = |page: &str, block: &str| Awareness {
+        session_id: "s".to_string(),
+        member_id: "m".to_string(),
+        name: "n".to_string(),
+        color: "#000000".to_string(),
+        page_id: page.to_string(),
+        block_id: block.to_string(),
+        index: 0,
+        selection_end: None,
+    };
+    let cursors = vec![
+        cursor("page-a", "block-1"),
+        cursor("page-a", "block-1"),
+        cursor("page-a", "block-2"),
+        cursor("page-b", "block-1"),
+    ];
+    let index = index_cursors(&cursors, "page-a");
+    assert_eq!(index.get("block-1").map(Vec::len), Some(2));
+    assert_eq!(index.get("block-2").map(Vec::len), Some(1));
+    assert!(!index.contains_key("page-b"));
 }
 
 #[test]

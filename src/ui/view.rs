@@ -77,7 +77,7 @@ pub(super) struct SettingsView {
 pub(super) struct ViewState {
     pub(super) current_page: String,
     pub(super) page_icon: String,
-    pub(super) remote_cursors: Vec<Awareness>,
+    pub(super) remote_cursors: Arc<Vec<Awareness>>,
     pub(super) server: ServerView,
     pub(super) tabs: Vec<String>,
     pub(super) active_tab: usize,

@@ -22,6 +22,10 @@ the architecture.
 
 ## 2. Deferred work
 
+The 2026-11-12 pass removed the P0 frame-wide clone/diff, normalized emoji
+filtering, indexed remote cursors by block and removed duplicate search-body
+work (specs 101-104; see `docs/performance-improvements.md`). The items below
+remain staged.
 | Item | Why it is deferred | Suggested next step |
 | ---- | ------------------ | ------------------- |
 | Asynchronous remote CRUD | Requires a UI request/response model and loading states; it is a product change, not a local refactor. | Add a background command queue with per-request cancellation and a busy indicator. |

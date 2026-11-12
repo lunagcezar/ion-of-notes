@@ -2,14 +2,34 @@
 
 use crate::server::realtime::Awareness;
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Stroke};
+use std::collections::HashMap;
 
 use super::super::super::palette::Palette;
+
+/// Group the awareness records for one page by block id once per frame.
+///
+/// Rendering then does a hash lookup per block instead of scanning every
+/// remote cursor for every block (spec-103).
+pub fn index_cursors<'a>(
+    cursors: &'a [Awareness],
+    page_id: &str,
+) -> HashMap<&'a str, Vec<&'a Awareness>> {
+    let mut by_block: HashMap<&'a str, Vec<&'a Awareness>> = HashMap::new();
+    for cursor in cursors.iter().filter(|cursor| cursor.page_id == page_id) {
+        by_block
+            .entry(cursor.block_id.as_str())
+            .or_default()
+            .push(cursor);
+    }
+    by_block
+}
+
 pub(super) fn draw_remote_cursors(
     ui: &mut egui::Ui,
     rect: &Rect,
     text: &str,
     font: &FontId,
-    cursors: &[Awareness],
+    cursors: &[&Awareness],
     palette: &Palette,
 ) {
     for cursor in cursors {

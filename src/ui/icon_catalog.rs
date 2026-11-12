@@ -28,11 +28,19 @@ pub struct IconGlyph {
 }
 
 /// Case-insensitive match against a name and its extra keywords.
+///
+/// Prefer [`catalog_matches_normalized`] in a loop: it avoids lowercasing the
+/// catalog metadata for every entry (spec-102).
 pub fn catalog_matches(name: &str, keywords: &str, query: &str) -> bool {
-    let query = query.trim().to_lowercase();
-    query.is_empty()
-        || name.to_lowercase().contains(&query)
-        || keywords.to_lowercase().contains(&query)
+    catalog_matches_normalized(name, keywords, &query.trim().to_lowercase())
+}
+
+/// Match against a query that is already trimmed and lowercased.
+///
+/// The curated catalog stores lowercase names and keywords, so the loop only
+/// has to scan them.
+pub fn catalog_matches_normalized(name: &str, keywords: &str, query: &str) -> bool {
+    query.is_empty() || name.contains(query) || keywords.contains(query)
 }
 
 macro_rules! emoji {

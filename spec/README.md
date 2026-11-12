@@ -138,6 +138,10 @@ Status vocabulary:
 | [098](spec-098-sidebar-commands.md) | Group sidebar commands | implemented | `SidebarCmd` behind `Command::Sidebar` |
 | [099](spec-099-dto-domain-separation.md) | Separate block and comment DTOs | implemented | `model/dto/` owns the v2 shapes |
 | [100](spec-100-domain-events.md) | Domain events for webhook writes | implemented | `DomainEvent` + `notify` |
+| [101](spec-101-frame-mutation-gating.md) | Skip idle-frame workspace snapshots and diffs | implemented | Optional undo snapshot + gated commit diff |
+| [102](spec-102-normalized-emoji-filter.md) | Normalize the emoji query once | implemented | One lowercase pass per catalog scan |
+| [103](spec-103-cursor-index.md) | Index remote cursors by block | implemented | `O(blocks + cursors)` lookup per page |
+| [104](spec-104-search-body-reuse.md) | Reuse the search body text | implemented | One body build per page |
 
 ## 3. Work status
 

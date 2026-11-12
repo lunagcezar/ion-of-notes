@@ -43,7 +43,9 @@ in what order, and which document is the source of truth for each concern.
   (deterministic performance harness); `spec-098` is implemented
   (sidebar command grouping); `spec-099` is implemented
   (block/comment DTO separation); `spec-100` is implemented
-  (domain events for webhook-emitting writes). The
+  (domain events for webhook-emitting writes); `spec-101`-`spec-104` implement
+  the performance pass (frame mutation gating, normalized emoji filtering,
+  cursor indexing and search-body reuse). The
   v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
@@ -134,6 +136,7 @@ flowchart TD
 | `docs/authorization.md` | server contributors | Roles, capabilities, page access resolution and nested-resource gaps |
 | `docs/persistence-integrity.md` | operators, contributors | Atomic snapshots, failure reload, JSON limits and backup/restore |
 | `docs/performance-roadmap.md` | contributors | Deferred performance/scale work and the measurement plan |
+| `docs/performance-improvements.md` | contributors | 2026-11-12 performance pass: what changed and what is staged |
 | `docs/review-response.md` | reviewers, maintainers | Finding → response → spec → evidence map for the 2026-11-12 reviews |
 | `docs/refactoring-roadmap.md` | contributors | Implemented general refactors and the risk-ordered deferred work |
 | `docs/testing.md` | contributors, agents | Test strategy, test crates, fakes, red/green discipline |

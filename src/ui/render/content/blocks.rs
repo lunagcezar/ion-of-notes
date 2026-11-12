@@ -19,6 +19,7 @@ use super::super::super::palette::{Palette, strong_font};
 use super::super::super::view::ViewState;
 use super::cursors::draw_remote_cursors;
 use super::page::body_font;
+use std::collections::HashMap;
 fn backspace_on_empty(ui: &egui::Ui, response: &egui::Response, text: &str) -> bool {
     response.has_focus() && text.is_empty() && ui.input(|i| i.key_pressed(egui::Key::Backspace))
 }
@@ -32,6 +33,7 @@ pub(super) fn render_block(
     width: f32,
     gutter: f32,
     view: &ViewState,
+    remote_cursors: &HashMap<&str, Vec<&Awareness>>,
     palette: &Palette,
     commands: &mut Vec<Command>,
     block_count: usize,
@@ -177,15 +179,11 @@ pub(super) fn render_block(
                 .hint_text(crate::i18n::t("block_placeholder"))
                 .text_color(palette.text)
                 .show(ui);
-            let remote: Vec<Awareness> = view
-                .remote_cursors
-                .iter()
-                .filter(|cursor| {
-                    cursor.page_id == page_id_for_edit && cursor.block_id == block_id_for_edit
-                })
-                .cloned()
-                .collect();
-            draw_remote_cursors(ui, &output.response.rect, text, &font, &remote, palette);
+            let remote: &[&Awareness] = remote_cursors
+                .get(block_id_for_edit.as_str())
+                .map(Vec::as_slice)
+                .unwrap_or(&[]);
+            draw_remote_cursors(ui, &output.response.rect, text, &font, remote, palette);
             if output.response.changed() {
                 pending_commands
                     .borrow_mut()

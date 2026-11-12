@@ -13,5 +13,6 @@ mod sidebar;
 
 pub use chrome::app_bar_left_width;
 pub(crate) use chrome::{SIDEBAR_WIDTH, TITLE_BAR_HEIGHT, render_title_bar};
+pub use content::index_cursors;
 pub(crate) use content::render_content;
 pub(crate) use sidebar::render_sidebar;

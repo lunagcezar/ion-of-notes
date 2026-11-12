@@ -257,6 +257,7 @@ fn render_page(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    let cursors_by_block = super::cursors::index_cursors(&view.remote_cursors, &view.current_page);
     let Some(page) = ws.page_mut(&view.current_page) else {
         ui.label(
             egui::RichText::new("No page selected. Create one from the sidebar.")
@@ -364,6 +365,7 @@ fn render_page(
             width,
             gutter,
             view,
+            &cursors_by_block,
             palette,
             commands,
             block_count,

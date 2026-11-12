@@ -8,4 +8,5 @@ mod blocks;
 mod cursors;
 mod page;
 
+pub use cursors::index_cursors;
 pub(crate) use page::render_content;

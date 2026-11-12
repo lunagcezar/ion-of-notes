@@ -65,7 +65,7 @@ impl NotionApp {
         ViewState {
             current_page: self.current_page.clone(),
             page_icon,
-            remote_cursors: self.collaboration.remote_awareness.clone(),
+            remote_cursors: Arc::clone(&self.collaboration.remote_awareness),
             server: ServerView {
                 url: self.server.url.clone(),
                 email: self.server.email.clone(),
@@ -440,10 +440,12 @@ impl NotionApp {
                     }
                 }
                 ServerMessage::Awareness { members } => {
-                    self.collaboration.remote_awareness = members
-                        .into_iter()
-                        .filter(|member| member.session_id != self.collaboration.session)
-                        .collect();
+                    self.collaboration.remote_awareness = Arc::new(
+                        members
+                            .into_iter()
+                            .filter(|member| member.session_id != self.collaboration.session)
+                            .collect(),
+                    );
                 }
                 _ => {}
             }
@@ -473,7 +475,7 @@ impl NotionApp {
         self.collaboration.crdt = CrdtSession::new();
         self.collaboration.page.clear();
         self.collaboration.receiver = self.client.subscribe_realtime();
-        self.collaboration.remote_awareness.clear();
+        Arc::make_mut(&mut self.collaboration.remote_awareness).clear();
         self.collaboration.last_awareness = None;
         self.server.password.clear();
     }
@@ -518,7 +520,7 @@ impl NotionApp {
         self.collaboration.crdt = CrdtSession::new();
         self.collaboration.page.clear();
         self.collaboration.receiver = self.client.subscribe_realtime();
-        self.collaboration.remote_awareness.clear();
+        Arc::make_mut(&mut self.collaboration.remote_awareness).clear();
         self.collaboration.last_awareness = None;
         self.search.cache = SearchCache::default();
         self.search.results = Arc::new(Vec::new());
@@ -592,7 +594,7 @@ impl NotionApp {
         &mut self,
         mut commands: Vec<Command>,
         ctx: &egui::Context,
-        frame_before: Workspace,
+        frame_before: Option<Workspace>,
     ) {
         let now = ctx.input(|i| i.time);
         let force_flush = commands.iter().any(Command::forces_flush);
@@ -627,7 +629,11 @@ impl NotionApp {
             index += 1;
         }
 
-        if !had_undo_redo && self.workspace != frame_before {
+        let workspace_may_have_changed = frame_before.is_some();
+        if let Some(frame_before) = frame_before
+            && !had_undo_redo
+            && self.workspace != frame_before
+        {
             self.undo_stack.push(frame_before);
             if self.undo_stack.len() > 60 {
                 self.undo_stack.remove(0);
@@ -653,7 +659,9 @@ impl NotionApp {
             self.pending_reload = false;
         }
 
-        self.commit_edits(now, false);
+        if workspace_may_have_changed || self.pending_edits.is_pending() {
+            self.commit_edits(now, false);
+        }
     }
 
     fn push_history(&mut self, id: String) {

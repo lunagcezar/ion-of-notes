@@ -36,7 +36,7 @@ use super::render::{
 use super::search_cache::SearchCache;
 
 pub(super) use super::commands::{
-    Command, FontStyle, IconTab, NewTabChoice, SidebarMenu, WorkspaceDialogMode,
+    Command, FontStyle, IconTab, NewTabChoice, SidebarMenu, WorkspaceDialogMode, frame_may_mutate,
 };
 use super::input::collect_shortcuts;
 pub(super) use super::view::ViewState;
@@ -74,7 +74,7 @@ pub(super) struct CollaborationState {
     pub crdt: CrdtSession,
     pub page: String,
     pub receiver: Option<tokio::sync::broadcast::Receiver<ServerMessage>>,
-    pub remote_awareness: Vec<Awareness>,
+    pub remote_awareness: Arc<Vec<Awareness>>,
     pub session: String,
     pub color: String,
     pub last_awareness: Option<(String, usize, Option<usize>)>,
@@ -434,7 +434,7 @@ impl NotionApp {
                 crdt,
                 page: demo_current_page.clone(),
                 receiver: crdt_rx,
-                remote_awareness: Vec::new(),
+                remote_awareness: Arc::new(Vec::new()),
                 session: awareness_session,
                 color: "#4C8BF5".to_string(),
                 last_awareness: None,
@@ -648,10 +648,6 @@ impl eframe::App for NotionApp {
             data.insert_temp(egui::Id::unique("block_drag_over"), false);
         });
 
-        // Snapshot before rendering: text edits mutate `workspace` directly, so
-        // this is the state an Undo would restore.
-        let frame_before = self.workspace.clone();
-
         let popup_open = self.new_tab_open
             || self.search.open
             || self.icon_picker_open
@@ -677,6 +673,24 @@ impl eframe::App for NotionApp {
             .iter()
             .map(|a| self.command_for_action(*a))
             .collect();
+
+        // Snapshot before rendering only when this frame can mutate the
+        // workspace. Idle frames and popup-only frames (emoji picker, menus)
+        // must not deep-clone the workspace just to discover that nothing
+        // changed (spec-101).
+        let overlay_open = popup_open
+            || self.settings.open
+            || self.sharing.open
+            || self.inbox_open
+            || self.onboarding_open
+            || self.templates_open;
+        let may_mutate = frame_may_mutate(
+            commands.is_empty(),
+            ctx.input(|i| i.pointer.any_click() || i.pointer.any_down()),
+            ctx.memory(|memory| memory.focused().is_some()),
+            overlay_open,
+        );
+        let frame_before = may_mutate.then(|| self.workspace.clone());
 
         // Search results are fetched through the client before rendering, but
         // only when the query or the workspace version changed (spec-015).

@@ -658,8 +658,8 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
 | `cargo test --all-targets --no-default-features` | Core integration tests (276, no desktop stack) |
-| `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (37) |
-| `cargo test --all-targets`               | All default-feature tests (313; the core-only seam test is skipped) |
+| `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (40) |
+| `cargo test --all-targets`               | All default-feature tests (316; the core-only seam test is skipped) |
 | `ION_OF_NOTES_PERF=1 cargo test --no-default-features --test perf -- --nocapture` | Opt-in 1k/10k/50k block load/search/CRDT timings |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |

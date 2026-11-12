@@ -22,7 +22,12 @@ impl Workspace {
                 .map(|r| r.name.as_str())
                 .collect::<Vec<_>>()
                 .join(" ");
-            let body = format!("{} {}", page.plain_text(), rows).to_lowercase();
+            let body_text = if rows.is_empty() {
+                page.plain_text()
+            } else {
+                format!("{} {}", page.plain_text(), rows)
+            };
+            let body = body_text.to_lowercase();
             let score = if title.starts_with(&q) {
                 3
             } else if title.contains(&q) {
@@ -38,7 +43,7 @@ impl Workspace {
             let snippet = if score >= 2 {
                 page.title.clone()
             } else {
-                excerpt(&format!("{} {}", page.plain_text(), rows), &q)
+                excerpt(&body_text, &q)
             };
             ranked.push((
                 score,

@@ -67,6 +67,18 @@ pub(super) fn new_tab_choices(ws: &Workspace, query: &str) -> Vec<NewTabChoice> 
     choices
 }
 
+/// Decide whether a frame can mutate the workspace and therefore needs a
+/// pre-frame undo snapshot. Idle and popup-only frames skip the clone
+/// (spec-101).
+pub fn frame_may_mutate(
+    commands_empty: bool,
+    pointer_active: bool,
+    text_focused: bool,
+    popup_open: bool,
+) -> bool {
+    !commands_empty || pointer_active || (!popup_open && text_focused)
+}
+
 /// The command family that owns the transition. `apply_commands` uses this
 /// classification to route one command to one `ui::apply/*` module, so the
 /// state machine is not one giant switch (spec-049).

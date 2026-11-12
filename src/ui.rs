@@ -33,6 +33,7 @@ mod widgets;
 
 pub use app::NotionApp;
 pub use block_ops::{drop_index, split_index};
+pub use commands::frame_may_mutate;
 pub use crdt::CrdtSession;
 pub use dialogs::search_window::page_matches as search_page_matches;
 pub use edit_queue::{CommitPlan, PendingEdits, execute_plan, plan_for};
@@ -45,5 +46,6 @@ pub use palette::{
     Palette, block_menu_options, install_fonts, status_color, strong_font, tab_title,
 };
 pub use render::app_bar_left_width;
+pub use render::index_cursors;
 pub use search_cache::SearchCache;
 pub use settings_search::{SettingsRow, rows_for, section_matches, settings_matches, visible_rows};
