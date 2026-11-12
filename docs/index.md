@@ -34,7 +34,8 @@ in what order, and which document is the source of truth for each concern.
   `spec-088` is implemented (SearchState/SearchView grouping); `spec-089` is
   implemented (typed handlers for the remaining resource families);
   `spec-090` is implemented (complete typed handler conversion); `spec-091` is
-  implemented (auth and webhook service modules). The
+  implemented (auth and webhook service modules); `spec-092` is implemented
+  (SharingState/SharingView grouping). The
   v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite

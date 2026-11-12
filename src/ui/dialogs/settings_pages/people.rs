@@ -49,14 +49,14 @@ pub(in crate::ui::dialogs) fn render_people_settings(
                 }
             }
             "members" => {
-                if view.share_members.is_empty() {
+                if view.sharing.members.is_empty() {
                     ui.label(
                         egui::RichText::new(i18n::t("no_members"))
                             .size(metrics::FONT_CAPTION)
                             .color(palette.muted),
                     );
                 }
-                for member in view.share_members.iter() {
+                for member in view.sharing.members.iter() {
                     ui.horizontal(|ui| {
                         ui.label(egui::RichText::new(&member.name).color(palette.text));
                         ui.add_space(metrics::SPACE_8);

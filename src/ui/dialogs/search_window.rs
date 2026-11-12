@@ -190,7 +190,7 @@ fn switcher_spec<'a>(
         created_by: view.search.created_by.as_deref(),
         in_page: view.search.in_page.as_deref(),
         has_comments: view.search.has_comments,
-        members: view.share_members.as_slice(),
+        members: view.sharing.members.as_slice(),
         mode,
         ws,
     }

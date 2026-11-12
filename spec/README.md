@@ -129,6 +129,7 @@ Status vocabulary:
 | [089](spec-089-typed-handlers-remaining.md) | Typed handlers for remaining families | implemented | User/file, blocks, databases, views, webhooks, auth |
 | [090](spec-090-complete-typed-handlers.md) | Complete typed handler conversion | implemented | CRDT, lists and shared adapters |
 | [091](spec-091-server-service-modules.md) | Server service modules | implemented | Auth/webhook logic under `server/services/` |
+| [092](spec-092-sharing-state-and-view.md) | SharingState and SharingView grouping | implemented | Sharing/invite runtime and view fields grouped |
 
 ## 3. Work status
 

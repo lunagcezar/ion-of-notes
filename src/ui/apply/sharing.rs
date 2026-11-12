@@ -11,23 +11,23 @@ impl NotionApp {
         match command {
             Command::OpenShare => {
                 self.close_overlays();
-                self.share_open = true;
-                self.invite_error = None;
-                self.invite_status = None;
+                self.sharing.open = true;
+                self.sharing.invite_error = None;
+                self.sharing.invite_status = None;
                 self.refresh_share();
             }
-            Command::CloseShare => self.share_open = false,
-            Command::SetInviteInput(input) => self.invite_input = input,
-            Command::SetInviteRole(role) => self.invite_role = role,
-            Command::SetInviteMessage(message) => self.invite_message = message,
+            Command::CloseShare => self.sharing.open = false,
+            Command::SetInviteInput(input) => self.sharing.invite_input = input,
+            Command::SetInviteRole(role) => self.sharing.invite_role = role,
+            Command::SetInviteMessage(message) => self.sharing.invite_message = message,
             Command::SendInvites => {
-                let emails: Vec<String> = parse_invite_emails(&self.invite_input)
+                let emails: Vec<String> = parse_invite_emails(&self.sharing.invite_input)
                     .into_iter()
                     .filter(|email| is_valid_email(email))
                     .collect();
                 if emails.is_empty() {
-                    self.invite_error = Some(i18n::t("invalid_email"));
-                    self.invite_status = None;
+                    self.sharing.invite_error = Some(i18n::t("invalid_email"));
+                    self.sharing.invite_status = None;
                 } else {
                     let mut invited = 0;
                     let mut errors = Vec::new();
@@ -35,7 +35,7 @@ impl NotionApp {
                         let draft = MemberDraft {
                             name: member_name_from_email(&email),
                             email,
-                            role: self.invite_role,
+                            role: self.sharing.invite_role,
                         };
                         match self.client.invite_member(&draft) {
                             Ok(_) => invited += 1,
@@ -43,10 +43,11 @@ impl NotionApp {
                         }
                     }
                     if invited > 0 {
-                        self.invite_input.clear();
-                        self.invite_status = Some(i18n::t_count("invited_members", invited));
+                        self.sharing.invite_input.clear();
+                        self.sharing.invite_status =
+                            Some(i18n::t_count("invited_members", invited));
                     }
-                    self.invite_error = if errors.is_empty() {
+                    self.sharing.invite_error = if errors.is_empty() {
                         None
                     } else {
                         Some(errors.join("; "))
@@ -62,11 +63,11 @@ impl NotionApp {
                 };
                 match self.client.set_share(&share) {
                     Ok(_) => {
-                        self.share_general_access = access;
-                        self.invite_error = None;
-                        self.invite_status = Some(i18n::t("general_updated"));
+                        self.sharing.general_access = access;
+                        self.sharing.invite_error = None;
+                        self.sharing.invite_status = Some(i18n::t("general_updated"));
                     }
-                    Err(error) => self.invite_error = Some(error.to_string()),
+                    Err(error) => self.sharing.invite_error = Some(error.to_string()),
                 }
             }
             Command::OpenInbox => {

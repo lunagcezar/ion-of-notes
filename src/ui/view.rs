@@ -24,6 +24,16 @@ pub(super) struct SearchView {
     pub(super) selected: usize,
 }
 
+/// Sharing-specific presentation data.
+pub(super) struct SharingView {
+    pub(super) open: bool,
+    pub(super) members: Arc<Vec<Member>>,
+    pub(super) invite_input: String,
+    pub(super) invite_error: Option<String>,
+    pub(super) invite_status: Option<String>,
+    pub(super) general_access: Access,
+}
+
 /// A snapshot of non-workspace app state passed to pure render functions.
 pub(super) struct ViewState {
     pub(super) current_page: String,
@@ -55,12 +65,7 @@ pub(super) struct ViewState {
     pub(super) library_tab: String,
     pub(super) library_shared: Arc<HashSet<String>>,
     pub(super) library_owner: String,
-    pub(super) share_open: bool,
-    pub(super) share_members: Arc<Vec<Member>>,
-    pub(super) invite_input: String,
-    pub(super) invite_error: Option<String>,
-    pub(super) invite_status: Option<String>,
-    pub(super) share_general_access: Access,
+    pub(super) sharing: SharingView,
     pub(super) inbox_open: bool,
     pub(super) inbox_unread: usize,
     pub(super) slash_for: Option<String>,

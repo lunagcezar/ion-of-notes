@@ -57,6 +57,18 @@ pub(super) struct SearchState {
     pub selected: usize,
 }
 
+/// Sharing and invite-owned application state.
+pub(super) struct SharingState {
+    pub open: bool,
+    pub members: Arc<Vec<Member>>,
+    pub invite_input: String,
+    pub invite_role: Role,
+    pub invite_message: String,
+    pub invite_error: Option<String>,
+    pub invite_status: Option<String>,
+    pub general_access: Access,
+}
+
 impl Default for SearchState {
     fn default() -> Self {
         Self {
@@ -99,14 +111,7 @@ pub struct NotionApp {
     pub(super) library_tab: String,
     pub(super) library_shared: Arc<HashSet<String>>,
     pub(super) library_owner: String,
-    pub(super) share_open: bool,
-    pub(super) share_members: Arc<Vec<Member>>,
-    pub(super) invite_input: String,
-    pub(super) invite_role: Role,
-    pub(super) invite_message: String,
-    pub(super) invite_error: Option<String>,
-    pub(super) invite_status: Option<String>,
-    pub(super) share_general_access: Access,
+    pub(super) sharing: SharingState,
     pub(super) inbox_open: bool,
     pub(super) nav_history: Vec<String>,
     pub(super) nav_pos: usize,
@@ -482,14 +487,16 @@ impl NotionApp {
             library_tab: "Recents".to_string(),
             library_shared,
             library_owner,
-            share_open: demo == "share",
-            share_members,
-            invite_input: String::new(),
-            invite_role: Role::Guest,
-            invite_message: String::new(),
-            invite_error: None,
-            invite_status: None,
-            share_general_access,
+            sharing: SharingState {
+                open: demo == "share",
+                members: share_members,
+                invite_input: String::new(),
+                invite_role: Role::Guest,
+                invite_message: String::new(),
+                invite_error: None,
+                invite_status: None,
+                general_access: share_general_access,
+            },
             inbox_open: demo == "inbox",
             nav_history,
             nav_pos: 0,
@@ -758,7 +765,7 @@ impl eframe::App for NotionApp {
         if view.templates_open {
             render_templates(&ctx, &view, &palette, &mut commands);
         }
-        if view.share_open {
+        if view.sharing.open {
             render_share(&ctx, &view, &palette, &mut commands);
         }
         if view.inbox_open {

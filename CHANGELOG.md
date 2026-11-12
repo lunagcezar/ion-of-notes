@@ -6,6 +6,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-092 sharing state and view
+
+- Grouped the sharing/invite fields into `SharingState` and `SharingView`;
+  references use `self.sharing.*` / `view.sharing.*`.
+
 ### Changed - spec-091 server service modules
 
 - Moved auth and webhook logic from `server/handlers/` to `server/services/`.

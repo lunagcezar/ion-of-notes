@@ -34,7 +34,7 @@ mod workspace;
 use super::crdt::CrdtSession;
 use super::edit_queue::{PendingEdits, execute_plan, plan_for};
 use super::search_cache::SearchCache;
-use super::view::{SearchView, ViewState};
+use super::view::{SearchView, SharingView, ViewState};
 
 pub(super) fn set_block_text(blocks: &mut [Block], block_id: &str, text: &str) -> bool {
     for block in blocks {
@@ -101,12 +101,14 @@ impl NotionApp {
             library_tab: self.library_tab.clone(),
             library_shared: Arc::clone(&self.library_shared),
             library_owner: self.library_owner.clone(),
-            share_open: self.share_open,
-            share_members: Arc::clone(&self.share_members),
-            invite_input: self.invite_input.clone(),
-            invite_error: self.invite_error.clone(),
-            invite_status: self.invite_status.clone(),
-            share_general_access: self.share_general_access,
+            sharing: SharingView {
+                open: self.sharing.open,
+                members: Arc::clone(&self.sharing.members),
+                invite_input: self.sharing.invite_input.clone(),
+                invite_error: self.sharing.invite_error.clone(),
+                invite_status: self.sharing.invite_status.clone(),
+                general_access: self.sharing.general_access,
+            },
             inbox_open: self.inbox_open,
             inbox_unread: self
                 .workspace
@@ -184,7 +186,7 @@ impl NotionApp {
     fn close_overlays(&mut self) {
         self.search.open = false;
         self.settings_open = false;
-        self.share_open = false;
+        self.sharing.open = false;
         self.inbox_open = false;
         self.slash_for = None;
         self.new_tab_open = false;
@@ -311,12 +313,12 @@ impl NotionApp {
     /// Refresh the member directory and the general-access level for the
     /// current page (spec-023).
     fn refresh_share(&mut self) {
-        self.share_members = Arc::new(self.client.list_members().unwrap_or_default());
+        self.sharing.members = Arc::new(self.client.list_members().unwrap_or_default());
         let shares = self
             .client
             .list_shares(Some(&self.current_page))
             .unwrap_or_default();
-        self.share_general_access = general_access(&shares, &self.current_page);
+        self.sharing.general_access = general_access(&shares, &self.current_page);
     }
 
     /// Create a page from a starter template and open it in the active tab.
@@ -340,7 +342,7 @@ impl NotionApp {
 
     /// Refresh the member directory used by Share and Settings → People.
     fn refresh_members(&mut self) {
-        self.share_members = Arc::new(self.client.list_members().unwrap_or_default());
+        self.sharing.members = Arc::new(self.client.list_members().unwrap_or_default());
     }
 
     /// Refresh the Library filters and owner label (spec-024).
@@ -499,7 +501,7 @@ impl NotionApp {
         self.library_open = false;
         self.search.open = false;
         self.settings_open = false;
-        self.share_open = false;
+        self.sharing.open = false;
         self.inbox_open = false;
         self.slash_for = None;
         self.page_selection.clear();

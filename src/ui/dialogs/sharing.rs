@@ -85,7 +85,7 @@ pub(crate) fn render_share(
             ui.add_space(metrics::SPACE_14);
 
             // Invite row: the field grows, the accent button keeps its width.
-            let mut invite = view.invite_input.clone();
+            let mut invite = view.sharing.invite_input.clone();
             ui.horizontal(|ui| {
                 let width = (ui.available_width() - 78.0).max(220.0);
                 let edit = ui.add(
@@ -112,14 +112,14 @@ pub(crate) fn render_share(
                     commands.push(Command::SendInvites);
                 }
             });
-            if let Some(error) = &view.invite_error {
+            if let Some(error) = &view.sharing.invite_error {
                 ui.label(
                     egui::RichText::new(error)
                         .size(metrics::FONT_MICRO)
                         .color(Color32::from_rgb(224, 108, 108)),
                 );
             }
-            if let Some(status) = &view.invite_status {
+            if let Some(status) = &view.sharing.invite_status {
                 ui.label(
                     egui::RichText::new(status)
                         .size(metrics::FONT_MICRO)
@@ -129,7 +129,7 @@ pub(crate) fn render_share(
             ui.add_space(metrics::SPACE_10);
 
             // People with access: avatar, name, address and role.
-            for member in view.share_members.iter() {
+            for member in view.sharing.members.iter() {
                 let (row, _) =
                     ui.allocate_exact_size(Vec2::new(ui.available_width(), 46.0), Sense::hover());
                 let avatar = Rect::from_center_size(
@@ -208,12 +208,12 @@ pub(crate) fn render_share(
             ui.painter().text(
                 Pos2::new(general.right() - 14.0, general.center().y),
                 Align2::RIGHT_CENTER,
-                format!("{} ⌄", access_label(view.share_general_access)),
+                format!("{} ⌄", access_label(view.sharing.general_access)),
                 FontId::proportional(metrics::FONT_CAPTION),
                 palette.muted,
             );
             if response.clicked() {
-                let next = match view.share_general_access {
+                let next = match view.sharing.general_access {
                     Access::Full => Access::Edit,
                     Access::Edit => Access::View,
                     Access::View => Access::None,
