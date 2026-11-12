@@ -175,6 +175,10 @@ pub(super) enum Command {
     ActivateNewTab(NewTabChoice),
     ActivateSelectedNewTab,
     SetSearchSelected(usize),
+    ToggleSearchTitleOnly,
+    SetSearchCreatedBy(Option<String>),
+    SetSearchIn(Option<String>),
+    ToggleSearchHasComments,
     SelectTab(usize),
     CloseTab(usize),
     PreviousTab,
@@ -387,6 +391,10 @@ impl Command {
             | Command::WindowClose
             | Command::ToggleFullscreen
             | Command::SetSearchSelected(_)
+            | Command::ToggleSearchTitleOnly
+            | Command::SetSearchCreatedBy(_)
+            | Command::SetSearchIn(_)
+            | Command::ToggleSearchHasComments
             | Command::ToggleHighlightPane
             | Command::ToggleFilters => Navigation,
             Command::OpenLibrary | Command::CloseLibrary | Command::SetLibraryTab(_) => Library,

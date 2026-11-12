@@ -11,6 +11,7 @@ use ion_of_notes::ui::{
 };
 use ion_of_notes::ui::{
     EMOJI, ICONS, app_bar_left_width, catalog_matches, glyph_visual_offset, page_icon_letter,
+    search_page_matches,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -100,6 +101,56 @@ fn page_icons_fall_back_to_the_uppercase_title_letter() {
     assert_eq!(page_icon_letter("★", "home"), "★");
     assert_eq!(page_icon_letter("", ""), "?");
     assert_eq!(page_icon_letter("", "éclair"), "É");
+}
+
+#[test]
+fn search_filters_match_title_creator_scope_and_comments() {
+    let mut ws = Workspace::new("w");
+    let mut parent = Page::new("parent", "Home", "");
+    parent.created_by = "Owner".to_string();
+    let mut child = Page::new("child", "Child page", "");
+    child.parent = Some("parent".to_string());
+    child.created_by = "Guest".to_string();
+    child.comments.push(ion_of_notes::model::Comment::new(
+        "c",
+        "Guest",
+        "hello",
+        "Nov 12, 2026 10:00",
+    ));
+    ws.add_page(parent).unwrap();
+    ws.add_page(child).unwrap();
+
+    let child_page = ws.page("child").unwrap();
+    assert!(search_page_matches(
+        &ws,
+        child_page,
+        "child",
+        true,
+        Some("Guest"),
+        Some("parent"),
+        true
+    ));
+    assert!(!search_page_matches(
+        &ws, child_page, "home", true, None, None, false
+    ));
+    assert!(!search_page_matches(
+        &ws,
+        child_page,
+        "",
+        false,
+        Some("Owner"),
+        None,
+        false
+    ));
+    assert!(search_page_matches(
+        &ws,
+        child_page,
+        "",
+        false,
+        None,
+        Some("parent"),
+        false
+    ));
 }
 
 #[test]

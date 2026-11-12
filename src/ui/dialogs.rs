@@ -9,7 +9,7 @@ mod help;
 mod menus;
 mod onboarding;
 mod page_actions;
-mod search_window;
+pub(super) mod search_window;
 mod settings;
 mod settings_pages;
 mod sharing;

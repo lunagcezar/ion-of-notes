@@ -6,6 +6,17 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-066 search and new-tab filters
+
+- Added working filters to Ctrl+K and the new-tab window: Title only, Created
+  by, In (page and descendants), Has comments via + Filter, and a show/hide
+  filters control with a filter glyph and tooltip.
+- Added an additive `Page.created_by` field (default `Workspace Owner`) and
+  load the member directory when search/new-tab opens.
+- Removed the Ask AI strip, button and status from the switcher; the AI
+  shortcut now opens Settings → AI assistant until the AI UI is redesigned.
+- Added a filter-predicate regression test; suite: 272 tests.
+
 ### Changed - spec-065 page icon letter fallback
 
 - Pages without an icon now render the uppercase first letter of their title

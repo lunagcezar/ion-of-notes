@@ -85,6 +85,7 @@ custom section owns an explicit shortcut list (spec-062).
 | `comments`          | `Vec<Comment>`      | Page-level discussion comments                   |
 | `blocks`            | `Vec<Block>`        | Ordered editable content                         |
 | `rows`              | `Vec<TableRow>`     | Inline table database (empty for normal pages)   |
+| `created_by`        | `String`            | Page creator label (default `Workspace Owner`)   |
 | `updated_at`        | `String`            | ISO-8601-like display timestamp                  |
 
 ## Entity: Comment

@@ -15,6 +15,7 @@ impl NotionApp {
             // ---- Tabs / "+" switcher ----------------------------------
             Command::OpenNewTab => {
                 self.close_overlays();
+                self.refresh_members();
                 self.new_tab_open = true;
                 self.new_tab_query.clear();
                 self.new_tab_selected = 0;

@@ -6,17 +6,15 @@ use std::sync::Arc;
 use super::super::app::NotionApp;
 use super::super::commands::Command;
 impl NotionApp {
-    pub(super) fn apply_ai(&mut self, command: Command, commands: &mut Vec<Command>) {
+    pub(super) fn apply_ai(&mut self, command: Command, _commands: &mut Vec<Command>) {
         match command {
             // ---- AI assistant ------------------------------------------
             Command::OpenAiChat => {
                 self.close_overlays();
-                self.search_open = true;
+                self.settings_open = true;
+                self.settings_page = "AI assistant".to_string();
                 self.ai_answer = None;
                 self.ai_error = None;
-                if !self.ai_query.trim().is_empty() {
-                    commands.push(Command::AskAi(self.ai_query.clone()));
-                }
             }
             Command::SetAiQuery(query) => self.ai_query = query,
             Command::AskAi(prompt) => {

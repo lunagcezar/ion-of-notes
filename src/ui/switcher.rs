@@ -40,13 +40,13 @@ pub(super) struct SwitcherSpec<'a> {
     pub selected: usize,
     pub highlight: bool,
     pub filters: bool,
+    pub title_only: bool,
+    pub created_by: Option<&'a str>,
+    pub in_page: Option<&'a str>,
+    pub has_comments: bool,
+    pub members: &'a [crate::collab::Member],
     pub mode: SwitcherMode,
     pub ws: &'a Workspace,
-    pub ai_query: &'a str,
-    pub ai_status: &'a str,
-    pub ai_answer: Option<&'a str>,
-    pub ai_error: Option<&'a str>,
-    pub ai_busy: bool,
 }
 
 /// A small speech-bubble glyph for the "New chat" row.
@@ -182,29 +182,25 @@ pub(super) fn render_switcher(
                 if field.changed() {
                     match spec.mode {
                         SwitcherMode::NewTab => commands.push(Command::SetNewTabQuery(query)),
-                        SwitcherMode::Search => {
-                            commands.push(Command::SetAiQuery(query.clone()));
-                            commands.push(Command::SetSearchQuery(query));
-                        }
+                        SwitcherMode::Search => commands.push(Command::SetSearchQuery(query)),
                     }
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let filter = ui
-                        .add_sized(
-                            Vec2::new(24.0, 24.0),
-                            egui::Button::new(
-                                egui::RichText::new("≡").size(15.0).color(palette.muted),
-                            )
-                            .frame(false),
-                        )
-                        .on_hover_text(if spec.filters {
-                            "Hide filters"
-                        } else {
-                            "Show filters"
-                        });
+                    let (filter_rect, filter) =
+                        ui.allocate_exact_size(Vec2::splat(24.0), Sense::click());
+                    if filter.hovered() {
+                        ui.painter()
+                            .rect_filled(filter_rect, CornerRadius::same(4), palette.hover);
+                    }
+                    draw_sliders(ui.painter(), filter_rect.shrink(4.0), palette.muted);
                     if filter.clicked() {
                         commands.push(Command::ToggleFilters);
                     }
+                    filter.on_hover_text(if spec.filters {
+                        "Hide filters"
+                    } else {
+                        "Show filters"
+                    });
                     let highlight = ui
                         .add_sized(
                             Vec2::new(24.0, 24.0),
@@ -229,10 +225,82 @@ pub(super) fn render_switcher(
 
             if spec.filters {
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 18.0;
+                    ui.spacing_mut().item_spacing.x = 12.0;
                     ui.add_space(24.0);
-                    for text in ["Aa  Title only", "Created by ⌄", "In ⌄", "+ Filter"] {
-                        ui.label(egui::RichText::new(text).size(12.0).color(palette.muted));
+                    if ui
+                        .selectable_label(
+                            spec.title_only,
+                            egui::RichText::new("Aa  Title only").size(12.0),
+                        )
+                        .clicked()
+                    {
+                        commands.push(Command::ToggleSearchTitleOnly);
+                    }
+                    let created = spec.created_by.unwrap_or("Created by");
+                    egui::ComboBox::from_id_salt((spec.id, "created_by"))
+                        .selected_text(egui::RichText::new(created).size(12.0))
+                        .show_ui(ui, |ui| {
+                            if ui
+                                .selectable_label(spec.created_by.is_none(), "Anyone")
+                                .clicked()
+                            {
+                                commands.push(Command::SetSearchCreatedBy(None));
+                            }
+                            for member in spec.members {
+                                if ui
+                                    .selectable_label(
+                                        spec.created_by == Some(member.name.as_str()),
+                                        &member.name,
+                                    )
+                                    .clicked()
+                                {
+                                    commands.push(Command::SetSearchCreatedBy(Some(
+                                        member.name.clone(),
+                                    )));
+                                }
+                            }
+                        });
+                    let in_label = spec
+                        .in_page
+                        .and_then(|id| spec.ws.page(id))
+                        .map(|page| page.title.as_str())
+                        .unwrap_or("In");
+                    egui::ComboBox::from_id_salt((spec.id, "in_page"))
+                        .selected_text(egui::RichText::new(in_label).size(12.0))
+                        .show_ui(ui, |ui| {
+                            if ui
+                                .selectable_label(spec.in_page.is_none(), "Anywhere")
+                                .clicked()
+                            {
+                                commands.push(Command::SetSearchIn(None));
+                            }
+                            for page in &spec.ws.pages {
+                                if ui
+                                    .selectable_label(
+                                        spec.in_page == Some(page.id.as_str()),
+                                        &page.title,
+                                    )
+                                    .clicked()
+                                {
+                                    commands.push(Command::SetSearchIn(Some(page.id.clone())));
+                                }
+                            }
+                        });
+                    if spec.has_comments {
+                        if ui
+                            .selectable_label(
+                                true,
+                                egui::RichText::new("Has comments  ×").size(12.0),
+                            )
+                            .clicked()
+                        {
+                            commands.push(Command::ToggleSearchHasComments);
+                        }
+                    } else if ui
+                        .button(egui::RichText::new("+ Filter").size(12.0))
+                        .clicked()
+                    {
+                        commands.push(Command::ToggleSearchHasComments);
                     }
                 });
                 ui.add_space(8.0);
@@ -336,66 +404,6 @@ pub(super) fn render_switcher(
                                 }
                             }
                         });
-
-                    // Compact AI strip: the assistant is still reachable from
-                    // the search window (spec-012) without a second layout.
-                    if spec.mode == SwitcherMode::Search {
-                        ui.add_space(10.0);
-                        ui.separator();
-                        ui.add_space(8.0);
-                        ui.horizontal(|ui| {
-                            ui.label(
-                                egui::RichText::new("Ask AI")
-                                    .size(12.5)
-                                    .strong()
-                                    .color(palette.text),
-                            );
-                            ui.with_layout(
-                                egui::Layout::right_to_left(egui::Align::Center),
-                                |ui| {
-                                    if ui
-                                        .add(
-                                            egui::Button::new(
-                                                egui::RichText::new("Ask")
-                                                    .size(12.0)
-                                                    .color(Color32::WHITE),
-                                            )
-                                            .fill(palette.accent)
-                                            .corner_radius(CornerRadius::same(6)),
-                                        )
-                                        .clicked()
-                                    {
-                                        commands.push(Command::AskAi(spec.ai_query.to_string()));
-                                    }
-                                },
-                            );
-                        });
-                        if spec.ai_busy {
-                            ui.label(
-                                egui::RichText::new("Thinking…")
-                                    .size(11.0)
-                                    .color(palette.accent),
-                            );
-                        } else if let Some(answer) = spec.ai_answer {
-                            ui.label(
-                                egui::RichText::new(answer.chars().take(160).collect::<String>())
-                                    .size(11.0)
-                                    .color(palette.text),
-                            );
-                        } else if let Some(error) = spec.ai_error {
-                            ui.label(
-                                egui::RichText::new(error)
-                                    .size(11.0)
-                                    .color(Color32::from_rgb(224, 108, 108)),
-                            );
-                        } else {
-                            ui.label(
-                                egui::RichText::new(spec.ai_status)
-                                    .size(10.5)
-                                    .color(palette.muted),
-                            );
-                        }
-                    }
                 });
 
                 // Preview ("highlight") pane.

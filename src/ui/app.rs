@@ -58,6 +58,10 @@ pub struct NotionApp {
     pub(super) search_open: bool,
     pub(super) search_query: String,
     pub(super) search_results: Arc<Vec<SearchResult>>,
+    pub(super) search_title_only: bool,
+    pub(super) search_created_by: Option<String>,
+    pub(super) search_in: Option<String>,
+    pub(super) search_has_comments: bool,
     pub(super) search_cache: SearchCache,
     pub(super) settings_open: bool,
     pub(super) onboarding_open: bool,
@@ -402,6 +406,10 @@ impl NotionApp {
             search_open: demo == "search",
             search_query: String::new(),
             search_results: Arc::new(Vec::new()),
+            search_title_only: false,
+            search_created_by: None,
+            search_in: None,
+            search_has_comments: false,
             search_cache: SearchCache::default(),
             settings_open: matches!(
                 demo.as_str(),
@@ -506,7 +514,7 @@ impl NotionApp {
             redo_stack: Vec::new(),
             search_selected: 0,
             highlight_pane: true,
-            filters: false,
+            filters: true,
             icon_picker_open: matches!(
                 demo.as_str(),
                 "iconpicker" | "iconpicker-icons" | "iconpicker-search"

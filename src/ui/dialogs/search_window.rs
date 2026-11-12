@@ -22,9 +22,72 @@ fn page_detail(ws: &Workspace, page: &Page) -> String {
     format!("   — {text}")
 }
 
-fn build_new_tab_rows(ws: &Workspace, choices: &[NewTabChoice]) -> Vec<SwitcherRow> {
+fn page_in_scope(ws: &Workspace, page_id: &str, scope: &str) -> bool {
+    let mut cursor = Some(page_id.to_string());
+    let mut guard = 0;
+    while let Some(id) = cursor {
+        if id == scope {
+            return true;
+        }
+        guard += 1;
+        if guard > 64 {
+            break;
+        }
+        cursor = ws.page(&id).and_then(|page| page.parent.clone());
+    }
+    false
+}
+
+pub fn page_matches(
+    ws: &Workspace,
+    page: &Page,
+    query: &str,
+    title_only: bool,
+    created_by: Option<&str>,
+    in_page: Option<&str>,
+    has_comments: bool,
+) -> bool {
+    let query = query.trim().to_lowercase();
+    if title_only && !query.is_empty() && !page.title.to_lowercase().contains(&query) {
+        return false;
+    }
+    if let Some(name) = created_by
+        && page.created_by != name
+    {
+        return false;
+    }
+    if let Some(scope) = in_page
+        && !page_in_scope(ws, &page.id, scope)
+    {
+        return false;
+    }
+    if has_comments && page.comments.is_empty() {
+        return false;
+    }
+    true
+}
+
+fn build_new_tab_rows(
+    ws: &Workspace,
+    view: &ViewState,
+    choices: &[NewTabChoice],
+) -> Vec<SwitcherRow> {
     choices
         .iter()
+        .filter(|choice| match choice {
+            NewTabChoice::Page(id) => ws.page(id).is_some_and(|page| {
+                page_matches(
+                    ws,
+                    page,
+                    &view.new_tab_query,
+                    view.search_title_only,
+                    view.search_created_by.as_deref(),
+                    view.search_in.as_deref(),
+                    view.search_has_comments,
+                )
+            }),
+            _ => true,
+        })
         .enumerate()
         .map(|(index, choice)| {
             let (label, icon, id, special, detail) = match choice {
@@ -74,6 +137,19 @@ fn build_new_tab_rows(ws: &Workspace, choices: &[NewTabChoice]) -> Vec<SwitcherR
 fn build_search_rows(ws: &Workspace, view: &ViewState) -> Vec<SwitcherRow> {
     view.search_results
         .iter()
+        .filter(|result| {
+            ws.page(&result.page_id).is_some_and(|page| {
+                page_matches(
+                    ws,
+                    page,
+                    &view.search_query,
+                    view.search_title_only,
+                    view.search_created_by.as_deref(),
+                    view.search_in.as_deref(),
+                    view.search_has_comments,
+                )
+            })
+        })
         .enumerate()
         .map(|(index, result)| {
             let page = ws.page(&result.page_id);
@@ -109,13 +185,13 @@ fn switcher_spec<'a>(
         selected,
         highlight: view.highlight_pane,
         filters: view.filters,
+        title_only: view.search_title_only,
+        created_by: view.search_created_by.as_deref(),
+        in_page: view.search_in.as_deref(),
+        has_comments: view.search_has_comments,
+        members: view.share_members.as_slice(),
         mode,
         ws,
-        ai_query: &view.ai_query,
-        ai_status: &view.ai_status,
-        ai_answer: view.ai_answer.as_deref(),
-        ai_error: view.ai_error.as_deref(),
-        ai_busy: view.ai_busy,
     }
 }
 
@@ -127,7 +203,7 @@ pub(crate) fn render_new_tab(
     commands: &mut Vec<Command>,
 ) {
     let choices = new_tab_choices(ws, &view.new_tab_query);
-    let rows = build_new_tab_rows(ws, &choices);
+    let rows = build_new_tab_rows(ws, view, &choices);
     let spec = switcher_spec(
         "new_tab_switcher",
         "Open in new tab...",
@@ -151,7 +227,7 @@ pub(crate) fn render_search(
     let rows = build_search_rows(ws, view);
     let spec = switcher_spec(
         "quick_search",
-        "Search or ask a question...",
+        "Search...",
         &view.search_query,
         &rows,
         view.search_selected,

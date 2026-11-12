@@ -36,7 +36,13 @@ pub struct Page {
     pub data_source_id: Option<String>,
     #[serde(default)]
     pub properties: std::collections::BTreeMap<String, PageProperty>,
+    #[serde(default = "default_created_by")]
+    pub created_by: String,
     pub updated_at: String,
+}
+
+fn default_created_by() -> String {
+    "Workspace Owner".to_string()
 }
 
 impl Page {
@@ -59,6 +65,7 @@ impl Page {
             rows: Vec::new(),
             data_source_id: None,
             properties: std::collections::BTreeMap::new(),
+            created_by: default_created_by(),
             updated_at: now_label(),
         }
     }
