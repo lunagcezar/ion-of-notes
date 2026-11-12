@@ -314,7 +314,7 @@ Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
 
 ```sh
 cargo build
-# 250 core tests without eframe/egui/wgpu
+# 251 core tests without eframe/egui/wgpu
 cargo test --all-targets --no-default-features
 # 35 desktop tests with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
@@ -322,7 +322,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-`cargo test --all-targets` still runs all default-feature tests (285), but the
+`cargo test --all-targets` still runs all default-feature tests (286), but the
 two passes above avoid linking the window into the core test binaries.
 
 Full gate, including Markdown link/Mermaid/table checks:

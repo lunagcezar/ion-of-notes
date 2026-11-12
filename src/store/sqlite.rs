@@ -107,8 +107,10 @@ impl SqliteStore {
                 .optional()
         })?;
         json.map(|json| {
-            serde_json::from_str(&json)
-                .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+            let mut workspace: Workspace = serde_json::from_str(&json)
+                .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+            workspace.normalize_legacy_icons();
+            Ok(workspace)
         })
         .transpose()
     }

@@ -142,8 +142,9 @@ pub(super) fn render_switcher(
     commands: &mut Vec<Command>,
 ) {
     let screen = ctx.viewport_rect();
-    let width = if spec.highlight { 1000.0 } else { 600.0 };
-    let size = Vec2::new(width, 690.0);
+    let width = (if spec.highlight { 1000.0_f32 } else { 600.0 }).min(screen.width() - 40.0);
+    let height = 690.0_f32.min(screen.height() - 120.0).max(360.0);
+    let size = Vec2::new(width, height);
     let pos = Pos2::new(
         screen.left() + ((screen.width() - size.x) / 2.0).max(0.0),
         screen.top() + 110.0,

@@ -331,6 +331,20 @@ fn new_pages_default_to_the_workspace_owner_and_hidden_sections_are_skipped() {
 }
 
 #[test]
+fn legacy_p_icons_are_cleared_when_the_title_does_not_start_with_p() {
+    let mut ws = Workspace::new("w");
+    let mut untitled = Page::new("u", "Untitled", "P");
+    untitled.parent = None;
+    let mut projects = Page::new("p", "Projects", "P");
+    projects.parent = None;
+    ws.add_page(untitled).unwrap();
+    ws.add_page(projects).unwrap();
+    ws.normalize_legacy_icons();
+    assert!(ws.page("u").unwrap().icon.is_empty());
+    assert_eq!(ws.page("p").unwrap().icon, "P");
+}
+
+#[test]
 fn sidebar_tabs_own_sections_and_keep_at_least_one_tab() {
     let mut layout = SidebarLayout::default();
     assert_eq!(layout.tabs.len(), 1);

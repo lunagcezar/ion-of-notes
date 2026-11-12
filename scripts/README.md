@@ -34,7 +34,7 @@ a pre-commit hook.
 
 - The Markdown checks ignore `target/`, `.git/` and `node_modules/`.
 - `check-tests.ps1` runs `cargo test --all-targets --no-default-features`
-  (250 core tests) and then the four UI test crates with `--features desktop`
+  (251 core tests) and then the four UI test crates with `--features desktop`
   (35 tests). It prints only the summary by default; use `-VerboseOutput` to
   see the full `cargo test` output.
 - `smoke-server.ps1` and `smoke-docker.ps1` are opt-in runtime smokes; the

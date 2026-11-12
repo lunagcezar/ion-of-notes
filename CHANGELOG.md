@@ -23,7 +23,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   persisted tab/section state.
 - Workspace, four-point and app-menu popovers are anchored to their controls;
   the inbox starts at the sidebar edge and fills the height below the tab bar.
-- Added a sidebar-tab model test; suite: 285 tests.
+- Added sidebar-tab and legacy-P migration tests; suite: 286 tests.
 
 ### Changed - spec-067 runtime smoke tests
 

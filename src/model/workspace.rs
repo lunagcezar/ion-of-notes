@@ -120,6 +120,22 @@ impl Workspace {
         }
     }
 
+    /// Clear the legacy `"P"` icon default when it does not match the title's
+    /// first letter, so old pages regain the title-letter fallback (spec-068).
+    pub fn normalize_legacy_icons(&mut self) {
+        for page in &mut self.pages {
+            let first = page
+                .title
+                .chars()
+                .next()
+                .map(|ch| ch.to_uppercase().next())
+                .unwrap_or(None);
+            if page.icon == "P" && first != Some('P') {
+                page.icon.clear();
+            }
+        }
+    }
+
     /// Lifetime block usage of the whole workspace (spec-037).
     pub fn block_count(&self) -> u64 {
         self.pages.iter().map(Page::block_count).sum()

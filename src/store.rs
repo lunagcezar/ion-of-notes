@@ -176,7 +176,9 @@ pub fn save(path: &Path, workspace: &Workspace) -> io::Result<()> {
 
 /// Read a workspace snapshot from JSON.
 pub fn load(path: &Path) -> io::Result<Workspace> {
-    read_json(path)
+    let mut workspace: Workspace = read_json(path)?;
+    workspace.normalize_legacy_icons();
+    Ok(workspace)
 }
 
 /// Load the workspace, or create and save a neutral demo workspace.
@@ -195,7 +197,13 @@ pub fn load_or_seed(path: &Path) -> Workspace {
 /// catalog file does not exist yet (spec-058).
 pub fn load_catalog_or_seed(path: &Path, workspace_path: &Path) -> crate::model::WorkspaceCatalog {
     match read_json::<crate::model::WorkspaceCatalog>(path) {
-        Ok(catalog) if !catalog.workspaces.is_empty() => catalog,
+        Ok(catalog) if !catalog.workspaces.is_empty() => {
+            let mut catalog = catalog;
+            for workspace in &mut catalog.workspaces {
+                workspace.normalize_legacy_icons();
+            }
+            catalog
+        }
         _ => {
             let workspace = load_or_seed(workspace_path);
             let catalog = crate::model::WorkspaceCatalog::new(workspace);
