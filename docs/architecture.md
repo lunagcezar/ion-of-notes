@@ -108,6 +108,7 @@ src/
                      (typed results)
     handlers/        one module per v2 resource family; comments uses typed
                      handler errors, user/file keeps the legacy adapter
+    services/        auth and webhook service modules
     error.rs         HandlerError, HandlerResult and body() for v2 handlers
     response.rs      Envelope/json/error helpers
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)

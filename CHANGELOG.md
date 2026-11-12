@@ -6,6 +6,12 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-091 server service modules
+
+- Moved auth and webhook logic from `server/handlers/` to `server/services/`.
+  The methods remain inherent on `WorkspaceServer`; the module is the seam for
+  a later owned-service extraction.
+
 ### Changed - spec-090 complete typed handlers
 
 - Converted `crdt`, `lists` and `shared` to `HandlerResult` with `ok`/`fail`

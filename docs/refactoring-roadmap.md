@@ -23,7 +23,7 @@ deliberately deferred. It complements `docs/architecture.md` and
 | Item | Why it is deferred | Suggested first slice |
 | ---- | ------------------ | --------------------- |
 | Typed handler errors | All v2 resource adapters now return `HandlerResult<Option<ApiResponse>>`; the dispatcher attaches the request ID once. | — |
-| Service split | `WorkspaceServer` still owns workspace, collaboration, auth, webhooks, limits, realtime and CRDT. | Extract `AuthService` and `WebhookService` first; keep `WorkspaceServer` as a facade. |
+| Service split | Auth and webhook logic now live in `server/services/`; the methods are still inherent on `WorkspaceServer`. | Extract owned `AuthService`/`WebhookService` structs and move state into them. |
 | Domain events | Handlers still call `emit_webhook`, `write` and `persist_collab` by hand (about 24 sites). | Add an event list to the write path; persist/change-feed/webhook subscribers. |
 | Store ports | `WorkspaceStore` and `CollabStore` still have the same shape and separate null adapters. | Do not collapse them until a second backend needs the generic form; an abstraction for its own sake is not worth it. |
 | Second HTTP adapter | `server/http.rs` remains a hand-written HTTP/1.1 parser used by tests and `serve_once`. | Keep it as an explicit compatibility adapter or move it under test support after checking every caller. |

@@ -33,7 +33,8 @@ in what order, and which document is the source of truth for each concern.
   `spec-087` is implemented (typed handler errors and the comments use case);
   `spec-088` is implemented (SearchState/SearchView grouping); `spec-089` is
   implemented (typed handlers for the remaining resource families);
-  `spec-090` is implemented (complete typed handler conversion). The
+  `spec-090` is implemented (complete typed handler conversion); `spec-091` is
+  implemented (auth and webhook service modules). The
   v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
