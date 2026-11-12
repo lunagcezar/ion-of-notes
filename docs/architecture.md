@@ -104,9 +104,11 @@ src/
       v2.rs          version/auth/limit/capability/authorization pipeline
       capabilities.rs route_capability facade over the policy table
       policy.rs      one RoutePolicy table (capability, limits, flags)
-    usecases/        pages, workspace and sharing use cases (typed results)
-    handlers/        one module per v2 resource family; shared.rs adapts the
-                     page/workspace/sharing use cases
+    usecases/        pages, workspace, sharing and comments use cases
+                     (typed results)
+    handlers/        one module per v2 resource family; comments uses typed
+                     handler errors, user/file keeps the legacy adapter
+    error.rs         HandlerError, HandlerResult and body() for v2 handlers
     response.rs      Envelope/json/error helpers
     http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
     web/             Axum/Tokio HTTP + WebSocket adapter for --serve

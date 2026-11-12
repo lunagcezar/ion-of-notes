@@ -124,6 +124,7 @@ Status vocabulary:
 | [084](spec-084-client-resource-modules.md) | Resource-oriented client modules | implemented | Client split by resource |
 | [085](spec-085-transport-adapter-split.md) | Transport adapter split | implemented | `server/web/` and `remote/` modules |
 | [086](spec-086-refactoring-round-ii.md) | Refactoring round II | implemented | Status and deferred roadmap |
+| [087](spec-087-typed-handler-errors-and-comments.md) | Typed handler errors and comments use case | implemented | `HandlerResult`, comments use case, feature-specific handler |
 
 ## 3. Work status
 

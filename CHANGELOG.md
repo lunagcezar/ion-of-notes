@@ -6,6 +6,17 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-087 typed handler errors and comments
+
+- Added `server/error.rs` with `HandlerError`, `HandlerResult<T>`, `body<T>()`
+  and `handler_error`.
+- Extracted comments into `server/usecases/comments.rs` (list/create/update/
+  delete, attachment validation, parent/display-name resolution, webhooks).
+- Added the typed `server/handlers/comments.rs` adapter; users and file uploads
+  now live in `handlers/user_file.rs`.
+- The remaining handlers still use the legacy `v2_error` path and are tracked
+  in the refactoring roadmap. Suite: 312 tests.
+
 ### Changed - spec-082..086 refactoring round II
 
 - Extracted the v2 version/auth/limits/capability/authorization stages into

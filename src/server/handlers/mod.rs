@@ -3,10 +3,11 @@
 
 mod auth;
 mod blocks;
-mod content;
+mod comments;
 mod crdt;
 mod databases;
 mod lists;
 mod shared;
+mod user_file;
 mod views;
 mod webhooks;

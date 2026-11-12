@@ -20,7 +20,7 @@ deliberately deferred. It complements `docs/architecture.md` and
 
 | Item | Why it is deferred | Suggested first slice |
 | ---- | ------------------ | --------------------- |
-| Typed handler errors | There are still ~176 `v2_error`/`parse_body` occurrences. A full `HandlerError`/`ApiResult` change touches every handler signature. | Introduce `HandlerResult<T>` and a `body<T>()` extractor, then convert `content.rs` comments before databases/views. |
+| Typed handler errors | The `HandlerError`/`HandlerResult`/`body()` foundation and the comments handler are converted; users/files, databases, views, blocks, webhooks and auth still use `v2_error`. | Convert `user_file.rs`, then databases/views. |
 | Service split | `WorkspaceServer` still owns workspace, collaboration, auth, webhooks, limits, realtime and CRDT. | Extract `AuthService` and `WebhookService` first; keep `WorkspaceServer` as a facade. |
 | Domain events | Handlers still call `emit_webhook`, `write` and `persist_collab` by hand (about 24 sites). | Add an event list to the write path; persist/change-feed/webhook subscribers. |
 | Store ports | `WorkspaceStore` and `CollabStore` still have the same shape and separate null adapters. | Do not collapse them until a second backend needs the generic form; an abstraction for its own sake is not worth it. |

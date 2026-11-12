@@ -2,6 +2,7 @@
 //! resource handlers.
 
 use super::super::contract::{CODE_NOT_FOUND, RequestLogEntry, new_request_id};
+use super::super::error::handler_error;
 use super::super::response::{v2_error, write_timeout_response};
 use super::super::{ApiRequest, ApiResponse, Method, WorkspaceServer};
 use super::pipeline;
@@ -78,8 +79,14 @@ impl WorkspaceServer {
         if let Some(response) = self.handle_v2_webhook(request, path, request_id) {
             return Ok(response);
         }
+        if let Some(response) = self
+            .handle_v2_comments(request, path, query, request_id)
+            .map_err(|error| handler_error(error, request_id))?
+        {
+            return Ok(response);
+        }
         if let Some(response) =
-            self.handle_v2_comment_user_file(request, path, query, request_id, &connection)
+            self.handle_v2_user_file(request, path, query, request_id, &connection)
         {
             return Ok(response);
         }
