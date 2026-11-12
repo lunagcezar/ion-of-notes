@@ -561,7 +561,7 @@ impl NotionApp {
             workspace_dialog,
             workspace_name,
             workspace_icon,
-            grid_menu_open: false,
+            grid_menu_open: demo == "grid-menu",
             drag_from: None,
             drag_to: None,
             drag_before: false,
