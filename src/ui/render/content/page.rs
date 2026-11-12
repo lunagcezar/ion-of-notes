@@ -386,23 +386,29 @@ fn render_page(
         let forced = view.focus_block.as_deref() == Some(block.id.as_str())
             || view.slash_for.as_deref() == Some(block.id.as_str())
             || view.page_selection.iter().any(|id| id == &block.id);
-        let cached = heights.get(&block.id).copied();
         let fingerprint = block_fingerprint(block);
-        if !interactive
+        let cached = heights
+            .get(&block.id)
+            .copied()
+            .filter(|entry| entry.fingerprint == fingerprint);
+        let below = top > viewport.bottom() + overscan;
+        let height = cached.map(|entry| entry.height).unwrap_or_else(|| {
+            crate::ui::estimate_block_height(block.kind, block.text.chars().count())
+        });
+        let can_skip = !interactive
             && !forced
-            && let Some(entry) = cached
-            && entry.fingerprint == fingerprint
+            && (cached.is_some() || below)
             && crate::ui::block_outside_viewport(
                 top,
-                entry.height,
+                height,
                 (viewport.top(), viewport.bottom()),
                 overscan,
-            )
-        {
+            );
+        if can_skip {
             if block.kind.is_heading() {
                 ui.add_space(BLOCK_HEADING_GAP);
             }
-            ui.add_space(entry.height + BLOCK_GAP);
+            ui.add_space(height + BLOCK_GAP);
             continue;
         }
         if block.kind.is_heading() {

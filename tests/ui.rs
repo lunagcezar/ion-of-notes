@@ -14,8 +14,8 @@ use ion_of_notes::ui::{
 };
 use ion_of_notes::ui::{
     EMOJI, ICONS, app_bar_left_width, block_outside_viewport, catalog_matches, drop_index,
-    frame_may_mutate, glyph_visual_offset, index_cursors, page_icon_letter, search_page_matches,
-    split_index,
+    estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors, page_icon_letter,
+    search_page_matches, split_index,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -295,6 +295,21 @@ fn block_viewport_culling_keeps_the_overscan_band() {
     assert!(!block_outside_viewport(90.0, 40.0, viewport, 100.0));
     assert!(!block_outside_viewport(480.0, 40.0, viewport, 100.0));
     assert!(block_outside_viewport(650.0, 40.0, viewport, 100.0));
+}
+
+#[test]
+fn uncached_block_estimates_grow_with_kind_and_text() {
+    assert!(
+        estimate_block_height(BlockKind::Heading1, 0)
+            > estimate_block_height(BlockKind::Paragraph, 0)
+    );
+    assert!(
+        estimate_block_height(BlockKind::Paragraph, 400)
+            > estimate_block_height(BlockKind::Paragraph, 0)
+    );
+    assert!(
+        estimate_block_height(BlockKind::Table, 0) > estimate_block_height(BlockKind::TableRow, 0)
+    );
 }
 
 #[test]

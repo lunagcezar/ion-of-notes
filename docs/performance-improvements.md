@@ -26,6 +26,8 @@ the whole workspace.
 | `spec-109` | Incremental search document cache in `Workspace`. | Re-indexes only pages mutated since the last query. |
 | `spec-110` | Block height cache + viewport culling; table row culling and board grouping. | Stops rendering unchanged offscreen blocks/rows after the first measured frame. |
 | `spec-111` | Immutable v1 read snapshots outside the server mutex. | `/api/workspace`, `/api/pages` and `/api/pages/{id}` serialize without holding the server lock; writes stay ordered. |
+| `spec-112` | Cache remote cursor text widths. | Reuses measured cursor geometry instead of rebuilding prefixes every frame. |
+| `spec-113` | Estimate uncached block heights. | Skips far-below blocks on the first frame; measured heights replace estimates once rendered. |
 
 The existing good decisions are preserved: cached filtered icon indices,
 `ScrollArea::show_rows` virtualization for the icon grid, the debounced edit
@@ -37,8 +39,8 @@ queue, the background WebSocket, and background webhook delivery.
 | ----- | ---- | ---------------- |
 | 2 | Bounded remote API worker for REST, search and CRDT sync | Implemented in `spec-108`: one worker per connection, latest-search coalescing, in-flight commit coalescing and a synchronous CRDT fallback when the queue is full. |
 | 3 | Incremental search index | Implemented in `spec-109`: per-page documents, dirty-page invalidation and a clone-reset runtime cache. |
-| 3 | Block virtualization with measured heights | Implemented conservatively in `spec-110`: measured heights plus viewport/overscan culling; the first frame still renders every block. |
-| 3 | Cursor geometry cache | Not implemented; cursor text widths are still measured during rendering. |
+| 3 | Block virtualization with measured heights | Implemented in `spec-110`/`spec-113`: measured heights plus viewport/overscan culling and first-frame estimates for far-below blocks. |
+| 3 | Cursor geometry cache | Implemented in `spec-112`: cached text widths keyed by text hash, index, font size and family. |
 | 3 | Database table/board virtualization | Implemented in `spec-110`: offscreen rows advance by a fixed height and board columns share one status grouping. |
 | 4 | Immutable server read snapshots + ordered writer | Implemented for the expensive v1 reads in `spec-111`; writes still use the ordered mutex and v2 stays on the locked pipeline for policy/limits. |
 | 4 | Incremental SQLite persistence | Deferred by measurement: see `docs/performance-roadmap.md`. |
