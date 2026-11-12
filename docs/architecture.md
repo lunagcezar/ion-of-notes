@@ -88,16 +88,19 @@ src/
   collab/
     export.rs        markdown/CSV export tree
   auth.rs            accounts, Argon2id passwords, sessions, AuthStore port
-  store.rs           WorkspaceStore + CollabStore + AuthStore ports and JSON adapters
+  store.rs           WorkspaceStore + CollabStore + SnapshotStore + AuthStore
+                     ports and JSON adapters
   store/
-    sqlite.rs        SQLite adapter for workspace, collaboration and auth
+    sqlite.rs        SQLite adapter for workspace, collaboration, auth and
+                     atomic snapshots
   server.rs          facade: contract DTOs, WorkspaceApi, WorkspaceServer state,
                      constructors, persistence and top-level dispatch
   server/
     routes.rs        WorkspaceApi implementation and route facade
     routes/
-      v1.rs          legacy v1 adapter over the use cases
-      v2.rs          version/auth/limit/capability pipeline
+      v1.rs          legacy v1 adapter over the use cases; session token required
+                     when an auth store is configured
+      v2.rs          version/auth/limit/capability/authorization pipeline
       capabilities.rs public route_capability table
     usecases/        pages, workspace and sharing use cases (typed results)
     handlers/        one module per v2 resource family; shared.rs adapts the
@@ -306,13 +309,28 @@ shared".
 
 - **SRP:** one cohesive responsibility per module; UI state, command
   application, rendering, dialogs and domain are separate.
-- **OCP/DIP:** new stores/transports implement `WorkspaceStore`, `CollabStore`
-  or `WorkspaceApi`; the server does not change.
+- **OCP/DIP:** new stores/transports implement `WorkspaceStore`, `CollabStore`,
+  `SnapshotStore` or `WorkspaceApi`; the server does not change.
 - **ISP:** ports are tiny (`persist`, `handle`).
 - **LSP:** `NoStore`, `JsonStore`, `NoCollabStore`, `JsonCollabStore` and test
   stubs are interchangeable.
 - **Selective DDD:** the workspace is one bounded context; invariants live at
   `Workspace`/server boundaries. There is no empty layer scaffold.
+
+### Security boundary
+
+- `AuthStore::requires_auth()` separates the local `NoAuthStore` from
+  production-capable stores. v1 and v2 require a session token when it is
+  `true`; `/health` remains public.
+- The demo `owner-token` connection is registered only for `NoAuthStore`.
+- Session capabilities are derived from the member role, and page access is
+  resolved by `WorkspaceServer::page_access` (owner, direct share,
+  page-general, workspace-general). See `docs/authorization.md`.
+- Workspace and collaboration snapshots commit through `SnapshotStore`; SQLite
+  uses one transaction and a failed write reloads the durable state. See
+  `docs/persistence-integrity.md`.
+- Webhook targets reject private/loopback/link-local hosts and are resolved
+  again before delivery. See `docs/security-hardening.md`.
 
 ### Clean Architecture
 

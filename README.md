@@ -432,6 +432,11 @@ eframe, JSON files or sockets.
 | [`docs/deployment.md`](docs/deployment.md) | Container deployment, TLS, backups, secrets and upgrades |
 | [`docs/contributor-guide.md`](docs/contributor-guide.md) | SDD/TDD workflow and where code belongs |
 | [`docs/ui-guidelines.md`](docs/ui-guidelines.md) | Alignment, spacing and design constants |
+| [`docs/security-hardening.md`](docs/security-hardening.md) | Auth boundary, sessions, login limits and webhook egress |
+| [`docs/authorization.md`](docs/authorization.md) | Roles, capabilities and page access |
+| [`docs/persistence-integrity.md`](docs/persistence-integrity.md) | Atomic snapshots, failure reload and backup/restore |
+| [`docs/performance-roadmap.md`](docs/performance-roadmap.md) | Deferred performance/scale work and measurements |
+| [`docs/review-response.md`](docs/review-response.md) | Finding → response → spec → evidence map |
 | [`docs/testing.md`](docs/testing.md) | Test strategy, crates and fakes |
 | [`docs/glossary.md`](docs/glossary.md) | Shared vocabulary |
 | [`docs/api-contract.md`](docs/api-contract.md) | Implemented v1/v2 routes and WebSocket messages |

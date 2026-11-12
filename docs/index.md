@@ -9,7 +9,8 @@ in what order, and which document is the source of truth for each concern.
 | -------- | ------------------ |
 | New contributor | `README.md` → `docs/architecture.md` → `docs/contributor-guide.md` → `docs/testing.md` → `docs/glossary.md` |
 | Agent starting a task | `AGENTS.md` → `spec/README.md` → `docs/architecture.md` → the relevant spec → `docs/review-findings.md` |
-| Working on the server/API | `docs/api-contract.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014 |
+| Working on the server/API | `docs/api-contract.md` → `docs/security-hardening.md` → `docs/authorization.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014 |
+| Reviewing a security finding | `docs/review-response.md` → `docs/security-hardening.md` → `docs/authorization.md` → the relevant spec |
 | Deploying the server | `docs/deployment.md` → `compose.yml` → `Dockerfile` → `spec-050`/`spec-051` |
 | Reviewing quality | `docs/review-findings.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/ui-guidelines.md` → `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
@@ -22,8 +23,10 @@ in what order, and which document is the source of truth for each concern.
   editor/AI responsiveness, settings formats, customizable sidebar);
   `spec-063` .. `spec-066` are implemented (bug-bashing II); `spec-067` is
   implemented (runtime smoke tests); `spec-068` .. `spec-071` are implemented
-  (bug-bashing III); `spec-072` is implemented (centralized UI metrics). The
-  v2 foundation, pagination, rich
+  (bug-bashing III); `spec-072` is implemented (centralized UI metrics);
+  `spec-073` .. `spec-077` are implemented (authentication boundary, atomic
+  persistence, webhook SSRF hardening, principal authorization and the review
+  response). The v2 foundation, pagination, rich
   text/blocks, properties/data sources, views, comments/users/files, webhooks,
   limits and the Axum adapter are implemented (specs 030-038); sessions/SQLite
   (spec-039), the WebSocket change feed (spec-040), TLS webhooks/shared limits
@@ -35,7 +38,7 @@ in what order, and which document is the source of truth for each concern.
   (spec-051), deployment hardening II (spec-052), the supply-chain/tooling baseline
   (spec-053), webhook reliability (spec-054), remote-mode UX (spec-055) and the production
   Compose/TLS manifest (spec-056) are implemented.
-- **Tests:** 289 tests across the core and desktop passes (252 + 37); both
+- **Tests:** 305 tests across the core and desktop passes (268 + 37); both
   clippy feature passes and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
   selects SQLite with Argon2id accounts and sessions. The desktop can connect
@@ -73,6 +76,11 @@ flowchart TD
     INDEX --> ARCH[docs/architecture.md]
     INDEX --> GUIDE[docs/contributor-guide.md]
     INDEX --> UIGUIDE[docs/ui-guidelines.md]
+    INDEX --> SEC[docs/security-hardening.md]
+    INDEX --> AUTHZ[docs/authorization.md]
+    INDEX --> PERSIST[docs/persistence-integrity.md]
+    INDEX --> PERF[docs/performance-roadmap.md]
+    INDEX --> REVIEWRESP[docs/review-response.md]
     INDEX --> TEST[docs/testing.md]
     INDEX --> GLOSS[docs/glossary.md]
     INDEX --> REVIEW[docs/review-findings.md]
@@ -103,6 +111,11 @@ flowchart TD
 | `docs/deployment.md` | operators | Container deployment, TLS/reverse proxy, backups, secrets, upgrades and hardening |
 | `docs/contributor-guide.md` | contributors, agents | Step-by-step SDD/TDD workflow and how to add features |
 | `docs/ui-guidelines.md` | UI contributors, agents | Alignment, margins, padding, design constants and how to add new UI tokens |
+| `docs/security-hardening.md` | operators, contributors | Auth boundary, owner password, login limits, sessions, request bounds and webhook egress |
+| `docs/authorization.md` | server contributors | Roles, capabilities, page access resolution and nested-resource gaps |
+| `docs/persistence-integrity.md` | operators, contributors | Atomic snapshots, failure reload, JSON limits and backup/restore |
+| `docs/performance-roadmap.md` | contributors | Deferred performance/scale work and the measurement plan |
+| `docs/review-response.md` | reviewers, maintainers | Finding → response → spec → evidence map for the 2026-11-12 reviews |
 | `docs/testing.md` | contributors, agents | Test strategy, test crates, fakes, red/green discipline |
 | `docs/glossary.md` | everyone | Shared vocabulary (domain, ports, adapters, DTOs, CRDT, clean room, …) |
 | `docs/review-findings.md` | maintainers, reviewers | Findings from the architecture/performance review and their resolution |

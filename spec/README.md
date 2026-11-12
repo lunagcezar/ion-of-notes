@@ -110,6 +110,11 @@ Status vocabulary:
 | [070](spec-070-sidebar-tabs-drag-and-remove.md) | Sidebar tabs, drag and remove | implemented | Sidebar tabs, section/shortcut drag, remove actions |
 | [071](spec-071-popover-positioning-and-inbox.md) | Popover positioning and inbox | implemented | Anchored menus and full-height inbox panel |
 | [072](spec-072-centralized-ui-metrics.md) | Centralized UI metrics | implemented | Constants-only layout module, even spacing scale, shared sidebar tokens |
+| [073](spec-073-authentication-boundary.md) | Authentication boundary and security hardening | implemented | v1 auth, no production owner token, login limits, request caps, timeouts |
+| [074](spec-074-atomic-persistence.md) | Atomic workspace and collaboration persistence | implemented | SnapshotStore port, SQLite transaction, reload after failure |
+| [075](spec-075-webhook-ssrf-hardening.md) | Webhook SSRF hardening | implemented | Private-host policy and delivery-time DNS guard |
+| [076](spec-076-principal-authorization.md) | Principal-aware authorization | implemented | Role capabilities, page shares, owner-only routes |
+| [077](spec-077-review-response.md) | Review response documentation and roadmap | implemented | Security/authorization/persistence/performance docs and finding map |
 
 ## 3. Work status
 

@@ -6,6 +6,24 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Changed - spec-073..077 review hardening
+
+- Added the authentication boundary: `AuthStore::requires_auth`, v1 token
+  enforcement, no production `owner-token`, token attachment for remote v1
+  calls, per-client/per-account login limits, request-log cap, session
+  connection cleanup, private session-file creation, request timeouts and a
+  fail-closed owner password.
+- Added atomic workspace/collaboration persistence through a `SnapshotStore`
+  port, a single SQLite transaction and durable-state reload after failure.
+- Hardened webhook egress with a private-host URL policy and a delivery-time
+  DNS resolution guard.
+- Added principal-aware authorization: role capabilities, direct/general page
+  share resolution, owner-only management routes and v1/v2 page checks.
+- Documented the response in `docs/security-hardening.md`,
+  `docs/authorization.md`, `docs/persistence-integrity.md`,
+  `docs/performance-roadmap.md` and `docs/review-response.md`; updated AGENTS,
+  README and the docs index. Suite: 305 tests.
+
 ### Changed - spec-072 centralized UI metrics
 
 - Added `src/ui/constants.rs`: a constants-only layout module with a base

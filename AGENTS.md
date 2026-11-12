@@ -613,6 +613,32 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
   `cargo test --features desktop --test ui ui_constants`.
 - Full guide: `docs/ui-guidelines.md`.
 
+### Security and review response
+
+- **Authentication boundary:** `AuthStore::requires_auth()` decides whether a
+  server is local or production-capable. Only `NoAuthStore` returns `false`.
+  v1 and v2 both require a session token when it returns `true`; `/health`
+  stays public.
+- **No demo credentials in production:** the `owner-token` connection is
+  registered only for `NoAuthStore`. Never add it to a constructor used with a
+  real auth store.
+- **Owner password:** production server mode fails closed unless
+  `ION_OF_NOTES_OWNER_PASSWORD` or `ION_OF_NOTES_OWNER_PASSWORD_FILE` is set.
+  `ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD=1` is the explicit development
+  override.
+- **Authorization:** route capabilities are coarse; page access is resolved by
+  `WorkspaceServer::page_access` (owner, direct share, page-general,
+  workspace-general). New page-scoped routes must call `can_read_page` /
+  `can_write_page`. See `docs/authorization.md`.
+- **Persistence:** mutations commit workspace and collaboration state through
+  `SnapshotStore` when available; SQLite uses one transaction and a failed
+  write reloads the durable state. See `docs/persistence-integrity.md`.
+- **Webhooks:** reject private/loopback/link-local HTTPS targets and resolve
+  the destination before delivery. See `docs/security-hardening.md`.
+- **Review response:** `docs/review-response.md` maps every 2026-11-12 review
+  finding to its spec, status and evidence. Update it when a finding is fixed
+  or explicitly deferred.
+
 ## Commands
 
 | Command                                  | Purpose                                  |
@@ -620,9 +646,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
-| `cargo test --all-targets --no-default-features` | Core integration tests (252, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (268, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (37) |
-| `cargo test --all-targets`               | All default-feature tests (289; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (305; the core-only seam test is skipped) |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, core + desktop tests, docs |
@@ -679,6 +705,11 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
   `docs/architecture.md`.
 - UI layout, alignment, spacing or design-token change → update
   `docs/ui-guidelines.md` and the relevant spec.
+- Authentication, authorization, persistence-integrity or webhook-egress change
+  → update `docs/security-hardening.md`, `docs/authorization.md`,
+  `docs/persistence-integrity.md` or `docs/review-response.md` as applicable.
+- Performance/scale proposal → update `docs/performance-roadmap.md` with the
+  measurement plan.
 - New term → update `docs/glossary.md`.
 - Each implemented spec → add a `CHANGELOG.md` entry and update
   `spec/README.md`.
@@ -705,6 +736,9 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
 - Rust API Guidelines: https://github.com/rust-lang/api-guidelines
 - UI layout, alignment and design constants: `docs/ui-guidelines.md`
   (constants use `SCREAMING_SNAKE_CASE` per the Rust API Guidelines / RFC 430).
+- Security hardening, authorization, persistence integrity and the 2026-11-12
+  review response: `docs/security-hardening.md`, `docs/authorization.md`,
+  `docs/persistence-integrity.md`, `docs/review-response.md`.
 - The Rust Programming Language, ch. 7 "Managing Growing Projects with
   Packages, Crates, and Modules":
   https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html

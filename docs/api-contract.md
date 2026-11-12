@@ -3,6 +3,12 @@
 This document is the reference for the **implemented** loopback API and the
 **decided** production API. It separates the two on purpose:
 
+> **Status note (2026-11-12):** the v2 API, sessions/Bearer auth, SQLite,
+> WebSocket/CRDT and the Axum adapter are implemented. The "decided, not built"
+> wording below is historical; see `docs/security-hardening.md`,
+> `docs/authorization.md` and `docs/review-response.md` for the current
+> security and implementation status.
+
 - **Implemented today:** the in-process `WorkspaceApi` and the optional
   `--serve` loopback HTTP/1.1 adapter, using unversioned `/api/...` routes.
 - **Decided, not built:** the self-hosted production shape under `/api/v1`,
@@ -22,6 +28,7 @@ pub struct ApiRequest {
     pub path: String,                      // "/api/pages/p-home?x=1"
     pub body: Option<String>,              // JSON text
     pub headers: BTreeMap<String, String>, // case-insensitive lookup
+    pub client_ip: Option<String>,         // login rate-limit key
 }
 
 pub struct ApiResponse {
