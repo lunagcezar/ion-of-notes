@@ -8,13 +8,14 @@ use super::super::response::{json, parse_body, v2_error};
 use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::auth::{self, LoginInput, Session, SessionInfo, SessionResponse};
 use crate::model::now_iso;
-use std::sync::OnceLock;
+
+/// A fixed Argon2id PHC hash used to spend the same time on an unknown email
+/// as on a wrong password. Keeping a constant avoids the old fallback to an
+/// empty string, which verified instantly and leaked the user's existence.
+const DUMMY_PASSWORD_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$eNIxuRokkbdzdfoxHu4L5A$4E/l20JT6e/N/w/QRO3naDcbmqS7GDcU2FvibgIbQOc";
 
 fn dummy_password_hash() -> &'static str {
-    static HASH: OnceLock<String> = OnceLock::new();
-    HASH.get_or_init(|| {
-        auth::hash_password("ion-of-notes-dummy-password").unwrap_or_else(|_| String::new())
-    })
+    DUMMY_PASSWORD_HASH
 }
 
 impl WorkspaceServer {
@@ -127,7 +128,7 @@ impl WorkspaceServer {
                 ));
             }
             // The demo owner token is not a persisted session; keep it usable.
-            if connection.id.starts_with("session-") {
+            if connection.kind == crate::server::contract::ConnectionKind::Session {
                 self.runtime
                     .connections
                     .retain(|existing| existing.token != connection.token);

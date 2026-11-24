@@ -87,20 +87,30 @@ fn collab_path_for(workspace_path: &Path) -> PathBuf {
 }
 
 /// Compose the object graph for the `--serve` loopback API server.
-pub fn build_server() -> WorkspaceServer {
+pub fn build_server() -> io::Result<WorkspaceServer> {
     build_server_at_paths(store::data_path(), store::collab_path())
 }
 
 /// Compose a server backed by the JSON files derived from `path`.
-pub fn build_server_at(path: PathBuf) -> WorkspaceServer {
+pub fn build_server_at(path: PathBuf) -> io::Result<WorkspaceServer> {
     let collab_path = collab_path_for(&path);
     build_server_at_paths(path, collab_path)
 }
 
 /// Compose a server backed by explicit workspace and collaboration paths.
-pub fn build_server_at_paths(workspace_path: PathBuf, collab_path: PathBuf) -> WorkspaceServer {
-    let workspace = store::load_or_seed(&workspace_path);
-    WorkspaceServer::with_paths(workspace, workspace_path, collab_path)
+///
+/// A corrupt or unreadable workspace is an error, not a reason to seed and
+/// overwrite it.
+pub fn build_server_at_paths(
+    workspace_path: PathBuf,
+    collab_path: PathBuf,
+) -> io::Result<WorkspaceServer> {
+    let workspace = store::load_or_seed(&workspace_path)?;
+    Ok(WorkspaceServer::with_paths(
+        workspace,
+        workspace_path,
+        collab_path,
+    ))
 }
 
 /// Compose and run the Axum API server for `--serve`.
@@ -110,7 +120,7 @@ pub fn build_server_at_paths(workspace_path: PathBuf, collab_path: PathBuf) -> W
 pub fn serve(addr: &str, database: Option<PathBuf>) -> io::Result<()> {
     let server = match database {
         Some(database) => build_server_sqlite(database)?,
-        None => build_server(),
+        None => build_server()?,
     };
     crate::server::serve_axum(addr, server)
 }
@@ -141,7 +151,7 @@ pub fn build_server_sqlite_at_with_password(
     let workspace = match sqlite.load_workspace()? {
         Some(workspace) => workspace,
         None => {
-            let workspace = store::load_or_seed(&workspace_path);
+            let workspace = store::load_or_seed(&workspace_path)?;
             sqlite.persist_workspace(&workspace)?;
             workspace
         }
@@ -232,16 +242,16 @@ fn owner_password() -> io::Result<String> {
 }
 
 /// Compose the object graph for the desktop window.
-pub fn build_desktop() -> (Client<DesktopApi>, Workspace) {
+pub fn build_desktop() -> io::Result<(Client<DesktopApi>, Workspace)> {
     build_desktop_at_paths(store::data_path(), store::collab_path())
 }
 
 /// Compose the desktop client plus the persisted workspace catalog (spec-058).
-pub fn build_desktop_catalog() -> (
+pub fn build_desktop_catalog() -> io::Result<(
     Client<DesktopApi>,
     Workspace,
     crate::model::WorkspaceCatalog,
-) {
+)> {
     build_desktop_catalog_at_paths(store::data_path(), store::collab_path())
 }
 
@@ -249,24 +259,24 @@ pub fn build_desktop_catalog() -> (
 pub fn build_desktop_catalog_at_paths(
     workspace_path: PathBuf,
     collab_path: PathBuf,
-) -> (
+) -> io::Result<(
     Client<DesktopApi>,
     Workspace,
     crate::model::WorkspaceCatalog,
-) {
+)> {
     let catalog_path = workspace_path.with_file_name("workspaces.json");
-    let catalog = store::load_catalog_or_seed(&catalog_path, &workspace_path);
-    let active = catalog
-        .active()
-        .cloned()
-        .unwrap_or_else(|| store::load_or_seed(&workspace_path));
+    let catalog = store::load_catalog_or_seed(&catalog_path, &workspace_path)?;
+    let active = match catalog.active().cloned() {
+        Some(active) => active,
+        None => store::load_or_seed(&workspace_path)?,
+    };
     let mut client = Client::new(DesktopApi::Local(Box::new(WorkspaceServer::with_paths(
         active.clone(),
         workspace_path,
         collab_path,
     ))));
     let workspace = client.workspace().unwrap_or(active);
-    (client, workspace, catalog)
+    Ok((client, workspace, catalog))
 }
 
 /// Compose a remote desktop client over HTTP and WebSocket.
@@ -281,7 +291,7 @@ pub fn build_remote_desktop(
 }
 
 /// Compose a desktop client backed by the JSON files derived from `path`.
-pub fn build_desktop_at(path: PathBuf) -> (Client<DesktopApi>, Workspace) {
+pub fn build_desktop_at(path: PathBuf) -> io::Result<(Client<DesktopApi>, Workspace)> {
     let collab_path = collab_path_for(&path);
     build_desktop_at_paths(path, collab_path)
 }
@@ -291,13 +301,30 @@ pub fn build_desktop_at(path: PathBuf) -> (Client<DesktopApi>, Workspace) {
 pub fn build_desktop_at_paths(
     workspace_path: PathBuf,
     collab_path: PathBuf,
-) -> (Client<DesktopApi>, Workspace) {
-    let loaded = store::load_or_seed(&workspace_path);
+) -> io::Result<(Client<DesktopApi>, Workspace)> {
+    let loaded = store::load_or_seed(&workspace_path)?;
     let mut client = Client::new(DesktopApi::Local(Box::new(WorkspaceServer::with_paths(
         loaded.clone(),
         workspace_path,
         collab_path,
     ))));
     let workspace = client.workspace().unwrap_or(loaded);
-    (client, workspace)
+    Ok((client, workspace))
+}
+
+/// In-memory desktop client used when the durable workspace cannot be read.
+///
+/// It never writes, so the corrupt or unreadable file stays available for
+/// recovery. The window can still open and tell the user what happened.
+pub fn fallback_desktop() -> (
+    Client<DesktopApi>,
+    Workspace,
+    crate::model::WorkspaceCatalog,
+) {
+    let workspace = Workspace::seed("ion-of-notes");
+    let catalog = crate::model::WorkspaceCatalog::new(workspace.clone());
+    let client = Client::new(DesktopApi::Local(Box::new(WorkspaceServer::new(
+        workspace.clone(),
+    ))));
+    (client, workspace, catalog)
 }

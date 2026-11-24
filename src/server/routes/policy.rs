@@ -141,7 +141,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::ReadContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -151,7 +151,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::InsertContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -161,7 +161,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::ReadContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -171,7 +171,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::InsertContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -181,7 +181,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::ReadContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -191,7 +191,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::InsertContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -221,7 +221,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::ReadContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -341,7 +341,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::ReadContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -443,7 +443,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::UpdateContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -453,7 +453,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::InsertContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {
@@ -493,7 +493,7 @@ pub const ROUTES: &[RoutePolicy] = &[
         suffix: None,
         capability: Capability::ReadContent,
         block_limit: BlockLimit::None,
-        owner_only: false,
+        owner_only: true,
         page_scoped: false,
     },
     RoutePolicy {

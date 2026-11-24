@@ -81,35 +81,33 @@ impl SearchCacheCell {
     }
 
     fn documents<'a>(&'a self, pages: &[Page]) -> MutexGuard<'a, SearchCache> {
-        {
-            let mut cache = self
-                .0
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
-            if !cache.initialized {
-                cache.documents.clear();
-                cache.dirty = pages.iter().map(|page| page.id.clone()).collect();
-                cache.initialized = true;
-            }
-            if !cache.dirty.is_empty() {
-                let dirty = std::mem::take(&mut cache.dirty);
-                for page_id in dirty {
-                    match pages.iter().find(|page| page.id == page_id) {
-                        Some(page) => {
-                            cache
-                                .documents
-                                .insert(page_id, SearchDocument::from_page(page));
-                        }
-                        None => {
-                            cache.documents.remove(&page_id);
-                        }
+        let mut cache = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if !cache.initialized {
+            cache.documents.clear();
+            cache.dirty = pages.iter().map(|page| page.id.clone()).collect();
+            cache.initialized = true;
+        }
+        if !cache.dirty.is_empty() {
+            let dirty = std::mem::take(&mut cache.dirty);
+            let by_id: HashMap<&str, &Page> =
+                pages.iter().map(|page| (page.id.as_str(), page)).collect();
+            for page_id in dirty {
+                match by_id.get(page_id.as_str()) {
+                    Some(page) => {
+                        cache
+                            .documents
+                            .insert(page_id, SearchDocument::from_page(page));
+                    }
+                    None => {
+                        cache.documents.remove(&page_id);
                     }
                 }
             }
         }
-        self.0
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+        cache
     }
 }
 
@@ -145,7 +143,7 @@ impl Workspace {
             let snippet = if score >= 2 {
                 document.title.clone()
             } else {
-                excerpt(&document.body_text, &q)
+                excerpt(&document.body_text, &document.body_lower, &q)
             };
             ranked.push((
                 score,
@@ -164,10 +162,14 @@ impl Workspace {
 }
 
 /// A short case-insensitive excerpt around the first match.
-fn excerpt(text: &str, query: &str) -> String {
-    let lower = text.to_lowercase();
-    let start = lower.find(query).unwrap_or(0);
-    let clipped: String = text.chars().skip(start).take(90).collect();
+///
+/// `lower` is the already-lowercased body. `find` returns a byte offset, which
+/// is converted to a character offset before slicing so accented and multibyte
+/// text keeps the excerpt aligned.
+fn excerpt(text: &str, lower: &str, query: &str) -> String {
+    let start_byte = lower.find(query).unwrap_or(0);
+    let start_chars = lower[..start_byte].chars().count();
+    let clipped: String = text.chars().skip(start_chars).take(90).collect();
     if clipped.chars().count() == 90 {
         format!("{clipped}...")
     } else {

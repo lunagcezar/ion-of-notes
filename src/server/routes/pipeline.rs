@@ -54,21 +54,14 @@ pub(super) fn check_login_rate(
     let client = request.client_ip.as_deref().unwrap_or("local");
     let now = Instant::now();
     let workspace_key = format!("login:{}", server.workspace.settings.id);
-    let client_decision =
-        server
-            .runtime
-            .login_limiter
-            .check(&format!("login-ip:{client}"), &workspace_key, now);
-    if !client_decision.allowed {
-        return Err(rate_limit_response(client_decision, request_id));
-    }
-    let account_decision =
-        server
-            .runtime
-            .login_limiter
-            .check(&format!("login-account:{email}"), &workspace_key, now);
-    if !account_decision.allowed {
-        return Err(rate_limit_response(account_decision, request_id));
+    let decision = server.runtime.login_limiter.check_login(
+        &format!("login-ip:{client}"),
+        &format!("login-account:{email}"),
+        &workspace_key,
+        now,
+    );
+    if !decision.allowed {
+        return Err(rate_limit_response(decision, request_id));
     }
     Ok(())
 }
@@ -301,8 +294,8 @@ fn blocks_created_by(server: &WorkspaceServer, request: &ApiRequest, path: &str)
 
 fn page_id(path: &str) -> Option<&str> {
     let rest = path.strip_prefix("/api/v2/pages/")?;
-    let id = rest.strip_suffix("/versions").unwrap_or(rest);
-    if id.is_empty() || id.contains('/') {
+    let id = rest.split('/').next()?;
+    if id.is_empty() {
         return None;
     }
     Some(id)

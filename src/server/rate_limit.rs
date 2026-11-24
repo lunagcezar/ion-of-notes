@@ -50,6 +50,11 @@ struct WindowCounter {
 }
 
 /// Fixed-window limiter shared by every connection of one workspace.
+/// Bound for the in-memory key maps. Past this size the limiter purges expired
+/// windows; if an attacker keeps filling it with fresh keys, new keys are
+/// denied instead of growing memory without limit.
+const MAX_TRACKED_KEYS: usize = 4096;
+
 #[derive(Debug, Clone)]
 pub struct RateLimiter {
     window: Duration,
@@ -115,6 +120,40 @@ impl RateLimiter {
         RateDecision::allowed()
     }
 
+    /// Account for one login attempt: the client and the account each get a
+    /// per-connection budget, while the workspace budget is charged once.
+    pub fn check_login(
+        &mut self,
+        client_key: &str,
+        account_key: &str,
+        workspace_key: &str,
+        now: Instant,
+    ) -> RateDecision {
+        for key in [client_key, account_key] {
+            let (allowed, retry_after) = take(
+                &mut self.connections,
+                key,
+                now,
+                self.window,
+                self.per_connection,
+            );
+            if !allowed {
+                return RateDecision::denied(retry_after, REASON_CONNECTION);
+            }
+        }
+        let (allowed, retry_after) = take(
+            &mut self.workspaces,
+            workspace_key,
+            now,
+            self.window,
+            self.per_workspace,
+        );
+        if !allowed {
+            return RateDecision::denied(retry_after, REASON_WORKSPACE);
+        }
+        RateDecision::allowed()
+    }
+
     /// Clear every counter (used when the policy changes or in tests).
     pub fn reset(&mut self) {
         self.connections.clear();
@@ -144,6 +183,9 @@ pub struct SqliteRateLimiter {
     window: Duration,
     per_connection: u32,
     per_workspace: u32,
+    /// Conservative in-process contingency used when the shared store fails.
+    /// A storage outage must not silently disable the limit.
+    fallback: RateLimiter,
 }
 
 impl SqliteRateLimiter {
@@ -158,6 +200,7 @@ impl SqliteRateLimiter {
             window,
             per_connection,
             per_workspace,
+            fallback: RateLimiter::new(per_connection, per_workspace, window),
         }
     }
 
@@ -173,8 +216,8 @@ impl SqliteRateLimiter {
 }
 
 impl RateLimitPolicy for SqliteRateLimiter {
-    fn check(&mut self, connection_id: &str, workspace_id: &str, _now: Instant) -> RateDecision {
-        let now = SystemTime::now()
+    fn check(&mut self, connection_id: &str, workspace_id: &str, now: Instant) -> RateDecision {
+        let now_secs = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
@@ -183,25 +226,28 @@ impl RateLimitPolicy for SqliteRateLimiter {
             &format!("conn:{connection_id}"),
             window_secs,
             self.per_connection,
-            now,
+            now_secs,
         ) {
             Ok(hit) if !hit.allowed => {
                 return RateDecision::denied(hit.retry_after, REASON_CONNECTION);
             }
             Ok(_) => {}
-            Err(error) => eprintln!("shared rate limit error: {error}"),
+            Err(error) => {
+                eprintln!("shared rate limit error, using local contingency: {error}");
+                return self.fallback.check(connection_id, workspace_id, now);
+            }
         }
         match self.store.check(
             &format!("ws:{workspace_id}"),
             window_secs,
             self.per_workspace,
-            now,
+            now_secs,
         ) {
             Ok(hit) if !hit.allowed => RateDecision::denied(hit.retry_after, REASON_WORKSPACE),
             Ok(_) => RateDecision::allowed(),
             Err(error) => {
-                eprintln!("shared rate limit error: {error}");
-                RateDecision::allowed()
+                eprintln!("shared rate limit error, using local contingency: {error}");
+                self.fallback.check(connection_id, workspace_id, now)
             }
         }
     }
@@ -220,6 +266,13 @@ fn take(
 ) -> (bool, u64) {
     if limit == 0 {
         return (true, 0);
+    }
+    if counters.len() >= MAX_TRACKED_KEYS {
+        counters.retain(|_, counter| now.saturating_duration_since(counter.window_start) < window);
+        if counters.len() >= MAX_TRACKED_KEYS && !counters.contains_key(key) {
+            // A flood of fresh keys must not grow memory without bound.
+            return (false, window.as_secs().max(1));
+        }
     }
     let elapsed = now.saturating_duration_since(
         counters

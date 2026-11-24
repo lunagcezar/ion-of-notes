@@ -344,7 +344,8 @@ v1 routes stay stable.
 - Success bodies use the existing `{data,error}` envelope for v1-compatible
   routes; v2 list routes return `ListResponse<T>`.
 - The v2 routes mirror the v1 use cases for workspace, pages, versions, search,
-  members, shares, sync, export and realtime; v1 is unchanged.
+  members, shares, sync, export and realtime; v1 keeps its envelope and routes
+  and applies the same authorization filters and owner checks.
 
 ### 8.1.1 HTTP transport (implemented, spec-038)
 
@@ -439,7 +440,7 @@ Implemented v2 routes:
 | `GET` / `POST` | `/api/v2/members` | read / insert content |
 | `GET` / `PUT` | `/api/v2/shares` | read / update content |
 | `GET` | `/api/v2/sync` | read content |
-| `GET` | `/api/v2/export` | read content |
+| `GET` | `/api/v2/export` | read content (owner-only) |
 | `GET` / `POST` | `/api/v2/databases` | read / insert content |
 | `GET` / `PATCH` / `DELETE` | `/api/v2/databases/{id}` | read / update content |
 | `GET` / `POST` | `/api/v2/databases/{id}/data_sources` | read / insert content |
@@ -454,18 +455,25 @@ Implemented v2 routes:
 | `GET` / `PATCH` / `DELETE` | `/api/v2/comments/{id}` | read / insert comments |
 | `GET` | `/api/v2/users` | read content |
 | `GET` | `/api/v2/users/{id}` | read content |
-| `GET` / `POST` | `/api/v2/file_uploads` | read / insert content |
-| `GET` | `/api/v2/file_uploads/{id}` | read content |
+| `GET` / `POST` | `/api/v2/file_uploads` | read (owner-only) / insert content |
+| `GET` | `/api/v2/file_uploads/{id}` | read content (owner-only) |
 | `POST` | `/api/v2/file_uploads/{id}/send` | insert content |
 | `POST` | `/api/v2/file_uploads/{id}/complete` | insert content |
-| `GET` / `POST` | `/api/v2/webhooks` | read / insert content |
-| `DELETE` | `/api/v2/webhooks/{id}` | update content |
-| `POST` | `/api/v2/webhooks/{id}/verify` | insert content |
-| `GET` | `/api/v2/webhook_deliveries` | read content |
-| `GET` | `/api/v2/webhook_deliveries/dead_letters` | read content |
-| `POST` | `/api/v2/webhook_deliveries/retry` | insert content |
-| `POST` | `/api/v2/webhook_deliveries/requeue` | insert content |
+| `GET` / `POST` | `/api/v2/webhooks` | read / insert content (owner-only) |
+| `DELETE` | `/api/v2/webhooks/{id}` | update content (owner-only) |
+| `POST` | `/api/v2/webhooks/{id}/verify` | insert content (owner-only) |
+| `GET` | `/api/v2/webhook_deliveries` | read content (owner-only) |
+| `GET` | `/api/v2/webhook_deliveries/dead_letters` | read content (owner-only) |
+| `POST` | `/api/v2/webhook_deliveries/retry` | insert content (owner-only) |
+| `POST` | `/api/v2/webhook_deliveries/requeue` | insert content (owner-only) |
 | `GET` | `/api/v2/realtime` | read content |
+
+The capability column is the coarse route gate. In addition, every nested
+resource (block, comment, database, data source, view) resolves its owning page
+and requires read or write access to it. `GET /api/v2/workspace`,
+`/api/v2/pages`, `/api/v2/search` and `/api/v2/sync` return principal-aware
+projections. Workspace-level databases are owner-only. See
+`docs/authorization.md`.
 
 ### 8.2 v2 list envelope (implemented)
 
@@ -561,6 +569,9 @@ and `href`.
 
 - `WebhookSubscription` has `id`, `url`, `events`, `verification_token`,
   `status` (`pending`/`active`/`paused`/`deleted`) and `created_at`.
+- The API list response uses `WebhookSubscriptionDto` and never serializes
+  `verification_token`. The creation response uses `WebhookCreatedDto` and
+  includes the secret once; webhook routes are owner-only.
 - Creating a subscription stores it as `pending`; the endpoint becomes `active`
   only after `POST /api/v2/webhooks/{id}/verify` with the matching token.
 - `WebhookEvent` carries `id`, `timestamp`, `workspace_id`, `subscription_id`,

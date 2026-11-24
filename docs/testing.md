@@ -42,24 +42,27 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (324 tests across the two feature passes, 2026-11-12)
+## 3. Test-crate map (331 tests across the two feature passes, 2026-11-24)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
 | `tests/model.rs` | 28 | entities, tree, search, diff, index, settings, comments, JSON round-trip |
 | `tests/server.rs` | 12 | routes, envelopes, status codes, HTTP parse/format, concurrent loopback |
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
+| `tests/authorization.rs` | 8 | direct and nested page shares, workspace/search/sync projections, CRDT and webhook scope |
+| `tests/security.rs` | 9 | auth boundary, owner token, login budgets, password resolution, session growth |
 | `tests/ui.rs` | 30 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, catalog normalization |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
-| `tests/contract.rs` | 18 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
+| `tests/contract.rs` | 20 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
+| `tests/routes.rs` | 5 | declarative route policy: capability, owner-only, page-scoped, block limit |
 | `tests/pagination.rs` | 11 | list envelopes, cursor round-trip, page bounds, v2 pages/search/sync/versions |
 | `tests/blocks.rs` | 12 | rich text, block metadata, nesting, tables, unsupported types, block endpoints |
 | `tests/properties.rs` | 9 | property schemas/values, clear rules, row migration, databases/data sources, property items |
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
 | `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
-| `tests/webhooks.rs` | 13 | subscriptions, verification, signatures, injected sender, delivery/retry, persistent outbox, dead letter/requeue |
+| `tests/webhooks.rs` | 15 | subscriptions, verification, signatures, injected sender, delivery/retry, persistent outbox, dead letter/requeue |
 | `tests/shared_limits.rs` | 2 | SQLite shared workspace budget and window reset |
-| `tests/web.rs` | 13 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, `/ready`, `/metrics` |
+| `tests/web.rs` | 15 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, projections, `/ready`, `/metrics` |
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 5 | client Yrs diff, empty-sync baseline, projection, convergence |
@@ -73,7 +76,7 @@ flowchart TD
 | `tests/fidelity.rs` | 6 | chrome colors, strong font, tab truncation, seeded page shape |
 | `tests/store_port.rs` | 5 | injectable store, failing store → `500`, null store |
 | `tests/store.rs` | 5 | JSON save/load, atomic write, missing file seed, workspace catalog |
-| `tests/cli.rs` | 3 | argument parsing for desktop, screenshot and serve |
+| `tests/cli.rs` | 5 | argument parsing for desktop, screenshot and serve |
 | `tests/templates.rs` | 3 | template catalog, stable page building, purpose mapping |
 | `tests/app.rs` | 4 | composition root wiring, replace-workspace, core-without-desktop feature seam |
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
@@ -86,10 +89,10 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 235 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 289 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
-# 26 desktop tests: the four UI crates, with the default-on desktop feature
+# 43 desktop tests: the four UI crates, with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
 
 cargo clippy --all-targets -- -D warnings
@@ -100,10 +103,10 @@ cargo fmt --check
 pwsh -File scripts/quality.ps1
 ```
 
-`cargo test --all-targets` still runs all default-feature tests (254) with the
+`cargo test --all-targets` runs all 331 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 261 unique tests because each feature pass includes its
+(spec-048) and cover 332 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam

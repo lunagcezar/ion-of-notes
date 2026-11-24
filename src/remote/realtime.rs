@@ -1,4 +1,6 @@
 use super::*;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+use tokio_tungstenite::tungstenite::http::HeaderValue;
 
 pub(super) fn spawn_ws(
     base: String,
@@ -18,12 +20,15 @@ pub(super) fn spawn_ws(
             let mut since = 0u64;
             let mut backoff = 1u64;
             loop {
-                let url = format!(
-                    "{}?token={}&since={since}",
-                    websocket_url(&base, &workspace_id),
-                    url_encode(&token)
-                );
-                if let Ok((mut socket, _)) = tokio_tungstenite::connect_async(url.as_str()).await {
+                let url = format!("{}?since={since}", websocket_url(&base, &workspace_id));
+                let mut request = match url.as_str().into_client_request() {
+                    Ok(request) => request,
+                    Err(_) => return,
+                };
+                if let Ok(value) = HeaderValue::from_str(&format!("Bearer {token}")) {
+                    request.headers_mut().insert("authorization", value);
+                }
+                if let Ok((mut socket, _)) = tokio_tungstenite::connect_async(request).await {
                     backoff = 1;
                     loop {
                         tokio::select! {

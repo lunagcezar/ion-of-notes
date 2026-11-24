@@ -3,7 +3,7 @@
 use crate::i18n;
 use crate::model::{Block, BlockKind, Workspace};
 use egui::{Align2, CornerRadius, FontFamily, FontId, Pos2, Rect, Sense, Stroke, Vec2};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use super::super::super::commands::{Command, FontStyle, SidebarCmd};
@@ -259,12 +259,18 @@ struct BlockHeight {
 }
 
 /// A cheap content fingerprint; a change invalidates the cached height.
+///
+/// Cached heights only depend on the block kind and the text volume, so hashing
+/// every character of every block each frame is unnecessary.
 fn block_fingerprint(block: &Block) -> u64 {
     let mut hasher = DefaultHasher::new();
-    block.text.hash(&mut hasher);
+    block.text.len().hash(&mut hasher);
     block.rich_text.len().hash(&mut hasher);
     std::mem::discriminant(&block.kind).hash(&mut hasher);
     block.children.len().hash(&mut hasher);
+    block.checked.hash(&mut hasher);
+    block.collapsed.hash(&mut hasher);
+    block.cells.len().hash(&mut hasher);
     hasher.finish()
 }
 
@@ -278,7 +284,7 @@ fn render_page(
     commands: &mut Vec<Command>,
 ) {
     let cursors_by_block = super::cursors::index_cursors(&view.remote_cursors, &view.current_page);
-    let Some(page) = ws.page_mut(&view.current_page) else {
+    let Some(page) = ws.page_mut_untracked(&view.current_page) else {
         ui.label(
             egui::RichText::new("No page selected. Create one from the sidebar.")
                 .color(palette.muted),
@@ -380,12 +386,13 @@ fn render_page(
     let viewport = ui.clip_rect();
     let overscan = (viewport.height() * 1.5).max(400.0);
     let interactive = view.block_selecting || view.drag_from.is_some();
+    let selection: HashSet<&str> = view.page_selection.iter().map(String::as_str).collect();
     for index in 0..page.blocks.len() {
         let block = &mut page.blocks[index];
         let top = ui.cursor().top();
         let forced = view.focus_block.as_deref() == Some(block.id.as_str())
             || view.slash_for.as_deref() == Some(block.id.as_str())
-            || view.page_selection.iter().any(|id| id == &block.id);
+            || selection.contains(block.id.as_str());
         let fingerprint = block_fingerprint(block);
         let cached = heights
             .get(&block.id)

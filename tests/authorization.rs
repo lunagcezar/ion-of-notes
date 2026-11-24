@@ -132,3 +132,163 @@ fn v1_page_routes_use_the_same_share_checks() {
         .with_header("authorization", format!("Bearer {member}"));
     assert_eq!(server.handle(&denied).status, 403);
 }
+
+#[test]
+fn nested_block_routes_resolve_the_owning_page() {
+    let mut server = server();
+    let member = login(&mut server, "member@workspace.local");
+
+    let readable = server.handle(&v2(&member, Method::Get, "/api/v2/blocks/h1", None));
+    assert_eq!(readable.status, 200);
+
+    let unreadable = server.handle(&v2(&member, Method::Get, "/api/v2/blocks/s1", None));
+    assert_eq!(unreadable.status, 403);
+
+    let body = serde_json::json!({ "text": "changed" }).to_string();
+    let writable = server.handle(&v2(
+        &member,
+        Method::Patch,
+        "/api/v2/blocks/h1",
+        Some(body.clone()),
+    ));
+    assert_eq!(writable.status, 200);
+
+    let forbidden = server.handle(&v2(&member, Method::Patch, "/api/v2/blocks/s1", Some(body)));
+    assert_eq!(forbidden.status, 403);
+    let deleted = server.handle(&v2(&member, Method::Delete, "/api/v2/blocks/s1", None));
+    assert_eq!(deleted.status, 403);
+}
+
+#[test]
+fn nested_comment_routes_resolve_the_owning_page() {
+    let mut server = server();
+    let member = login(&mut server, "member@workspace.local");
+
+    let filtered = server.handle(&v2(
+        &member,
+        Method::Get,
+        "/api/v2/comments?page=p-start",
+        None,
+    ));
+    assert_eq!(filtered.status, 403);
+
+    let body = serde_json::to_string(&ion_of_notes::model::CommentInput {
+        parent: ion_of_notes::model::ParentDto::Page {
+            page_id: "p-start".to_string(),
+        },
+        discussion_id: None,
+        rich_text: vec![ion_of_notes::model::RichText::text("hello")],
+        attachments: Vec::new(),
+        display_name: None,
+        property_id: None,
+    })
+    .expect("body");
+    let denied = server.handle(&v2(&member, Method::Post, "/api/v2/comments", Some(body)));
+    assert_eq!(denied.status, 403);
+
+    let allowed_body = serde_json::to_string(&ion_of_notes::model::CommentInput {
+        parent: ion_of_notes::model::ParentDto::Page {
+            page_id: "p-home".to_string(),
+        },
+        discussion_id: None,
+        rich_text: vec![ion_of_notes::model::RichText::text("hello")],
+        attachments: Vec::new(),
+        display_name: None,
+        property_id: None,
+    })
+    .expect("body");
+    let allowed = server.handle(&v2(
+        &member,
+        Method::Post,
+        "/api/v2/comments",
+        Some(allowed_body),
+    ));
+    assert_eq!(allowed.status, 201);
+}
+
+#[test]
+fn list_search_and_workspace_reads_are_projected() {
+    let mut server = server();
+    let member = login(&mut server, "member@workspace.local");
+
+    let pages = server.handle(&v2(&member, Method::Get, "/api/v2/pages", None));
+    assert_eq!(pages.status, 200);
+    let envelope: Envelope<ion_of_notes::ListResponse<ion_of_notes::model::PageSummary>> =
+        serde_json::from_str(&pages.body).expect("pages");
+    let ids: Vec<String> = envelope
+        .data
+        .expect("data")
+        .results
+        .into_iter()
+        .map(|page| page.id)
+        .collect();
+    assert_eq!(ids, vec!["p-home".to_string()]);
+
+    let search = server.handle(&v2(&member, Method::Get, "/api/v2/search?q=Getting", None));
+    assert_eq!(search.status, 200);
+    let envelope: Envelope<ion_of_notes::ListResponse<ion_of_notes::model::SearchResult>> =
+        serde_json::from_str(&search.body).expect("search");
+    assert!(envelope.data.expect("data").results.is_empty());
+
+    let workspace = server.handle(&v2(&member, Method::Get, "/api/v2/workspace", None));
+    assert_eq!(workspace.status, 200);
+    let envelope: Envelope<Workspace> = serde_json::from_str(&workspace.body).expect("workspace");
+    let workspace = envelope.data.expect("data");
+    assert_eq!(workspace.pages.len(), 1);
+    assert_eq!(workspace.pages[0].id, "p-home");
+    assert!(workspace.databases.is_empty());
+    assert!(workspace.comments.is_empty());
+}
+
+#[test]
+fn database_view_and_export_routes_require_page_access() {
+    let mut server = server();
+    server.workspace.ensure_data_sources();
+    server.workspace.ensure_views();
+    let member = login(&mut server, "member@workspace.local");
+
+    for path in [
+        "/api/v2/databases/db-p-tasks",
+        "/api/v2/data_sources/ds-p-tasks",
+        "/api/v2/views/view-ds-p-tasks",
+    ] {
+        let response = server.handle(&v2(&member, Method::Get, path, None));
+        assert_eq!(response.status, 403, "{path}");
+    }
+
+    let databases = server.handle(&v2(&member, Method::Get, "/api/v2/databases", None));
+    assert_eq!(databases.status, 200);
+    let envelope: Envelope<Vec<ion_of_notes::model::Database>> =
+        serde_json::from_str(&databases.body).expect("databases");
+    assert!(envelope.data.expect("data").is_empty());
+
+    let exported = server.handle(&v2(&member, Method::Get, "/api/v2/export", None));
+    assert_eq!(exported.status, 403);
+}
+
+#[test]
+fn crdt_and_webhook_routes_are_scoped_to_the_connection() {
+    let mut server = server();
+    let member = login(&mut server, "member@workspace.local");
+
+    let sync_body = serde_json::json!({ "page_id": "p-start" }).to_string();
+    let denied = server.handle(&v2(
+        &member,
+        Method::Post,
+        "/api/v2/crdt/sync",
+        Some(sync_body),
+    ));
+    assert_eq!(denied.status, 403);
+
+    let allowed_body = serde_json::json!({ "page_id": "p-home" }).to_string();
+    let allowed = server.handle(&v2(
+        &member,
+        Method::Post,
+        "/api/v2/crdt/sync",
+        Some(allowed_body),
+    ));
+    assert_eq!(allowed.status, 200);
+
+    let webhooks = server.handle(&v2(&member, Method::Get, "/api/v2/webhooks", None));
+    assert_eq!(webhooks.status, 403);
+}

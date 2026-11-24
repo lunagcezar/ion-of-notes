@@ -150,6 +150,7 @@ src/
     usecases/      pages, workspace and sharing use cases with typed results
     handlers/      one module per v2 resource family (crdt, comments/users/
                    files, views, databases, blocks, lists, shared adapter)
+    authorization.rs  owning-page resolution, resource access and projections
     services/      auth and webhook service modules
     events.rs      DomainEvent + notify for webhook-emitting writes
     error.rs       HandlerError, HandlerResult and body() for v2 handlers
@@ -634,16 +635,19 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
   override.
 - **Authorization:** route capabilities are coarse; page access is resolved by
   `WorkspaceServer::page_access` (owner, direct share, page-general,
-  workspace-general). New page-scoped routes must call `can_read_page` /
-  `can_write_page`. See `docs/authorization.md`.
+  workspace-general). Nested resources resolve their owning page through
+  `server::authorization`; global reads return a principal-aware projection.
+  New page-scoped routes must call `can_read_page` / `can_write_page`, and new
+  nested resources must use the `page_for_*` helpers. See
+  `docs/authorization.md`.
 - **Persistence:** mutations commit workspace and collaboration state through
   `SnapshotStore` when available; SQLite uses one transaction and a failed
   write reloads the durable state. See `docs/persistence-integrity.md`.
 - **Webhooks:** reject private/loopback/link-local HTTPS targets and resolve
   the destination before delivery. See `docs/security-hardening.md`.
-- **Review response:** `docs/review-response.md` maps every 2026-11-12 review
-  finding to its spec, status and evidence. Update it when a finding is fixed
-  or explicitly deferred.
+- **Review response:** `docs/review-response.md` maps every review finding
+  (including the 2026-11-24 Kimi/ChatGPT convergence) to its spec, status and
+  evidence. Update it when a finding is fixed or explicitly deferred.
 - **Refactoring:** the v2 route table is the single source for capability,
   block-limit, owner-only and page-scoped policy. Shared CRDT text logic lives
   in `crate::crdt_text`; do not add a third copy. Refactor one resource family
@@ -687,9 +691,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
-| `cargo test --all-targets --no-default-features` | Core integration tests (281, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (289, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (43) |
-| `cargo test --all-targets`               | All default-feature tests (324; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (331; the core-only seam test is skipped) |
 | `ION_OF_NOTES_PERF=1 cargo test --no-default-features --test perf -- --nocapture` | Opt-in 1k/10k/50k block load/search/CRDT timings |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |

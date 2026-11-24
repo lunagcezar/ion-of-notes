@@ -281,8 +281,11 @@ session.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ION_OF_NOTES_OWNER_PASSWORD` | `change-me-now` | Password for the seeded owner on the first SQLite run (environment fallback) |
+| `ION_OF_NOTES_OWNER_PASSWORD` | unset (debug only: `change-me-now`) | Password for the seeded owner on the first SQLite run (environment fallback) |
 | `ION_OF_NOTES_OWNER_PASSWORD_FILE` | unset | File containing the owner password; used by Compose secrets |
+| `ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD` | unset | `1` allows the development owner password in debug builds only |
+| `ION_OF_NOTES_ALLOW_INSECURE_SERVER` | unset | `1` allows an unauthenticated `NoAuthStore` server on a non-loopback address (isolated development only) |
+| `ION_OF_NOTES_TRUSTED_PROXIES` | loopback only | Comma-separated proxy IPs (or `*`) whose `X-Forwarded-For` / `X-Real-IP` are trusted |
 | `ION_OF_NOTES_BIND` | `127.0.0.1` | Host bind address published by `compose.yml` |
 | `ION_OF_NOTES_PORT` | `8787` | Host port published by `compose.yml` |
 | `ION_OF_NOTES_SHOW` | unset | Open one pictured UI state for screenshots |

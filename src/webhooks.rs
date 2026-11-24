@@ -200,6 +200,53 @@ pub struct WebhookSubscription {
     pub created_at: String,
 }
 
+/// Public read shape for a subscription. It never carries the verification
+/// secret; only the owner receives that once, at creation time.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WebhookSubscriptionDto {
+    pub id: String,
+    pub url: String,
+    pub events: Vec<WebhookEventType>,
+    pub status: SubscriptionStatus,
+    pub created_at: String,
+}
+
+impl From<&WebhookSubscription> for WebhookSubscriptionDto {
+    fn from(subscription: &WebhookSubscription) -> Self {
+        Self {
+            id: subscription.id.clone(),
+            url: subscription.url.clone(),
+            events: subscription.events.clone(),
+            status: subscription.status,
+            created_at: subscription.created_at.clone(),
+        }
+    }
+}
+
+/// Creation response: the only response that includes the verification token.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WebhookCreatedDto {
+    pub id: String,
+    pub url: String,
+    pub events: Vec<WebhookEventType>,
+    pub status: SubscriptionStatus,
+    pub created_at: String,
+    pub verification_token: String,
+}
+
+impl From<WebhookSubscription> for WebhookCreatedDto {
+    fn from(subscription: WebhookSubscription) -> Self {
+        Self {
+            id: subscription.id,
+            url: subscription.url,
+            events: subscription.events,
+            status: subscription.status,
+            created_at: subscription.created_at,
+            verification_token: subscription.verification_token,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WebhookSubscriptionInput {
     pub url: String,
@@ -268,6 +315,10 @@ impl WebhookEvent {
         }
     }
 }
+
+/// Bound for the persisted delivery history. Delivery records are diagnostic;
+/// the oldest completed ones are dropped first.
+pub const MAX_WEBHOOK_DELIVERIES: usize = 1000;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WebhookDelivery {

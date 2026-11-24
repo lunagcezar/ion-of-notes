@@ -3,7 +3,10 @@
 //! A handler returns `HandlerResult<T>`; the dispatcher attaches the request ID
 //! once when it turns the error into an `ApiError` response.
 
-use super::contract::{CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR};
+use super::contract::{
+    CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_RESTRICTED_RESOURCE,
+    CODE_VALIDATION_ERROR,
+};
 use super::response::{parse_body, v2_error};
 use super::{ApiRequest, ApiResponse};
 use serde::de::DeserializeOwned;
@@ -40,6 +43,23 @@ impl HandlerError {
 
     pub fn internal(message: impl Into<String>) -> Self {
         Self::new(500, CODE_INTERNAL, message)
+    }
+
+    /// A page-scoped resource the connection may not read or write.
+    pub fn restricted(message: impl Into<String>, page_id: &str, access: &str) -> Self {
+        let mut error = Self::new(403, CODE_RESTRICTED_RESOURCE, message);
+        error.extra = Some(serde_json::json!({
+            "page_id": page_id,
+            "required_access": access,
+        }));
+        error
+    }
+
+    /// A workspace-level resource that only the owner may manage.
+    pub fn owner_only(message: impl Into<String>) -> Self {
+        let mut error = Self::new(403, CODE_RESTRICTED_RESOURCE, message);
+        error.extra = Some(serde_json::json!({ "required_role": "owner" }));
+        error
     }
 }
 

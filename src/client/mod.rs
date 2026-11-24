@@ -19,7 +19,8 @@ use crate::server::{
     RequestTransport, VERSION_HEADER, WorkspaceApi, url_encode,
 };
 use crate::webhooks::{
-    WebhookDelivery, WebhookSubscription, WebhookSubscriptionInput, WebhookVerificationInput,
+    WebhookCreatedDto, WebhookDelivery, WebhookSubscriptionDto, WebhookSubscriptionInput,
+    WebhookVerificationInput,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;

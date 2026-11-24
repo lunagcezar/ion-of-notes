@@ -3,15 +3,15 @@
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::{HeaderMap, Request, StatusCode};
-use ion_of_notes::auth::MemoryAuthStore;
-use ion_of_notes::collab::CollabState;
-use ion_of_notes::model::{PageSummary, Workspace};
-use ion_of_notes::server::web::router;
+use ion_of_notes::auth::{Account, AuthStore, MemoryAuthStore, SessionResponse, hash_password};
+use ion_of_notes::collab::{Access, CollabState, Member, Role, Share};
+use ion_of_notes::model::{PageSummary, Workspace, now_iso};
+use ion_of_notes::server::web::{router, serve_axum};
 use ion_of_notes::server::{
     API_VERSION, ApiError, Envelope, ListResponse, OWNER_TOKEN, WorkspaceServer,
 };
 use ion_of_notes::store::{NoCollabStore, NoStore};
-use ion_of_notes::webhooks::WebhookSubscription;
+use ion_of_notes::webhooks::{WebhookCreatedDto, WebhookSubscriptionDto};
 use std::time::Duration;
 use tower::ServiceExt;
 
@@ -73,6 +73,12 @@ async fn health_route_works_through_axum() {
     );
     let envelope: Envelope<String> = serde_json::from_str(&body).unwrap();
     assert_eq!(envelope.data.unwrap(), "ok");
+}
+
+#[test]
+fn unauthenticated_server_refuses_a_public_bind() {
+    let error = serve_axum("0.0.0.0:0", server()).expect_err("public bind must be refused");
+    assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
 }
 
 #[tokio::test]
@@ -169,6 +175,73 @@ async fn snapshot_reads_require_auth_when_configured() {
 }
 
 #[tokio::test]
+async fn snapshot_reads_are_projections_for_a_member() {
+    let workspace = Workspace::seed("web-projection");
+    let mut collab = CollabState::new();
+    collab.shares.clear();
+    collab.members.push(Member::new(
+        "m-member",
+        "Morgan Member",
+        "member@workspace.local",
+        Role::Member,
+    ));
+    collab.shares.push(Share {
+        page_id: "p-home".to_string(),
+        subject: "m-member".to_string(),
+        access: Access::Edit,
+    });
+    let store = MemoryAuthStore::default();
+    store
+        .upsert_account(&Account {
+            id: "account-m-member".to_string(),
+            member_id: "m-member".to_string(),
+            email: "member@workspace.local".to_string(),
+            password_hash: hash_password("secret").expect("hash"),
+            created_at: now_iso(),
+        })
+        .expect("account");
+    let server =
+        WorkspaceServer::with_stores_and_auth(workspace, collab, NoStore, NoCollabStore, store);
+    let app = router(server);
+
+    let login = Request::builder()
+        .method("POST")
+        .uri("/api/v2/auth/login")
+        .header("ion-of-notes-version", API_VERSION)
+        .header("content-type", "application/json")
+        .body(Body::from(
+            r#"{"email":"member@workspace.local","password":"secret"}"#,
+        ))
+        .unwrap();
+    let (status, _, body) = send(&app, login).await;
+    assert_eq!(status, StatusCode::OK);
+    let session: Envelope<SessionResponse> = serde_json::from_str(&body).unwrap();
+    let token = session.data.expect("session").token;
+
+    let authorized = |path: &str| {
+        Request::builder()
+            .method("GET")
+            .uri(path)
+            .header("authorization", format!("Bearer {token}"))
+            .body(Body::empty())
+            .unwrap()
+    };
+    let (status, _, body) = send(&app, authorized("/api/workspace")).await;
+    assert_eq!(status, StatusCode::OK);
+    let envelope: Envelope<Workspace> = serde_json::from_str(&body).unwrap();
+    let projected = envelope.data.expect("workspace");
+    assert_eq!(projected.pages.len(), 1);
+    assert_eq!(projected.pages[0].id, "p-home");
+
+    let (status, _, body) = send(&app, authorized("/api/pages")).await;
+    assert_eq!(status, StatusCode::OK);
+    let envelope: Envelope<Vec<PageSummary>> = serde_json::from_str(&body).unwrap();
+    let pages = envelope.data.expect("pages");
+    assert_eq!(pages.len(), 1);
+    assert_eq!(pages[0].id, "p-home");
+}
+
+#[tokio::test]
 async fn v2_requires_version_then_token() {
     let app = router(server());
 
@@ -245,12 +318,16 @@ async fn webhook_roundtrip_works_through_axum() {
     );
     let (status, _, body) = send(&app, create).await;
     assert_eq!(status, StatusCode::CREATED);
-    let created: Envelope<WebhookSubscription> = serde_json::from_str(&body).unwrap();
+    let created: Envelope<WebhookCreatedDto> = serde_json::from_str(&body).unwrap();
     let id = created.data.unwrap().id;
 
     let (status, _, body) = send(&app, v2_request("GET", "/api/v2/webhooks", None)).await;
     assert_eq!(status, StatusCode::OK);
-    let list: Envelope<Vec<WebhookSubscription>> = serde_json::from_str(&body).unwrap();
+    assert!(
+        !body.contains("verification_token"),
+        "the list response must not expose the verification secret"
+    );
+    let list: Envelope<Vec<WebhookSubscriptionDto>> = serde_json::from_str(&body).unwrap();
     assert_eq!(list.data.unwrap().len(), 1);
 
     let (status, _, _) = send(

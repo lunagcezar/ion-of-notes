@@ -1,13 +1,14 @@
 //! Saved-view CRUD, query and v2 route use cases.
 
+use super::super::authorization::ResourceAccess;
 use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
 };
-use super::super::error::{HandlerResult, fail, ok};
+use super::super::error::{HandlerError, HandlerResult, fail, ok};
 use super::super::events::DomainEvent;
 use super::super::pagination::{PageRequest, paginate};
 use super::super::response::{json, parse_body, query_value, v2_error};
-use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
+use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::collab::ChangeOp;
 use crate::model::{View, ViewConfig, ViewInput, ViewQueryInput, ViewQueryResult, now_iso};
 
@@ -18,6 +19,7 @@ impl WorkspaceServer {
         path: &str,
         query: &str,
         request_id: &str,
+        connection: &Connection,
     ) -> HandlerResult<Option<ApiResponse>> {
         if path == "/api/v2/views" && request.method == Method::Get {
             let data_source = query_value(query, "data_source");
@@ -29,6 +31,7 @@ impl WorkspaceServer {
                     data_source.is_empty()
                         || view.data_source_id.as_deref() == Some(data_source.as_str())
                 })
+                .filter(|view| self.view_visible(connection, &view.id))
                 .cloned()
                 .collect();
             return ok(json(200, Envelope::ok(views)));
@@ -58,6 +61,13 @@ impl WorkspaceServer {
                     None,
                 ));
             };
+            ensure_view_access(
+                self,
+                connection,
+                self.page_for_data_source(&data_source.id),
+                ResourceAccess::Write,
+                request_id,
+            )?;
             let now = now_iso();
             let view = View {
                 id: format!("view-{}", uuid::Uuid::new_v4()),
@@ -119,6 +129,13 @@ impl WorkspaceServer {
                     None,
                 ));
             };
+            ensure_view_access(
+                self,
+                connection,
+                self.page_for_view(id),
+                ResourceAccess::Read,
+                request_id,
+            )?;
             let input = if request.body.is_some() {
                 match parse_body::<ViewQueryInput>(request) {
                     Ok(input) => input,
@@ -165,7 +182,16 @@ impl WorkspaceServer {
 
         match request.method {
             Method::Get => match self.workspace.view(rest) {
-                Some(view) => ok(json(200, Envelope::ok(view.clone()))),
+                Some(view) => {
+                    ensure_view_access(
+                        self,
+                        connection,
+                        self.page_for_view(rest),
+                        ResourceAccess::Read,
+                        request_id,
+                    )?;
+                    ok(json(200, Envelope::ok(view.clone())))
+                }
                 None => fail(v2_error(
                     404,
                     CODE_NOT_FOUND,
@@ -175,6 +201,13 @@ impl WorkspaceServer {
                 )),
             },
             Method::Patch => {
+                ensure_view_access(
+                    self,
+                    connection,
+                    self.page_for_view(rest),
+                    ResourceAccess::Write,
+                    request_id,
+                )?;
                 let input = match parse_body::<ViewInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
@@ -237,6 +270,13 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
+                ensure_view_access(
+                    self,
+                    connection,
+                    self.page_for_view(rest),
+                    ResourceAccess::Write,
+                    request_id,
+                )?;
                 let deleted_id = rest.to_string();
                 self.workspace.views.retain(|view| view.id != rest);
                 if let Err(error) = self.write(ChangeOp::Delete, "__view__") {
@@ -261,5 +301,31 @@ impl WorkspaceServer {
                 None,
             )),
         }
+    }
+}
+
+fn ensure_view_access(
+    server: &WorkspaceServer,
+    connection: &Connection,
+    page: Option<String>,
+    access: ResourceAccess,
+    _request_id: &str,
+) -> Result<(), HandlerError> {
+    if server.can_access_resource(connection, page.as_deref(), access) {
+        return Ok(());
+    }
+    let required = match access {
+        ResourceAccess::Read => "read",
+        ResourceAccess::Write => "write",
+    };
+    match page {
+        Some(page_id) => Err(HandlerError::restricted(
+            format!("{required} access to this view's page is not allowed"),
+            &page_id,
+            required,
+        )),
+        None => Err(HandlerError::owner_only(
+            "workspace-level views require owner access",
+        )),
     }
 }

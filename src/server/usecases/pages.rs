@@ -2,15 +2,10 @@
 
 use super::super::events::DomainEvent;
 use crate::collab::ChangeOp;
-use crate::model::{Page, PageDraft, PageSummary, SearchResult};
+use crate::model::{Page, PageDraft};
 
 use super::super::WorkspaceServer;
 use super::UseCaseError;
-
-/// Every page as a lightweight summary.
-pub(in crate::server) fn list_pages(server: &WorkspaceServer) -> Vec<PageSummary> {
-    server.workspace.pages.iter().map(Page::summary).collect()
-}
 
 /// One page by id.
 pub(in crate::server) fn get_page(
@@ -120,9 +115,4 @@ pub(in crate::server) fn page_versions(
     id: &str,
 ) -> Vec<crate::collab::PageVersion> {
     server.collab.versions_for(id)
-}
-
-/// Ranked workspace search.
-pub(in crate::server) fn search(server: &WorkspaceServer, query: &str) -> Vec<SearchResult> {
-    server.workspace.search(query)
 }

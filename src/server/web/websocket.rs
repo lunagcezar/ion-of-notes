@@ -1,6 +1,10 @@
 use super::http::plain_error;
 use super::*;
 
+/// Upper bound for one WebSocket client text frame. A CRDT update larger than
+/// this is rejected before JSON parsing or base64 decoding.
+const MAX_WS_MESSAGE_BYTES: usize = 1024 * 1024;
+
 pub(super) async fn ws_handler(
     State(state): State<AppState>,
     Path(workspace_id): Path<String>,
@@ -44,6 +48,7 @@ pub(super) async fn ws_handler(
             .changes
             .iter()
             .filter(|change| change.seq > since)
+            .filter(|change| server.change_visible(&connection, &change.page_id))
             .cloned()
             .collect::<Vec<_>>();
         let seq = server.collab.next_seq.saturating_sub(1);
@@ -109,6 +114,9 @@ async fn websocket_session(
         tokio::select! {
             event = receiver.recv() => match event {
                 Ok(message) => {
+                    if !message_visible(&server, &connection, &message).await {
+                        continue;
+                    }
                     if !send_json(&mut socket, &message).await {
                         break;
                     }
@@ -118,6 +126,12 @@ async fn websocket_session(
             },
             incoming = socket.recv() => match incoming {
                 Some(Ok(Message::Text(text))) => {
+                    if text.len() > MAX_WS_MESSAGE_BYTES {
+                        if !send_error(&mut socket, "message_too_large", "websocket message is too large").await {
+                            break;
+                        }
+                        continue;
+                    }
                     match serde_json::from_str::<ClientMessage>(text.as_str()) {
                         Ok(ClientMessage::Ping) => {
                             if !send_json(&mut socket, &ServerMessage::Pong).await {
@@ -128,7 +142,15 @@ async fn websocket_session(
                             page_id,
                             state_vector,
                         }) => {
-                            if !handle_crdt_sync(&mut socket, &server, page_id, state_vector).await {
+                            if !handle_crdt_sync(
+                                &mut socket,
+                                &server,
+                                &connection,
+                                page_id,
+                                state_vector,
+                            )
+                            .await
+                            {
                                 break;
                             }
                         }
@@ -137,9 +159,9 @@ async fn websocket_session(
                                 &mut socket,
                                 &server,
                                 &hub,
+                                &connection,
                                 page_id,
                                 update,
-                                &connection.member_id,
                             )
                             .await
                             {
@@ -191,6 +213,7 @@ async fn send_error(socket: &mut WebSocket, code: &str, message: impl Into<Strin
 async fn handle_crdt_sync(
     socket: &mut WebSocket,
     server: &Arc<Mutex<WorkspaceServer>>,
+    connection: &Connection,
     page_id: String,
     state_vector: Option<String>,
 ) -> bool {
@@ -205,7 +228,11 @@ async fn handle_crdt_sync(
         let mut server = server
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        server.crdt_sync(&page_id, state_vector.as_deref())
+        if !server.can_read_page(connection, &page_id) {
+            Err("read access to this page is not allowed".to_string())
+        } else {
+            server.crdt_sync(&page_id, state_vector.as_deref())
+        }
     };
     match result {
         Ok((update, vector)) => {
@@ -227,9 +254,9 @@ async fn handle_crdt_update(
     socket: &mut WebSocket,
     server: &Arc<Mutex<WorkspaceServer>>,
     hub: &RealtimeHub,
+    connection: &Connection,
     page_id: String,
     update: String,
-    actor: &str,
 ) -> bool {
     let update = match BASE64.decode(update) {
         Ok(bytes) => bytes,
@@ -239,7 +266,11 @@ async fn handle_crdt_update(
         let mut server = server
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        server.apply_crdt_update(&page_id, &update, actor)
+        if !server.can_write_page(connection, &page_id) {
+            Err("write access to this page is not allowed".to_string())
+        } else {
+            server.apply_crdt_update(&page_id, &update, &connection.member_id)
+        }
     };
     match result {
         Ok(merged) => {
@@ -248,4 +279,38 @@ async fn handle_crdt_update(
         }
         Err(error) => send_error(socket, "crdt_error", error).await,
     }
+}
+
+/// Whether one broadcast message belongs to a page the connection may read.
+async fn message_visible(
+    server: &Arc<Mutex<WorkspaceServer>>,
+    connection: &Connection,
+    message: &ServerMessage,
+) -> bool {
+    let page_id = match message {
+        ServerMessage::Change { change } => Some(change.page_id.as_str()),
+        ServerMessage::CrdtUpdate { page_id, .. } | ServerMessage::CrdtSync { page_id, .. } => {
+            Some(page_id.as_str())
+        }
+        ServerMessage::Awareness { members } => {
+            let guard = server
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            return members.iter().all(|awareness| {
+                guard.can_read_page(connection, &awareness.page_id)
+                    || awareness.member_id == connection.member_id
+            });
+        }
+        ServerMessage::Ready { .. } | ServerMessage::Presence { .. } | ServerMessage::Pong => {
+            return true;
+        }
+        ServerMessage::Error { .. } => return true,
+    };
+    let Some(page_id) = page_id else {
+        return true;
+    };
+    let guard = server
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    guard.change_visible(connection, page_id)
 }

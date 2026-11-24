@@ -1,7 +1,8 @@
 //! REST CRDT sync routes used by remote clients.
 
+use super::super::authorization::ResourceAccess;
 use super::super::contract::CODE_VALIDATION_ERROR;
-use super::super::error::{HandlerResult, body, fail, ok};
+use super::super::error::{HandlerError, HandlerResult, body, fail, ok};
 use super::super::response::{json, v2_error};
 use super::super::{
     ApiRequest, ApiResponse, Connection, CrdtSyncInput, CrdtSyncOutput, CrdtUpdateInput,
@@ -22,6 +23,7 @@ impl WorkspaceServer {
     ) -> HandlerResult<Option<ApiResponse>> {
         if path == "/api/v2/crdt/sync" && request.method == Method::Post {
             let input: CrdtSyncInput = body(request)?;
+            ensure_crdt_access(self, connection, &input.page_id, ResourceAccess::Read)?;
             let state_vector = match input.state_vector {
                 Some(value) => match BASE64.decode(value) {
                     Ok(bytes) => Some(bytes),
@@ -56,6 +58,7 @@ impl WorkspaceServer {
         }
         if path == "/api/v2/crdt/update" && request.method == Method::Post {
             let input: CrdtUpdateInput = body(request)?;
+            ensure_crdt_access(self, connection, &input.page_id, ResourceAccess::Write)?;
             let update = match BASE64.decode(input.update) {
                 Ok(bytes) => bytes,
                 Err(error) => {
@@ -68,7 +71,7 @@ impl WorkspaceServer {
                     ));
                 }
             };
-            let actor = input.actor.unwrap_or_else(|| connection.member_id.clone());
+            let actor = connection.member_id.clone();
             return match self.apply_crdt_update(&input.page_id, &update, &actor) {
                 Ok(merged) => ok(json(
                     200,
@@ -87,4 +90,24 @@ impl WorkspaceServer {
         }
         Ok(None)
     }
+}
+
+fn ensure_crdt_access(
+    server: &WorkspaceServer,
+    connection: &Connection,
+    page_id: &str,
+    access: ResourceAccess,
+) -> Result<(), HandlerError> {
+    if server.can_access_resource(connection, Some(page_id), access) {
+        return Ok(());
+    }
+    let required = match access {
+        ResourceAccess::Read => "read",
+        ResourceAccess::Write => "write",
+    };
+    Err(HandlerError::restricted(
+        format!("{required} access to this page is not allowed"),
+        page_id,
+        required,
+    ))
 }

@@ -1,7 +1,7 @@
 use super::*;
 
 impl<A: RequestTransport> Client<A> {
-    pub fn list_webhooks_v2(&mut self) -> Result<Vec<WebhookSubscription>, ClientError> {
+    pub fn list_webhooks_v2(&mut self) -> Result<Vec<WebhookSubscriptionDto>, ClientError> {
         let request = self.v2_request(Method::Get, "/api/v2/webhooks", None)?;
         self.call_v2(request)
     }
@@ -9,7 +9,7 @@ impl<A: RequestTransport> Client<A> {
     pub fn create_webhook_v2(
         &mut self,
         input: &WebhookSubscriptionInput,
-    ) -> Result<WebhookSubscription, ClientError> {
+    ) -> Result<WebhookCreatedDto, ClientError> {
         let body = encode_body(input)?;
         let request = self.v2_request(Method::Post, "/api/v2/webhooks", Some(body))?;
         self.call_v2(request)

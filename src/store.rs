@@ -200,11 +200,32 @@ fn write_json<T: Serialize>(path: &Path, value: &T) -> io::Result<()> {
     }
     match fs::rename(&temporary, path) {
         Ok(()) => Ok(()),
-        Err(_) => {
-            fs::copy(&temporary, path)?;
-            fs::remove_file(&temporary)?;
-            Ok(())
+        Err(error)
+            if matches!(
+                error.kind(),
+                io::ErrorKind::AlreadyExists | io::ErrorKind::PermissionDenied
+            ) =>
+        {
+            // Some platforms cannot replace an existing file in one rename.
+            // Keep the previous document as a sibling backup until the new
+            // file is in place; never copy over the live file in place.
+            let backup = path.with_extension("bak");
+            let _ = fs::remove_file(&backup);
+            if path.exists() {
+                fs::rename(path, &backup)?;
+            }
+            match fs::rename(&temporary, path) {
+                Ok(()) => {
+                    let _ = fs::remove_file(&backup);
+                    Ok(())
+                }
+                Err(error) => {
+                    let _ = fs::rename(&backup, path);
+                    Err(error)
+                }
+            }
         }
+        Err(error) => Err(error),
     }
 }
 
@@ -227,34 +248,47 @@ pub fn load(path: &Path) -> io::Result<Workspace> {
 }
 
 /// Load the workspace, or create and save a neutral demo workspace.
-pub fn load_or_seed(path: &Path) -> Workspace {
+///
+/// Only a missing file seeds a new workspace. A corrupt, unreadable or
+/// permission-denied file is an error: overwriting it would destroy the only
+/// recovery evidence.
+pub fn load_or_seed(path: &Path) -> io::Result<Workspace> {
     match load(path) {
-        Ok(workspace) => workspace,
-        Err(_) => {
+        Ok(workspace) => Ok(workspace),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
             let workspace = Workspace::seed("ion-of-notes");
-            let _ = save(path, &workspace);
-            workspace
+            save(path, &workspace)?;
+            Ok(workspace)
         }
+        Err(error) => Err(error),
     }
 }
 
 /// Load the workspace catalog, migrating the current single workspace when the
 /// catalog file does not exist yet (spec-058).
-pub fn load_catalog_or_seed(path: &Path, workspace_path: &Path) -> crate::model::WorkspaceCatalog {
+pub fn load_catalog_or_seed(
+    path: &Path,
+    workspace_path: &Path,
+) -> io::Result<crate::model::WorkspaceCatalog> {
     match read_json::<crate::model::WorkspaceCatalog>(path) {
         Ok(catalog) if !catalog.workspaces.is_empty() => {
             let mut catalog = catalog;
             for workspace in &mut catalog.workspaces {
                 workspace.normalize_legacy_icons();
             }
-            catalog
+            Ok(catalog)
         }
-        _ => {
-            let workspace = load_or_seed(workspace_path);
+        Ok(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "workspace catalog is empty",
+        )),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            let workspace = load_or_seed(workspace_path)?;
             let catalog = crate::model::WorkspaceCatalog::new(workspace);
-            let _ = save_catalog(path, &catalog);
-            catalog
+            save_catalog(path, &catalog)?;
+            Ok(catalog)
         }
+        Err(error) => Err(error),
     }
 }
 

@@ -112,6 +112,8 @@ src/
                      (typed results)
     handlers/        one module per v2 resource family, all on typed
                      handler errors
+    authorization.rs owning-page resolution, resource access and
+                     principal-aware workspace/search/sync projections
     services/        auth and webhook service modules
     events.rs        DomainEvent + notify for webhook-emitting writes
     error.rs         HandlerError, HandlerResult and body() for v2 handlers

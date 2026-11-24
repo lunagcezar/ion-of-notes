@@ -6,9 +6,10 @@ use super::super::response::{json, parse_body, v2_error};
 use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
 use crate::model::now_iso;
 use crate::webhooks::{
-    EntityRef, SubscriptionStatus, WebhookDelivery, WebhookEvent, WebhookEventType,
-    WebhookRequeueInput, WebhookStats, WebhookSubscription, WebhookSubscriptionInput,
-    WebhookVerificationInput, aggregate_events, is_allowed_url, sign,
+    EntityRef, MAX_WEBHOOK_DELIVERIES, SubscriptionStatus, WebhookCreatedDto, WebhookDelivery,
+    WebhookEvent, WebhookEventType, WebhookRequeueInput, WebhookStats, WebhookSubscription,
+    WebhookSubscriptionDto, WebhookSubscriptionInput, WebhookVerificationInput, aggregate_events,
+    is_allowed_url, sign,
 };
 
 impl WorkspaceServer {
@@ -167,7 +168,7 @@ impl WorkspaceServer {
             }
         }
         if queued {
-            let _ = self.persist_collab();
+            self.persist_collab_logged();
         }
     }
 
@@ -188,7 +189,7 @@ impl WorkspaceServer {
                 self.deliver_event(&subscription, event);
             }
         }
-        let _ = self.persist_collab();
+        self.persist_collab_logged();
     }
 
     /// Retry failed deliveries with exponential backoff and a dead-letter
@@ -247,7 +248,7 @@ impl WorkspaceServer {
             }
         }
         if changed {
-            let _ = self.persist_collab();
+            self.persist_collab_logged();
         }
     }
 
@@ -291,7 +292,29 @@ impl WorkspaceServer {
             },
             dead_lettered: false,
         });
-        let _ = self.persist_collab();
+        self.prune_deliveries();
+        self.persist_collab_logged();
+    }
+
+    /// Log a failed webhook persistence attempt instead of silently dropping
+    /// the durability error. The in-memory delivery state remains available to
+    /// the next worker tick.
+    fn persist_collab_logged(&self) {
+        if let Err(error) = self.persist_collab() {
+            eprintln!("webhook persistence error: {error}");
+        }
+    }
+
+    fn prune_deliveries(&mut self) {
+        while self.collab.webhook_deliveries.len() > MAX_WEBHOOK_DELIVERIES {
+            let position = self
+                .collab
+                .webhook_deliveries
+                .iter()
+                .position(|delivery| delivery.delivered || delivery.dead_lettered)
+                .unwrap_or(0);
+            self.collab.webhook_deliveries.remove(position);
+        }
     }
 
     pub(in crate::server) fn handle_v2_webhook(
@@ -301,7 +324,13 @@ impl WorkspaceServer {
         request_id: &str,
     ) -> HandlerResult<Option<ApiResponse>> {
         if path == "/api/v2/webhooks" && request.method == Method::Get {
-            return ok(json(200, Envelope::ok(self.collab.webhooks.clone())));
+            let subscriptions: Vec<WebhookSubscriptionDto> = self
+                .collab
+                .webhooks
+                .iter()
+                .map(WebhookSubscriptionDto::from)
+                .collect();
+            return ok(json(200, Envelope::ok(subscriptions)));
         }
         if path == "/api/v2/webhooks" && request.method == Method::Post {
             let input = match parse_body::<WebhookSubscriptionInput>(request) {
@@ -311,7 +340,10 @@ impl WorkspaceServer {
                 }
             };
             return match self.create_webhook(input) {
-                Ok(subscription) => ok(json(201, Envelope::ok(subscription))),
+                Ok(subscription) => ok(json(
+                    201,
+                    Envelope::ok(WebhookCreatedDto::from(subscription)),
+                )),
                 Err(message) => fail(v2_error(
                     400,
                     CODE_VALIDATION_ERROR,

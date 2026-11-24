@@ -29,17 +29,22 @@ fn write_private_file(path: &Path, text: &str) -> io::Result<()> {
     #[cfg(unix)]
     {
         use std::io::Write;
-        use std::os::unix::fs::OpenOptionsExt;
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
             .mode(0o600)
             .open(path)?;
+        // `mode` only applies when the file is created. Tighten an existing
+        // file before writing the token into it.
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
         file.write_all(text.as_bytes())?;
     }
     #[cfg(not(unix))]
     {
+        // Windows does not expose a portable file ACL through std; the file
+        // inherits the user profile directory's ACL. Documented limitation.
         std::fs::write(path, text)?;
     }
     Ok(())

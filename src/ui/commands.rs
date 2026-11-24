@@ -69,14 +69,15 @@ pub(super) fn new_tab_choices(ws: &Workspace, query: &str) -> Vec<NewTabChoice> 
 
 /// Decide whether a frame can mutate the workspace and therefore needs a
 /// pre-frame undo snapshot. Idle and popup-only frames skip the clone
-/// (spec-101).
+/// (spec-101). `text_input_active` means a real text/key event arrived this
+/// frame, not merely that a field keeps keyboard focus.
 pub fn frame_may_mutate(
     commands_empty: bool,
     pointer_active: bool,
-    text_focused: bool,
+    text_input_active: bool,
     popup_open: bool,
 ) -> bool {
-    !commands_empty || pointer_active || (!popup_open && text_focused)
+    !commands_empty || pointer_active || (!popup_open && text_input_active)
 }
 
 /// The command family that owns the transition. `apply_commands` uses this

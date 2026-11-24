@@ -50,12 +50,30 @@ pub fn require_owner_password(value: Option<String>, allow_default: bool) -> io:
         return Ok(value);
     }
     if allow_default {
-        return Ok(DEFAULT_OWNER_PASSWORD.to_string());
+        return default_owner_password().map(str::to_string).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "the development default password is disabled in release builds; set ION_OF_NOTES_OWNER_PASSWORD or ION_OF_NOTES_OWNER_PASSWORD_FILE",
+            )
+        });
     }
     Err(io::Error::new(
         io::ErrorKind::InvalidInput,
         "set ION_OF_NOTES_OWNER_PASSWORD or ION_OF_NOTES_OWNER_PASSWORD_FILE (or ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD=1 for development)",
     ))
+}
+
+/// The development default exists only in debug builds. A release binary must
+/// always receive an explicit owner password.
+pub fn default_owner_password() -> Option<&'static str> {
+    #[cfg(debug_assertions)]
+    {
+        Some(DEFAULT_OWNER_PASSWORD)
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        None
+    }
 }
 
 /// One local account. The password is an Argon2id PHC string.

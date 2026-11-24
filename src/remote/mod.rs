@@ -10,7 +10,7 @@ use crate::server::realtime::{Awareness, ClientMessage, ServerMessage};
 use crate::server::{
     API_VERSION, AUTH_HEADER, ApiRequest, ApiResponse, CollabTransport, CrdtSyncInput,
     CrdtSyncOutput, CrdtUpdateInput, CrdtUpdateOutput, Envelope, Method, RequestTransport,
-    VERSION_HEADER, url_encode,
+    VERSION_HEADER,
 };
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;

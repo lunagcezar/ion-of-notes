@@ -6,11 +6,6 @@ use crate::model::Workspace;
 use super::super::WorkspaceServer;
 use super::UseCaseError;
 
-/// The current workspace snapshot.
-pub(in crate::server) fn get_workspace(server: &WorkspaceServer) -> Workspace {
-    server.workspace.clone()
-}
-
 /// Replace the workspace, record changed pages, persist and return the result.
 pub(in crate::server) fn replace_workspace(
     server: &mut WorkspaceServer,

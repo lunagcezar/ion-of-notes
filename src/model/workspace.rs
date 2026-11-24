@@ -191,6 +191,13 @@ impl Workspace {
 
     pub fn page_mut(&mut self, id: &str) -> Option<&mut Page> {
         self.search_cache.mark_dirty(id);
+        self.page_mut_untracked(id)
+    }
+
+    /// A mutable page reference for rendering and other reads that may write
+    /// text widgets but must not invalidate the search cache just because the
+    /// page was drawn.
+    pub fn page_mut_untracked(&mut self, id: &str) -> Option<&mut Page> {
         let position = if self.index.len() == self.pages.len() {
             self.index.position(id)
         } else {
@@ -663,5 +670,15 @@ impl Workspace {
 
     pub fn bump_version(&mut self) {
         self.version = self.version.saturating_add(1);
+    }
+
+    /// Keep only the pages selected by `keep` and rebuild the derived index.
+    ///
+    /// Used by the server's principal-aware workspace projection. The search
+    /// cache is reset because it indexed the removed pages.
+    pub fn retain_pages(&mut self, keep: impl Fn(&Page) -> bool) {
+        self.pages.retain(keep);
+        self.index = WorkspaceIndex::build(&self.pages);
+        self.search_cache = SearchCacheCell::default();
     }
 }

@@ -29,9 +29,13 @@ snapshot store.
   durable snapshot instead of staying ahead of the store.
 - CRDT projection failures also reload and reset the page document.
 
-The JSON adapters write each document through a temporary file and rename.
-They cannot commit two files atomically; JSON mode is a local single-process
-mode. Use SQLite for multi-user or remote deployments.
+The JSON adapters write each document through a temporary file and rename. If
+the platform cannot replace an existing file, the previous document is moved to
+a sibling `.bak` file until the new one is in place; the live file is never
+overwritten with `fs::copy`. A corrupt or unreadable document is preserved and
+the load returns an error instead of seeding a new workspace over it. JSON
+files cannot commit two documents atomically; JSON mode is a local
+single-process mode. Use SQLite for multi-user or remote deployments.
 
 ## 3. SQLite schema posture
 

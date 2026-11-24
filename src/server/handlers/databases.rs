@@ -1,12 +1,13 @@
 //! Database, data-source and page-property v2 route use cases.
 
+use super::super::authorization::ResourceAccess;
 use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
 };
-use super::super::error::{HandlerResult, fail, ok};
+use super::super::error::{HandlerError, HandlerResult, fail, ok};
 use super::super::pagination::PageRequest;
 use super::super::response::{json, parse_body, v2_error, v2_list_response};
-use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
+use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::collab::ChangeOp;
 use crate::model::{
     DataSource, DataSourceInput, DataSourceRef, Database, DatabaseInput, PagePropertiesInput,
@@ -20,6 +21,7 @@ impl WorkspaceServer {
         path: &str,
         query: &str,
         request_id: &str,
+        connection: &Connection,
     ) -> HandlerResult<Option<ApiResponse>> {
         // Page properties: /api/v2/pages/{id}/properties
         if let Some(page_id) = path
@@ -37,6 +39,7 @@ impl WorkspaceServer {
                     None,
                 ));
             };
+            ensure_page_access(self, connection, page_id, ResourceAccess::Read)?;
             return ok(json(200, Envelope::ok(page.properties.clone())));
         }
 
@@ -53,6 +56,7 @@ impl WorkspaceServer {
                     return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                 }
             };
+            ensure_page_access(self, connection, page_id, ResourceAccess::Write)?;
             let dto = {
                 let Some(page) = self.workspace.page_or_row_mut(page_id) else {
                     return fail(v2_error(
@@ -97,6 +101,7 @@ impl WorkspaceServer {
                     None,
                 ));
             };
+            ensure_page_access(self, connection, page_id, ResourceAccess::Read)?;
             let Some(property) = page.properties.get(property_id).or_else(|| {
                 page.properties
                     .values()
@@ -138,7 +143,20 @@ impl WorkspaceServer {
 
         match (request.method, path, database_rest, data_source_rest) {
             (Method::Get, "/api/v2/databases", _, _) => {
-                ok(json(200, Envelope::ok(self.workspace.databases.clone())))
+                let databases: Vec<Database> = self
+                    .workspace
+                    .databases
+                    .iter()
+                    .filter(|database| {
+                        self.can_access_resource(
+                            connection,
+                            self.page_for_database(&database.id).as_deref(),
+                            ResourceAccess::Read,
+                        )
+                    })
+                    .cloned()
+                    .collect();
+                ok(json(200, Envelope::ok(databases)))
             }
             (Method::Post, "/api/v2/databases", _, _) => {
                 let input = match parse_body::<DatabaseInput>(request) {
@@ -147,6 +165,18 @@ impl WorkspaceServer {
                         return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
+                match input.parent_page_id.as_deref() {
+                    Some(page_id) => {
+                        ensure_page_access(self, connection, page_id, ResourceAccess::Write)?
+                    }
+                    None => {
+                        if !self.is_owner(connection) {
+                            return Err(HandlerError::owner_only(
+                                "workspace-level databases require owner access",
+                            ));
+                        }
+                    }
+                }
                 if input.title.trim().is_empty() {
                     return fail(v2_error(
                         400,
@@ -187,6 +217,7 @@ impl WorkspaceServer {
                 ok(json(201, Envelope::ok(database)))
             }
             (Method::Get, _, Some(id), _) if !id.is_empty() && !id.contains('/') => {
+                ensure_database_access(self, connection, id, ResourceAccess::Read)?;
                 match self.workspace.database(id) {
                     Some(database) => ok(json(200, Envelope::ok(database.clone()))),
                     None => fail(v2_error(
@@ -199,6 +230,7 @@ impl WorkspaceServer {
                 }
             }
             (Method::Patch, _, Some(id), _) if !id.is_empty() && !id.contains('/') => {
+                ensure_database_access(self, connection, id, ResourceAccess::Write)?;
                 let input = match parse_body::<DatabaseInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
@@ -237,6 +269,7 @@ impl WorkspaceServer {
                 ok(json(200, Envelope::ok(dto)))
             }
             (Method::Delete, _, Some(id), _) if !id.is_empty() && !id.contains('/') => {
+                ensure_database_access(self, connection, id, ResourceAccess::Write)?;
                 let dto = {
                     let Some(database) = self.workspace.database_mut(id) else {
                         return fail(v2_error(
@@ -264,6 +297,7 @@ impl WorkspaceServer {
             }
             (Method::Get, _, Some(id), _) if id.ends_with("/data_sources") => {
                 let database_id = id.trim_end_matches("/data_sources");
+                ensure_database_access(self, connection, database_id, ResourceAccess::Read)?;
                 let Some(database) = self.workspace.database(database_id) else {
                     return fail(v2_error(
                         404,
@@ -290,6 +324,7 @@ impl WorkspaceServer {
             }
             (Method::Post, _, Some(id), _) if id.ends_with("/data_sources") => {
                 let database_id = id.trim_end_matches("/data_sources");
+                ensure_database_access(self, connection, database_id, ResourceAccess::Write)?;
                 let Some(database) = self.workspace.database(database_id).cloned() else {
                     return fail(v2_error(
                         404,
@@ -351,6 +386,7 @@ impl WorkspaceServer {
                 ok(json(201, Envelope::ok(data_source)))
             }
             (Method::Get, _, _, Some(id)) if !id.is_empty() && !id.contains('/') => {
+                ensure_data_source_access(self, connection, id, ResourceAccess::Read)?;
                 match self.workspace.data_source(id) {
                     Some(data_source) => ok(json(200, Envelope::ok(data_source.clone()))),
                     None => fail(v2_error(
@@ -363,6 +399,7 @@ impl WorkspaceServer {
                 }
             }
             (Method::Patch, _, _, Some(id)) if !id.is_empty() && !id.contains('/') => {
+                ensure_data_source_access(self, connection, id, ResourceAccess::Write)?;
                 let input = match parse_body::<DataSourceInput>(request) {
                     Ok(input) => input,
                     Err(message) => {
@@ -401,6 +438,7 @@ impl WorkspaceServer {
             }
             (Method::Post, _, _, Some(id)) if id.ends_with("/query") => {
                 let data_source_id = id.trim_end_matches("/query");
+                ensure_data_source_access(self, connection, data_source_id, ResourceAccess::Read)?;
                 let Some(data_source) = self.workspace.data_source(data_source_id) else {
                     return fail(v2_error(
                         404,
@@ -434,5 +472,82 @@ impl WorkspaceServer {
             }
             _ => Ok(None),
         }
+    }
+}
+
+fn ensure_page_access(
+    server: &WorkspaceServer,
+    connection: &Connection,
+    page_id: &str,
+    access: ResourceAccess,
+) -> Result<(), HandlerError> {
+    if server.can_access_resource(connection, Some(page_id), access) {
+        return Ok(());
+    }
+    let required = access_name(access);
+    Err(HandlerError::restricted(
+        format!("{required} access to this page is not allowed"),
+        page_id,
+        required,
+    ))
+}
+
+fn ensure_database_access(
+    server: &WorkspaceServer,
+    connection: &Connection,
+    database_id: &str,
+    access: ResourceAccess,
+) -> Result<(), HandlerError> {
+    ensure_resource_access(
+        server,
+        connection,
+        server.page_for_database(database_id),
+        access,
+        "database",
+    )
+}
+
+fn ensure_data_source_access(
+    server: &WorkspaceServer,
+    connection: &Connection,
+    data_source_id: &str,
+    access: ResourceAccess,
+) -> Result<(), HandlerError> {
+    ensure_resource_access(
+        server,
+        connection,
+        server.page_for_data_source(data_source_id),
+        access,
+        "data source",
+    )
+}
+
+fn ensure_resource_access(
+    server: &WorkspaceServer,
+    connection: &Connection,
+    page: Option<String>,
+    access: ResourceAccess,
+    kind: &str,
+) -> Result<(), HandlerError> {
+    if server.can_access_resource(connection, page.as_deref(), access) {
+        return Ok(());
+    }
+    let required = access_name(access);
+    match page {
+        Some(page_id) => Err(HandlerError::restricted(
+            format!("{required} access to this {kind}'s page is not allowed"),
+            &page_id,
+            required,
+        )),
+        None => Err(HandlerError::owner_only(format!(
+            "workspace-level {kind} administration requires owner access"
+        ))),
+    }
+}
+
+fn access_name(access: ResourceAccess) -> &'static str {
+    match access {
+        ResourceAccess::Read => "read",
+        ResourceAccess::Write => "write",
     }
 }

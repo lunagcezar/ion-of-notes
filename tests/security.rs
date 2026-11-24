@@ -197,6 +197,27 @@ fn login_is_limited_per_client_and_per_account() {
 }
 
 #[test]
+fn login_workspace_budget_is_charged_once_per_attempt() {
+    let mut server = server_with_account();
+    server.configure_login_rate_limits(100, 2, Duration::from_secs(60));
+
+    for attempt in 0..2 {
+        let response = server.handle(&login_request(
+            "owner@workspace.local",
+            "wrong",
+            Some(&format!("10.0.1.{attempt}")),
+        ));
+        assert_eq!(response.status, 401, "attempt {attempt}");
+    }
+    let third = server.handle(&login_request(
+        "owner@workspace.local",
+        "wrong",
+        Some("10.0.1.9"),
+    ));
+    assert_eq!(third.status, 429, "the workspace budget is two attempts");
+}
+
+#[test]
 fn request_log_is_capped() {
     let mut server = WorkspaceServer::new(Workspace::seed("log-cap"));
     server.set_request_log_cap(3);

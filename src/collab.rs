@@ -19,6 +19,10 @@ use serde::{Deserialize, Serialize};
 /// Keep at most this many snapshots per page (newest first).
 pub const MAX_VERSIONS_PER_PAGE: usize = 50;
 
+/// Bound for the global sync log. A cursor older than the retained window is
+/// expected to full-resync; this keeps memory and persisted state finite.
+pub const MAX_CHANGES: usize = 10_000;
+
 mod export;
 
 pub use export::{export_tree, page_markdown, people_csv, people_markdown};
@@ -379,6 +383,10 @@ impl CollabState {
         };
         self.next_seq += 1;
         self.changes.push(change.clone());
+        if self.changes.len() > MAX_CHANGES {
+            let excess = self.changes.len() - MAX_CHANGES;
+            self.changes.drain(0..excess);
+        }
         change
     }
 

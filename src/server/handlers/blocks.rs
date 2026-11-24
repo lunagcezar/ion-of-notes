@@ -1,10 +1,11 @@
 //! Block read, append, update and delete v2 route use cases.
 
+use super::super::authorization::ResourceAccess;
 use super::super::contract::{CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND};
-use super::super::error::{HandlerResult, fail, ok};
+use super::super::error::{HandlerError, HandlerResult, fail, ok};
 use super::super::pagination::PageRequest;
 use super::super::response::{json, parse_body, v2_error, v2_list_response};
-use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
+use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::collab::ChangeOp;
 use crate::model::{
     Block, BlockChildrenRequest, BlockDto, BlockInput, BlockKind, RichText, now_iso,
@@ -17,6 +18,7 @@ impl WorkspaceServer {
         path: &str,
         query: &str,
         request_id: &str,
+        connection: &Connection,
     ) -> HandlerResult<Option<ApiResponse>> {
         let Some(rest) = path.strip_prefix("/api/v2/blocks/") else {
             return Ok(None);
@@ -46,6 +48,7 @@ impl WorkspaceServer {
                         None,
                     ));
                 };
+                ensure_access(self, connection, &page_id, ResourceAccess::Read)?;
                 let Some(block) = self.workspace.block(id) else {
                     return fail(v2_error(
                         404,
@@ -71,6 +74,7 @@ impl WorkspaceServer {
                         None,
                     ));
                 };
+                ensure_access(self, connection, &page_id, ResourceAccess::Read)?;
                 let Some(children) = self.workspace.block_children(id) else {
                     return fail(v2_error(
                         404,
@@ -120,6 +124,7 @@ impl WorkspaceServer {
                         None,
                     ));
                 };
+                ensure_access(self, connection, &page_id, ResourceAccess::Write)?;
                 let parent_block = (!is_page_parent).then(|| id.to_string());
                 let actor = self.collab.owner_id();
                 let mut created = Vec::new();
@@ -174,6 +179,7 @@ impl WorkspaceServer {
                         None,
                     ));
                 };
+                ensure_access(self, connection, &page_id, ResourceAccess::Write)?;
                 let actor = self.collab.owner_id();
                 let dto = {
                     let Some(block) = self.workspace.block_mut(id) else {
@@ -234,6 +240,7 @@ impl WorkspaceServer {
                         None,
                     ));
                 };
+                ensure_access(self, connection, &page_id, ResourceAccess::Write)?;
                 let actor = self.collab.owner_id();
                 let dto = {
                     let Some(block) = self.workspace.block_mut(id) else {
@@ -270,4 +277,25 @@ impl WorkspaceServer {
             )),
         }
     }
+}
+
+/// Apply the owning page's share rules to one nested block request.
+fn ensure_access(
+    server: &WorkspaceServer,
+    connection: &Connection,
+    page_id: &str,
+    access: ResourceAccess,
+) -> Result<(), HandlerError> {
+    if server.can_access_resource(connection, Some(page_id), access) {
+        return Ok(());
+    }
+    let required = match access {
+        ResourceAccess::Read => "read",
+        ResourceAccess::Write => "write",
+    };
+    Err(HandlerError::restricted(
+        format!("{required} access to this block's page is not allowed"),
+        page_id,
+        required,
+    ))
 }

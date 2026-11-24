@@ -16,7 +16,7 @@ fn build_desktop_at_seeds_and_serves_the_workspace() {
     let collab = path.with_extension("collab.json");
     remove(&path);
     remove(&collab);
-    let (mut client, workspace) = build_desktop_at(path.clone());
+    let (mut client, workspace) = build_desktop_at(path.clone()).expect("desktop");
     assert!(!workspace.pages.is_empty(), "the demo workspace is seeded");
     assert_eq!(client.workspace().unwrap(), workspace);
     remove(&path);
@@ -29,7 +29,7 @@ fn replace_workspace_moves_the_local_server_to_the_new_snapshot() {
     let collab = path.with_extension("collab.json");
     remove(&path);
     remove(&collab);
-    let (mut client, workspace) = build_desktop_at(path.clone());
+    let (mut client, workspace) = build_desktop_at(path.clone()).expect("desktop");
     let mut second = ion_of_notes::model::Workspace::seed("Second");
     second.settings.id = "second".to_string();
     client.replace_workspace(&second).unwrap();
@@ -50,7 +50,7 @@ fn build_desktop_catalog_at_paths_returns_an_active_catalog() {
     remove(&collab);
     remove(&catalog_path);
     let (mut client, workspace, catalog) =
-        build_desktop_catalog_at_paths(path.clone(), collab.clone());
+        build_desktop_catalog_at_paths(path.clone(), collab.clone()).expect("catalog");
     assert_eq!(catalog.summaries().len(), 1);
     assert!(catalog.summaries()[0].active);
     assert_eq!(client.workspace().unwrap().name, workspace.name);
@@ -73,7 +73,7 @@ fn build_server_at_answers_health() {
     let collab = path.with_extension("collab.json");
     remove(&path);
     remove(&collab);
-    let mut server = build_server_at(path.clone());
+    let mut server = build_server_at(path.clone()).expect("server");
     let response = server.handle(&ApiRequest::new(Method::Get, "/health", None));
     assert_eq!(response.status, 200);
     remove(&path);

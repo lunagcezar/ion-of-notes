@@ -167,6 +167,18 @@ impl Capability {
     }
 }
 
+/// Where a connection comes from. The kind replaces string-prefix checks on
+/// the connection id and keeps the demo owner separate from a persisted
+/// session.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectionKind {
+    #[default]
+    Session,
+    Local,
+    Api,
+}
+
 /// A connection (token + member + workspace + capabilities).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Connection {
@@ -175,6 +187,8 @@ pub struct Connection {
     pub member_id: String,
     pub workspace_id: String,
     pub capabilities: BTreeSet<Capability>,
+    #[serde(default)]
+    pub kind: ConnectionKind,
 }
 
 impl Connection {
@@ -191,18 +205,21 @@ impl Connection {
             member_id: member_id.into(),
             workspace_id: workspace_id.into(),
             capabilities: capabilities.into_iter().collect(),
+            kind: ConnectionKind::Session,
         }
     }
 
     /// The local demo owner: every capability, one stable token.
     pub fn owner(member_id: impl Into<String>, workspace_id: impl Into<String>) -> Self {
-        Self::new(
+        let mut connection = Self::new(
             "connection-owner",
             OWNER_TOKEN,
             member_id,
             workspace_id,
             Capability::all(),
-        )
+        );
+        connection.kind = ConnectionKind::Local;
+        connection
     }
 
     pub fn has(&self, capability: Capability) -> bool {

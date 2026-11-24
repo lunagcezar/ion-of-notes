@@ -6,8 +6,8 @@ use super::super::response::{
     bad, forbidden, json, not_found, parse_body, query_value, server_error, unauthorized,
 };
 use super::super::usecases::{
-    self, UseCaseError, create_page, delete_page, get_page, get_workspace, invite_member,
-    list_members, list_pages, list_shares, page_versions, replace_workspace, search, set_share,
+    self, UseCaseError, create_page, delete_page, get_page, invite_member, list_members,
+    list_shares, page_versions, replace_workspace, set_share,
 };
 use super::super::{
     ApiRequest, ApiResponse, Capability, Connection, Envelope, Method, WorkspaceServer,
@@ -43,6 +43,7 @@ impl WorkspaceServer {
             (Method::Put, "/api/workspace")
                 | (Method::Post, "/api/members")
                 | (Method::Put, "/api/shares")
+                | (Method::Get, "/api/export")
         ) && !self.is_owner(&connection)
         {
             return forbidden("owner access required");
@@ -67,7 +68,9 @@ impl WorkspaceServer {
         match (request.method, path) {
             (Method::Get, "/health") => json(200, Envelope::ok("ok".to_string())),
 
-            (Method::Get, "/api/workspace") => json(200, Envelope::ok(get_workspace(self))),
+            (Method::Get, "/api/workspace") => {
+                json(200, Envelope::ok(self.project_workspace(&connection)))
+            }
             (Method::Put, "/api/workspace") => match parse_body::<Workspace>(request) {
                 Ok(workspace) => match replace_workspace(self, workspace) {
                     Ok(workspace) => json(200, Envelope::ok(workspace)),
@@ -76,7 +79,9 @@ impl WorkspaceServer {
                 Err(message) => bad(&message),
             },
 
-            (Method::Get, "/api/pages") => json(200, Envelope::ok(list_pages(self))),
+            (Method::Get, "/api/pages") => {
+                json(200, Envelope::ok(self.visible_page_summaries(&connection)))
+            }
             (Method::Post, "/api/pages") => match parse_body::<PageDraft>(request) {
                 Ok(draft) => match create_page(self, draft) {
                     Ok(page) => json(201, Envelope::ok(page)),
@@ -87,7 +92,7 @@ impl WorkspaceServer {
 
             (Method::Get, "/api/search") => {
                 let q = query_value(query, "q");
-                json(200, Envelope::ok(search(self, &q)))
+                json(200, Envelope::ok(self.visible_search(&connection, &q)))
             }
 
             // ---- decided collaborative API (see docs/adr-003-*) ----------
@@ -101,6 +106,12 @@ impl WorkspaceServer {
             },
             (Method::Get, "/api/shares") => {
                 let page = query_value(query, "page");
+                if page.is_empty() && !self.is_owner(&connection) {
+                    return forbidden("owner access required");
+                }
+                if !page.is_empty() && !self.can_read_page(&connection, &page) {
+                    return forbidden("read access to this page is not allowed");
+                }
                 json(200, Envelope::ok(list_shares(self, Some(&page))))
             }
             (Method::Put, "/api/shares") => match parse_body::<crate::collab::Share>(request) {
@@ -112,7 +123,7 @@ impl WorkspaceServer {
             },
             (Method::Get, "/api/sync") => {
                 let since = query_value(query, "since").parse::<u64>().unwrap_or(0);
-                json(200, Envelope::ok(usecases::sync(self, since)))
+                json(200, Envelope::ok(self.visible_changes(&connection, since)))
             }
             (Method::Get, "/api/export") => json(200, Envelope::ok(usecases::export(self))),
             (Method::Get, "/api/realtime") => {

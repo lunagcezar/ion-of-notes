@@ -89,7 +89,7 @@ impl WorkspaceServer {
             return Ok(response);
         }
         if let Some(response) = self
-            .handle_v2_comments(request, path, query, request_id)
+            .handle_v2_comments(request, path, query, request_id, &connection)
             .map_err(|error| handler_error(error, request_id))?
         {
             return Ok(response);
@@ -101,31 +101,31 @@ impl WorkspaceServer {
             return Ok(response);
         }
         if let Some(response) = self
-            .handle_v2_view(request, path, query, request_id)
+            .handle_v2_view(request, path, query, request_id, &connection)
             .map_err(|error| handler_error(error, request_id))?
         {
             return Ok(response);
         }
         if let Some(response) = self
-            .handle_v2_database(request, path, query, request_id)
+            .handle_v2_database(request, path, query, request_id, &connection)
             .map_err(|error| handler_error(error, request_id))?
         {
             return Ok(response);
         }
         if let Some(response) = self
-            .handle_v2_block(request, path, query, request_id)
+            .handle_v2_block(request, path, query, request_id, &connection)
             .map_err(|error| handler_error(error, request_id))?
         {
             return Ok(response);
         }
         if let Some(response) = self
-            .handle_v2_shared(request, path, request_id)
+            .handle_v2_shared(request, path, request_id, &connection)
             .map_err(|error| handler_error(error, request_id))?
         {
             return Ok(response);
         }
         if let Some(response) = self
-            .handle_v2_list(request, path, query, request_id)
+            .handle_v2_list(request, path, query, request_id, &connection)
             .map_err(|error| handler_error(error, request_id))?
         {
             return Ok(response);

@@ -43,7 +43,7 @@ in what order, and which document is the source of truth for each concern.
   (deterministic performance harness); `spec-098` is implemented
   (sidebar command grouping); `spec-099` is implemented
   (block/comment DTO separation); `spec-100` is implemented
-  (domain events for webhook-emitting writes); `spec-101`-`spec-114` implement
+  (domain events for webhook-emitting writes); `spec-101`-`spec-116` implement
   the performance pass (frame mutation gating, normalized emoji filtering,
   cursor indexing, search-body reuse, frame tracing, a shared expanded set, a
   bounded awareness queue, the background remote request worker, an incremental
@@ -141,7 +141,7 @@ flowchart TD
 | `docs/persistence-integrity.md` | operators, contributors | Atomic snapshots, failure reload, JSON limits and backup/restore |
 | `docs/performance-roadmap.md` | contributors | Deferred performance/scale work and the measurement plan |
 | `docs/performance-improvements.md` | contributors | 2026-11-12 performance pass: what changed and what is staged |
-| `docs/review-response.md` | reviewers, maintainers | Finding → response → spec → evidence map for the 2026-11-12 reviews |
+| `docs/review-response.md` | reviewers, maintainers | Finding → response → spec → evidence map for the 2026-11-12 and 2026-11-24 reviews |
 | `docs/refactoring-roadmap.md` | contributors | Implemented general refactors and the risk-ordered deferred work |
 | `docs/testing.md` | contributors, agents | Test strategy, test crates, fakes, red/green discipline |
 | `docs/glossary.md` | everyone | Shared vocabulary (domain, ports, adapters, DTOs, CRDT, clean room, …) |

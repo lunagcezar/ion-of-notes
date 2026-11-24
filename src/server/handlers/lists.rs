@@ -1,10 +1,10 @@
 //! Cursor-paginated v2 list routes.
 
-use super::super::error::{HandlerResult, fail, ok};
+use super::super::error::{HandlerError, HandlerResult, fail, ok};
 use super::super::pagination::PageRequest;
 use super::super::response::{query_value, v2_error, v2_list_response};
-use super::super::usecases::{list_members, list_pages, list_shares, page_versions, search, sync};
-use super::super::{ApiRequest, ApiResponse, Method, WorkspaceServer};
+use super::super::usecases::{list_members, list_shares, page_versions};
+use super::super::{ApiRequest, ApiResponse, Connection, Method, WorkspaceServer};
 
 impl WorkspaceServer {
     pub(in crate::server) fn handle_v2_list(
@@ -13,6 +13,7 @@ impl WorkspaceServer {
         path: &str,
         query: &str,
         request_id: &str,
+        connection: &Connection,
     ) -> HandlerResult<Option<ApiResponse>> {
         if request.method != Method::Get {
             return Ok(None);
@@ -42,7 +43,7 @@ impl WorkspaceServer {
         };
 
         if path == "/api/v2/pages" {
-            let items = list_pages(self);
+            let items = self.visible_page_summaries(connection);
             return ok(v2_list_response(items, &page, "pages", "page", request_id));
         }
         if path == "/api/v2/members" {
@@ -56,13 +57,26 @@ impl WorkspaceServer {
         }
         if path == "/api/v2/shares" {
             let page_id = query_value(query, "page");
+            if page_id.is_empty() {
+                if !self.is_owner(connection) {
+                    return Err(HandlerError::owner_only(
+                        "listing every share requires owner access",
+                    ));
+                }
+            } else if !self.can_read_page(connection, &page_id) {
+                return Err(HandlerError::restricted(
+                    "read access to this page is not allowed",
+                    &page_id,
+                    "read",
+                ));
+            }
             let shares = list_shares(self, Some(&page_id));
             let sort = format!("shares:{page_id}");
             return ok(v2_list_response(shares, &page, &sort, "share", request_id));
         }
         if path == "/api/v2/sync" {
             let since = query_value(query, "since").parse::<u64>().unwrap_or(0);
-            let changes = sync(self, since).changes;
+            let changes = self.visible_changes(connection, since).changes;
             let sort = format!("sync:{since}");
             return ok(v2_list_response(
                 changes, &page, &sort, "change", request_id,
@@ -70,7 +84,7 @@ impl WorkspaceServer {
         }
         if path == "/api/v2/search" {
             let q = query_value(query, "q");
-            let results = search(self, &q);
+            let results = self.visible_search(connection, &q);
             let sort = format!("search:{q}");
             return ok(v2_list_response(
                 results,

@@ -6,6 +6,41 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ## [Unreleased]
 
+### Security - spec-115 resource-scoped authorization
+
+- Added `server::authorization`: every nested resource (block, comment,
+  database, data source, view) resolves its owning page and applies the same
+  share checks as a direct page route; workspace-level resources are
+  owner-only.
+- `GET /api/v2/workspace` and v1 `/api/workspace` now return a principal-aware
+  projection; pages, search and sync are filtered per connection.
+- CRDT REST and WebSocket sync/update and the real-time backlog/messages are
+  page-scoped.
+- Webhook administration, export and file-upload listing are owner-only;
+  webhook list responses no longer serialize `verification_token`.
+- Extended the v1 adapter to the same filters and owner checks.
+
+### Security - spec-116 operational hardening
+
+- Trust `X-Forwarded-For` / `X-Real-IP` only from loopback or
+  `ION_OF_NOTES_TRUSTED_PROXIES`; use the socket peer otherwise.
+- Refuse an unauthenticated non-loopback bind unless
+  `ION_OF_NOTES_ALLOW_INSECURE_SERVER=1`; the development owner password is
+  debug-only.
+- Bound and purge the rate-limit maps, charge the login workspace budget once,
+  and use a local contingency when the shared limiter store fails.
+- Pin validated webhook DNS addresses with a custom ureq resolver (DNS
+  rebinding) and honor an explicit URL port.
+- Preserve a corrupt JSON workspace instead of overwriting it; replace files
+  through a sibling backup; rewrite an existing Unix session file with `0600`.
+- Generic 500 bodies with internal `tracing`; constant dummy Argon2id hash.
+- Cap the sync log and webhook delivery history; log webhook persistence
+  failures; skip unchanged SQLite position rewrites.
+- Fix the O(N²) search index and multibyte excerpt offset; stop marking the
+  search cache dirty while rendering; cheap block fingerprints, `HashSet`
+  selection, and no per-frame clone for a merely focused field.
+- Added `ConnectionKind` instead of string-prefix identity.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

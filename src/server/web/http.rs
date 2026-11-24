@@ -3,11 +3,17 @@ use crate::model::{Page, PageSummary, Workspace};
 use crate::server::contract::{AUTH_HEADER, OWNER_TOKEN, parse_bearer};
 use crate::server::response::{forbidden, json, not_found, unauthorized};
 use crate::server::{Connection, Envelope};
-use std::sync::RwLock;
+use axum::extract::ConnectInfo;
+use std::net::{IpAddr, SocketAddr};
+use std::sync::{OnceLock, RwLock};
 
 pub(super) async fn handle(State(state): State<AppState>, request: Request) -> Response {
     state.requests.fetch_add(1, Ordering::Relaxed);
     let (parts, body) = request.into_parts();
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| *addr);
     let body = match axum::body::to_bytes(body, MAX_BODY_BYTES).await {
         Ok(bytes) => (!bytes.is_empty()).then(|| String::from_utf8_lossy(&bytes).into_owned()),
         Err(_) => {
@@ -33,13 +39,7 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
                 .map(|value| (name.as_str().to_string(), value.to_string()))
         })
         .collect();
-    let client_ip = headers
-        .get("x-forwarded-for")
-        .and_then(|value| value.split(',').next())
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
-        .or_else(|| headers.get("x-real-ip").cloned());
+    let client_ip = trusted_client_ip(peer, &headers);
     let api_request = ApiRequest {
         method,
         path,
@@ -66,9 +66,10 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
     {
         Ok(response) => response,
         Err(error) => {
+            tracing::error!(%error, "server task failed");
             return plain_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                &format!("server task failed: {error}"),
+                "the request could not be completed",
             );
         }
     };
@@ -110,14 +111,22 @@ fn read_snapshot(
         Err(response) => return Some(response),
     };
     if path == "/api/workspace" {
-        let workspace = snapshot_for(&guard, cache);
+        let projected = if guard.is_owner(&connection) {
+            snapshot_for(&guard, cache).as_ref().clone()
+        } else {
+            guard.project_workspace(&connection)
+        };
         drop(guard);
-        return Some(json(200, Envelope::ok(workspace.as_ref())));
+        return Some(json(200, Envelope::ok(projected)));
     }
     if path == "/api/pages" {
-        let workspace = snapshot_for(&guard, cache);
+        let pages: Vec<PageSummary> = if guard.is_owner(&connection) {
+            let workspace = snapshot_for(&guard, cache);
+            workspace.pages.iter().map(Page::summary).collect()
+        } else {
+            guard.visible_page_summaries(&connection)
+        };
         drop(guard);
-        let pages: Vec<PageSummary> = workspace.pages.iter().map(Page::summary).collect();
         return Some(json(200, Envelope::ok(pages)));
     }
     let page_id = path.strip_prefix("/api/pages/")?;
@@ -204,4 +213,64 @@ fn to_http(response: ApiResponse) -> Response {
 
 pub(super) fn plain_error(status: StatusCode, message: &str) -> Response {
     (status, message.to_string()).into_response()
+}
+
+/// Resolve the client address used by login rate limiting.
+///
+/// `X-Forwarded-For` and `X-Real-IP` are honored only when the direct peer is a
+/// configured trusted proxy (loopback by default). Otherwise the socket peer is
+/// used, so a public client cannot rotate the login bucket with a header.
+fn trusted_client_ip(
+    peer: Option<SocketAddr>,
+    headers: &BTreeMap<String, String>,
+) -> Option<String> {
+    let peer_ip = peer.map(|addr| addr.ip());
+    let trusted = peer_ip.is_some_and(is_trusted_proxy);
+    if !trusted {
+        return peer_ip.map(|ip| ip.to_string());
+    }
+    headers
+        .get("x-forwarded-for")
+        .and_then(|value| value.split(',').next())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .or_else(|| headers.get("x-real-ip").cloned())
+        .or_else(|| peer_ip.map(|ip| ip.to_string()))
+}
+
+/// Trusted reverse proxies: loopback always, plus `ION_OF_NOTES_TRUSTED_PROXIES`
+/// (comma-separated IPs or `*`). The list is read once per process.
+fn is_trusted_proxy(ip: IpAddr) -> bool {
+    if ip.is_loopback() {
+        return true;
+    }
+    trusted_proxy_list().iter().any(|entry| match entry {
+        TrustedProxy::Any => true,
+        TrustedProxy::Address(address) => *address == ip,
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TrustedProxy {
+    Any,
+    Address(IpAddr),
+}
+
+fn trusted_proxy_list() -> &'static [TrustedProxy] {
+    static LIST: OnceLock<Vec<TrustedProxy>> = OnceLock::new();
+    LIST.get_or_init(|| {
+        std::env::var("ION_OF_NOTES_TRUSTED_PROXIES")
+            .unwrap_or_default()
+            .split(',')
+            .filter_map(|entry| {
+                let entry = entry.trim();
+                if entry == "*" {
+                    Some(TrustedProxy::Any)
+                } else {
+                    entry.parse::<IpAddr>().ok().map(TrustedProxy::Address)
+                }
+            })
+            .collect()
+    })
 }

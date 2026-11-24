@@ -119,7 +119,11 @@ impl NotionApp {
             }
             Command::DisconnectServer => {
                 let _ = crate::remote::clear_session();
-                let (client, workspace, catalog) = crate::app::build_desktop_catalog();
+                let (client, workspace, catalog) = crate::app::build_desktop_catalog()
+                    .unwrap_or_else(|error| {
+                        eprintln!("could not reload the workspace ({error}); staying in memory");
+                        crate::app::fallback_desktop()
+                    });
                 self.catalog = catalog;
                 self.catalog_path = Some(crate::store::catalog_path());
                 self.replace_client(client, workspace);

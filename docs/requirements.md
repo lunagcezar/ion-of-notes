@@ -350,6 +350,10 @@ capabilities) is implemented; the rest are planned.
 - FR-104: Settings → Server asks for the server URL, email and password, logs
   in, switches between local and remote workspaces and reports status
   (implemented in `spec-045`).
+- FR-105: Every page-scoped operation, including nested blocks, comments,
+  databases, data sources, views, CRDT sync/update and WebSocket messages,
+  enforces the owning page's read/write share; workspace, page lists, search
+  and sync return a principal-aware projection (implemented in `spec-115`).
 
 ## 2. Non-functional requirements
 
@@ -521,6 +525,7 @@ capabilities) is implemented; the rest are planned.
 | FR-75 (implemented)           | `spec-026-page-actions-and-comments.md` |
 | FR-76 (implemented)           | `spec-028-i18n-coverage.md` |
 | FR-77 (implemented)           | `spec-027-onboarding-and-templates.md` |
+| FR-105 (implemented)          | `spec-115-resource-scoped-authorization.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

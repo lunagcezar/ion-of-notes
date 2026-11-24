@@ -20,6 +20,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+mod authorization;
 mod contract;
 pub mod crdt;
 mod error;
@@ -42,9 +43,9 @@ pub use contract::{
     API_VERSION, AUTH_HEADER, ApiError, CODE_CONFLICT, CODE_INTERNAL, CODE_INVALID_CURSOR,
     CODE_INVALID_JSON, CODE_MISSING_VERSION, CODE_NOT_FOUND, CODE_RATE_LIMITED,
     CODE_RESTRICTED_RESOURCE, CODE_SERVICE_OVERLOAD, CODE_SERVICE_UNAVAILABLE, CODE_UNAUTHORIZED,
-    CODE_UNSUPPORTED_VERSION, CODE_VALIDATION_ERROR, Capability, Connection, ListResponse,
-    OWNER_TOKEN, RequestLogEntry, SUPPORTED_VERSIONS, VERSION_HEADER, new_request_id, parse_bearer,
-    version_supported,
+    CODE_UNSUPPORTED_VERSION, CODE_VALIDATION_ERROR, Capability, Connection, ConnectionKind,
+    ListResponse, OWNER_TOKEN, RequestLogEntry, SUPPORTED_VERSIONS, VERSION_HEADER, new_request_id,
+    parse_bearer, version_supported,
 };
 pub use crdt::CrdtStore;
 pub use http::{format_http_response, parse_http_request, serve_forever, serve_on, serve_once};

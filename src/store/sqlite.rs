@@ -451,7 +451,15 @@ impl SnapshotStore for SqliteStore {
         self.with_connection_mut(|connection| {
             let transaction = connection.transaction()?;
             write_meta(&transaction, &meta, &now)?;
-            match workspace.pages.iter().position(|page| page.id == page_id) {
+            let existing_position: Option<i64> = transaction
+                .query_row(
+                    "SELECT position FROM workspace_pages WHERE id = ?1",
+                    params![page_id],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            let page_position = workspace.pages.iter().position(|page| page.id == page_id);
+            match page_position {
                 Some(position) => {
                     write_page(&transaction, &workspace.pages[position], position, &now)?
                 }
@@ -462,7 +470,12 @@ impl SnapshotStore for SqliteStore {
                     )?;
                 }
             }
-            refresh_positions(&transaction, workspace)?;
+            // A text edit keeps its position. Only a create, delete or reorder
+            // needs the O(pages) position refresh.
+            let new_position = page_position.map(|position| position as i64);
+            if existing_position != new_position {
+                refresh_positions(&transaction, workspace)?;
+            }
             write_collab(&transaction, collab, &now)?;
             transaction.commit()
         })?;

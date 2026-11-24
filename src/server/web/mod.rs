@@ -91,6 +91,7 @@ pub fn router_with_server(server: Arc<Mutex<WorkspaceServer>>) -> Router {
 /// Liveness probe. Kept separate from `/ready` so healthchecks do not count as
 /// API traffic in `/metrics`.
 pub fn serve_axum(addr: &str, server: WorkspaceServer) -> std::io::Result<()> {
+    ensure_bind_is_safe(addr, server.requires_auth())?;
     init_tracing();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -102,9 +103,13 @@ pub fn serve_axum(addr: &str, server: WorkspaceServer) -> std::io::Result<()> {
         println!("ion-of-notes API listening on http://{local}");
         let shared = Arc::new(Mutex::new(server));
         spawn_webhook_worker(Arc::clone(&shared));
-        axum::serve(listener, router_with_server(shared))
-            .with_graceful_shutdown(shutdown_signal())
-            .await
+        axum::serve(
+            listener,
+            router_with_server(shared)
+                .into_make_service_with_connect_info::<std::net::SocketAddr>(),
+        )
+        .with_graceful_shutdown(shutdown_signal())
+        .await
     })
 }
 
@@ -130,6 +135,43 @@ fn spawn_webhook_worker(server: Arc<Mutex<WorkspaceServer>>) {
             .await;
         }
     });
+}
+
+/// Refuse to expose an unauthenticated server beyond loopback.
+///
+/// `NoAuthStore` is the local, in-process demo mode. Binding it to a network
+/// interface would publish the known demo owner connection. Production must
+/// use the SQLite/session store; development can opt in explicitly.
+fn ensure_bind_is_safe(addr: &str, requires_auth: bool) -> std::io::Result<()> {
+    if requires_auth || bind_is_loopback(addr) {
+        return Ok(());
+    }
+    let allow_insecure = std::env::var("ION_OF_NOTES_ALLOW_INSECURE_SERVER")
+        .ok()
+        .as_deref()
+        == Some("1");
+    if allow_insecure {
+        eprintln!(
+            "warning: serving the unauthenticated local API on {addr}; set ION_OF_NOTES_ALLOW_INSECURE_SERVER=1 only for isolated development"
+        );
+        return Ok(());
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::PermissionDenied,
+        "refusing to bind the unauthenticated local API to a non-loopback address; use --database with an owner password or set ION_OF_NOTES_ALLOW_INSECURE_SERVER=1 for isolated development",
+    ))
+}
+
+fn bind_is_loopback(addr: &str) -> bool {
+    let host = if let Some(rest) = addr.strip_prefix('[') {
+        rest.split(']').next().unwrap_or("")
+    } else {
+        addr.rsplit_once(':').map(|(host, _)| host).unwrap_or(addr)
+    };
+    host.eq_ignore_ascii_case("localhost")
+        || host
+            .parse::<std::net::IpAddr>()
+            .is_ok_and(|ip| ip.is_loopback())
 }
 
 fn init_tracing() {

@@ -4,6 +4,46 @@ This document maps the external review findings (Kimi, ChatGPT, Claude) to the
 work done in this cycle and to the items deliberately deferred. It is the
 single place to check whether a finding was fixed, mitigated or planned.
 
+## 0. 2026-11-24 review convergence (Kimi + ChatGPT)
+
+| Finding | Status | Response | Evidence |
+| ------- | ------ | -------- | -------- |
+| Nested block/comment/database/view resources bypassed page shares | fixed | `server::authorization` resolves the owning page and applies read/write access | spec-115, `tests/authorization.rs` |
+| `/api/workspace`, `/api/pages`, search, sync and v1 returned every page | fixed | principal-aware projection and filtered lists | spec-115 |
+| CRDT REST/WebSocket did not authorize the page | fixed | read/write checks before sync/update; backlog and live messages filtered | spec-115, `tests/authorization.rs` |
+| Webhook secrets and deliveries visible to members | fixed | routes owner-only; list uses `WebhookSubscriptionDto` without the token | spec-115, `tests/web.rs` |
+| Export exposed the whole workspace to any reader | fixed | owner-only v1/v2 export | spec-115 |
+| `X-Forwarded-For` bypassed login throttling | fixed | trusted-proxy check (loopback or `ION_OF_NOTES_TRUSTED_PROXIES`) | spec-116, `docs/security-hardening.md` |
+| Hardcoded `owner-token` reachable on a network bind | mitigated | unauthenticated non-loopback bind is refused unless explicitly overridden | spec-116, `tests/web.rs` |
+| Default owner password compiled into release | mitigated | development default is debug-only | spec-116 |
+| Session token in the WebSocket query string | mitigated | remote client sends `Authorization`; query fallback kept for old clients/tests | spec-116 |
+| 500 leaked task internals | fixed | generic body plus `tracing::error` | spec-116 |
+| Dummy hash could fall back to an empty string | fixed | constant Argon2id PHC hash | spec-116 |
+| Rate-limiter maps grew without bound | fixed | purge at a bound; new keys denied while full | spec-116 |
+| Shared limiter failed open | fixed | local contingency limiter on storage error | spec-116 |
+| Login workspace budget charged twice | fixed | `check_login` charges IP + account + workspace once | spec-116, `tests/security.rs` |
+| Session file kept permissive modes | fixed (Unix) | `set_permissions(0600)` before rewriting | spec-116 |
+| JSON corruption was overwritten with a seed | fixed | only `NotFound` seeds; errors propagate; desktop opens read-only in memory | spec-116, `tests/store.rs` |
+| Copy-over fallback could truncate the live file | fixed | sibling backup + rename; failure restores the backup | spec-116 |
+| Webhook DNS rebinding | fixed | validated addresses pinned in a custom ureq resolver | spec-116, `tests/webhooks.rs` |
+| Webhook persistence errors swallowed | fixed | `persist_collab_logged` | spec-116 |
+| Sync log and delivery history unbounded | fixed | `MAX_CHANGES`, `MAX_WEBHOOK_DELIVERIES` | spec-116 |
+| SQLite rewrote all positions on every edit | fixed | refresh only on create/delete/reorder | spec-116 |
+| O(N²) initial search index | fixed | one page map per dirty pass | spec-116, `tests/model.rs` |
+| Excerpt offset used bytes as characters | fixed | byte-to-char conversion | spec-116 |
+| Rendering marked the search cache dirty | fixed | `page_mut_untracked` in the renderer | spec-116 |
+| Focused text field cloned the workspace every frame | fixed | snapshot only when a text/key event arrives | spec-116, `tests/ui.rs` |
+| Block fingerprint hashed all text; selection was a Vec | fixed | cheap metadata fingerprint and `HashSet` | spec-116 |
+| String-prefix connection identity | fixed | `ConnectionKind` | spec-116 |
+| Webhook network I/O under the global mutex | deferred | needs a transactional outbox + independent worker; tracked in the roadmap | spec-116 |
+| Database view pagination after loading every row | deferred | needs a query layer; correctness unchanged | roadmap |
+| Renderer still visits every block; height tree absent | deferred | fingerprints are now cheap; a height tree is the next step | roadmap |
+| Hand-written loopback HTTP parser and three HTTP layers | deferred | production traffic uses Axum; consolidation is a separate refactor | roadmap |
+| Windows session-file ACL | deferred | inherits the profile ACL; keychain/ACL work is platform-specific | roadmap |
+
+The security items above are enforced server-side. The desktop UI is not an
+authorization boundary.
+
 ## 1. Implemented in this cycle
 
 | Area | Finding | Response | Spec | Evidence |
@@ -25,9 +65,9 @@ single place to check whether a finding was fixed, mitigated or planned.
 
 | Finding | What is done | What remains |
 | ------- | ------------ | ------------ |
-| Principal-aware authorization | Direct page routes and owner-only management routes enforce roles and shares | Nested resources (blocks, comments, databases, views, files) still need parent-page resolution; list/search are not filtered per principal |
+| Principal-aware authorization | Direct and nested resources, projections, CRDT/WebSocket, webhooks and export are enforced (spec-115) | Client-side hiding and page-level-only grant granularity |
 | Session storage | Session tokens are hashed at rest; remote session file is private on Unix | OS keychain integration and explicit Windows ACLs are not implemented |
-| Webhook egress | Private/loopback/link-local hosts are rejected before delivery | DNS rebinding between resolution and connection remains possible; an operator egress allowlist is the durable mitigation |
+| Webhook egress | Private hosts are rejected and the validated DNS answer is pinned | An operator egress allowlist is still recommended |
 | Documentation | Security, authorization, persistence, performance and review response are documented | Architecture/API status text still needs a full reconciliation pass |
 
 ## 3. Deferred with a documented plan

@@ -1,12 +1,13 @@
 //! v2 adapters for the page, workspace and sharing use cases.
 
+use super::super::authorization::ResourceAccess;
 use super::super::error::{HandlerError, HandlerResult, body, ok};
 use super::super::response::json;
 use super::super::usecases::{
-    self, UseCaseError, create_page, delete_page, get_page, get_workspace, invite_member,
-    replace_workspace, set_share,
+    self, UseCaseError, create_page, delete_page, get_page, invite_member, replace_workspace,
+    set_share,
 };
-use super::super::{ApiRequest, ApiResponse, Envelope, Method, WorkspaceServer};
+use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::collab::MemberDraft;
 use crate::model::{Page, PageDraft, Workspace};
 
@@ -17,11 +18,13 @@ impl WorkspaceServer {
         request: &ApiRequest,
         path: &str,
         request_id: &str,
+        connection: &Connection,
     ) -> HandlerResult<Option<ApiResponse>> {
         match (request.method, path) {
-            (Method::Get, "/api/v2/workspace") => {
-                Ok(Some(json(200, Envelope::ok(get_workspace(self)))))
-            }
+            (Method::Get, "/api/v2/workspace") => Ok(Some(json(
+                200,
+                Envelope::ok(self.project_workspace(connection)),
+            ))),
             (Method::Put, "/api/v2/workspace") => {
                 let workspace: Workspace = body(request)?;
                 match replace_workspace(self, workspace) {
@@ -31,6 +34,15 @@ impl WorkspaceServer {
             }
             (Method::Post, "/api/v2/pages") => {
                 let draft: PageDraft = body(request)?;
+                if let Some(parent) = draft.parent.as_deref()
+                    && !self.can_access_resource(connection, Some(parent), ResourceAccess::Write)
+                {
+                    return Err(HandlerError::restricted(
+                        "write access to the parent page is not allowed",
+                        parent,
+                        "write",
+                    ));
+                }
                 match create_page(self, draft) {
                     Ok(page) => ok(json(201, Envelope::ok(page))),
                     Err(error) => Err(use_case_error(error)),

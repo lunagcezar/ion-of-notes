@@ -152,6 +152,8 @@ Status vocabulary:
 | [112](spec-112-cursor-geometry-cache.md) | Cache remote cursor geometry | implemented | Text-width cache per block/font/index |
 | [113](spec-113-estimated-block-heights.md) | Estimate uncached block heights | implemented | First-frame far-below blocks skipped |
 | [114](spec-114-incremental-sqlite-persistence.md) | Incremental SQLite page persistence | implemented | Metadata + one row per page |
+| [115](spec-115-resource-scoped-authorization.md) | Resource-scoped authorization | implemented | Nested resources, projections, CRDT and WebSocket |
+| [116](spec-116-operational-hardening.md) | Operational hardening and hot paths | implemented | Proxy trust, fail-closed bind, rate limits, search/UI/SQLite |
 
 ## 3. Work status
 

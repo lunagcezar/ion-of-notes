@@ -23,6 +23,9 @@ contributor reference for the server's security boundary.
   with `Authorization: Bearer owner-token`.
 - The remote desktop client attaches its session token to v1 as well as v2
   requests, so remote mode does not depend on the legacy public path.
+- An unauthenticated `NoAuthStore` server refuses a non-loopback bind unless
+  `ION_OF_NOTES_ALLOW_INSECURE_SERVER=1` is set explicitly. The static demo
+  token is therefore not published to a network interface by accident.
 
 ### Deployment rule
 
@@ -38,19 +41,23 @@ session token. The reverse proxy is not an authentication layer.
 - Sessions expire (`SESSION_DAYS`); expired sessions are deleted on lookup.
 - Logout deletes the session. Sessions are resolved from the auth store on each
   request, so the runtime does not retain one connection object per login.
-- Unknown-email logins verify a dummy Argon2id hash before returning the same
-  `401`, reducing user-enumeration timing differences.
-- The remembered remote session is written with mode `0600` on Unix before any
-  token bytes are written. On Windows the file relies on the user profile's
-  ACL; use a dedicated OS account for the desktop app.
+- Unknown-email logins verify a constant dummy Argon2id hash before returning
+  the same `401`, reducing user-enumeration timing differences.
+- The remembered remote session is written with mode `0600` on Unix; an
+  existing file is tightened with `set_permissions` before the token is
+  rewritten. On Windows the file relies on the user profile's ACL; use a
+  dedicated OS account for the desktop app.
+- `ConnectionKind` distinguishes a persisted session from the local demo owner;
+  logout does not depend on a `"session-"` id prefix.
 
 ### Owner password
 
 - Production server mode requires `ION_OF_NOTES_OWNER_PASSWORD` or
   `ION_OF_NOTES_OWNER_PASSWORD_FILE`.
 - If neither is set, startup fails with a clear error.
-- The development default (`change-me-now`) is only used when
-  `ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD=1` is set explicitly.
+- The development default (`change-me-now`) is only compiled into debug builds
+  and is only used when `ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD=1` is set. A
+  release build still fails when that variable is the only source.
 - The account is seeded once. Changing the environment variable later does not
   reset an existing password; there is no password-reset flow yet.
 
@@ -64,9 +71,19 @@ Login attempts use a dedicated limiter, separate from the API budget:
 | Normalized email | 5 per minute | Stops one account from being brute-forced. |
 | Workspace login bucket | 100 per minute | Bounds total login work per workspace. |
 
-The Axum adapter fills `ApiRequest::client_ip` from `X-Forwarded-For` (first
-value) or `X-Real-IP`. The production proxy must set or strip these headers;
-do not trust client-supplied values on a directly exposed listener.
+The workspace bucket is charged once per attempt; the IP and account counters
+are charged separately in the same call.
+
+The Axum adapter uses `X-Forwarded-For` (first value) or `X-Real-IP` **only**
+when the direct TCP peer is loopback or listed in
+`ION_OF_NOTES_TRUSTED_PROXIES` (comma-separated IPs, or `*`). A direct public
+client therefore cannot rotate its login bucket with a forged header. Set the
+variable to the proxy address when Caddy is not on loopback; leaving it unset
+makes every request look like the proxy address.
+
+The in-process maps purge expired windows at a size bound and deny fresh keys
+while an attacker keeps them full. The shared SQLite limiter falls back to a
+conservative local contingency if the store errors, instead of failing open.
 
 ## 4. Resource limits and timeouts
 
@@ -90,17 +107,20 @@ Webhook URLs are validated in two layers:
      rejected.
    - Plain HTTP is only allowed for loopback when
      `allow_insecure_webhooks(true)` is set (development and tests).
-2. **Delivery-time resolution** (`UreqWebhookSender`):
-   - The destination host is resolved with `ToSocketAddrs`.
+2. **Delivery-time resolution and pinning** (`UreqWebhookSender`):
+   - The destination host and its explicit URL port are resolved with
+     `ToSocketAddrs`.
    - Any private/loopback/link-local/unspecified/multicast address fails the
      delivery before an HTTP request is made.
+   - The validated addresses are injected into a custom ureq `Resolver`, so the
+     HTTP stack does not perform a second DNS lookup. This closes the
+     DNS-rebinding window between the check and the connection.
    - Redirects remain disabled.
    - The development sender (`UreqWebhookSender::new_development`) permits
      loopback for local tests.
 
-Remaining limitation: DNS rebinding can still change the address between the
-resolution check and the connection. An operator-level egress allowlist or
-network policy is the durable mitigation.
+Remaining limitation: the process still needs an operator-level egress policy
+if the host network must be restricted beyond the IP checks.
 
 ## 6. Operational checklist
 
@@ -119,7 +139,8 @@ network policy is the durable mitigation.
 
 - No registration, password reset or account-management UI yet.
 - No external security audit.
-- Nested-resource authorization is partial; see `docs/authorization.md`.
+- Webhook delivery still performs network I/O while the workspace mutex is
+  held; a transactional outbox with an independent sender is the next step.
 - Windows session-file ACLs are inherited from the profile rather than set
   explicitly.
-- The webhook DNS check is not a full DNS-rebinding defense.
+- The loopback HTTP/1.1 parser is hand-written; production traffic uses Axum.

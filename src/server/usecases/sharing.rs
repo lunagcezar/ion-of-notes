@@ -1,7 +1,7 @@
 //! Members, shares, sync, export and realtime-contract use cases.
 
 use crate::collab::{
-    ExportFile, Member, MemberDraft, RealtimeContract, Share, SyncBatch, export_tree,
+    ExportFile, Member, MemberDraft, RealtimeContract, Share, export_tree,
     realtime_contract as realtime_contract_value,
 };
 
@@ -48,11 +48,6 @@ pub(in crate::server) fn set_share(
         .persist_collab()
         .map_err(|error| UseCaseError::Storage(error.to_string()))?;
     Ok(share)
-}
-
-/// Changes after a cursor.
-pub(in crate::server) fn sync(server: &WorkspaceServer, since: u64) -> SyncBatch {
-    server.collab.changes_since(since)
 }
 
 /// The Notion-style export tree.

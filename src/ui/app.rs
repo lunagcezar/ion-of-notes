@@ -256,7 +256,12 @@ pub struct NotionApp {
 
 impl NotionApp {
     pub fn new(cc: &eframe::CreationContext<'_>, screenshot: Option<PathBuf>) -> Self {
-        let (client, workspace, catalog) = app::build_desktop_catalog();
+        let (client, workspace, catalog) = app::build_desktop_catalog().unwrap_or_else(|error| {
+            eprintln!(
+                "could not load the workspace ({error}); starting in memory and leaving the file untouched"
+            );
+            app::fallback_desktop()
+        });
         Self::with_client_catalog(
             cc,
             screenshot,
@@ -726,10 +731,19 @@ impl eframe::App for NotionApp {
             || self.inbox_open
             || self.onboarding_open
             || self.templates_open;
+        let text_input_active = ctx.memory(|memory| memory.focused().is_some())
+            && ctx.input(|input| {
+                input.events.iter().any(|event| {
+                    matches!(
+                        event,
+                        egui::Event::Text(_) | egui::Event::Key { pressed: true, .. }
+                    )
+                })
+            });
         let may_mutate = frame_may_mutate(
             commands.is_empty(),
             ctx.input(|i| i.pointer.any_click() || i.pointer.any_down()),
-            ctx.memory(|memory| memory.focused().is_some()),
+            text_input_active,
             overlay_open,
         );
         let frame_before = may_mutate.then(|| self.workspace.clone());

@@ -17,7 +17,7 @@ fn workspace_catalog_roundtrip_keeps_the_active_workspace() {
     let mut catalog = WorkspaceCatalog::new(first);
     catalog.add(second);
     store::save_catalog(&catalog_path, &catalog).unwrap();
-    let loaded = store::load_catalog_or_seed(&catalog_path, &workspace_path);
+    let loaded = store::load_catalog_or_seed(&catalog_path, &workspace_path).unwrap();
     assert_eq!(loaded.summaries().len(), 2);
     assert_eq!(loaded.active_id, "second");
     remove(&catalog_path);
@@ -50,17 +50,22 @@ fn save_is_atomic_and_leaves_no_temporary_file() {
 fn load_or_seed_creates_file() {
     let path = temp_path("seed", "json");
     remove(&path);
-    let ws = store::load_or_seed(&path);
+    let ws = store::load_or_seed(&path).unwrap();
     assert!(path.exists());
     assert!(!ws.pages.is_empty());
     remove(&path);
 }
 
 #[test]
-fn corrupt_file_falls_back_to_seed() {
+fn corrupt_file_is_preserved_and_loading_fails() {
     let path = temp_path("corrupt", "json");
     std::fs::write(&path, "not json at all").unwrap();
-    let ws = store::load_or_seed(&path);
-    assert!(!ws.pages.is_empty());
+    let error = store::load_or_seed(&path).expect_err("corrupt data must not be replaced");
+    assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    assert_eq!(
+        std::fs::read_to_string(&path).unwrap(),
+        "not json at all",
+        "the original file is the recovery evidence"
+    );
     remove(&path);
 }
