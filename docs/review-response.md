@@ -45,6 +45,7 @@ single place to check whether a finding was fixed, mitigated or planned.
 | No tagged binaries | fixed | `v*` tag workflow builds Linux server and Windows desktop/server archives (spec-130) | `.github/workflows/release.yml` |
 | No inline comment text ranges | fixed at the API/model layer | optional `anchor { block_id, start, end }` with ownership/range validation (spec-131); the desktop comment panel still renders page-level threads | `tests/comments.rs` |
 | Remote UI blocked on CRUD | fixed | create/delete/invite/share/version restore run on the worker (spec-132) | `tests/remote.rs` |
+| Page writes rewrote every block | fixed | `workspace_blocks` rows; single-block writes use `persist_block` and legacy pages migrate (spec-133) | `tests/sqlite_store.rs` |
 | Webhook network I/O under the global mutex | fixed | events queue in the outbox; the worker sends outside the lock (spec-117) | `tests/webhooks.rs` |
 | Database view pagination after loading every row | fixed | index selection + `PageWindow`; only the requested slice is cloned (spec-118) | `tests/model.rs`, `tests/pagination.rs` |
 | Renderer still visits every block; height tree absent | fixed | Fenwick height index renders only the visible window (spec-119) | `tests/ui.rs`, screenshot |
@@ -85,7 +86,6 @@ authorization boundary.
 | Finding | Why deferred | Where it is tracked |
 | ------- | ------------ | ------------------- |
 | CRDT coverage for structure/properties/databases | Needs conflict semantics per object family | `docs/performance-roadmap.md` |
-| Per-block persistence | Page rows are incremental (spec-114); block-level tables would add schema and migration complexity | `docs/performance-roadmap.md` |
 | PostgreSQL / Redis | SQLite is intentionally single-node for now | `docs/performance-roadmap.md` |
 | Password reset / registration / account UI | Product decision and email delivery are missing | `docs/authorization.md`, roadmap |
 | Browser UI | Out of scope for the desktop-first product | roadmap |

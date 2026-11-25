@@ -96,8 +96,8 @@ src/
   store.rs           WorkspaceStore + CollabStore + SnapshotStore + AuthStore
                      ports and JSON adapters
   store/
-    sqlite.rs        SQLite adapter for workspace, collaboration, auth and
-                     atomic snapshots
+    sqlite.rs        SQLite adapter for metadata, pages, blocks, collaboration,
+                     auth and atomic snapshots
   server.rs          facade: contract DTOs, transport traits, WorkspaceServer state,
                      constructors, persistence and top-level dispatch
   server/

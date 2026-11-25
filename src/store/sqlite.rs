@@ -8,10 +8,12 @@
 use crate::auth::{Account, AuthStore, Session};
 use crate::collab::CollabState;
 use crate::model::{
-    CommentDto, DataSource, Database, FileUpload, Page, View, Workspace, WorkspaceSettings, now_iso,
+    Block, CommentDto, DataSource, Database, FileUpload, Page, View, Workspace, WorkspaceSettings,
+    now_iso,
 };
 use crate::store::{CollabStore, RateLimitHit, RateLimitStore, SnapshotStore, WorkspaceStore};
 use rusqlite::{Connection, OptionalExtension, params};
+use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -73,7 +75,18 @@ impl WorkspaceMeta {
 }
 
 fn serialize_page(page: &Page) -> rusqlite::Result<String> {
-    serde_json::to_string(page)
+    // Blocks live in their own table; the page row keeps only page metadata.
+    let mut stored = page.clone();
+    stored.blocks.clear();
+    serde_json::to_string(&stored)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))
+}
+
+fn serialize_block(block: &Block) -> rusqlite::Result<String> {
+    // Children live in their own rows; keep the block's own fields only.
+    let mut stored = block.clone();
+    stored.children.clear();
+    serde_json::to_string(&stored)
         .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))
 }
 
@@ -106,14 +119,104 @@ fn write_page(
     Ok(())
 }
 
+fn write_block_row(
+    connection: &Connection,
+    page_id: &str,
+    parent_id: Option<&str>,
+    position: usize,
+    block: &Block,
+    now: &str,
+) -> rusqlite::Result<()> {
+    let json = serialize_block(block)?;
+    connection.execute(
+        "INSERT INTO workspace_blocks (id, page_id, parent_id, position, json, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(id) DO UPDATE SET
+             page_id = excluded.page_id,
+             parent_id = excluded.parent_id,
+             position = excluded.position,
+             json = excluded.json,
+             updated_at = excluded.updated_at",
+        params![block.id, page_id, parent_id, position as i64, json, now],
+    )?;
+    Ok(())
+}
+
+fn write_blocks_recursive(
+    connection: &Connection,
+    page_id: &str,
+    parent_id: Option<&str>,
+    blocks: &[Block],
+    now: &str,
+) -> rusqlite::Result<()> {
+    for (position, block) in blocks.iter().enumerate() {
+        write_block_row(connection, page_id, parent_id, position, block, now)?;
+        write_blocks_recursive(
+            connection,
+            page_id,
+            Some(block.id.as_str()),
+            &block.children,
+            now,
+        )?;
+    }
+    Ok(())
+}
+
+fn delete_blocks_for_page(connection: &Connection, page_id: &str) -> rusqlite::Result<()> {
+    connection.execute(
+        "DELETE FROM workspace_blocks WHERE page_id = ?1",
+        params![page_id],
+    )?;
+    Ok(())
+}
+
+fn delete_block_subtree(
+    connection: &Connection,
+    page_id: &str,
+    block_id: &str,
+) -> rusqlite::Result<()> {
+    let mut stack = vec![block_id.to_string()];
+    while let Some(id) = stack.pop() {
+        let mut statement = connection
+            .prepare("SELECT id FROM workspace_blocks WHERE page_id = ?1 AND parent_id = ?2")?;
+        let children: Vec<String> = statement
+            .query_map(params![page_id, id], |row| row.get(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        drop(statement);
+        stack.extend(children);
+        connection.execute(
+            "DELETE FROM workspace_blocks WHERE page_id = ?1 AND id = ?2",
+            params![page_id, id],
+        )?;
+    }
+    Ok(())
+}
+
+fn find_block_slot<'a>(
+    blocks: &'a [Block],
+    id: &str,
+    parent_id: Option<&str>,
+) -> Option<(Option<String>, usize, &'a Block)> {
+    for (position, block) in blocks.iter().enumerate() {
+        if block.id == id {
+            return Some((parent_id.map(str::to_string), position, block));
+        }
+        if let Some(found) = find_block_slot(&block.children, id, Some(block.id.as_str())) {
+            return Some(found);
+        }
+    }
+    None
+}
 fn write_all_pages(
     connection: &Connection,
     workspace: &Workspace,
     now: &str,
 ) -> rusqlite::Result<()> {
     connection.execute("DELETE FROM workspace_pages", [])?;
+    connection.execute("DELETE FROM workspace_blocks", [])?;
     for (position, page) in workspace.pages.iter().enumerate() {
         write_page(connection, page, position, now)?;
+        write_blocks_recursive(connection, &page.id, None, &page.blocks, now)?;
     }
     Ok(())
 }
@@ -158,6 +261,79 @@ fn read_pages(connection: &Connection) -> rusqlite::Result<Vec<Page>> {
     Ok(pages)
 }
 
+struct StoredBlock {
+    parent_id: Option<String>,
+    position: i64,
+    block: Block,
+}
+
+fn read_blocks(connection: &Connection) -> rusqlite::Result<HashMap<String, Vec<StoredBlock>>> {
+    let mut statement = connection.prepare(
+        "SELECT page_id, parent_id, position, json FROM workspace_blocks
+         ORDER BY page_id, position, id",
+    )?;
+    let rows = statement.query_map([], |row| {
+        let page_id: String = row.get(0)?;
+        let parent_id: Option<String> = row.get(1)?;
+        let position: i64 = row.get(2)?;
+        let json: String = row.get(3)?;
+        let block: Block = serde_json::from_str(&json).map_err(|error| {
+            rusqlite::Error::FromSqlConversionFailure(
+                3,
+                rusqlite::types::Type::Text,
+                Box::new(error),
+            )
+        })?;
+        Ok((
+            page_id,
+            StoredBlock {
+                parent_id,
+                position,
+                block,
+            },
+        ))
+    })?;
+    let mut by_page: HashMap<String, Vec<StoredBlock>> = HashMap::new();
+    for row in rows {
+        let (page_id, block) = row?;
+        by_page.entry(page_id).or_default().push(block);
+    }
+    Ok(by_page)
+}
+
+fn attach_blocks(page: &mut Page, rows: Vec<StoredBlock>) {
+    let mut children: HashMap<Option<String>, Vec<(i64, Block)>> = HashMap::new();
+    for row in rows {
+        children
+            .entry(row.parent_id)
+            .or_default()
+            .push((row.position, row.block));
+    }
+    let mut visited = HashSet::new();
+    page.blocks = build_block_level(None, &mut children, &mut visited);
+}
+
+fn build_block_level(
+    parent: Option<&str>,
+    children: &mut HashMap<Option<String>, Vec<(i64, Block)>>,
+    visited: &mut HashSet<String>,
+) -> Vec<Block> {
+    let mut level = children
+        .remove(&parent.map(str::to_string))
+        .unwrap_or_default();
+    level.sort_by_key(|(position, _)| *position);
+    level
+        .into_iter()
+        .filter_map(|(_, mut block)| {
+            if !visited.insert(block.id.clone()) {
+                return None;
+            }
+            block.children = build_block_level(Some(&block.id), children, visited);
+            Some(block)
+        })
+        .collect()
+}
+
 fn migrate_legacy(connection: &mut Connection) -> io::Result<()> {
     let has_meta: bool = connection
         .query_row(
@@ -193,6 +369,44 @@ fn migrate_legacy(connection: &mut Connection) -> io::Result<()> {
     Ok(())
 }
 
+/// Split pages written by older versions into `workspace_blocks` rows.
+///
+/// The operation is idempotent: after the first run, page rows no longer carry
+/// blocks and the loop does nothing.
+fn migrate_blocks(connection: &mut Connection) -> io::Result<()> {
+    let transaction = connection.transaction().map_err(io::Error::other)?;
+    let now = now_iso();
+    let mut statement = transaction
+        .prepare("SELECT id, position, json FROM workspace_pages ORDER BY position, id")
+        .map_err(io::Error::other)?;
+    let rows: Vec<(String, i64, String)> = statement
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .map_err(io::Error::other)?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(io::Error::other)?;
+    drop(statement);
+    for (page_id, position, json) in rows {
+        let page: Page = serde_json::from_str(&json)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        if page.blocks.is_empty() {
+            continue;
+        }
+        let has_blocks: bool = transaction
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM workspace_blocks WHERE page_id = ?1)",
+                params![page_id],
+                |row| row.get(0),
+            )
+            .map_err(io::Error::other)?;
+        if !has_blocks {
+            write_blocks_recursive(&transaction, &page_id, None, &page.blocks, &now)
+                .map_err(io::Error::other)?;
+        }
+        write_page(&transaction, &page, position as usize, &now).map_err(io::Error::other)?;
+    }
+    transaction.commit().map_err(io::Error::other)
+}
+
 impl std::fmt::Debug for SqliteStore {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -226,6 +440,16 @@ fn configure_connection(connection: &Connection) -> io::Result<()> {
          );
          CREATE INDEX IF NOT EXISTS workspace_pages_position
              ON workspace_pages(position);
+         CREATE TABLE IF NOT EXISTS workspace_blocks (
+             id TEXT PRIMARY KEY,
+             page_id TEXT NOT NULL,
+             parent_id TEXT,
+             position INTEGER NOT NULL,
+             json TEXT NOT NULL,
+             updated_at TEXT NOT NULL
+         );
+         CREATE INDEX IF NOT EXISTS workspace_blocks_parent
+             ON workspace_blocks(page_id, parent_id, position);
          CREATE TABLE IF NOT EXISTS collab (
              id INTEGER PRIMARY KEY CHECK (id = 1),
              json TEXT NOT NULL,
@@ -282,6 +506,7 @@ impl SqliteStore {
             .map_err(io::Error::other)?;
         configure_connection(&connection)?;
         migrate_legacy(&mut connection)?;
+        migrate_blocks(&mut connection)?;
         Ok(Self {
             path,
             connection: Arc::new(Mutex::new(connection)),
@@ -321,7 +546,11 @@ impl SqliteStore {
                     Box::new(error),
                 )
             })?;
-            let pages = read_pages(connection)?;
+            let mut pages = read_pages(connection)?;
+            let mut blocks = read_blocks(connection)?;
+            for page in &mut pages {
+                attach_blocks(page, blocks.remove(&page.id).unwrap_or_default());
+            }
             Ok(Some(meta.into_workspace(pages)))
         })
     }
@@ -483,9 +712,13 @@ impl SnapshotStore for SqliteStore {
             let page_position = workspace.pages.iter().position(|page| page.id == page_id);
             match page_position {
                 Some(position) => {
-                    write_page(&transaction, &workspace.pages[position], position, &now)?
+                    let page = &workspace.pages[position];
+                    write_page(&transaction, page, position, &now)?;
+                    delete_blocks_for_page(&transaction, page_id)?;
+                    write_blocks_recursive(&transaction, page_id, None, &page.blocks, &now)?;
                 }
                 None => {
+                    delete_blocks_for_page(&transaction, page_id)?;
                     transaction.execute(
                         "DELETE FROM workspace_pages WHERE id = ?1",
                         params![page_id],
@@ -497,6 +730,45 @@ impl SnapshotStore for SqliteStore {
             let new_position = page_position.map(|position| position as i64);
             if existing_position != new_position {
                 refresh_positions(&transaction, workspace)?;
+            }
+            write_collab(&transaction, collab, &now)?;
+            transaction.commit()
+        })?;
+        Ok(())
+    }
+
+    fn persist_block(
+        &self,
+        workspace: &Workspace,
+        collab: &CollabState,
+        page_id: &str,
+        block_id: &str,
+    ) -> io::Result<()> {
+        let meta = WorkspaceMeta::from_workspace(workspace);
+        let now = now_iso();
+        self.with_connection_mut(|connection| {
+            let transaction = connection.transaction()?;
+            write_meta(&transaction, &meta, &now)?;
+            let Some(page_position) = workspace.pages.iter().position(|page| page.id == page_id)
+            else {
+                // Data-source rows and unknown ids are not part of this table.
+                transaction.commit()?;
+                return Ok(());
+            };
+            let page = &workspace.pages[page_position];
+            write_page(&transaction, page, page_position, &now)?;
+            match find_block_slot(&page.blocks, block_id, None) {
+                Some((parent_id, position, block)) => {
+                    write_block_row(
+                        &transaction,
+                        page_id,
+                        parent_id.as_deref(),
+                        position,
+                        block,
+                        &now,
+                    )?;
+                }
+                None => delete_block_subtree(&transaction, page_id, block_id)?,
             }
             write_collab(&transaction, collab, &now)?;
             transaction.commit()

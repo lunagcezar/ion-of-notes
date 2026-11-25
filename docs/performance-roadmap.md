@@ -41,7 +41,7 @@ remain staged.
 | CRDT coverage for structure/properties/databases | Needs a merge model for ordered rows, property schemas and deletions. | Start with one object family (database rows) and define its conflict semantics. |
 | Awareness queue while offline | Fixed in spec-122: a one-entry pending cursor is flushed on reconnect. | Add a fixed-port reconnect integration test if the harness becomes stable. |
 | Multi-line remote caret overlay | Fixed in spec-123: carets and selections use the laid-out galley. | Add bidi affinity tests if the target scripts require them. |
-| Per-block persistence | Page rows are incremental (spec-114); block-level tables add schema and migration complexity. | Add a block table only if page-row size becomes a measured problem above ~20k blocks. |
+| Per-block persistence | Fixed in spec-133: blocks live in `workspace_blocks` and single-block edits write one row. | Add an operation log only if block-level history is required. |
 | PostgreSQL / Redis | SQLite is single-node and the deployment story is intentionally small. | Keep the ports; add a PostgreSQL adapter and a shared limiter only when multi-node is a real requirement. |
 | Load and contention tests | `tests/perf.rs` covers workspace size, spec-125 covers mixed invariants, spec-126 adds an opt-in 8-thread read/write harness and spec-129 covers concurrent SQLite connections. | Add multi-process crash recovery tests before multi-node work. |
 | Webhook I/O under the workspace lock | Fixed in spec-117: events queue, the worker sends outside the lock and applies results afterwards. | Keep the worker single and add idempotency keys for at-least-once delivery. |

@@ -219,7 +219,7 @@ impl WorkspaceServer {
                     block.last_edited_by = Some(actor);
                     block.to_dto(&page_id)
                 };
-                if let Err(error) = self.write(ChangeOp::Update, &page_id) {
+                if let Err(error) = self.write_block(ChangeOp::Update, &page_id, id) {
                     return fail(v2_error(
                         500,
                         CODE_INTERNAL,
@@ -257,7 +257,7 @@ impl WorkspaceServer {
                     block.last_edited_by = Some(actor);
                     block.to_dto(&page_id)
                 };
-                if let Err(error) = self.write(ChangeOp::Update, &page_id) {
+                if let Err(error) = self.write_block(ChangeOp::Update, &page_id, id) {
                     return fail(v2_error(
                         500,
                         CODE_INTERNAL,

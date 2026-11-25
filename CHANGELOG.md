@@ -152,6 +152,16 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - The UI applies results on the egui thread, keeps tab/history behavior and
   falls back to the synchronous path if the worker queue is unavailable.
 
+### Performance - spec-133 per-block SQLite persistence
+
+- Added `workspace_blocks(id, page_id, parent_id, position, json)` and a
+  matching index; page rows no longer duplicate block JSON.
+- Single-block PATCH/DELETE writes one block row via
+  `SnapshotStore::persist_block`; page and children writes replace the page's
+  rows.
+- Opening an older database migrates page JSON blocks into rows.
+- Loading rebuilds nested trees with cycle protection.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

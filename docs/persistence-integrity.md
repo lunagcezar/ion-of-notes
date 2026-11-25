@@ -39,18 +39,21 @@ single-process mode. Use SQLite for multi-user or remote deployments.
 
 ## 3. SQLite schema posture
 
-The first SQLite slice stores the existing JSON documents in two rows
-(`workspace`, `collab`) plus normalized tables for accounts, sessions and rate
-limits. WAL mode is enabled and the connection is guarded by a process mutex.
+The SQLite adapter stores workspace metadata in `workspace_meta`, pages in
+`workspace_pages`, blocks in `workspace_blocks`, collaboration state in
+`collab`, and accounts/sessions/rate limits in their own tables. WAL mode,
+foreign keys and a busy timeout are enabled; the connection is guarded by a
+process mutex.
 
-This is a deliberate first step:
+- Page rows carry metadata only; block rows carry `page_id`, `parent_id`,
+  `position` and the block JSON without children.
+- A single-block PATCH/DELETE writes one block row, the page row and the
+  collaboration row in one transaction.
+- Full snapshots and page/children writes replace the affected block rows.
+- Opening an older database splits page JSON blocks into rows once.
 
-- simple deployment and backup;
-- no separate database service;
-- straightforward migration from the JSON documents.
-
-Normalized page/block/row tables are a later spec. Until then, large workspace
-writes serialize the full snapshot; measure before changing the schema.
+Large workspace metadata (databases, data sources, views, comments and uploads)
+is still one JSON document; measure before normalizing it further.
 
 ## 4. Backup and restore runbook
 

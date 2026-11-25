@@ -697,14 +697,41 @@ impl WorkspaceServer {
         self.persistence.collab_store.persist(&self.collab)
     }
 
+    /// Persist one block plus page metadata/collaboration (spec-133).
+    fn persist_block(&self, page_id: &str, block_id: &str) -> std::io::Result<()> {
+        if let Some(store) = &self.persistence.snapshot_store {
+            return store.persist_block(&self.workspace, &self.collab, page_id, block_id);
+        }
+        self.persistence.workspace_store.persist(&self.workspace)?;
+        self.persistence.collab_store.persist(&self.collab)
+    }
+
     /// Single write path (DRY): bump the version, append one sync-log entry,
     /// and persist both documents. Every mutation goes through here and reports
     /// a storage failure to the caller instead of hiding it (spec-015).
     fn write(&mut self, op: ChangeOp, page_id: &str) -> std::io::Result<()> {
+        self.commit_write(op, page_id, None)
+    }
+
+    /// Write path for a single block mutation (spec-133).
+    fn write_block(&mut self, op: ChangeOp, page_id: &str, block_id: &str) -> std::io::Result<()> {
+        self.commit_write(op, page_id, Some(block_id))
+    }
+
+    fn commit_write(
+        &mut self,
+        op: ChangeOp,
+        page_id: &str,
+        block_id: Option<&str>,
+    ) -> std::io::Result<()> {
         self.workspace.bump_version();
         let actor = self.collab.owner_id();
         let change = self.collab.record(op, page_id, &actor);
-        if let Err(error) = self.persist_page(page_id) {
+        let persisted = match block_id {
+            Some(block_id) => self.persist_block(page_id, block_id),
+            None => self.persist_page(page_id),
+        };
+        if let Err(error) = persisted {
             self.reload_after_failure();
             return Err(error);
         }

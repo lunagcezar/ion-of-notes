@@ -85,6 +85,20 @@ pub trait SnapshotStore: Send + Sync {
         let _ = page_id;
         self.persist_snapshots(workspace, collab)
     }
+
+    /// Persist one block plus its page metadata and collaboration state.
+    ///
+    /// Adapters without a block table can fall back to the page write.
+    fn persist_block(
+        &self,
+        workspace: &Workspace,
+        collab: &CollabState,
+        page_id: &str,
+        block_id: &str,
+    ) -> io::Result<()> {
+        let _ = block_id;
+        self.persist_page(workspace, collab, page_id)
+    }
 }
 
 /// One shared rate-limit decision.

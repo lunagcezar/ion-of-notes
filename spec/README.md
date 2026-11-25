@@ -170,6 +170,7 @@ Status vocabulary:
 | [130](spec-130-release-artifacts.md) | Tagged release artifacts | implemented | Linux server + Windows desktop/server on `v*` |
 | [131](spec-131-inline-comment-anchors.md) | Inline comment block anchors | implemented | Validated block/text range on comments |
 | [132](spec-132-async-remote-crud.md) | Asynchronous remote CRUD | implemented | Create/delete/invite/share/version restore on the worker |
+| [133](spec-133-per-block-persistence.md) | Per-block SQLite persistence | implemented | One block row per edit; page JSON without blocks |
 
 ## 3. Work status
 
