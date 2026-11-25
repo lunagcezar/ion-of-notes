@@ -117,6 +117,12 @@ redirects. Traefik, nginx and HAProxy work the same way with
 `127.0.0.1:8787` (host) or `ion-of-notes:8787` (same Compose network) as the
 upstream.
 
+`compose.prod.yml` gives Caddy the fixed address `172.30.0.2` on the
+`ion-internal` network and sets `ION_OF_NOTES_TRUSTED_PROXIES` to that address.
+This keeps the login rate-limit bucket per visitor; if you replace Caddy or
+change the network, update the variable to the proxy address (never `*` on a
+public deployment).
+
 ## 4. Data volume and permissions
 
 The named volume is `ion-of-notes-data` and is mounted at `/data`. It contains

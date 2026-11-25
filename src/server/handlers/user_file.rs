@@ -91,6 +91,25 @@ impl WorkspaceServer {
                 request_id,
             ))
         } else if path == "/api/v2/file_uploads" && request.method == Method::Post {
+            let pruned = self.prune_uploads();
+            if pruned && let Err(error) = self.write(ChangeOp::Delete, "__file_upload__") {
+                return fail(v2_error(
+                    500,
+                    CODE_INTERNAL,
+                    error.to_string(),
+                    request_id,
+                    None,
+                ));
+            }
+            if self.pending_upload_count() >= crate::server::MAX_PENDING_UPLOADS {
+                return fail(v2_error(
+                    429,
+                    crate::server::contract::CODE_RATE_LIMITED,
+                    "too many pending uploads; complete or expire them first",
+                    request_id,
+                    Some(serde_json::json!({ "retry_after": "60" })),
+                ));
+            }
             let input = match parse_body::<FileUploadInput>(request) {
                 Ok(input) => input,
                 Err(message) => {
@@ -159,7 +178,11 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                let Some(content) = request.body.as_ref() else {
+                let content = request
+                    .body_bytes
+                    .as_deref()
+                    .or_else(|| request.body.as_deref().map(str::as_bytes));
+                let Some(content) = content else {
                     return fail(v2_error(
                         400,
                         CODE_VALIDATION_ERROR,
@@ -212,12 +235,22 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
-                let length = match self.store_upload_content(&existing.id, content.as_bytes()) {
+                let length = match self.store_upload_content(&existing.id, content) {
                     Ok(length) => length,
                     Err(error) => {
+                        let status = match error.kind() {
+                            std::io::ErrorKind::InvalidInput | std::io::ErrorKind::StorageFull => {
+                                400
+                            }
+                            _ => 500,
+                        };
                         return fail(v2_error(
-                            500,
-                            CODE_INTERNAL,
+                            status,
+                            if status == 400 {
+                                CODE_VALIDATION_ERROR
+                            } else {
+                                CODE_INTERNAL
+                            },
                             error.to_string(),
                             request_id,
                             None,

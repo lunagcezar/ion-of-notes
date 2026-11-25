@@ -4,8 +4,8 @@ use super::super::authorization::ResourceAccess;
 use super::super::error::{HandlerError, HandlerResult, body, ok};
 use super::super::response::json;
 use super::super::usecases::{
-    self, UseCaseError, create_page, delete_page, get_page, invite_member, replace_workspace,
-    set_share,
+    self, UseCaseError, create_page, delete_page, get_page, invite_member, issue_invite,
+    replace_workspace, set_share,
 };
 use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::collab::MemberDraft;
@@ -68,6 +68,28 @@ impl WorkspaceServer {
                 let draft: MemberDraft = body(request)?;
                 match invite_member(self, draft) {
                     Ok(member) => ok(json(201, Envelope::ok(member))),
+                    Err(error) => Err(use_case_error(error)),
+                }
+            }
+            (Method::Post, _) if path.starts_with("/api/v2/members/") => {
+                let Some(member_id) = path
+                    .strip_prefix("/api/v2/members/")
+                    .and_then(|rest| rest.strip_suffix("/invite"))
+                else {
+                    return Ok(None);
+                };
+                if member_id.is_empty() || member_id.contains('/') {
+                    return Ok(None);
+                }
+                match issue_invite(self, member_id) {
+                    Ok((token, expires_at)) => ok(json(
+                        201,
+                        Envelope::ok(serde_json::json!({
+                            "member_id": member_id,
+                            "token": token,
+                            "expires_at": expires_at,
+                        })),
+                    )),
                     Err(error) => Err(use_case_error(error)),
                 }
             }

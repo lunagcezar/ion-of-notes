@@ -10,6 +10,7 @@
 
 use crate::auth::{self, AuthStore, NoAuthStore};
 use crate::collab::{ChangeOp, CollabState, Role};
+use crate::lock::LockExt;
 use crate::model::Workspace;
 use crate::store::{
     CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore,
@@ -136,6 +137,10 @@ pub struct ApiRequest {
     pub method: Method,
     pub path: String,
     pub body: Option<String>,
+    /// Raw request bytes for binary uploads; `body` is the lossy UTF-8 view used
+    /// by JSON handlers (spec-155).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body_bytes: Option<Vec<u8>>,
     #[serde(default)]
     pub headers: BTreeMap<String, String>,
     /// Best-effort client address for login rate limiting. The Axum adapter
@@ -151,6 +156,7 @@ impl ApiRequest {
             method,
             path: path.into(),
             body,
+            body_bytes: None,
             headers: BTreeMap::new(),
             client_ip: None,
         }
@@ -311,6 +317,8 @@ struct Runtime {
     login_limiter: RateLimiter,
     shared_rate_store: Option<Arc<dyn crate::store::RateLimitStore>>,
     uploads_dir: std::path::PathBuf,
+    upload_max_file_bytes: u64,
+    upload_quota_bytes: u64,
     actor: Option<String>,
     session_cache: std::sync::Mutex<SessionCache>,
     realtime_tickets: std::sync::Mutex<TicketStore>,
@@ -368,10 +376,15 @@ impl TicketStore {
         ticket
     }
 
-    fn redeem(&mut self, ticket: &str, now: std::time::Instant) -> Option<Connection> {
+    fn redeem(
+        &mut self,
+        ticket: &str,
+        workspace_id: &str,
+        now: std::time::Instant,
+    ) -> Option<Connection> {
         let (connection, expires_at) = self.entries.remove(ticket)?;
         self.order.retain(|key| key != ticket);
-        (expires_at > now).then_some(connection)
+        (expires_at > now && connection.workspace_id == workspace_id).then_some(connection)
     }
 
     fn clear(&mut self) {
@@ -425,7 +438,12 @@ pub const DEFAULT_REQUEST_LOG_CAP: usize = 1000;
 /// Login attempts allowed per client and per account in one window.
 pub const DEFAULT_LOGIN_PER_CLIENT: u32 = 5;
 pub const DEFAULT_LOGIN_PER_WORKSPACE: u32 = 100;
-
+/// Default per-file limit; the HTTP body limit is 2 MiB.
+pub const DEFAULT_UPLOAD_MAX_BYTES: u64 = 2 * 1024 * 1024;
+/// Default total upload storage per workspace (best effort, see `prune_uploads`).
+pub const DEFAULT_UPLOAD_QUOTA_BYTES: u64 = 1024 * 1024 * 1024;
+/// Maximum simultaneous pending uploads before the server refuses new ones.
+pub const MAX_PENDING_UPLOADS: usize = 64;
 /// Webhook delivery state, separate from the collaboration records.
 struct WebhookRuntime {
     allow_insecure: bool,
@@ -538,6 +556,8 @@ impl WorkspaceServer {
                     .parent()
                     .map(|dir| dir.join("uploads"))
                     .unwrap_or_else(|| std::env::temp_dir().join("ion-of-notes-uploads")),
+                upload_max_file_bytes: DEFAULT_UPLOAD_MAX_BYTES,
+                upload_quota_bytes: DEFAULT_UPLOAD_QUOTA_BYTES,
                 actor: None,
                 session_cache: std::sync::Mutex::new(SessionCache::new()),
                 realtime_tickets: std::sync::Mutex::new(TicketStore::new()),
@@ -639,8 +659,7 @@ impl WorkspaceServer {
         if let Some(connection) = self
             .runtime
             .session_cache
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .get(&token_hash, std::time::Instant::now())
         {
             return Ok(Some(connection));
@@ -667,11 +686,11 @@ impl WorkspaceServer {
             )
         });
         if let Some(connection) = &connection {
-            self.runtime
-                .session_cache
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner())
-                .insert(token_hash, connection.clone(), std::time::Instant::now());
+            self.runtime.session_cache.lock_or_log().insert(
+                token_hash,
+                connection.clone(),
+                std::time::Instant::now(),
+            );
         }
         Ok(connection)
     }
@@ -679,11 +698,7 @@ impl WorkspaceServer {
     /// Drop a cached session (logout or explicit revocation).
     pub fn invalidate_session(&self, token: &str) {
         let token_hash = auth::hash_token(token);
-        self.runtime
-            .session_cache
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .remove(&token_hash);
+        self.runtime.session_cache.lock_or_log().remove(&token_hash);
     }
 
     /// Remove every session for one member and clear the in-memory auth caches
@@ -692,16 +707,8 @@ impl WorkspaceServer {
         self.persistence
             .auth_store
             .delete_member_sessions(member_id)?;
-        self.runtime
-            .session_cache
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .clear();
-        self.runtime
-            .realtime_tickets
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .clear();
+        self.runtime.session_cache.lock_or_log().clear();
+        self.runtime.realtime_tickets.lock_or_log().clear();
         Ok(())
     }
 
@@ -709,18 +716,18 @@ impl WorkspaceServer {
     pub fn issue_realtime_ticket(&self, connection: &Connection) -> String {
         self.runtime
             .realtime_tickets
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .issue(connection.clone(), std::time::Instant::now())
     }
 
-    /// Redeem a WebSocket ticket. A ticket works once and expires after 30 s.
-    pub fn redeem_realtime_ticket(&self, ticket: &str) -> Option<Connection> {
-        self.runtime
-            .realtime_tickets
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .redeem(ticket, std::time::Instant::now())
+    /// Redeem a WebSocket ticket for one workspace. A ticket works once,
+    /// expires after 30 s and is bound to the workspace that issued it.
+    pub fn redeem_realtime_ticket(&self, ticket: &str, workspace_id: &str) -> Option<Connection> {
+        self.runtime.realtime_tickets.lock_or_log().redeem(
+            ticket,
+            workspace_id,
+            std::time::Instant::now(),
+        )
     }
 
     /// The workspace role of a connection, if its member still exists.
@@ -850,6 +857,22 @@ impl WorkspaceServer {
 
     /// Persist one upload body atomically and return its size.
     pub fn store_upload_content(&self, upload_id: &str, content: &[u8]) -> std::io::Result<u64> {
+        let size = content.len() as u64;
+        if size > self.runtime.upload_max_file_bytes {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!(
+                    "file exceeds the {} byte upload limit",
+                    self.runtime.upload_max_file_bytes
+                ),
+            ));
+        }
+        if self.upload_usage().saturating_add(size) > self.runtime.upload_quota_bytes {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::StorageFull,
+                "workspace upload quota exhausted",
+            ));
+        }
         let dir = &self.runtime.uploads_dir;
         std::fs::create_dir_all(dir)?;
         let target = dir.join(upload_id);
@@ -868,6 +891,77 @@ impl WorkspaceServer {
             .ok()
             .filter(|metadata| metadata.is_file())
             .map(|metadata| metadata.len())
+    }
+
+    /// Override the per-file and total upload limits (tests and operators).
+    pub fn configure_upload_limits(&mut self, max_file_bytes: u64, quota_bytes: u64) {
+        self.runtime.upload_max_file_bytes = max_file_bytes;
+        self.runtime.upload_quota_bytes = quota_bytes;
+    }
+
+    /// Per-file upload limit.
+    pub fn upload_max_file_bytes(&self) -> u64 {
+        self.runtime.upload_max_file_bytes
+    }
+
+    /// Total bytes currently stored for this workspace.
+    pub fn upload_usage(&self) -> u64 {
+        self.workspace
+            .file_uploads
+            .iter()
+            .filter_map(|upload| self.upload_content_len(&upload.id))
+            .sum()
+    }
+
+    /// Remaining upload budget.
+    pub fn upload_quota_remaining(&self) -> u64 {
+        self.runtime
+            .upload_quota_bytes
+            .saturating_sub(self.upload_usage())
+    }
+
+    /// Number of pending uploads.
+    pub fn pending_upload_count(&self) -> usize {
+        self.workspace
+            .file_uploads
+            .iter()
+            .filter(|upload| upload.status == crate::model::UploadStatus::Pending)
+            .count()
+    }
+
+    /// Remove expired pending uploads and files that no upload record references.
+    /// Returns true when the workspace record changed.
+    pub fn prune_uploads(&mut self) -> bool {
+        let now = chrono::Utc::now();
+        let directory = self.runtime.uploads_dir.clone();
+        let before = self.workspace.file_uploads.len();
+        self.workspace.file_uploads.retain(|upload| {
+            let expired = upload.status == crate::model::UploadStatus::Pending
+                && upload
+                    .expiry_time
+                    .as_deref()
+                    .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+                    .is_some_and(|expiry| expiry < now);
+            if expired {
+                let _ = std::fs::remove_file(directory.join(&upload.id));
+            }
+            !expired
+        });
+        let ids: std::collections::HashSet<&str> = self
+            .workspace
+            .file_uploads
+            .iter()
+            .map(|upload| upload.id.as_str())
+            .collect();
+        if let Ok(entries) = std::fs::read_dir(&directory) {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if name.ends_with(".tmp") || !ids.contains(name.as_str()) {
+                    let _ = std::fs::remove_file(entry.path());
+                }
+            }
+        }
+        self.workspace.file_uploads.len() != before
     }
 
     /// Record the authenticated member that performs the current request.

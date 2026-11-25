@@ -274,12 +274,27 @@ pub struct CollabState {
     /// restart does not lose pending webhooks.
     #[serde(default)]
     pub webhook_queue: Vec<WebhookEvent>,
+    /// Pending self-registration invitations; only the token hash is stored
+    /// (spec-155).
+    #[serde(default)]
+    pub invites: Vec<Invite>,
 }
 
 impl Default for CollabState {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// One pending self-registration invitation (spec-155).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Invite {
+    pub member_id: String,
+    pub email: String,
+    /// SHA-256 of the one-time token; the raw token is returned once.
+    pub token_hash: String,
+    pub created_at: String,
+    pub expires_at: String,
 }
 
 impl CollabState {
@@ -314,6 +329,7 @@ impl CollabState {
             webhooks: Vec::new(),
             webhook_deliveries: Vec::new(),
             webhook_queue: Vec::new(),
+            invites: Vec::new(),
         }
     }
 
@@ -335,6 +351,47 @@ impl CollabState {
         );
         self.members.push(member.clone());
         member
+    }
+
+    /// Issue a one-time registration token for an existing member.
+    pub fn create_invite(&mut self, member_id: &str) -> Option<(String, String)> {
+        let member = self
+            .members
+            .iter()
+            .find(|member| member.id == member_id)?
+            .clone();
+        let token = format!("inv_{}", uuid::Uuid::new_v4());
+        let created_at = crate::model::now_iso();
+        let expires_at = (chrono::Utc::now() + chrono::Duration::days(7)).to_rfc3339();
+        self.invites.retain(|invite| invite.member_id != member.id);
+        self.invites.push(Invite {
+            member_id: member.id,
+            email: member.email,
+            token_hash: crate::auth::hash_token(&token),
+            created_at,
+            expires_at: expires_at.clone(),
+        });
+        Some((token, expires_at))
+    }
+
+    /// Whether `token` is a live invitation for `email`.
+    pub fn invite_valid(&self, token: &str, email: &str) -> bool {
+        let hash = crate::auth::hash_token(token);
+        self.invites.iter().any(|invite| {
+            invite.token_hash == hash
+                && invite.email.eq_ignore_ascii_case(email)
+                && chrono::DateTime::parse_from_rfc3339(&invite.expires_at)
+                    .map(|expires| expires > chrono::Utc::now())
+                    .unwrap_or(false)
+        })
+    }
+
+    /// Invalidate the invitation after a successful registration.
+    pub fn consume_invite(&mut self, token: &str, email: &str) {
+        let hash = crate::auth::hash_token(token);
+        self.invites.retain(|invite| {
+            !(invite.token_hash == hash && invite.email.eq_ignore_ascii_case(email))
+        });
     }
 
     /// Upsert a permission grant for a (page, subject) pair.

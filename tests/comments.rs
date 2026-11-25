@@ -459,3 +459,74 @@ fn client_comment_and_upload_roundtrip() {
     );
     client.delete_comment_v2(&comment.id).unwrap();
 }
+
+#[test]
+fn upload_limits_and_expired_pending_files_are_pruned() {
+    let mut server = WorkspaceServer::new(Workspace::seed("upload-limits"));
+    server.use_uploads_dir(common::temp_dir("upload-limits"));
+    server.configure_upload_limits(4, 10);
+
+    let body = serde_json::to_string(&FileUploadInput {
+        filename: Some("big.txt".to_string()),
+        content_type: Some("text/plain".to_string()),
+        content_length: None,
+        page_id: None,
+    })
+    .unwrap();
+    let response = server.handle(&v2_request(
+        Method::Post,
+        "/api/v2/file_uploads",
+        Some(body),
+    ));
+    let upload: FileUpload = data(&response);
+    let response = server.handle(&v2_request(
+        Method::Post,
+        &format!("/api/v2/file_uploads/{}/send", upload.id),
+        Some("12345".to_string()),
+    ));
+    assert_eq!(response.status, 400, "{}", response.body);
+
+    server.configure_upload_limits(10, 10);
+    let response = server.handle(&v2_request(
+        Method::Post,
+        &format!("/api/v2/file_uploads/{}/send", upload.id),
+        Some("12345678".to_string()),
+    ));
+    assert_eq!(response.status, 200, "{}", response.body);
+    assert_eq!(server.upload_usage(), 8);
+
+    let body = serde_json::to_string(&FileUploadInput {
+        filename: Some("expired.txt".to_string()),
+        content_type: Some("text/plain".to_string()),
+        content_length: None,
+        page_id: None,
+    })
+    .unwrap();
+    let response = server.handle(&v2_request(
+        Method::Post,
+        "/api/v2/file_uploads",
+        Some(body),
+    ));
+    let expired: FileUpload = data(&response);
+    if let Some(slot) = server
+        .workspace
+        .file_uploads
+        .iter_mut()
+        .find(|upload| upload.id == expired.id)
+    {
+        slot.expiry_time = Some("2000-01-01T00:00:00Z".to_string());
+    }
+    server.configure_upload_limits(10, 100);
+    server
+        .store_upload_content(&expired.id, b"stale")
+        .expect("stale file");
+    assert!(server.prune_uploads());
+    assert!(
+        !server
+            .workspace
+            .file_uploads
+            .iter()
+            .any(|upload| upload.id == expired.id)
+    );
+    assert!(server.upload_content_len(&expired.id).is_none());
+}

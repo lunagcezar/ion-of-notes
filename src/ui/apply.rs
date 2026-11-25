@@ -73,6 +73,7 @@ impl NotionApp {
                 email: self.server.email.clone(),
                 password: self.server.password.clone(),
                 register: self.server.register,
+                invite_token: self.server.invite_token.clone(),
                 current_password: self.server.current_password.clone(),
                 new_password: self.server.new_password.clone(),
                 confirm_password: self.server.confirm_password.clone(),

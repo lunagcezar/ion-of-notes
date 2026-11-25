@@ -4,6 +4,7 @@
 //! dirty, so a query after an edit re-indexes the edited page instead of every
 //! page in the workspace (spec-109).
 
+use crate::lock::LockExt;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, MutexGuard};
 
@@ -63,28 +64,19 @@ impl Clone for SearchCacheCell {
 impl SearchCacheCell {
     /// Mark one page for re-indexing.
     pub(crate) fn mark_dirty(&self, page_id: &str) {
-        let mut cache = self
-            .0
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut cache = self.0.lock_or_log();
         cache.dirty.insert(page_id.to_string());
     }
 
     /// Drop a removed page from the cache.
     pub(crate) fn remove(&self, page_id: &str) {
-        let mut cache = self
-            .0
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut cache = self.0.lock_or_log();
         cache.documents.remove(page_id);
         cache.dirty.remove(page_id);
     }
 
     fn documents<'a>(&'a self, pages: &[Page]) -> MutexGuard<'a, SearchCache> {
-        let mut cache = self
-            .0
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut cache = self.0.lock_or_log();
         if !cache.initialized {
             cache.documents.clear();
             cache.dirty = pages.iter().map(|page| page.id.clone()).collect();

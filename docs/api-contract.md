@@ -375,8 +375,10 @@ v1 routes stay stable.
   `{token, expires_at, member_id, email, name}`. The raw `sess_<uuid>` token is
   returned once.
 - `POST /api/v2/auth/register` claims an invited member email with
-  `{email, password}` and returns a session. Unknown emails are 403, an existing
-  account is 409, and the password needs 8+ characters (spec-152).
+  `{email, password, invite_token}` and returns a session. Unknown emails and
+  invalid/expired tokens are 403, an existing account is 409, and the password
+  needs 8+ characters (spec-152, spec-155). The owner issues the single-use
+  token with `POST /api/v2/members/{id}/invite`.
 - `POST /api/v2/auth/password` takes `{current_password, new_password}`, revokes
   every session for the member and returns a fresh session.
 - `POST /api/v2/auth/reset` is owner-only: `{email, new_password}` resets the
@@ -448,6 +450,7 @@ Implemented v2 routes:
 | ------ | ---- | ------------------- |
 | `POST` | `/api/v2/auth/login` | none (version header only) |
 | `POST` | `/api/v2/auth/register` | none (version header only) |
+| `POST` | `/api/v2/members/{id}/invite` | insert content (owner only) |
 | `POST` | `/api/v2/auth/password` | read content |
 | `POST` | `/api/v2/auth/reset` | update content (owner only) |
 | `POST` | `/api/v2/crdt/sync` | read content |
@@ -505,8 +508,10 @@ Moving a view to a data source or a database to a page requires write access to
 the **destination** page. File uploads carry `created_by` and an optional
 `page_id`: creating one for a page requires write access, and `send`/`complete`
 require the creator (or the owner) plus page write access. `send` validates the
-declared length and persists the body under the server uploads directory;
-`complete` requires that stored body. See `spec-138`.
+declared length, the 2 MiB per-file limit and the 1 GiB workspace quota, then
+persists the raw bytes under the server uploads directory; `complete` requires
+that stored body. Expired pending uploads and unreferenced files are pruned. See
+`spec-138` and `spec-155`.
 
 ### 8.2 v2 list envelope (implemented)
 

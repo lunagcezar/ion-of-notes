@@ -20,6 +20,7 @@ services:
       - "8787"
     environment:
       ION_OF_NOTES_OWNER_PASSWORD_FILE: /run/secrets/owner_password
+      ION_OF_NOTES_TRUSTED_PROXIES: ${ION_OF_NOTES_TRUSTED_PROXIES:-172.30.0.2}
       RUST_LOG: ${RUST_LOG:-info,tower_http=info}
     secrets:
       - owner_password
@@ -34,6 +35,8 @@ services:
       - no-new-privileges:true
     pids_limit: 256
     stop_grace_period: 15s
+    networks:
+      - ion-internal
     logging:
       driver: json-file
       options:
@@ -56,6 +59,9 @@ services:
     depends_on:
       ion-of-notes:
         condition: service_healthy
+    networks:
+      ion-internal:
+        ipv4_address: 172.30.0.2
     security_opt:
       - no-new-privileges:true
     logging:
@@ -90,6 +96,12 @@ volumes:
     name: ion-of-notes-data
   caddy-data:
   caddy-config:
+
+networks:
+  ion-internal:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
 
 secrets:
   owner_password:

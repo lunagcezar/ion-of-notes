@@ -47,6 +47,9 @@ fn production_compose_puts_caddy_in_front_and_keeps_the_app_private() {
     assert!(compose.contains("8787"));
     assert!(compose.contains("depends_on:"));
     assert!(compose.contains("condition: service_healthy"));
+    assert!(compose.contains("ION_OF_NOTES_TRUSTED_PROXIES"));
+    assert!(compose.contains("ipv4_address: 172.30.0.2"));
+    assert!(compose.contains("subnet: 172.30.0.0/24"));
     assert!(!compose.contains("ports:\n      - \"8787:8787\""));
 }
 

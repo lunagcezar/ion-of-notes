@@ -4,6 +4,7 @@
 //! The limiter uses one Redis counter per key and fixed window; INCR/EXPIRE run
 //! in a small Lua script so the first hit always sets the TTL atomically.
 
+use crate::lock::LockExt;
 use crate::store::{RateLimitHit, RateLimitStore};
 use redis::Client;
 use std::io;
@@ -35,9 +36,7 @@ impl RedisRateLimitStore {
     }
 
     fn connection(&self) -> std::sync::MutexGuard<'_, redis::Connection> {
-        self.connection
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+        self.connection.lock_or_log()
     }
 }
 

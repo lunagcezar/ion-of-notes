@@ -6,6 +6,9 @@
   const VERSION = "2026-11-08";
   const $ = (id) => document.getElementById(id);
   const state = { token: sessionStorage.getItem("ion-token") || "", page: null };
+  let searchTimer = null;
+  let searchController = null;
+  let searchSeq = 0;
 
   function baseUrl() {
     const entered = $("server").value.trim().replace(/\/+$/, "");
@@ -54,7 +57,11 @@
     try {
       const session = await api(register ? "/api/v2/auth/register" : "/api/v2/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(
+          register
+            ? { email, password, invite_token: $("invite-token").value.trim() }
+            : { email, password },
+        ),
       });
       state.token = session.token;
       sessionStorage.setItem("ion-token", state.token);
@@ -81,8 +88,14 @@
 
   async function loadPages() {
     try {
-      const list = await api("/api/v2/pages?page_size=100");
-      const pages = list.results || [];
+      const pages = [];
+      let cursor = null;
+      do {
+        const suffix = cursor ? `&start_cursor=${encodeURIComponent(cursor)}` : "";
+        const list = await api(`/api/v2/pages?page_size=100${suffix}`);
+        pages.push(...(list.results || []));
+        cursor = list.next_cursor;
+      } while (cursor && pages.length < 2000);
       const nav = $("pages");
       nav.textContent = "";
       for (const page of pages) {
@@ -124,37 +137,41 @@
       host.textContent = "This page has no blocks yet.";
       return;
     }
+    renderBlockTree(host, blocks, 0);
+  }
+
+  function renderBlockTree(host, blocks, depth) {
     for (const block of blocks) {
+      renderInto(host, block, depth);
       if (block.children && block.children.length) {
-        renderInto(host, block);
-        for (const child of block.children) renderInto(host, child);
-      } else {
-        renderInto(host, block);
+        renderBlockTree(host, block.children, depth + 1);
       }
     }
   }
 
-  function renderInto(host, block) {
+  function renderInto(host, block, depth) {
     const row = document.createElement("div");
     row.className = "block";
+    if (depth > 0) row.style.marginLeft = `${depth * 18}px`;
     const kind = document.createElement("div");
     kind.className = "kind";
     kind.textContent = (block.kind || "").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
     const area = document.createElement("textarea");
     area.value = block.text || "";
     area.rows = Math.max(1, Math.ceil((block.text || "").length / 70));
-    area.addEventListener("blur", () => saveBlock(block.id, area.value, block.text || ""));
+    area.addEventListener("blur", () => saveBlock(block, area.value));
     row.append(kind, area);
     host.appendChild(row);
   }
 
-  async function saveBlock(id, text, previous) {
-    if (text === previous) return;
+  async function saveBlock(block, text) {
+    if (text === (block.text || "")) return;
     try {
-      await api(`/api/v2/blocks/${encodeURIComponent(id)}`, {
+      await api(`/api/v2/blocks/${encodeURIComponent(block.id)}`, {
         method: "PATCH",
         body: JSON.stringify({ text }),
       });
+      block.text = text;
       status("Saved.");
     } catch (error) {
       status(error.message);
@@ -177,13 +194,28 @@
     }
   }
 
-  async function search() {
+  function search() {
     const query = $("search").value.trim();
+    clearTimeout(searchTimer);
+    if (!query) {
+      $("search-results").textContent = "";
+      return;
+    }
+    searchTimer = setTimeout(() => runSearch(query, ++searchSeq), 300);
+  }
+
+  async function runSearch(query, sequence) {
+    if (searchController) searchController.abort();
+    const controller = new AbortController();
+    searchController = controller;
     const host = $("search-results");
-    host.textContent = "";
-    if (!query) return;
     try {
-      const list = await api(`/api/v2/search?q=${encodeURIComponent(query)}&page_size=20`);
+      const list = await api(
+        `/api/v2/search?q=${encodeURIComponent(query)}&page_size=20`,
+        { signal: controller.signal },
+      );
+      if (sequence !== searchSeq) return;
+      host.textContent = "";
       for (const result of list.results || []) {
         const link = document.createElement("a");
         link.className = "page-link";
@@ -197,6 +229,7 @@
       }
       if (!(list.results || []).length) host.textContent = "No matches.";
     } catch (error) {
+      if (error.name === "AbortError") return;
       status(error.message);
     }
   }
@@ -240,6 +273,9 @@
   }
 
   $("server").value = location.origin;
+  $("register-mode").addEventListener("change", () => {
+    $("invite-row").classList.toggle("hidden", !$("register-mode").checked);
+  });
   $("login").addEventListener("click", signIn);
   $("logout").addEventListener("click", signOut);
   $("create").addEventListener("click", createPage);

@@ -52,7 +52,12 @@ remain staged.
 | Per-block persistence | Fixed in spec-133: blocks live in `workspace_blocks` and single-block edits write one row. | Add an operation log only if block-level history is required. |
 | PostgreSQL / Redis | Fixed in spec-137 as optional adapters; realtime fan-out and connection pooling remain per process. | Add a shared realtime bus and pool when multi-instance editing is required. |
 | Load and contention tests | `tests/perf.rs` covers workspace size, spec-125 covers mixed invariants, spec-126 adds an opt-in 8-thread read/write harness and spec-129 covers concurrent SQLite connections. | Add multi-process crash recovery tests before multi-node work. |
-| Webhook I/O under the workspace lock | Fixed in spec-117: events queue, the worker sends outside the lock and applies results afterwards. | Keep the worker single and add idempotency keys for at-least-once delivery. |
+| Webhook I/O under the workspace lock | Fixed in spec-117/spec-155: events queue, the worker sends outside the lock on the blocking pool. | Keep the worker single and add bounded concurrency/idempotency keys for at-least-once delivery. |
+| Blocking CRDT on Tokio workers | Fixed in spec-155: WebSocket sync/update run on `spawn_blocking`. | Add a per-workspace writer actor if write contention grows. |
+| Awareness fan-out | Each cursor update broadcasts the full participant list (O(N) build, O(N) delivery). | Publish `AwarenessUpdated` deltas and coalesce cursor events. |
+| Deep snapshot publication | HTTP writes publish an `Arc` snapshot but still clone the workspace/collaboration first (spec-151). | Move to page/block `Arc` copy-on-write; measure write p95 by workspace size first. |
+| Performance regression gate | `tests/perf.rs` is opt-in and asserts correctness, not latency. | Add a scheduled (not per-PR) benchmark job with recorded artifacts. |
+| Large server/UI files | `server.rs`, `sidebar.rs` and `icon_catalog.rs` still carry several responsibilities. | Split by responsibility only when the next feature touches them; see `docs/refactoring-roadmap.md`. |
 | Query-level database pagination | Fixed in spec-118: index selection plus `PageWindow` materializes only the requested slice. | Add keyset cursors on property values if cursor stability becomes a requirement. |
 | Renderer height tree | Fixed in spec-119: a Fenwick tree renders only the visible window. | Add a variable-width cache if resizing becomes a measured bottleneck. |
 | Three HTTP layers | Fixed in spec-120/spec-121: one auth seam, a bounded parser helper, and `serve_on` now uses the Axum router. | Remove `serve_once` if its parser tests move to the Axum contract suite. |

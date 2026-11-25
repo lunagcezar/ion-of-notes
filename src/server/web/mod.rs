@@ -15,6 +15,7 @@ use super::{
     WorkspaceSnapshot, parse_bearer,
 };
 use crate::collab::Change;
+use crate::lock::LockExt;
 
 mod http;
 mod operations;
@@ -97,14 +98,8 @@ pub fn router(server: WorkspaceServer) -> Router {
 
 /// Build the router around an already shared server (tests, embedding).
 pub fn router_with_server(server: Arc<Mutex<WorkspaceServer>>) -> Router {
-    let snapshot = server
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .snapshot_cell();
-    server
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .enable_read_snapshots();
+    let snapshot = server.lock_or_log().snapshot_cell();
+    server.lock_or_log().enable_read_snapshots();
     let state = AppState {
         server,
         snapshot,
@@ -168,9 +163,7 @@ fn spawn_webhook_worker(server: Arc<Mutex<WorkspaceServer>>) {
             ticker.tick().await;
             let shared = Arc::clone(&server);
             let prepared = tokio::task::spawn_blocking(move || {
-                let mut server = shared
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                let mut server = shared.lock_or_log();
                 server.flush_webhooks();
                 let sender = server.webhook_sender();
                 let jobs = server.prepare_webhook_deliveries();
@@ -180,18 +173,20 @@ fn spawn_webhook_worker(server: Arc<Mutex<WorkspaceServer>>) {
             let Ok((sender, jobs)) = prepared else {
                 continue;
             };
-            // Sending happens outside the workspace lock so a slow endpoint
-            // cannot stall API writes.
+            // Sending happens outside the workspace lock and on the blocking
+            // pool, so synchronous DNS/HTTP cannot occupy a Tokio worker
+            // (spec-155).
             tracing::debug!(jobs = jobs.len(), "webhook worker cycle");
-            let results = jobs
-                .into_iter()
-                .map(|job| job.send(sender.as_ref()))
-                .collect::<Vec<_>>();
+            let results = tokio::task::spawn_blocking(move || {
+                jobs.into_iter()
+                    .map(|job| job.send(sender.as_ref()))
+                    .collect::<Vec<_>>()
+            })
+            .await
+            .unwrap_or_default();
             let shared = Arc::clone(&server);
             let _ = tokio::task::spawn_blocking(move || {
-                let mut server = shared
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                let mut server = shared.lock_or_log();
                 server.apply_webhook_delivery_results(results);
             })
             .await;

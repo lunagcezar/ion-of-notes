@@ -25,6 +25,7 @@ pub mod client;
 pub mod collab;
 mod crdt_text;
 pub mod i18n;
+mod lock;
 pub mod model;
 pub mod ollama;
 pub mod remote;

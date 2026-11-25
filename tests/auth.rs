@@ -292,10 +292,37 @@ fn resolved_sessions_are_cached_and_invalidated_on_logout() {
 #[test]
 fn invited_member_can_register_change_and_reset_password() {
     let (mut server, _store) = server_with_account();
+    server.configure_login_rate_limits(100, 100, std::time::Duration::from_secs(60));
+
+    let without_token = serde_json::json!({
+        "email": "alex@workspace.local",
+        "password": "alexpass1",
+    })
+    .to_string();
+    let response = server.handle(&common::v2_request(
+        Method::Post,
+        "/api/v2/auth/register",
+        Some(without_token),
+    ));
+    assert_eq!(response.status, 403, "registration needs an invitation");
+
+    let owner = login(&mut server, "owner@workspace.local", "secret");
+    assert_eq!(owner.status, 200);
+    let owner: SessionResponse = common::data(&owner);
+    let invite = server.handle(&common::v2_request_as(
+        &owner.token,
+        Method::Post,
+        "/api/v2/members/m-guest-1/invite",
+        None,
+    ));
+    assert_eq!(invite.status, 201, "{}", invite.body);
+    let invite: serde_json::Value = common::data(&invite);
+    let invite_token = invite["token"].as_str().expect("invite token").to_string();
 
     let body = serde_json::json!({
         "email": "alex@workspace.local",
         "password": "alexpass1",
+        "invite_token": invite_token,
     })
     .to_string();
     let response = server.handle(&common::v2_request(
@@ -310,6 +337,7 @@ fn invited_member_can_register_change_and_reset_password() {
     let repeated = serde_json::json!({
         "email": "alex@workspace.local",
         "password": "alexpass1",
+        "invite_token": invite_token,
     })
     .to_string();
     let response = server.handle(&common::v2_request(
@@ -362,8 +390,6 @@ fn invited_member_can_register_change_and_reset_password() {
             .is_none(),
         "owner reset revokes member sessions"
     );
-    assert_eq!(
-        login(&mut server, "alex@workspace.local", "alexpass3").status,
-        200
-    );
+    let final_login = login(&mut server, "alex@workspace.local", "alexpass3");
+    assert_eq!(final_login.status, 200, "{}", final_login.body);
 }

@@ -78,9 +78,11 @@ are charged separately in the same call.
 The Axum adapter uses `X-Forwarded-For` (first value) or `X-Real-IP` **only**
 when the direct TCP peer is loopback or listed in
 `ION_OF_NOTES_TRUSTED_PROXIES` (comma-separated IPs, or `*`). A direct public
-client therefore cannot rotate its login bucket with a forged header. Set the
-variable to the proxy address when Caddy is not on loopback; leaving it unset
-makes every request look like the proxy address.
+client therefore cannot rotate its login bucket with a forged header. The
+production Compose file gives Caddy the fixed address `172.30.0.2` on an
+internal network and sets this variable to it, so each visitor keeps a distinct
+login bucket. If Caddy runs elsewhere, set the variable to its address; leaving
+it unset makes every request look like the proxy address.
 
 The in-process maps purge expired windows at a size bound and deny fresh keys
 while an attacker keeps them full. The shared SQLite limiter falls back to a
@@ -157,9 +159,17 @@ logs, traces or browser history.
 
 ## 7. Known limitations
 
-- Registration is invite-first (the email must already belong to a member) and
-  password change/reset revoke the member's sessions; email verification and
-  self-service reset tokens are not implemented.
+- Registration is invite-first and requires a single-use token issued by the
+  owner for that member (`POST /api/v2/members/{id}/invite`); only its SHA-256
+  hash is stored, it expires after 7 days and it is consumed on success
+  (spec-155). Password change/reset revoke the member's sessions; email
+  verification and self-service reset tokens are not implemented.
+- Remote clients require HTTPS/WSS outside loopback; plaintext is accepted only
+  for localhost/127.0.0.1/::1.
+- Uploads have a 2 MiB per-file limit, a 1 GiB workspace quota, a 64-pending cap
+  and expired/orphan cleanup; `/metrics` exposes usage.
+- Recovered mutex poisoning is logged and counted in
+  `ion_of_notes_poisoned_locks_total`.
 - The browser UI is served from the same origin with a strict CSP; it uses
   `sessionStorage` Bearer tokens and no cookies.
 - No external security audit.

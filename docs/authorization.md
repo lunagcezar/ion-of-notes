@@ -109,9 +109,11 @@ roadmap; do not treat a collaboration invite as a working login.
   connection in local mode; remote member flows should use their own session.
 - **Account lifecycle**: invite-first registration (`POST /api/v2/auth/register`),
   self-service password change (`POST /api/v2/auth/password`) and owner reset
-  (`POST /api/v2/auth/reset`) are implemented (spec-152). Every password change
-  revokes that member's sessions. Email verification and self-service reset
-  tokens are not implemented.
+  (`POST /api/v2/auth/reset`) are implemented (spec-152). Registration requires
+  a single-use invitation token issued by the owner for that member
+  (`POST /api/v2/members/{id}/invite`, spec-155). Every password change revokes
+  that member's sessions. Email verification and self-service reset tokens are
+  not implemented.
 
 ## 6. Adding a protected resource
 

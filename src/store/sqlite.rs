@@ -7,6 +7,7 @@
 
 use crate::auth::{Account, AuthStore, Session};
 use crate::collab::CollabState;
+use crate::lock::LockExt;
 use crate::model::{
     Block, CommentDto, DataSource, Database, FileUpload, Page, View, Workspace, WorkspaceSettings,
     now_iso,
@@ -573,10 +574,7 @@ impl SqliteStore {
         &self,
         operation: impl FnOnce(&Connection) -> rusqlite::Result<T>,
     ) -> io::Result<T> {
-        let connection = self
-            .connection
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let connection = self.connection.lock_or_log();
         operation(&connection).map_err(io::Error::other)
     }
 
@@ -584,10 +582,7 @@ impl SqliteStore {
         &self,
         operation: impl FnOnce(&mut Connection) -> rusqlite::Result<T>,
     ) -> io::Result<T> {
-        let mut connection = self
-            .connection
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut connection = self.connection.lock_or_log();
         operation(&mut connection).map_err(io::Error::other)
     }
 }

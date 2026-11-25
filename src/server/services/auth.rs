@@ -31,6 +31,8 @@ fn validate_new_password(password: &str) -> Result<(), &'static str> {
 struct RegisterInput {
     email: String,
     password: String,
+    #[serde(default)]
+    invite_token: String,
 }
 
 #[derive(Deserialize)]
@@ -213,6 +215,15 @@ impl WorkspaceServer {
                 return v2_error(500, CODE_INTERNAL, error.to_string(), request_id, None);
             }
         }
+        if !self.collab.invite_valid(&input.invite_token, &email) {
+            return v2_error(
+                403,
+                CODE_UNAUTHORIZED,
+                "a valid invitation token is required",
+                request_id,
+                None,
+            );
+        }
         let account = Account {
             id: format!("account-{}", uuid::Uuid::new_v4()),
             member_id: member.id.clone(),
@@ -226,6 +237,10 @@ impl WorkspaceServer {
             created_at: now_iso(),
         };
         if let Err(error) = self.persistence.auth_store.upsert_account(&account) {
+            return v2_error(500, CODE_INTERNAL, error.to_string(), request_id, None);
+        }
+        self.collab.consume_invite(&input.invite_token, &email);
+        if let Err(error) = self.persist_collab() {
             return v2_error(500, CODE_INTERNAL, error.to_string(), request_id, None);
         }
         match self.issue_session(&member) {

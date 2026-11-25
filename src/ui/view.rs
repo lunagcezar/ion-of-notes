@@ -53,6 +53,7 @@ pub(super) struct ServerView {
     pub(super) email: String,
     pub(super) password: String,
     pub(super) register: bool,
+    pub(super) invite_token: String,
     pub(super) current_password: String,
     pub(super) new_password: String,
     pub(super) confirm_password: String,

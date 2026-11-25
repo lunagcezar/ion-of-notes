@@ -90,10 +90,30 @@ authorization boundary.
 | WebSocket session token in the query string | fixed | single-use 30 s ticket; header still preferred (spec-148) | `tests/realtime.rs` |
 | Releases had no checksums | fixed | `SHA256SUMS` job after both platforms (spec-149) | `tests/deployment.rs` |
 
-Still open and tracked in `docs/performance-roadmap.md`: the single-writer
-workspace mutex, the block-id index, session cache, patch-based undo, sidebar
-virtualization, the WebSocket query-token fallback and signed release
-checksums.
+### 1.2 Third review (Kimi + ChatGPT, 2026-11-25)
+
+| Finding | Status | Response | Evidence |
+| ------- | ------ | -------- | -------- |
+| Registration could claim an invited email without proof | fixed | single-use invite token, hashed, 7-day expiry, owner-issued (spec-155) | `tests/auth.rs` |
+| Production proxy not trusted, collapsing login buckets | fixed | Caddy fixed `172.30.0.2` and `ION_OF_NOTES_TRUSTED_PROXIES` in Compose (spec-155) | `tests/deployment.rs` |
+| Uploads had no quota or garbage collection | fixed | 2 MiB/file, 1 GiB/workspace, 64 pending, expired/orphan GC, metrics (spec-155) | `tests/comments.rs` |
+| Uploads were not binary-safe | fixed | adapter keeps raw `body_bytes`; send reads bytes (spec-155) | `tests/web.rs` |
+| Remote client accepted plaintext HTTP/WSS | fixed | HTTPS/WSS outside loopback enforced before login/connect (spec-155) | `tests/remote.rs` |
+| WebSocket size limit applied after allocation | fixed | 1 MiB message/frame limits on the upgrade, 120 s idle close (spec-155) | `tests/realtime.rs` |
+| Ticket not bound to the workspace | fixed | redemption checks the ticket's workspace (spec-155) | `tests/realtime.rs` |
+| Mutex poisoning ignored | fixed | `lock_or_log` logs and counts, metric exposed (spec-155) | `/metrics` |
+| Webhooks blocked a Tokio worker | fixed | sends run on `spawn_blocking` (spec-155) | `tests/webhooks.rs` |
+| CRDT sync/update ran synchronously on the socket task | fixed | `spawn_blocking` around sync/update (spec-155) | `tests/crdt.rs` |
+| Browser search fired per keystroke, stale saves, no cursor/tree | fixed | 300 ms debounce + abort, local text update, cursor loop, recursive blocks (spec-155) | `tests/web.rs` |
+| Awareness broadcasts full list | deferred | delta/coalescing tracked in `docs/performance-roadmap.md` | roadmap |
+| Snapshot publication clones the workspace | accepted | writes pay the clone; reads are lock-free; incremental `Arc` copy-on-write tracked | roadmap |
+| Single writer and per-process realtime | accepted | documented long-term items | ADR-016, roadmap |
+| Large server/UI files | deferred | split by responsibility when touched | `docs/refactoring-roadmap.md` |
+
+Still open and tracked in `docs/performance-roadmap.md`: awareness deltas, the
+incremental snapshot publication, the single-writer mutex, a scheduled
+performance gate and the large-file splits. Email verification/self-service
+reset and multi-node realtime remain deferred with a documented plan.
 
 ## 1. Implemented in this cycle
 

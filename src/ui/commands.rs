@@ -328,6 +328,7 @@ pub(super) enum Command {
     SetServerEmail(String),
     SetServerPassword(String),
     SetServerRegister(bool),
+    SetServerInviteToken(String),
     SetServerCurrentPassword(String),
     SetServerNewPassword(String),
     SetServerConfirmPassword(String),
@@ -573,6 +574,7 @@ impl Command {
             | Command::SetServerEmail(_)
             | Command::SetServerPassword(_)
             | Command::SetServerRegister(_)
+            | Command::SetServerInviteToken(_)
             | Command::SetServerCurrentPassword(_)
             | Command::SetServerNewPassword(_)
             | Command::SetServerConfirmPassword(_)

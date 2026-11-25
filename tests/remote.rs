@@ -9,7 +9,7 @@ use ion_of_notes::collab::{Access, ChangeOp, CollabState, MemberDraft, Role, Sha
 use ion_of_notes::model::{PageDraft, Workspace, now_iso};
 use ion_of_notes::remote::{
     PendingAwareness, RemoteApi, RemoteRest, RemoteSession, clear_session_at, load_session_at,
-    login, save_session_at,
+    login, save_session_at, validate_remote_url,
 };
 use ion_of_notes::server::WorkspaceServer;
 use ion_of_notes::server::realtime::{Awareness, ServerMessage};
@@ -288,4 +288,17 @@ fn saved_session_is_private_on_unix() {
         & 0o777;
     assert_eq!(mode, 0o600);
     common::remove(&path);
+}
+
+#[test]
+fn remote_urls_require_tls_outside_loopback() {
+    assert!(validate_remote_url("https://notes.example.com").is_ok());
+    assert!(validate_remote_url("wss://notes.example.com").is_ok());
+    assert!(validate_remote_url("http://127.0.0.1:8787").is_ok());
+    assert!(validate_remote_url("http://localhost:8787").is_ok());
+    assert!(validate_remote_url("ws://[::1]:8787").is_ok());
+    assert!(validate_remote_url("http://notes.example.com").is_err());
+    assert!(validate_remote_url("ws://192.168.1.4:8787").is_err());
+    assert!(validate_remote_url("ftp://notes.example.com").is_err());
+    assert!(validate_remote_url("notes.example.com").is_err());
 }

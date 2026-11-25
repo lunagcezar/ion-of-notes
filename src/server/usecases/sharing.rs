@@ -30,6 +30,20 @@ pub(in crate::server) fn invite_member(
     Ok(member)
 }
 
+/// Issue a one-time registration token for an existing member (spec-155).
+pub(in crate::server) fn issue_invite(
+    server: &mut WorkspaceServer,
+    member_id: &str,
+) -> Result<(String, String), UseCaseError> {
+    let Some((token, expires_at)) = server.collab.create_invite(member_id) else {
+        return Err(UseCaseError::NotFound("member not found".to_string()));
+    };
+    server
+        .persist_collab()
+        .map_err(|error| UseCaseError::Storage(error.to_string()))?;
+    Ok((token, expires_at))
+}
+
 /// Permission grants, optionally filtered by page.
 pub(in crate::server) fn list_shares(server: &WorkspaceServer, page: Option<&str>) -> Vec<Share> {
     match page {

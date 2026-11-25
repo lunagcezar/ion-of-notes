@@ -5,6 +5,7 @@
 //! workspace snapshot after every update, so a restart can re-seed from the
 //! durable page document.
 
+use crate::lock::LockExt;
 #[cfg(feature = "desktop")]
 use crate::model::DataSource;
 use crate::model::{Block, Page, PageProperty, ParentDto, Workspace};
@@ -47,10 +48,7 @@ impl CrdtStore {
 
     /// Create the CRDT document from the current page snapshot if needed.
     pub fn ensure_page(&self, workspace: &Workspace, page_id: &str) -> Result<(), String> {
-        let mut docs = self
-            .docs
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut docs = self.docs.lock_or_log();
         if docs.contains_key(page_id) {
             return Ok(());
         }
@@ -82,10 +80,7 @@ impl CrdtStore {
         state_vector: Option<&[u8]>,
     ) -> Result<(Vec<u8>, Vec<u8>), String> {
         self.ensure_page(workspace, page_id)?;
-        let docs = self
-            .docs
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let docs = self.docs.lock_or_log();
         let doc = docs
             .get(page_id)
             .ok_or_else(|| format!("page not found: {page_id}"))?;
@@ -109,10 +104,7 @@ impl CrdtStore {
         update: &[u8],
     ) -> Result<Vec<u8>, String> {
         self.ensure_page(workspace, page_id)?;
-        let mut docs = self
-            .docs
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut docs = self.docs.lock_or_log();
         let doc = docs
             .get_mut(page_id)
             .ok_or_else(|| format!("page not found: {page_id}"))?;
@@ -128,10 +120,7 @@ impl CrdtStore {
     /// Project the merged title, block structure/text, page properties and
     /// data-source rows back into the workspace page.
     pub fn project(&self, workspace: &mut Workspace, page_id: &str) -> Result<(), String> {
-        let docs = self
-            .docs
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let docs = self.docs.lock_or_log();
         let doc = docs
             .get(page_id)
             .ok_or_else(|| format!("page not found: {page_id}"))?;
@@ -158,18 +147,12 @@ impl CrdtStore {
 
     /// Drop one document so the next sync re-seeds from the page snapshot.
     pub fn reset_page(&self, page_id: &str) {
-        self.docs
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .remove(page_id);
+        self.docs.lock_or_log().remove(page_id);
     }
 
     /// Drop every document (used after a whole-workspace replace).
     pub fn reset_all(&self) {
-        self.docs
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .clear();
+        self.docs.lock_or_log().clear();
     }
 }
 

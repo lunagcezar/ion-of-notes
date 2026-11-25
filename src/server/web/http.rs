@@ -1,4 +1,5 @@
 use super::*;
+use crate::lock::LockExt;
 use crate::model::{Page, PageSummary};
 use crate::server::contract::{CODE_NOT_FOUND, CODE_RESTRICTED_RESOURCE};
 use crate::server::pagination::PageRequest;
@@ -18,12 +19,16 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
         .extensions
         .get::<ConnectInfo<SocketAddr>>()
         .map(|ConnectInfo(addr)| *addr);
-    let body = match axum::body::to_bytes(body, MAX_BODY_BYTES).await {
-        Ok(bytes) => (!bytes.is_empty()).then(|| String::from_utf8_lossy(&bytes).into_owned()),
+    let bytes = match axum::body::to_bytes(body, MAX_BODY_BYTES).await {
+        Ok(bytes) => bytes,
         Err(_) => {
             return plain_error(StatusCode::PAYLOAD_TOO_LARGE, "request body is too large");
         }
     };
+    let body_bytes = (!bytes.is_empty()).then(|| bytes.to_vec());
+    let body = body_bytes
+        .as_ref()
+        .map(|bytes| String::from_utf8_lossy(bytes).into_owned());
     let Some(method) = api_method(parts.method.as_str()) else {
         return plain_error(StatusCode::METHOD_NOT_ALLOWED, "unsupported method");
     };
@@ -48,6 +53,7 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
         method,
         path,
         body,
+        body_bytes,
         headers,
         client_ip,
     };
@@ -65,9 +71,7 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
 
     let server = Arc::clone(&state.server);
     let response = match tokio::task::spawn_blocking(move || {
-        let mut guard = server
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut guard = server.lock_or_log();
         guard.handle(&api_request)
     })
     .await
@@ -113,9 +117,7 @@ fn read_snapshot(
     // Hold the lock only long enough to authenticate and take the snapshot;
     // projection and JSON serialization run after it is released (spec-143).
     let (connection, snapshot) = {
-        let guard = server
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let guard = server.lock_or_log();
         let connection = match authenticate(&guard, request) {
             Ok(connection) => connection,
             Err(response) => return Some(response),
@@ -183,9 +185,7 @@ async fn snapshot_v2_read(state: &AppState, request: &ApiRequest) -> Option<ApiR
     let prepare_request = request.clone();
     let request_id = new_request_id();
     let prepared = tokio::task::spawn_blocking(move || {
-        let mut guard = server
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut guard = server.lock_or_log();
         match guard.prepare_v2_read(&prepare_request, &request_id, &cache) {
             Ok(context) => Ok(context),
             Err(mut response) => {

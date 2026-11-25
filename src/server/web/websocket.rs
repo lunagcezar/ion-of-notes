@@ -1,5 +1,6 @@
 use super::http::plain_error;
 use super::*;
+use crate::lock::LockExt;
 use crate::server::realtime::Awareness;
 
 /// Upper bound for one WebSocket client text frame. A CRDT update larger than
@@ -27,16 +28,13 @@ pub(super) async fn ws_handler(
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(0);
     let (connection, hub, backlog, seq, member_name, reset_required) = {
-        let server = state
-            .server
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let server = state.server.lock_or_log();
         if server.workspace.settings.id != workspace_id {
             return plain_error(StatusCode::NOT_FOUND, "workspace not found");
         }
         let connection = match (token.as_deref(), ticket.as_deref()) {
             (Some(token), _) => server.connection_for_token(token),
-            (None, Some(ticket)) => server.redeem_realtime_ticket(ticket),
+            (None, Some(ticket)) => server.redeem_realtime_ticket(ticket, &workspace_id),
             _ => None,
         };
         let Some(connection) = connection else {
@@ -73,6 +71,9 @@ pub(super) async fn ws_handler(
             reset_required,
         )
     };
+    let ws = ws
+        .max_message_size(MAX_WS_MESSAGE_BYTES)
+        .max_frame_size(MAX_WS_MESSAGE_BYTES);
     let server = Arc::clone(&state.server);
     ws.on_upgrade(move |socket| {
         websocket_session(
@@ -154,7 +155,9 @@ async fn websocket_session(
                 }
                 Err(broadcast::error::RecvError::Closed) => break,
             },
-            incoming = socket.recv() => match incoming {
+            incoming = tokio::time::timeout(std::time::Duration::from_secs(120), socket.recv()) => match incoming {
+                Err(_) => break,
+                Ok(incoming) => match incoming {
                 Some(Ok(Message::Text(text))) => {
                     if !budget.allow(std::time::Instant::now()) {
                         let _ = send_error(
@@ -234,6 +237,7 @@ async fn websocket_session(
                 Some(Ok(Message::Close(_))) | None => break,
                 Some(Ok(_)) => {}
                 Some(Err(_)) => break,
+                },
             },
         }
     }
@@ -273,14 +277,20 @@ async fn handle_crdt_sync(
         None => None,
     };
     let result = {
-        let mut server = server
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if !server.can_read_page(connection, &page_id) {
-            Err("read access to this page is not allowed".to_string())
-        } else {
-            server.crdt_sync(&page_id, state_vector.as_deref())
-        }
+        let server = Arc::clone(server);
+        let connection = connection.clone();
+        let page_id = page_id.clone();
+        let state_vector = state_vector.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut guard = server.lock_or_log();
+            if !guard.can_read_page(&connection, &page_id) {
+                Err("read access to this page is not allowed".to_string())
+            } else {
+                guard.crdt_sync(&page_id, state_vector.as_deref())
+            }
+        })
+        .await
+        .unwrap_or_else(|_| Err("crdt sync task failed".to_string()))
     };
     match result {
         Ok((update, vector)) => {
@@ -311,14 +321,20 @@ async fn handle_crdt_update(
         Err(error) => return send_error(socket, "crdt_error", error.to_string()).await,
     };
     let result = {
-        let mut server = server
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if !server.can_write_page(connection, &page_id) {
-            Err("write access to this page is not allowed".to_string())
-        } else {
-            server.apply_crdt_update(&page_id, &update, &connection.member_id)
-        }
+        let server = Arc::clone(server);
+        let connection = connection.clone();
+        let page_id = page_id.clone();
+        let update = update.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut guard = server.lock_or_log();
+            if !guard.can_write_page(&connection, &page_id) {
+                Err("write access to this page is not allowed".to_string())
+            } else {
+                guard.apply_crdt_update(&page_id, &update, &connection.member_id)
+            }
+        })
+        .await
+        .unwrap_or_else(|_| Err("crdt update task failed".to_string()))
     };
     match result {
         Ok(merged) => {
@@ -345,9 +361,7 @@ async fn message_visible(
             Some(page_id.as_str())
         }
         ServerMessage::Awareness { .. } => {
-            let guard = server
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            let guard = server.lock_or_log();
             let ServerMessage::Awareness { members } = message else {
                 return None;
             };
@@ -366,9 +380,7 @@ async fn message_visible(
     let Some(page_id) = page_id else {
         return Some(message);
     };
-    let guard = server
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let guard = server.lock_or_log();
     guard.change_visible(connection, page_id).then_some(message)
 }
 
@@ -379,9 +391,7 @@ async fn validate_awareness(
     connection: &Connection,
     awareness: &Awareness,
 ) -> Result<(), String> {
-    let guard = server
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let guard = server.lock_or_log();
     if !guard.can_read_page(connection, &awareness.page_id) {
         return Err("read access to this page is not allowed".to_string());
     }

@@ -250,6 +250,14 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - `POST /api/v2/auth/password` changes the caller's password, revokes every session and returns a fresh token; `POST /api/v2/auth/reset` lets the owner reset a member.
 - Desktop Settings → Server and the browser UI expose registration, change and reset.
 
+### Security - spec-155 third-review hardening
+
+- Registration requires a single-use invite token (hashed, 7-day expiry); the owner issues it per member.
+- The production Compose stack trusts only Caddy's fixed address; remote clients require HTTPS/WSS outside loopback.
+- Uploads have per-file/quota/pending limits, expired-file GC and byte-exact binary bodies.
+- Poisoned mutexes are logged and counted; WebSocket upgrade limits, workspace-bound tickets, idle timeout and blocking-work offload are in place.
+- The browser UI debounces/aborts search, updates saved block text, follows cursors and renders nested blocks.
+
 ### Documentation - spec-154 DeepWiki review
 
 - Added `docs/wiki-findings.md` with the wiki page map, adopted findings, stale-claim reconciliation and open limitations.

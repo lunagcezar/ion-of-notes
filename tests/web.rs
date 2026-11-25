@@ -444,3 +444,37 @@ async fn browser_app_is_served_with_a_restrictive_csp() {
     assert!(html.contains("/app.js"));
     assert!(html.contains("/app.css"));
 }
+
+#[tokio::test]
+async fn upload_send_preserves_non_utf8_bytes() {
+    let mut server = server();
+    let directory = std::env::temp_dir().join(format!("ion-upload-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&directory).unwrap();
+    server.use_uploads_dir(directory.clone());
+    let app = router(server);
+
+    let body = serde_json::json!({
+        "filename": "raw.bin",
+        "content_type": "application/octet-stream",
+        "content_length": null,
+    })
+    .to_string();
+    let (status, _, body) =
+        send(&app, v2_request("POST", "/api/v2/file_uploads", Some(body))).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let upload: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let id = upload["data"]["id"].as_str().expect("upload id");
+
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("/api/v2/file_uploads/{id}/send"))
+        .header("ion-of-notes-version", API_VERSION)
+        .header("authorization", format!("Bearer {OWNER_TOKEN}"))
+        .body(Body::from(vec![0xff, 0xfe, 0x00, 0x80]))
+        .unwrap();
+    let (status, _, _) = send(&app, request).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let stored = std::fs::read(directory.join(id)).expect("stored file");
+    assert_eq!(stored, vec![0xff, 0xfe, 0x00, 0x80]);
+}

@@ -29,6 +29,10 @@ impl NotionApp {
         if self.server.busy {
             return;
         }
+        if let Err(message) = crate::remote::validate_remote_url(&url) {
+            self.server.status = Some(message);
+            return;
+        }
         self.server.busy = true;
         self.server.status = Some("Connecting...".to_string());
         let slot = Arc::clone(&self.server.slot);
@@ -118,6 +122,10 @@ impl NotionApp {
                 self.server.register = value;
                 self.server.status = None;
             }
+            Command::SetServerInviteToken(value) => {
+                self.server.invite_token = value;
+                self.server.status = None;
+            }
             Command::SetServerCurrentPassword(value) => {
                 self.server.current_password = value;
                 self.server.status = None;
@@ -193,7 +201,12 @@ impl NotionApp {
                     self.server.status =
                         Some("Server, email and password are required.".to_string());
                 } else if self.server.register {
-                    match crate::remote::register_account(&url, &email, &password) {
+                    match crate::remote::register_account(
+                        &url,
+                        &email,
+                        &password,
+                        &self.server.invite_token,
+                    ) {
                         Ok(_) => {
                             self.start_server_connect(url, email, Some(password), None);
                         }

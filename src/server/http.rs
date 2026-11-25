@@ -57,12 +57,15 @@ pub fn parse_http_request(bytes: &[u8]) -> Option<ApiRequest> {
     if content_length > raw.len() {
         return None;
     }
-    let body =
-        (content_length > 0).then(|| String::from_utf8_lossy(&raw[..content_length]).into_owned());
+    let body_bytes = (content_length > 0).then(|| raw[..content_length].to_vec());
+    let body = body_bytes
+        .as_ref()
+        .map(|bytes| String::from_utf8_lossy(bytes).into_owned());
     Some(ApiRequest {
         method,
         path,
         body,
+        body_bytes,
         headers,
         client_ip: None,
     })

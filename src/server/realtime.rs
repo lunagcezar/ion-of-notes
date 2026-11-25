@@ -4,6 +4,7 @@
 //! typed messages; tests can exercise the hub without a socket.
 
 use crate::collab::Change;
+use crate::lock::LockExt;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use serde::{Deserialize, Serialize};
@@ -133,22 +134,15 @@ impl RealtimeHub {
     /// Add a participant and broadcast the new presence list.
     pub fn join(&self, member: PresenceMember) {
         self.presence
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .insert(member.session_id.clone(), member);
         self.publish_presence();
     }
 
     /// Remove a participant and broadcast the new presence/awareness lists.
     pub fn leave(&self, session_id: &str) {
-        self.presence
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .remove(session_id);
-        self.awareness
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .remove(session_id);
+        self.presence.lock_or_log().remove(session_id);
+        self.awareness.lock_or_log().remove(session_id);
         self.publish_presence();
         self.publish_awareness();
     }
@@ -156,30 +150,19 @@ impl RealtimeHub {
     /// Store one participant's cursor/selection and broadcast the list.
     pub fn update_awareness(&self, awareness: Awareness) {
         self.awareness
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .insert(awareness.session_id.clone(), awareness);
         self.publish_awareness();
     }
 
     /// Current cursor/selection awareness, ordered by session id.
     pub fn awareness(&self) -> Vec<Awareness> {
-        self.awareness
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .values()
-            .cloned()
-            .collect()
+        self.awareness.lock_or_log().values().cloned().collect()
     }
 
     /// Current participants, ordered by session id.
     pub fn members(&self) -> Vec<PresenceMember> {
-        self.presence
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .values()
-            .cloned()
-            .collect()
+        self.presence.lock_or_log().values().cloned().collect()
     }
 
     fn publish_presence(&self) {

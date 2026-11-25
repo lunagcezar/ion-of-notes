@@ -90,6 +90,20 @@ pub(in crate::ui::dialogs) fn render_server_settings(
         {
             commands.push(Command::SetServerRegister(register));
         }
+        if server.register {
+            let mut token = server.invite_token.clone();
+            if ui
+                .add(
+                    egui::TextEdit::singleline(&mut token)
+                        .desired_width(360.0)
+                        .hint_text("Invitation token (inv_...)")
+                        .text_color(palette.text),
+                )
+                .changed()
+            {
+                commands.push(Command::SetServerInviteToken(token));
+            }
+        }
     }
 
     if server.connected {

@@ -24,9 +24,10 @@ pub(super) async fn ready() -> Response {
 pub(super) async fn metrics(State(state): State<AppState>) -> Response {
     let uptime = state.started.elapsed().as_secs();
     let requests = state.requests.load(Ordering::Relaxed);
-    let snapshot = state.server.lock().ok().map(|server| {
+    let snapshot = {
+        let server = state.server.lock_or_log();
         let stats = server.webhook_stats();
-        (
+        Some((
             stats.pending,
             stats.dead_letters,
             stats.deliveries,
@@ -36,10 +37,23 @@ pub(super) async fn metrics(State(state): State<AppState>) -> Response {
             server.workspace.version,
             server.collab.next_seq.saturating_sub(1),
             server.request_log().len(),
-        )
-    });
-    let (pending, dead_letters, deliveries, pages, blocks, members, version, sync_seq, request_log) =
-        snapshot.unwrap_or((0, 0, 0, 0, 0, 0, 0, 0, 0));
+            server.upload_usage(),
+            server.upload_quota_remaining(),
+        ))
+    };
+    let (
+        pending,
+        dead_letters,
+        deliveries,
+        pages,
+        blocks,
+        members,
+        version,
+        sync_seq,
+        request_log,
+        upload_bytes,
+        upload_free,
+    ) = snapshot.unwrap_or((0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
     let body = format!(
         "# HELP ion_of_notes_up Whether the server process is running.\n\
          # TYPE ion_of_notes_up gauge\n\
@@ -76,7 +90,17 @@ pub(super) async fn metrics(State(state): State<AppState>) -> Response {
          ion_of_notes_sync_seq {sync_seq}\n\
          # HELP ion_of_notes_request_log_entries In-memory v2 request-log entries.\n\
          # TYPE ion_of_notes_request_log_entries gauge\n\
-         ion_of_notes_request_log_entries {request_log}\n"
+         ion_of_notes_request_log_entries {request_log}\n\
+         # HELP ion_of_notes_upload_bytes Bytes stored in the workspace upload directory.\n\
+         # TYPE ion_of_notes_upload_bytes gauge\n\
+         ion_of_notes_upload_bytes {upload_bytes}\n\
+         # HELP ion_of_notes_upload_quota_remaining Remaining upload bytes before the quota.\n\
+         # TYPE ion_of_notes_upload_quota_remaining gauge\n\
+         ion_of_notes_upload_quota_remaining {upload_free}\n\
+         # HELP ion_of_notes_poisoned_locks_total Mutexes found poisoned and recovered.\n\
+         # TYPE ion_of_notes_poisoned_locks_total counter\n\
+         ion_of_notes_poisoned_locks_total {poisoned}\n",
+        poisoned = crate::lock::POISONED_LOCKS.load(Ordering::Relaxed)
     );
     let mut response = body.into_response();
     response.headers_mut().insert(

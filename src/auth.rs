@@ -4,6 +4,7 @@
 //! the SQLite adapter and by an in-memory adapter for tests; password and token
 //! helpers are pure functions.
 
+use crate::lock::LockExt;
 use argon2::Argon2;
 use argon2::password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash};
 use serde::{Deserialize, Serialize};
@@ -190,18 +191,14 @@ impl AuthStore for MemoryAuthStore {
     fn find_account(&self, email: &str) -> io::Result<Option<Account>> {
         Ok(self
             .accounts
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .iter()
             .find(|account| account.email.eq_ignore_ascii_case(email))
             .cloned())
     }
 
     fn upsert_account(&self, account: &Account) -> io::Result<()> {
-        let mut accounts = self
-            .accounts
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut accounts = self.accounts.lock_or_log();
         accounts.retain(|existing| {
             existing.id != account.id && !existing.email.eq_ignore_ascii_case(&account.email)
         });
@@ -210,10 +207,7 @@ impl AuthStore for MemoryAuthStore {
     }
 
     fn save_session(&self, session: &Session) -> io::Result<()> {
-        let mut sessions = self
-            .sessions
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut sessions = self.sessions.lock_or_log();
         sessions.retain(|existing| existing.token_hash != session.token_hash);
         sessions.push(session.clone());
         Ok(())
@@ -222,8 +216,7 @@ impl AuthStore for MemoryAuthStore {
     fn find_session(&self, token_hash: &str) -> io::Result<Option<Session>> {
         Ok(self
             .sessions
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .iter()
             .find(|session| session.token_hash == token_hash)
             .cloned())
@@ -231,24 +224,21 @@ impl AuthStore for MemoryAuthStore {
 
     fn delete_session(&self, token_hash: &str) -> io::Result<()> {
         self.sessions
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .retain(|session| session.token_hash != token_hash);
         Ok(())
     }
 
     fn delete_member_sessions(&self, member_id: &str) -> io::Result<()> {
         self.sessions
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .retain(|session| session.member_id != member_id);
         Ok(())
     }
 
     fn prune_sessions(&self, now: &str) -> io::Result<()> {
         self.sessions
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .lock_or_log()
             .retain(|session| !session_is_expired_at(session, now));
         Ok(())
     }

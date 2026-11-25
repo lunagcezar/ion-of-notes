@@ -6,6 +6,7 @@
 
 use crate::auth::{Account, AuthStore, Session};
 use crate::collab::CollabState;
+use crate::lock::LockExt;
 use crate::model::{
     Block, CommentDto, DataSource, Database, FileUpload, Page, View, Workspace, WorkspaceSettings,
     now_iso,
@@ -176,9 +177,7 @@ impl PostgresStore {
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Client> {
-        self.connection
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+        self.connection.lock_or_log()
     }
 }
 

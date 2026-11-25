@@ -1,4 +1,5 @@
 use super::*;
+use crate::lock::LockExt;
 
 impl CollabTransport for RemoteRest {
     fn crdt_sync(
@@ -69,10 +70,7 @@ impl CollabTransport for RemoteApi {
     }
 
     fn subscribe_realtime(&self) -> Option<broadcast::Receiver<ServerMessage>> {
-        self.realtime_rx
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .take()
+        self.realtime_rx.lock_or_log().take()
     }
 
     fn publish_awareness(&mut self, awareness: Awareness) -> Result<(), String> {

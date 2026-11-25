@@ -46,8 +46,36 @@ pub use session::{
     save_session_at, session_path,
 };
 
+/// Reject plaintext remote transports outside loopback (spec-155).
+pub fn validate_remote_url(base_url: &str) -> Result<(), String> {
+    let base = base_url.trim().trim_end_matches('/');
+    let Some((scheme, rest)) = base.split_once("://") else {
+        return Err("server URL must include http(s):// or ws(s)://".to_string());
+    };
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    let host = if let Some(rest) = authority.strip_prefix('[') {
+        rest.split_once(']').map(|(host, _)| host).unwrap_or("")
+    } else {
+        authority.split(':').next().unwrap_or("")
+    };
+    let loopback = host.eq_ignore_ascii_case("localhost")
+        || host == "127.0.0.1"
+        || host == "::1"
+        || host == "0.0.0.0";
+    match scheme.to_ascii_lowercase().as_str() {
+        "https" | "wss" => Ok(()),
+        "http" | "ws" if loopback => Ok(()),
+        "http" | "ws" => Err(
+            "plaintext server URLs are only allowed for loopback; use https:// or wss://"
+                .to_string(),
+        ),
+        other => Err(format!("unsupported server scheme: {other}")),
+    }
+}
+
 /// Log in to a remote server and return the session token.
 pub fn login(base_url: &str, email: &str, password: &str) -> Result<SessionResponse, String> {
+    validate_remote_url(base_url)?;
     let base = base_url.trim_end_matches('/');
     let body = serde_json::to_string(&LoginInput {
         email: email.to_string(),
@@ -82,9 +110,16 @@ pub fn register_account(
     base_url: &str,
     email: &str,
     password: &str,
+    invite_token: &str,
 ) -> Result<SessionResponse, String> {
+    validate_remote_url(base_url)?;
     let base = base_url.trim_end_matches('/');
-    let body = serde_json::json!({ "email": email, "password": password }).to_string();
+    let body = serde_json::json!({
+        "email": email,
+        "password": password,
+        "invite_token": invite_token,
+    })
+    .to_string();
     let mut response = agent()
         .post(format!("{base}/api/v2/auth/register"))
         .header(VERSION_HEADER, API_VERSION)

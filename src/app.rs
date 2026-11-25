@@ -332,6 +332,7 @@ pub fn build_remote_desktop(
     base_url: &str,
     token: &str,
 ) -> Result<(Client<DesktopApi>, Workspace), String> {
+    crate::remote::validate_remote_url(base_url)?;
     let remote = RemoteApi::connect(base_url, token)?;
     let mut client = Client::with_token(DesktopApi::Remote(remote), token);
     let workspace = client.workspace().map_err(|error| error.to_string())?;

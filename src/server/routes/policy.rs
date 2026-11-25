@@ -325,6 +325,16 @@ pub const ROUTES: &[RoutePolicy] = &[
         page_scoped: false,
     },
     RoutePolicy {
+        methods: &[Method::Post],
+        path: "/api/v2/members/",
+        kind: MatchKind::Prefix,
+        suffix: Some("/invite"),
+        capability: Capability::InsertContent,
+        block_limit: BlockLimit::None,
+        owner_only: true,
+        page_scoped: false,
+    },
+    RoutePolicy {
         methods: &[Method::Get],
         path: "/api/v2/shares",
         kind: MatchKind::Exact,
