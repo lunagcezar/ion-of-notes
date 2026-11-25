@@ -43,7 +43,7 @@ pub use crdt::CrdtSession;
 pub use dialogs::search_window::page_matches as search_page_matches;
 pub use edit_queue::{CommitPlan, PendingEdits, execute_plan, plan_for};
 pub use format::{format_number, format_timestamp};
-pub use icon_catalog::{EMOJI, ICONS, catalog_matches};
+pub use icon_catalog::{EMOJI, ICONS, catalog_matches, warmup_batch};
 pub use icons::{glyph_visual_offset, page_icon_letter};
 pub use invite::{is_valid_email, member_name_from_email, parse_invite_emails};
 pub use library_filter::pages_for_view;

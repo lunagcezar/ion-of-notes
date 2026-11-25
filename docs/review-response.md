@@ -77,7 +77,7 @@ authorization boundary.
 | Typing sent the whole CRDT document and persisted per key | fixed | transaction-only update; local mode commits through the debounced REST write (spec-141) | `tests/ui_crdt.rs` |
 | Structural scan on every text edit | fixed | sync only on structural commands (spec-141) | `tests/ui_crdt.rs` |
 | Undo cloned the workspace on every key | fixed | one snapshot per 0.8 s typing burst (spec-141) | `tests/ui.rs` |
-| Emoji picker rebuilt the UI behind it | fixed | backdrop-only render while the picker is open (spec-141) | screenshot |
+| Emoji picker rebuilt the UI behind it | superseded | normal background restored; the picker is warmed in batches and the font stack is optimized (spec-156) | `tests/ui.rs`, screenshot |
 | Snapshot cache invalidated on every write | fixed | version-keyed cache only (spec-141) | `tests/web.rs` |
 | Projection cloned the whole workspace | fixed | builds from authorized resources only (spec-141) | `tests/web.rs`, `tests/authorization.rs` |
 | Writes recorded the owner as actor | fixed | request actor context from the session (spec-142) | `tests/authorization.rs`, `tests/comments.rs` |

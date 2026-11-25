@@ -13,7 +13,9 @@ use crate::ui::constants as metrics;
 use egui::{Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
 use super::app::{Command, IconTab, ViewState};
-use super::icon_catalog::{EMOJI, Emoji, ICONS, IconGlyph, catalog_matches_normalized};
+use super::icon_catalog::{
+    EMOJI, Emoji, ICONS, IconGlyph, catalog_matches_normalized, warmup_batch,
+};
 use super::icons::draw_glyph_centered;
 use super::palette::Palette;
 use std::sync::Arc;
@@ -47,6 +49,38 @@ fn cached_indices(ctx: &egui::Context, tab: IconTab, query: &str) -> Arc<Vec<usi
     let cached = Arc::new(indices);
     ctx.data_mut(|data| data.insert_temp(id, Arc::clone(&cached)));
     cached
+}
+
+/// Warm the emoji font atlas in small batches while the picker stays open.
+///
+/// The grid is already virtualized, but the first pass over a new row still
+/// rasterizes each emoji into the font atlas. Pre-laying a batch per frame
+/// keeps that work ahead of the scroll instead of hitching on every new row
+/// (spec-156).
+fn warm_emoji_glyphs(ctx: &egui::Context, budget: usize) {
+    let id = egui::Id::unique("icon_picker_emoji_warmup");
+    let cursor = ctx.data(|data| data.get_temp::<usize>(id)).unwrap_or(0);
+    let Some(range) = warmup_batch(cursor, EMOJI.len(), budget) else {
+        return;
+    };
+    ctx.fonts_mut(|fonts| {
+        for entry in &EMOJI[range.clone()] {
+            let _ = fonts.layout_no_wrap(
+                entry.glyph.to_string(),
+                FontId::proportional(19.0),
+                Color32::BLACK,
+            );
+        }
+    });
+    ctx.data_mut(|data| data.insert_temp(id, range.end));
+    if range.end < EMOJI.len() {
+        ctx.request_repaint();
+    }
+}
+
+/// Continue warming the emoji atlas while the app is idle (spec-156).
+pub(super) fn warm_emoji_background(ctx: &egui::Context) {
+    warm_emoji_glyphs(ctx, 64);
 }
 
 /// One selectable emoji in the grid.
@@ -106,6 +140,9 @@ pub(super) fn render_icon_picker(
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
+    if view.icon_picker_tab == IconTab::Emoji {
+        warm_emoji_glyphs(ctx, 48);
+    }
     let screen = ctx.viewport_rect();
     let size = Vec2::new(404.0, 344.0);
     let pos = Pos2::new(screen.left() + 304.0, screen.top() + 236.0);

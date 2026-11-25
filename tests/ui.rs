@@ -19,7 +19,7 @@ use ion_of_notes::ui::{
     EMOJI, ICONS, UndoCapture, UndoEntry, app_bar_left_width, block_outside_viewport,
     catalog_matches, drop_index, estimate_block_height, frame_may_mutate, glyph_visual_offset,
     index_cursors, inline_comment_input, inline_threads, page_icon_letter, search_page_matches,
-    selection_rects, split_index, visible_tree_rows,
+    selection_rects, split_index, visible_tree_rows, warmup_batch,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -762,4 +762,17 @@ fn sidebar_tree_rows_follow_expansion_and_skip_archived_pages() {
     workspace.page_mut("p-start").expect("page").archived = true;
     let rows = visible_tree_rows(&workspace, &expanded);
     assert!(!rows.iter().any(|row| row.page_id == "p-start"));
+}
+
+#[test]
+fn emoji_warmup_batches_cover_the_catalog_once() {
+    let total = EMOJI.len();
+    assert_eq!(warmup_batch(0, total, 48), Some(0..48));
+    assert_eq!(
+        warmup_batch(total - 10, total, 48),
+        Some((total - 10)..total)
+    );
+    assert_eq!(warmup_batch(total, total, 48), None);
+    assert_eq!(warmup_batch(0, 0, 48), None);
+    assert_eq!(warmup_batch(0, total, 0), None);
 }

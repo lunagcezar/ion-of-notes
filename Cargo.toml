@@ -74,6 +74,45 @@ debug = "line-tables-only"
 # and the memory/IO cost of writing it, while incremental stays enabled.
 debug = 0
 
+# Color-emoji rasterization is a CPU-hot path even in development (the icon
+# picker and any emoji label). Optimize the font stack without giving up debug
+# information for this crate (spec-156).
+[profile.dev.package.epaint]
+opt-level = 3
+
+[profile.dev.package.vello_cpu]
+opt-level = 3
+
+[profile.dev.package.vello_common]
+opt-level = 3
+
+[profile.dev.package.skrifa]
+opt-level = 3
+
+[profile.dev.package.read-fonts]
+opt-level = 3
+
+[profile.dev.package.font-types]
+opt-level = 3
+
+[profile.test.package.epaint]
+opt-level = 3
+
+[profile.test.package.vello_cpu]
+opt-level = 3
+
+[profile.test.package.vello_common]
+opt-level = 3
+
+[profile.test.package.skrifa]
+opt-level = 3
+
+[profile.test.package.read-fonts]
+opt-level = 3
+
+[profile.test.package.font-types]
+opt-level = 3
+
 # Ship a smaller, faster binary: thin LTO lets the egui/eframe code inline
 # across crates without the build cost of full LTO.
 [profile.release]

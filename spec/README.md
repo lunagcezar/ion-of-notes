@@ -193,6 +193,7 @@ Status vocabulary:
 | [153](spec-153-browser-ui.md) | Browser UI | implemented | Embedded login/pages/blocks/search app |
 | [154](spec-154-deepwiki-documentation-review.md) | DeepWiki documentation review | implemented | Adopted findings and reconciled stale claims |
 | [155](spec-155-third-review-hardening.md) | Third-review hardening | implemented | Invite tokens, proxy trust, TLS, uploads, locks, WS |
+| [156](spec-156-emoji-picker-warmup.md) | Emoji picker warm-up | implemented | Font-stack opt, progressive glyph warm-up, background restored |
 
 ## 3. Work status
 

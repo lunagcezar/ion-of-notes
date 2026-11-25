@@ -41,8 +41,12 @@ taken at most once per 0.8 s of continuous mutation instead of on every key.
 
 ### Icon picker
 
-While the icon picker is open, the sidebar tree and page body are not rendered;
-a dimmed backdrop is painted instead. The picker grid already virtualizes rows.
+> **Superseded by spec-156 (2026-11-25):** the backdrop-only render was
+> removed because it did not improve picker responsiveness. The background now
+> renders normally and the emoji catalog is warmed in progressive batches.
+
+While the icon picker is open, the sidebar tree and page body were not rendered;
+a dimmed backdrop was painted instead. The picker grid already virtualizes rows.
 
 ### Snapshot cache
 
@@ -70,7 +74,7 @@ P4. **Given** a full remote worker queue, **then** the UI keeps the update in th
 pending queue and stays responsive.
 
 P5. **Given** the icon picker open, **then** the sidebar and page body are not
-rendered.
+rendered (superseded by spec-156: background renders normally).
 
 P6. **Given** a member read after a write, **then** the snapshot cache version
 matches `workspace.version` without manual invalidation.

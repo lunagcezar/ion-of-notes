@@ -715,6 +715,11 @@ impl eframe::App for NotionApp {
         self.poll_server();
         self.poll_remote(ctx.input(|i| i.time));
         self.sync_crdt();
+        if !self.icon_picker_open
+            && ctx.input(|input| input.events.is_empty() && !input.pointer.any_down())
+        {
+            super::page_icon::warm_emoji_background(&ctx);
+        }
         // Reset the per-frame "pointer is over a block" flag used by the
         // release-based drag drop (spec-060).
         ctx.data_mut(|data| {
@@ -865,42 +870,27 @@ impl eframe::App for NotionApp {
                 );
             });
 
-        if view.icon_picker_open {
-            // The icon picker is a floating window; do not rebuild the sidebar
-            // tree and the page behind it while the user scrolls the picker
-            // (spec-141).
-            egui::CentralPanel::default()
-                .frame(egui::Frame::NONE.fill(palette.content))
+        if view.sidebar_open || sidebar_width > 0.5 {
+            egui::Panel::left("sidebar")
+                .exact_size(sidebar_width)
+                .resizable(false)
+                .show_separator_line(false)
+                .frame(
+                    egui::Frame::NONE
+                        .fill(palette.sidebar)
+                        .inner_margin(egui::Margin::symmetric(10, 6)),
+                )
                 .show(ui, |ui| {
-                    ui.painter().rect_filled(
-                        ui.max_rect(),
-                        0.0,
-                        palette.sidebar.gamma_multiply(0.4),
-                    );
-                });
-        } else {
-            if view.sidebar_open || sidebar_width > 0.5 {
-                egui::Panel::left("sidebar")
-                    .exact_size(sidebar_width)
-                    .resizable(false)
-                    .show_separator_line(false)
-                    .frame(
-                        egui::Frame::NONE
-                            .fill(palette.sidebar)
-                            .inner_margin(egui::Margin::symmetric(10, 6)),
-                    )
-                    .show(ui, |ui| {
-                        render_sidebar(ui, &self.workspace, &view, &palette, &mut commands);
-                    });
-            }
-
-            let workspace_mut = &mut self.workspace;
-            egui::CentralPanel::default()
-                .frame(egui::Frame::NONE.fill(palette.content))
-                .show(ui, |ui| {
-                    render_content(ui, workspace_mut, &view, &palette, &mut commands);
+                    render_sidebar(ui, &self.workspace, &view, &palette, &mut commands);
                 });
         }
+
+        let workspace_mut = &mut self.workspace;
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(palette.content))
+            .show(ui, |ui| {
+                render_content(ui, workspace_mut, &view, &palette, &mut commands);
+            });
 
         // A block drag ends on pointer release anywhere, not only over the
         // six-dot handle. Releasing outside a block cancels the move.

@@ -250,6 +250,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - `POST /api/v2/auth/password` changes the caller's password, revokes every session and returns a fresh token; `POST /api/v2/auth/reset` lets the owner reset a member.
 - Desktop Settings → Server and the browser UI expose registration, change and reset.
 
+### Performance - spec-156 emoji picker warm-up
+
+- The font rasterization stack (`epaint`, `vello_cpu`, `vello_common`, `skrifa`, `read-fonts`, `font-types`) is optimized in dev/test; first-open debug time dropped from ~21.7 s to ~3.1 s for 120 frames.
+- The emoji catalog is warmed in 48-glyph batches while open and 64 at idle, resumable across opens; the picker renders over the normal sidebar/page again.
+
 ### Security - spec-155 third-review hardening
 
 - Registration requires a single-use invite token (hashed, 7-day expiry); the owner issues it per member.

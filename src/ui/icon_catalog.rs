@@ -43,6 +43,15 @@ pub fn catalog_matches_normalized(name: &str, keywords: &str, query: &str) -> bo
     query.is_empty() || name.contains(query) || keywords.contains(query)
 }
 
+/// Next range for progressive glyph warm-up, or `None` when the catalog is
+/// fully warmed (spec-156).
+pub fn warmup_batch(cursor: usize, total: usize, budget: usize) -> Option<std::ops::Range<usize>> {
+    if cursor >= total || budget == 0 {
+        return None;
+    }
+    Some(cursor..(cursor + budget).min(total))
+}
+
 macro_rules! emoji {
     ($glyph:expr, $name:expr, $keywords:expr) => {
         Emoji {

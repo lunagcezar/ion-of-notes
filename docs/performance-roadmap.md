@@ -61,6 +61,7 @@ remain staged.
 | Query-level database pagination | Fixed in spec-118: index selection plus `PageWindow` materializes only the requested slice. | Add keyset cursors on property values if cursor stability becomes a requirement. |
 | Renderer height tree | Fixed in spec-119: a Fenwick tree renders only the visible window. | Add a variable-width cache if resizing becomes a measured bottleneck. |
 | Three HTTP layers | Fixed in spec-120/spec-121: one auth seam, a bounded parser helper, and `serve_on` now uses the Axum router. | Remove `serve_once` if its parser tests move to the Axum contract suite. |
+| Emoji picker first-open scroll | Fixed in spec-156: font-stack crates are optimized in dev/test and the catalog warms in 48-glyph batches; the background renders normally again. | Measure a release `--screenshot` run after adding new emoji entries. |
 | Typing pipeline | Fixed in spec-141: transaction-only CRDT updates, no per-key server persist, structural sync only on structural commands, grouped undo snapshots. | Measure p50/p95 of `CrdtSession::local_text` and `commit_edits` at 1 KB/20 KB/100 KB texts. |
 | Background render behind overlays | Fixed in spec-141 for the icon picker (backdrop only). | Apply the same overlay rule to large dialogs if profiling shows it. |
 | Workspace projection clone | Fixed in spec-141: the projection clones only authorized pages/resources. | Move to borrowed DTOs if allocation profiling shows it matters. |
@@ -125,6 +126,7 @@ boundary.
 - A full CRDT model for every workspace object.
 - Multi-node rate limiting beyond the shared SQLite/Redis limiter.
 - Multi-node realtime fan-out (the WebSocket hub remains per process).
+
 
 
 
