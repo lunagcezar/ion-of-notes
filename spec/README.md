@@ -165,6 +165,8 @@ Status vocabulary:
 | [125](spec-125-workspace-invariant-fuzz.md) | Workspace invariant fuzz | implemented | Deterministic mixed-mutation invariants |
 | [126](spec-126-lock-contention-harness.md) | Lock-contention harness | implemented | Opt-in 8-thread read/write p50/p95 |
 | [127](spec-127-windows-session-acl.md) | Windows session-file DACL | implemented | Owner-only ACL before the token write |
+| [128](spec-128-portable-docs-gate.md) | PowerShell-free docs gate | implemented | Markdown checks in `tests/docs.rs` + `quality.sh` |
+| [129](spec-129-sqlite-concurrent-instances.md) | SQLite concurrent instances | implemented | Busy timeout + bounded schema retry |
 
 ## 3. Work status
 

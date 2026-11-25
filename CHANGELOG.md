@@ -117,6 +117,22 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   file, applies an owner-only DACL, and only then writes the token.
 - Recorded the dependency decision in ADR-015.
 
+### Added - spec-128 PowerShell-free docs gate
+
+- `tests/docs.rs` checks relative links, table pipe counts and Mermaid fences
+  in every Markdown file during the normal cargo test passes.
+- `scripts/quality.sh` runs fmt, clippy, core tests, desktop tests and the full
+  default pass without PowerShell.
+
+### Fixed - spec-129 SQLite concurrent instances
+
+- Set `busy_timeout` before the first write pragma and retry the idempotent
+  schema batch while another instance holds the startup lock.
+- The rate-limit read-modify-write uses an `IMMEDIATE` transaction so the busy
+  handler waits for the write lock.
+- Added a four-connection rate-limit test asserting exactly 100 allowed and 100
+  denied checks for a limit of 100.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

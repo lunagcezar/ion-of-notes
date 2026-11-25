@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (340 tests across the two feature passes, 2026-11-24)
+## 3. Test-crate map (342 tests across the two feature passes, 2026-11-24)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -61,7 +61,7 @@ flowchart TD
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
 | `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
 | `tests/webhooks.rs` | 16 | subscriptions, verification, signatures, outbox/worker, delivery/retry, dead letter/requeue |
-| `tests/shared_limits.rs` | 2 | SQLite shared workspace budget and window reset |
+| `tests/shared_limits.rs` | 3 | SQLite shared workspace budget, window reset and four-connection contention |
 | `tests/web.rs` | 15 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, projections, `/ready`, `/metrics` |
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
@@ -83,6 +83,7 @@ flowchart TD
 | `tests/deployment.rs` | 6 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
 | `tests/perf.rs` | 1 | opt-in load/serialize/search/CRDT timings at 1k/10k/50k blocks |
 | `tests/load.rs` | 1 | opt-in 8-thread read/write p50/p95 under the workspace lock |
+| `tests/docs.rs` | 1 | relative links, table columns and Mermaid fences |
 | `tests/smoke.rs` | 1 | real listener: health/ready/metrics and authenticated v2 workspace |
 | `tests/screenshot.rs` | 2 | `ColorImage` → RGBA, PNG output |
 | `tests/integration.rs` | 1 | client → server → store end to end |
@@ -90,7 +91,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 297 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 299 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 44 desktop tests: the four UI crates, with the default-on desktop feature
@@ -102,12 +103,15 @@ cargo fmt --check
 
 # Or run the full gate, including the Markdown checks:
 pwsh -File scripts/quality.ps1
+
+# PowerShell-free equivalent (docs checks are in tests/docs.rs):
+sh scripts/quality.sh
 ```
 
-`cargo test --all-targets` runs all 340 default-feature tests with the
+`cargo test --all-targets` runs all 342 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 341 unique tests because each feature pass includes its
+(spec-048) and cover 343 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam

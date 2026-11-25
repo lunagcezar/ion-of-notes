@@ -43,7 +43,7 @@ remain staged.
 | Multi-line remote caret overlay | Fixed in spec-123: carets and selections use the laid-out galley. | Add bidi affinity tests if the target scripts require them. |
 | Per-block persistence | Page rows are incremental (spec-114); block-level tables add schema and migration complexity. | Add a block table only if page-row size becomes a measured problem above ~20k blocks. |
 | PostgreSQL / Redis | SQLite is single-node and the deployment story is intentionally small. | Keep the ports; add a PostgreSQL adapter and a shared limiter only when multi-node is a real requirement. |
-| Load and contention tests | `tests/perf.rs` covers workspace size, spec-125 covers mixed invariants and spec-126 adds an opt-in 8-thread read/write harness. | Add multi-process SQLite contention before multi-node work. |
+| Load and contention tests | `tests/perf.rs` covers workspace size, spec-125 covers mixed invariants, spec-126 adds an opt-in 8-thread read/write harness and spec-129 covers concurrent SQLite connections. | Add multi-process crash recovery tests before multi-node work. |
 | Webhook I/O under the workspace lock | Fixed in spec-117: events queue, the worker sends outside the lock and applies results afterwards. | Keep the worker single and add idempotency keys for at-least-once delivery. |
 | Query-level database pagination | Fixed in spec-118: index selection plus `PageWindow` materializes only the requested slice. | Add keyset cursors on property values if cursor stability becomes a requirement. |
 | Renderer height tree | Fixed in spec-119: a Fenwick tree renders only the visible window. | Add a variable-width cache if resizing becomes a measured bottleneck. |

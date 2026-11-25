@@ -40,6 +40,8 @@ single place to check whether a finding was fixed, mitigated or planned.
 | Observability stopped at request/webhook counters | fixed | pages, blocks, members, version, sync, request-log gauges (spec-124) | `tests/web.rs` |
 | No randomized invariant coverage | fixed | deterministic mixed-mutation fuzz test (spec-125) | `tests/model.rs` |
 | No concurrent latency baseline | fixed | opt-in 8-thread read/write p50/p95 harness (spec-126) | `tests/load.rs` |
+| PowerShell-free quality gate | fixed | Markdown checks run in `tests/docs.rs` and `scripts/quality.sh` needs no pwsh (spec-128) | `tests/docs.rs` |
+| Concurrent SQLite instances could fail on startup/count | fixed | busy timeout, bounded schema retry and a four-connection count test (spec-129) | `tests/shared_limits.rs` |
 | Webhook network I/O under the global mutex | fixed | events queue in the outbox; the worker sends outside the lock (spec-117) | `tests/webhooks.rs` |
 | Database view pagination after loading every row | fixed | index selection + `PageWindow`; only the requested slice is cloned (spec-118) | `tests/model.rs`, `tests/pagination.rs` |
 | Renderer still visits every block; height tree absent | fixed | Fenwick height index renders only the visible window (spec-119) | `tests/ui.rs`, screenshot |
@@ -87,8 +89,6 @@ authorization boundary.
 | Browser UI | Out of scope for the desktop-first product | roadmap |
 | Block anchors for inline comments | Needs a comment model change | roadmap |
 | Release artifacts / prebuilt binaries | CI packaging work | roadmap |
-| PowerShell-free quality gate | A pure-cargo fallback is a tooling task | roadmap |
-| Multi-process SQLite contention | The in-process load harness is in place; multi-instance contention needs a shared database | `docs/performance-roadmap.md` |
 
 ## 4. Review scope and limitations
 

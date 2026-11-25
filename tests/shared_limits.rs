@@ -50,6 +50,40 @@ fn sqlite_rate_limits_are_shared_across_servers() {
 }
 
 #[test]
+fn sqlite_rate_limit_preserves_the_count_across_concurrent_connections() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::thread;
+
+    let db = common::temp_path("shared-limits-threads", "sqlite3");
+    let allowed = Arc::new(AtomicUsize::new(0));
+    let denied = Arc::new(AtomicUsize::new(0));
+    let mut handles = Vec::new();
+    for _ in 0..4 {
+        let db = db.clone();
+        let allowed = Arc::clone(&allowed);
+        let denied = Arc::clone(&denied);
+        handles.push(thread::spawn(move || {
+            let store = SqliteStore::open(&db).expect("connection");
+            for _ in 0..50 {
+                let hit = store.check("contended", 60, 100, 1_000).expect("check");
+                if hit.allowed {
+                    allowed.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    denied.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+        }));
+    }
+    for handle in handles {
+        handle.join().expect("thread");
+    }
+
+    assert_eq!(allowed.load(Ordering::Relaxed), 100);
+    assert_eq!(denied.load(Ordering::Relaxed), 100);
+    common::remove(&db);
+}
+
+#[test]
 fn sqlite_rate_limit_window_resets() {
     let db = common::temp_path("shared-window", "sqlite3");
     let store = SqliteStore::open(&db).expect("store");

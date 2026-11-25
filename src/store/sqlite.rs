@@ -15,6 +15,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// SQLite adapter implementing all three persistence ports.
 #[derive(Clone)]
@@ -201,6 +202,69 @@ impl std::fmt::Debug for SqliteStore {
     }
 }
 
+/// Apply pragmas and schema, retrying while another instance is switching the
+/// journal mode or creating the initial tables.
+fn configure_connection(connection: &Connection) -> io::Result<()> {
+    const SCHEMA: &str = "PRAGMA journal_mode = WAL;
+         PRAGMA busy_timeout = 5000;
+         PRAGMA foreign_keys = ON;
+         CREATE TABLE IF NOT EXISTS workspace (
+             id INTEGER PRIMARY KEY CHECK (id = 1),
+             json TEXT NOT NULL,
+             updated_at TEXT NOT NULL
+         );
+         CREATE TABLE IF NOT EXISTS workspace_meta (
+             id INTEGER PRIMARY KEY CHECK (id = 1),
+             json TEXT NOT NULL,
+             updated_at TEXT NOT NULL
+         );
+         CREATE TABLE IF NOT EXISTS workspace_pages (
+             id TEXT PRIMARY KEY,
+             position INTEGER NOT NULL,
+             json TEXT NOT NULL,
+             updated_at TEXT NOT NULL
+         );
+         CREATE INDEX IF NOT EXISTS workspace_pages_position
+             ON workspace_pages(position);
+         CREATE TABLE IF NOT EXISTS collab (
+             id INTEGER PRIMARY KEY CHECK (id = 1),
+             json TEXT NOT NULL,
+             updated_at TEXT NOT NULL
+         );
+         CREATE TABLE IF NOT EXISTS accounts (
+             id TEXT PRIMARY KEY,
+             member_id TEXT NOT NULL,
+             email TEXT NOT NULL UNIQUE,
+             password_hash TEXT NOT NULL,
+             created_at TEXT NOT NULL
+         );
+         CREATE TABLE IF NOT EXISTS sessions (
+             token_hash TEXT PRIMARY KEY,
+             member_id TEXT NOT NULL,
+             created_at TEXT NOT NULL,
+             expires_at TEXT NOT NULL
+         );
+         CREATE INDEX IF NOT EXISTS sessions_member
+             ON sessions(member_id);
+         CREATE TABLE IF NOT EXISTS rate_limits (
+             key TEXT PRIMARY KEY,
+             window_start INTEGER NOT NULL,
+             count INTEGER NOT NULL
+         );";
+    for attempt in 0..50 {
+        match connection.execute_batch(SCHEMA) {
+            Ok(()) => return Ok(()),
+            Err(rusqlite::Error::SqliteFailure(error, _))
+                if error.code == rusqlite::ErrorCode::DatabaseBusy && attempt < 49 =>
+            {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            Err(error) => return Err(io::Error::other(error)),
+        }
+    }
+    Err(io::Error::other("SQLite schema setup kept returning busy"))
+}
+
 impl SqliteStore {
     /// Open (or create) a SQLite database and its schema.
     pub fn open(path: impl Into<PathBuf>) -> io::Result<Self> {
@@ -211,55 +275,12 @@ impl SqliteStore {
             std::fs::create_dir_all(parent)?;
         }
         let mut connection = Connection::open(&path).map_err(io::Error::other)?;
+        // Set the busy timeout before the first write pragma: concurrent
+        // instance opens otherwise race on `journal_mode = WAL`.
         connection
-            .execute_batch(
-                "PRAGMA journal_mode = WAL;
-                 PRAGMA foreign_keys = ON;
-                 CREATE TABLE IF NOT EXISTS workspace (
-                     id INTEGER PRIMARY KEY CHECK (id = 1),
-                     json TEXT NOT NULL,
-                     updated_at TEXT NOT NULL
-                 );
-                 CREATE TABLE IF NOT EXISTS workspace_meta (
-                     id INTEGER PRIMARY KEY CHECK (id = 1),
-                     json TEXT NOT NULL,
-                     updated_at TEXT NOT NULL
-                 );
-                 CREATE TABLE IF NOT EXISTS workspace_pages (
-                     id TEXT PRIMARY KEY,
-                     position INTEGER NOT NULL,
-                     json TEXT NOT NULL,
-                     updated_at TEXT NOT NULL
-                 );
-                 CREATE INDEX IF NOT EXISTS workspace_pages_position
-                     ON workspace_pages(position);
-                 CREATE TABLE IF NOT EXISTS collab (
-                     id INTEGER PRIMARY KEY CHECK (id = 1),
-                     json TEXT NOT NULL,
-                     updated_at TEXT NOT NULL
-                 );
-                 CREATE TABLE IF NOT EXISTS accounts (
-                     id TEXT PRIMARY KEY,
-                     member_id TEXT NOT NULL,
-                     email TEXT NOT NULL UNIQUE,
-                     password_hash TEXT NOT NULL,
-                     created_at TEXT NOT NULL
-                 );
-                 CREATE TABLE IF NOT EXISTS sessions (
-                     token_hash TEXT PRIMARY KEY,
-                     member_id TEXT NOT NULL,
-                     created_at TEXT NOT NULL,
-                     expires_at TEXT NOT NULL
-                 );
-                 CREATE INDEX IF NOT EXISTS sessions_member
-                     ON sessions(member_id);
-                 CREATE TABLE IF NOT EXISTS rate_limits (
-                     key TEXT PRIMARY KEY,
-                     window_start INTEGER NOT NULL,
-                     count INTEGER NOT NULL
-                 );",
-            )
+            .busy_timeout(Duration::from_secs(5))
             .map_err(io::Error::other)?;
+        configure_connection(&connection)?;
         migrate_legacy(&mut connection)?;
         Ok(Self {
             path,
@@ -351,7 +372,8 @@ impl RateLimitStore for SqliteStore {
             });
         }
         self.with_connection_mut(|connection| {
-            let transaction = connection.transaction()?;
+            let transaction =
+                connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
             let row: Option<(u64, u32)> = transaction
                 .query_row(
                     "SELECT window_start, count FROM rate_limits WHERE key = ?1",
