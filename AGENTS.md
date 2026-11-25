@@ -209,6 +209,8 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
                    radii, font sizes and strokes
     icons.rs       original shape artwork (chrome, sidebar, book, controls,
                    page icon)
+    block_selection.rs pure select-all stage, whole/partial format toggles and
+                   the turn-into kind list (spec-157)
     commands.rs    Command + flush/lock classification, IconTab, FontStyle,
                    NewTabChoice and pure builders
     view.rs        ViewState snapshot passed to render functions
@@ -222,7 +224,7 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
       chrome.rs    tab strip and window controls
       sidebar.rs   search, Library/Settings, favorites, tree, bottom group
       content.rs   facade: render_content entry point
-      content/     page, blocks, cursors, height index
+      content/     page, blocks, cursors, height index, selection toolbar
       library.rs   Library table and tabs
       database.rs  inline table / board database
     dialogs.rs     facade for the dialog submodules
@@ -714,8 +716,8 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo test --no-default-features --features postgres,redis --test postgres_store --test redis_limits` | Opt-in PostgreSQL/Redis integration tests (need URLs) |
 | `pwsh -File scripts/smoke-external.ps1` | Starts disposable PostgreSQL/Redis containers, runs both opt-in tests, removes them |
 | `cargo test --all-targets --no-default-features` | Core integration tests (325, no desktop stack) |
-| `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (52) |
-| `cargo test --all-targets`               | All default-feature tests (376; the core-only seam test is skipped) |
+| `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (57) |
+| `cargo test --all-targets`               | All default-feature tests (382; the core-only seam test is skipped) |
 | `ION_OF_NOTES_PERF=1 cargo test --no-default-features --test perf -- --nocapture` | Opt-in 1k/10k/50k block load/search/CRDT timings |
 | `ION_OF_NOTES_LOAD=1 cargo test --no-default-features --test load -- --nocapture` | Opt-in 8-thread read/write p50/p95 under the workspace lock |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
@@ -747,7 +749,7 @@ runs it with the `ion-data` volume, a required owner password and the
 The window opens at 1322x861 logical points, the size of the reference
 pictures. OS decorations are disabled (`with_decorations(false)`): the Rust
 tab strip is the only window frame and doubles as a drag handle.
-`ION_OF_NOTES_SHOW=library|share|inbox|settings|settings-12h|settings-comma|settings-general|settings-people|settings-offline|settings-server|search|tasks|newtab|ai|ai-error|shortcuts|iconpicker|iconpicker-icons|iconpicker-search|pageactions|discussions|onboarding|templates|slash|selection|customize-sidebar|customize-shortcut|customize-section|customize-row-settings|workspace-switcher|workspace-create|workspace-rename|new-workspace|appbar-closed|app-menu-file|app-menu-view|compose-menu|empty-block|grid-menu`
+`ION_OF_NOTES_SHOW=library|share|inbox|settings|settings-12h|settings-comma|settings-general|settings-people|settings-offline|settings-server|search|tasks|newtab|ai|ai-error|shortcuts|iconpicker|iconpicker-icons|iconpicker-search|pageactions|discussions|onboarding|templates|slash|selection|selection-text|customize-sidebar|customize-shortcut|customize-section|customize-row-settings|workspace-switcher|workspace-create|workspace-rename|new-workspace|appbar-closed|app-menu-file|app-menu-view|compose-menu|empty-block|grid-menu`
 is a harmless preview hook: it opens one pictured state on startup so it can be
 captured with `--screenshot`. Normal runs (and the rebuild check) never set it.
 

@@ -1,9 +1,11 @@
 //! Command family: blocks.
 
 use crate::model::{Block, BlockKind, TableRow};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 use super::super::app::NotionApp;
+use super::super::block_selection::{toggle_block_format, toggle_text_format};
 use super::super::commands::Command;
 impl NotionApp {
     pub(super) fn apply_blocks(&mut self, command: Command, ctx: &egui::Context) {
@@ -178,6 +180,7 @@ impl NotionApp {
                     .map(|page| page.blocks.iter().map(|b| b.id.clone()).collect())
                     .unwrap_or_default();
                 self.block_selecting = false;
+                self.block_toolbar_menu = false;
             }
             Command::ExtendBlockSelection(id) => {
                 if !self.page_selection.contains(&id) {
@@ -188,6 +191,104 @@ impl NotionApp {
             Command::ClearBlockSelection => {
                 self.page_selection.clear();
                 self.block_selecting = false;
+                self.block_toolbar_menu = false;
+            }
+            Command::SetSelectedBlocksKind(kind) => {
+                let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
+                if let Some(page) = self.current_page_mut() {
+                    for block in &mut page.blocks {
+                        if selection.contains(&block.id) {
+                            block.set_kind(kind);
+                            if kind.is_divider() {
+                                block.text.clear();
+                            }
+                        }
+                    }
+                }
+                self.block_toolbar_menu = false;
+                self.sync_crdt_structure();
+            }
+            Command::ToggleSelectedBlocksFormat(format) => {
+                let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
+                if let Some(page) = self.current_page_mut() {
+                    for block in &mut page.blocks {
+                        if selection.contains(&block.id) {
+                            toggle_block_format(block, format);
+                        }
+                    }
+                }
+            }
+            Command::DuplicateBlockSelection => {
+                let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
+                let mut duplicates = Vec::new();
+                if let Some(page) = self.current_page_mut() {
+                    let mut index = 0;
+                    while index < page.blocks.len() {
+                        if selection.contains(&page.blocks[index].id) {
+                            let mut copy = page.blocks[index].clone();
+                            copy.id = Uuid::new_v4().to_string();
+                            page.blocks.insert(index + 1, copy);
+                            duplicates.push(page.blocks[index + 1].id.clone());
+                            index += 2;
+                        } else {
+                            index += 1;
+                        }
+                    }
+                }
+                if duplicates.is_empty() {
+                    self.page_selection.clear();
+                } else {
+                    self.page_selection = duplicates;
+                }
+                self.block_selecting = false;
+                self.block_toolbar_menu = false;
+                self.sync_crdt_structure();
+            }
+            Command::DeleteBlockSelection => {
+                let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
+                if let Some(page) = self.current_page_mut() {
+                    page.blocks.retain(|block| !selection.contains(&block.id));
+                    if page.blocks.is_empty() {
+                        page.blocks.push(Block::new(
+                            Uuid::new_v4().to_string(),
+                            BlockKind::Paragraph,
+                            "",
+                        ));
+                    }
+                }
+                self.page_selection.clear();
+                self.block_selecting = false;
+                self.block_toolbar_menu = false;
+                self.sync_crdt_structure();
+            }
+            Command::ToggleBlockToolbarMenu => {
+                self.block_toolbar_menu = !self.block_toolbar_menu;
+            }
+            Command::CloseBlockToolbarMenu => self.block_toolbar_menu = false,
+            Command::ToggleBlockTextFormat {
+                block,
+                start,
+                end,
+                format,
+            } => {
+                if let Some(block) = self.find_block_mut(&block) {
+                    toggle_text_format(block, start, end, format);
+                }
+            }
+            Command::CopyBlockText { block, start, end } => {
+                if let Some(block) = self.workspace.block(&block) {
+                    let chars: Vec<char> = block.text.chars().collect();
+                    let start = start.min(chars.len());
+                    let end = end.min(chars.len());
+                    let (start, end) = if start <= end {
+                        (start, end)
+                    } else {
+                        (end, start)
+                    };
+                    if start < end {
+                        ctx.copy_text(chars[start..end].iter().collect());
+                    }
+                }
             }
             Command::CopyBlockSelection => {
                 if let Some(page) = self.workspace.page(&self.current_page) {

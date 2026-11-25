@@ -258,6 +258,10 @@ pub struct NotionApp {
     pub(super) focus_block: Option<String>,
     pub(super) page_selection: Vec<String>,
     pub(super) block_selecting: bool,
+    /// The block-type dropdown of the selection toolbar (spec-157).
+    pub(super) block_toolbar_menu: bool,
+    /// Preview hook: select this block's text on the first frame.
+    pub(super) demo_text_selection: Option<String>,
     // Real-time CRDT and awareness.
     pub(super) collaboration: CollaborationState,
     // Background remote requests (spec-108).
@@ -438,6 +442,16 @@ impl NotionApp {
                 .unwrap_or_default()
         } else {
             Vec::new()
+        };
+        let demo_text_selection = if demo == "selection-text" {
+            workspace.page(&demo_current_page).and_then(|page| {
+                page.blocks
+                    .iter()
+                    .find(|block| !block.text.trim().is_empty())
+                    .map(|block| block.id.clone())
+            })
+        } else {
+            None
         };
         let ai_config = OllamaConfig::from_env();
         let ai_status = OllamaStatus::Unavailable;
@@ -696,6 +710,8 @@ impl NotionApp {
             focus_block: None,
             page_selection,
             block_selecting: false,
+            block_toolbar_menu: demo == "selection" || demo == "selection-text",
+            demo_text_selection,
         }
     }
 }
@@ -703,6 +719,25 @@ impl NotionApp {
 impl eframe::App for NotionApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        if let Some(block_id) = self.demo_text_selection.clone()
+            && let Some(page) = self.workspace.page(&self.current_page)
+            && let Some((index, block)) = page
+                .blocks
+                .iter()
+                .enumerate()
+                .find(|(_, block)| block.id == block_id)
+        {
+            let edit_id = egui::Id::unique(("block_edit", &block.id, index));
+            let mut state = egui::TextEdit::load_state(&ctx, edit_id).unwrap_or_default();
+            state
+                .cursor
+                .set_char_range(Some(egui::text::CCursorRange::two(
+                    egui::text::CCursor::new(0),
+                    egui::text::CCursor::new(block.text.chars().count()),
+                )));
+            egui::TextEdit::store_state(&ctx, edit_id, state);
+            ctx.memory_mut(|memory| memory.request_focus(edit_id));
+        }
         if self.settings.theme_dirty {
             apply_theme(&ctx, self.settings.dark);
             self.settings.theme_dirty = false;

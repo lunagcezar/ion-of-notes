@@ -143,4 +143,5 @@ pub(super) struct ViewState {
     pub(super) focus_block: Option<String>,
     pub(super) page_selection: Vec<String>,
     pub(super) block_selecting: bool,
+    pub(super) block_toolbar_menu: bool,
 }

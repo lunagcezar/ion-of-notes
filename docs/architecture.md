@@ -208,7 +208,8 @@ src/
                      ai, settings, page_actions, crdt, server
     render.rs        render facade
     render/          chrome, sidebar, content, library, database
-    render/content/  page, blocks, cursors, height index
+    render/content/  page, blocks, cursors, height index, selection toolbar
+    block_selection.rs pure select-all stage and format toggles
     dialogs.rs       dialog facade
     dialogs/         settings, sharing, page actions, menus, help,
                      search window, onboarding, templates

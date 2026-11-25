@@ -11,6 +11,7 @@
 mod app;
 mod apply;
 mod block_ops;
+mod block_selection;
 mod commands;
 mod comments;
 mod constants;
@@ -37,6 +38,10 @@ mod widgets;
 
 pub use app::NotionApp;
 pub use block_ops::{block_outside_viewport, drop_index, estimate_block_height, split_index};
+pub use block_selection::{
+    BlockFormat, SelectAllStage, block_has_format, common_kind, select_all_stage, text_has_format,
+    toggle_block_format, toggle_text_format, turn_into_kinds,
+};
 pub use commands::frame_may_mutate;
 pub use comments::{InlineCommentView, InlineThreadView, inline_comment_input, inline_threads};
 pub use crdt::CrdtSession;

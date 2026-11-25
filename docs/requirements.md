@@ -404,6 +404,10 @@ capabilities) is implemented; the rest are planned.
 - FR-122: The server serves an embedded browser UI at `/app` with login,
   registration, page list/create/open, block editing, search and password forms
   (implemented in `spec-153`).
+- FR-123: In the desktop editor, `Ctrl+A` first selects the focused block's
+  text and a second press selects every block on the page. Text and block
+  selections open one toolbar with whole-block or selected-text formats, copy,
+  comment, duplicate/delete and a block-type menu (implemented in `spec-157`).
 
 ## 2. Non-functional requirements
 
@@ -593,6 +597,7 @@ capabilities) is implemented; the rest are planned.
 | FR-120 (implemented)          | `spec-151-publish-snapshot-on-write.md` |
 | FR-121 (implemented)          | `spec-152-account-lifecycle.md` |
 | FR-122 (implemented)          | `spec-153-browser-ui.md` |
+| FR-123 (implemented)          | `spec-157-block-selection-toolbar.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

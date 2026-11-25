@@ -15,8 +15,9 @@ use super::super::super::palette::{Palette, strong_font};
 use super::super::super::view::ViewState;
 use super::super::database::render_database;
 use super::super::library::render_library;
-use super::blocks::render_block;
+use super::blocks::{TextSelection, render_block};
 use super::heights::HeightIndex;
+use super::toolbar::render_block_toolbar;
 use crate::ui::constants::{
     BLOCK_GAP, BLOCK_HEADING_GAP, BREADCRUMB_ACTION_HEIGHT, BREADCRUMB_ACTION_SIZE, BREADCRUMB_GAP,
     BREADCRUMB_HEIGHT, BREADCRUMB_ICON_INSET, BREADCRUMB_ICON_SIZE, BREADCRUMB_LABEL_INSET,
@@ -359,6 +360,8 @@ fn render_page(
     let overscan = (viewport.height() * 1.5).max(400.0);
     let interactive = view.block_selecting || view.drag_from.is_some();
     let selection: HashSet<&str> = view.page_selection.iter().map(String::as_str).collect();
+    let mut selection_rect: Option<Rect> = None;
+    let mut text_selection: Option<TextSelection> = None;
     let mut index = HeightIndex::sync(ui.ctx(), &page.id, &page.blocks);
 
     if !interactive
@@ -384,7 +387,7 @@ fn render_page(
                 ui.add_space(BLOCK_HEADING_GAP);
             }
             let before = ui.cursor().top();
-            render_block(
+            let selected = render_block(
                 ui,
                 block,
                 cursor,
@@ -397,6 +400,12 @@ fn render_page(
                 commands,
                 block_count,
             );
+            if let Some(rect) = selected.page_rect {
+                selection_rect = Some(selection_rect.map_or(rect, |union| union.union(rect)));
+            }
+            if let Some(text) = selected.text {
+                text_selection = Some(text);
+            }
             let content_height = (ui.cursor().top() - before).max(0.0);
             index.update(cursor, block, content_height);
             ui.add_space(BLOCK_GAP);
@@ -415,7 +424,7 @@ fn render_page(
                 ui.add_space(BLOCK_HEADING_GAP);
             }
             let before = ui.cursor().top();
-            render_block(
+            let selected = render_block(
                 ui,
                 block,
                 cursor,
@@ -428,12 +437,42 @@ fn render_page(
                 commands,
                 block_count,
             );
+            if let Some(rect) = selected.page_rect {
+                selection_rect = Some(selection_rect.map_or(rect, |union| union.union(rect)));
+            }
+            if let Some(text) = selected.text {
+                text_selection = Some(text);
+            }
             let content_height = (ui.cursor().top() - before).max(0.0);
             index.update(cursor, block, content_height);
             ui.add_space(BLOCK_GAP);
         }
     }
     index.save(ui.ctx());
+
+    if !view.page_selection.is_empty()
+        && ui.memory(|memory| memory.focused().is_none())
+        && ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::C))
+    {
+        commands.push(Command::CopyBlockSelection);
+    }
+    let anchor = selection_rect.or_else(|| text_selection.as_ref().map(|text| text.rect));
+    if let Some(anchor) = anchor
+        && !view.lock_page
+    {
+        render_block_toolbar(
+            ui.ctx(),
+            anchor,
+            &page.blocks,
+            page.inline_comments,
+            text_selection.as_ref(),
+            view,
+            palette,
+            commands,
+        );
+    } else if view.block_toolbar_menu {
+        commands.push(Command::CloseBlockToolbarMenu);
+    }
 
     // Subtle add-block row.
     ui.horizontal(|ui| {

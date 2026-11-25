@@ -8,6 +8,7 @@ mod blocks;
 mod cursors;
 mod heights;
 mod page;
+mod toolbar;
 
 pub use cursors::{index_cursors, selection_rects};
 pub(crate) use page::render_content;

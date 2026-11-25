@@ -184,6 +184,7 @@ impl NotionApp {
             focus_block: self.focus_block.clone(),
             page_selection: self.page_selection.clone(),
             block_selecting: self.block_selecting,
+            block_toolbar_menu: self.block_toolbar_menu,
         }
     }
 
@@ -217,6 +218,7 @@ impl NotionApp {
         self.drag_to = None;
         self.page_selection.clear();
         self.block_selecting = false;
+        self.block_toolbar_menu = false;
         self.compose_menu_open = false;
     }
 
@@ -232,6 +234,7 @@ impl NotionApp {
         self.page_status = None;
         self.page_selection.clear();
         self.block_selecting = false;
+        self.block_toolbar_menu = false;
         self.push_history(id);
     }
 
@@ -556,6 +559,7 @@ impl NotionApp {
         self.slash_for = None;
         self.page_selection.clear();
         self.block_selecting = false;
+        self.block_toolbar_menu = false;
         self.pending_edits = PendingEdits::new(0.25);
         self.collaboration.crdt = CrdtSession::new();
         self.collaboration.page.clear();

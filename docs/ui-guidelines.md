@@ -195,6 +195,20 @@ right padding explicitly with `ui.add_space(...)`.
 - Menu rows use `MENU_ROW_HEIGHT` (30), `MENU_ROW_RADIUS` (6), `MENU_TEXT_SIZE`
   (14) and `MENU_HINT_SIZE` (12).
 
+### 3.5 Block selection toolbar
+
+- The toolbar is one row inside a `POPOVER_RADIUS` frame: a type control,
+  format buttons, a divider, then action icons. It uses
+  `SELECTION_TOOLBAR_HEIGHT`, `SELECTION_BUTTON_SIZE`, `SELECTION_TYPE_WIDTH`
+  and `SELECTION_TOOLBAR_GAP`.
+- Text selections place it under the selected text; page-level selections
+  place it beside the selected rows. Both variants flip to the other side when
+  the estimated `SELECTION_TOOLBAR_WIDTH` would leave the viewport.
+- The expanded type menu uses `BLOCK_TYPE_MENU_WIDTH`, `MENU_ROW_HEIGHT` and
+  `BLOCK_TYPE_MENU_MAX_HEIGHT` with a vertical scroll area; the active kind gets
+  a check mark and the menu closes after a choice.
+- Keep every action in a `Command`; the toolbar never mutates the document.
+
 ## 4. Surface metrics
 
 ### 4.1 Shell and tab strip
@@ -282,6 +296,12 @@ scrollbar.
 | Body/small text | `BLOCK_BODY_SIZE`, `BLOCK_SMALL_SIZE` | 16, 14 |
 | Callout/code padding | `BLOCK_CALLOUT_PADDING`, `BLOCK_CODE_PADDING` | 12, 12 |
 | Divider height | `BLOCK_DIVIDER_HEIGHT` | 14 |
+| Selection toolbar height | `SELECTION_TOOLBAR_HEIGHT` | 36 |
+| Selection toolbar estimate | `SELECTION_TOOLBAR_WIDTH` | 392 |
+| Selection button | `SELECTION_BUTTON_SIZE` | 28 |
+| Selection type control | `SELECTION_TYPE_WIDTH` | 132 |
+| Selection gap | `SELECTION_TOOLBAR_GAP` | 10 |
+| Type menu width/height | `BLOCK_TYPE_MENU_WIDTH`, `BLOCK_TYPE_MENU_MAX_HEIGHT` | 248, 420 |
 
 ### 4.6 Fonts and strokes
 

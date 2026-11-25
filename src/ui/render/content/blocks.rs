@@ -13,6 +13,7 @@ use crate::ui::constants::{
     SPACE_70, STROKE_EMPHASIS, STROKE_HAIRLINE,
 };
 
+use super::super::super::block_selection::{SelectAllStage, rich_spans, select_all_stage};
 use super::super::super::commands::Command;
 use super::super::super::icons::{draw_bullet_dot, draw_dots, draw_page, draw_plus, icon_button};
 use super::super::super::palette::{Palette, strong_font};
@@ -20,6 +21,25 @@ use super::super::super::view::ViewState;
 use super::cursors::draw_remote_cursors;
 use super::page::body_font;
 use std::collections::HashMap;
+
+/// A non-empty text selection inside one block (spec-157).
+#[derive(Debug, Clone, PartialEq)]
+pub(super) struct TextSelection {
+    pub block: String,
+    pub start: usize,
+    pub end: usize,
+    pub rect: Rect,
+}
+
+/// What one rendered block contributes to the selection toolbar.
+#[derive(Debug, Clone, Default)]
+pub(super) struct BlockSelectionState {
+    /// The page-level selection highlight for this row.
+    pub page_rect: Option<Rect>,
+    /// The inline text selection when this block is focused.
+    pub text: Option<TextSelection>,
+}
+
 fn backspace_on_empty(ui: &egui::Ui, response: &egui::Response, text: &str) -> bool {
     response.has_focus() && text.is_empty() && ui.input(|i| i.key_pressed(egui::Key::Backspace))
 }
@@ -37,9 +57,10 @@ pub(super) fn render_block(
     palette: &Palette,
     commands: &mut Vec<Command>,
     block_count: usize,
-) {
+) -> BlockSelectionState {
     let row_min = ui.available_rect_before_wrap().min;
     let row_rect = Rect::from_min_size(row_min, Vec2::new(width + gutter, BLOCK_ROW_HEIGHT));
+    let is_selected = view.page_selection.iter().any(|id| id == &block.id);
     let hover = ui
         .input(|i| i.pointer.hover_pos())
         .map(|p| row_rect.contains(p))
@@ -91,6 +112,8 @@ pub(super) fn render_block(
     }
 
     let mut delete_empty = false;
+    let mut selection_rect: Option<Rect> = None;
+    let text_selection: std::cell::RefCell<Option<TextSelection>> = std::cell::RefCell::new(None);
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
         // Keep layout stable regardless of hover to avoid stealing TextEdit focus.
@@ -164,11 +187,56 @@ pub(super) fn render_block(
             ui.memory_mut(|memory| memory.request_focus(edit_id));
             commands.push(Command::ClearBlockFocus);
         }
+        let spans = rich_spans(block);
+        let spans_joined: String = spans.iter().map(|(text, _)| text.as_str()).collect();
         let edit = |ui: &mut egui::Ui,
                     text: &mut String,
                     font: FontId,
                     w: f32|
          -> egui::widgets::text_edit::TextEditOutput {
+            let mut layouter = |ui: &egui::Ui, buffer: &dyn egui::TextBuffer, wrap_width: f32| {
+                let mut job = egui::text::LayoutJob::default();
+                if !spans.is_empty() && spans_joined == buffer.as_str() {
+                    for (span, annotations) in &spans {
+                        let mut format = egui::TextFormat {
+                            font_id: font.clone(),
+                            color: palette.text,
+                            italics: annotations.italic,
+                            underline: if annotations.underline {
+                                Stroke::new(STROKE_HAIRLINE, palette.text)
+                            } else {
+                                Stroke::NONE
+                            },
+                            strikethrough: if annotations.strikethrough {
+                                Stroke::new(STROKE_HAIRLINE, palette.text)
+                            } else {
+                                Stroke::NONE
+                            },
+                            ..Default::default()
+                        };
+                        if annotations.bold {
+                            format.font_id = strong_font(font.size);
+                        }
+                        if annotations.code {
+                            format.font_id = FontId::monospace(font.size);
+                            format.background = palette.code_bg;
+                        }
+                        job.append(span.as_str(), 0.0, format);
+                    }
+                } else {
+                    job.append(
+                        buffer.as_str(),
+                        0.0,
+                        egui::TextFormat {
+                            font_id: font.clone(),
+                            color: palette.text,
+                            ..Default::default()
+                        },
+                    );
+                }
+                job.wrap.max_width = wrap_width;
+                ui.fonts_mut(|fonts| fonts.layout_job(job))
+            };
             let output = egui::TextEdit::multiline(text)
                 .id(edit_id)
                 .font(font.clone())
@@ -178,6 +246,7 @@ pub(super) fn render_block(
                 .interactive(!locked)
                 .hint_text(crate::i18n::t("block_placeholder"))
                 .text_color(palette.text)
+                .layouter(&mut layouter)
                 .show(ui);
             let remote: &[&Awareness] = remote_cursors
                 .get(block_id_for_edit.as_str())
@@ -197,6 +266,23 @@ pub(super) fn render_block(
                 let index = range.primary.index.0;
                 let selection_end = (range.primary.index != range.secondary.index)
                     .then_some(range.secondary.index.0);
+                let chars = range.as_sorted_char_range();
+                if chars.start.0 != chars.end.0
+                    && !is_selected
+                    && (ui.memory(|memory| memory.has_focus(edit_id)) || view.block_toolbar_menu)
+                    && !ui.input(|i| i.pointer.primary_down())
+                {
+                    let cursor_rect = output
+                        .galley
+                        .pos_from_cursor(range.primary)
+                        .translate(output.galley_pos.to_vec2());
+                    *text_selection.borrow_mut() = Some(TextSelection {
+                        block: block_id_for_edit.clone(),
+                        start: chars.start.0,
+                        end: chars.end.0,
+                        rect: cursor_rect,
+                    });
+                }
                 pending_commands.borrow_mut().push(Command::CrdtCursor {
                     page_id: page_id_for_edit.clone(),
                     block_id: block_id_for_edit.clone(),
@@ -217,10 +303,33 @@ pub(super) fn render_block(
             output
         };
 
-        // Ctrl+A and Ctrl+C must win over the per-block TextEdit so the whole
-        // page selection is used (spec-057).
+        // Two-stage select-all (spec-157): the first Ctrl+A belongs to the
+        // text editor and selects the block's text; a second Ctrl+A while the
+        // whole text is selected promotes the selection to the whole page.
         if !locked && ui.memory(|m| m.has_focus(edit_id)) {
-            if ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::A)) {
+            let selected_chars = egui::TextEdit::load_state(ui.ctx(), edit_id)
+                .and_then(|state| state.cursor.char_range())
+                .map(|range| {
+                    let range = range.as_sorted_char_range();
+                    (range.start.0, range.end.0)
+                });
+            let stage = select_all_stage(
+                block.text.chars().count(),
+                selected_chars,
+                !view.page_selection.is_empty(),
+            );
+            if stage == SelectAllStage::Blocks
+                && ui.input(|i| {
+                    i.modifiers.command
+                        && !i.modifiers.shift
+                        && !i.modifiers.alt
+                        && i.key_pressed(egui::Key::A)
+                })
+            {
+                ui.input_mut(|i| {
+                    i.consume_key(egui::Modifiers::COMMAND, egui::Key::A);
+                });
+                ui.memory_mut(|memory| memory.surrender_focus(edit_id));
                 commands.push(Command::SelectAllBlocks);
             }
             if !view.page_selection.is_empty()
@@ -390,14 +499,38 @@ pub(super) fn render_block(
 
         commands.append(&mut pending_commands.into_inner());
 
-        if view.page_selection.iter().any(|id| id == &block.id)
-            && let Some(resp) = &edit_response
-        {
-            ui.painter().rect_filled(
-                resp.response.rect,
-                CornerRadius::same(4),
-                Color32::from_rgba_unmultiplied(35, 131, 226, 42),
+        if is_selected {
+            let text_rect = edit_response.as_ref().map_or_else(
+                || Rect::from_min_size(row_rect.min, Vec2::new(row_rect.width(), BLOCK_ROW_HEIGHT)),
+                |resp| resp.response.rect,
             );
+            let rect = Rect::from_min_max(
+                Pos2::new(
+                    row_rect.left() + 2.0 * BLOCK_CONTROL_WIDTH + BLOCK_CONTROL_GAP,
+                    text_rect.top() - SPACE_2,
+                ),
+                Pos2::new(row_rect.right(), text_rect.bottom() + SPACE_2),
+            );
+            let fill = Color32::from_rgba_unmultiplied(
+                palette.accent.r(),
+                palette.accent.g(),
+                palette.accent.b(),
+                32,
+            );
+            let stroke = Color32::from_rgba_unmultiplied(
+                palette.accent.r(),
+                palette.accent.g(),
+                palette.accent.b(),
+                150,
+            );
+            ui.painter().rect(
+                rect,
+                CornerRadius::same(ROW_RADIUS),
+                fill,
+                Stroke::new(STROKE_HAIRLINE, stroke),
+                egui::StrokeKind::Inside,
+            );
+            selection_rect = Some(rect);
         }
 
         if !locked {
@@ -479,6 +612,10 @@ pub(super) fn render_block(
     }
     if delete_empty {
         commands.push(Command::DeleteBlock(block.id.clone()));
+    }
+    BlockSelectionState {
+        page_rect: selection_rect,
+        text: text_selection.into_inner(),
     }
 }
 

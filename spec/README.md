@@ -194,6 +194,7 @@ Status vocabulary:
 | [154](spec-154-deepwiki-documentation-review.md) | DeepWiki documentation review | implemented | Adopted findings and reconciled stale claims |
 | [155](spec-155-third-review-hardening.md) | Third-review hardening | implemented | Invite tokens, proxy trust, TLS, uploads, locks, WS |
 | [156](spec-156-emoji-picker-warmup.md) | Emoji picker warm-up | implemented | Font-stack opt, progressive glyph warm-up, background restored |
+| [157](spec-157-block-selection-toolbar.md) | Two-stage select-all and selection toolbar | implemented | Ctrl+A text→blocks, inline/block formats, turn-into menu |
 
 ## 3. Work status
 

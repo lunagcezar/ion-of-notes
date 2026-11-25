@@ -178,6 +178,20 @@ pub(crate) const BLOCK_DIVIDER_HEIGHT: f32 = SPACE_14;
 pub(crate) const BLOCK_DRAG_OVER: f32 = SPACE_10;
 pub(crate) const DRAG_GHOST_MIN_WIDTH: f32 = 220.0;
 pub(crate) const DRAG_GHOST_MAX_WIDTH: f32 = 420.0;
+/// Height of the floating block-selection toolbar (spec-157).
+pub(crate) const SELECTION_TOOLBAR_HEIGHT: f32 = SPACE_36;
+/// Estimated width used to keep the toolbar inside the viewport.
+pub(crate) const SELECTION_TOOLBAR_WIDTH: f32 = 392.0;
+/// Gap between the selection and the toolbar, and between toolbar groups.
+pub(crate) const SELECTION_TOOLBAR_GAP: f32 = SPACE_10;
+/// Square hit target for one toolbar button.
+pub(crate) const SELECTION_BUTTON_SIZE: f32 = SPACE_28;
+/// Width reserved for the block-type control.
+pub(crate) const SELECTION_TYPE_WIDTH: f32 = 132.0;
+/// Width of the expanded block-type menu.
+pub(crate) const BLOCK_TYPE_MENU_WIDTH: f32 = 248.0;
+/// Maximum height of the scrolling block-type menu.
+pub(crate) const BLOCK_TYPE_MENU_MAX_HEIGHT: f32 = 420.0;
 
 // ---- Popovers, menus and shared rows -------------------------------------
 

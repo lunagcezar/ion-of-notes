@@ -127,6 +127,24 @@ impl RichText {
         }
     }
 
+    /// The annotations attached to this span, whatever its variant.
+    pub fn annotations(&self) -> &Annotations {
+        match self {
+            RichText::Text { annotations, .. }
+            | RichText::Mention { annotations, .. }
+            | RichText::Equation { annotations, .. } => annotations,
+        }
+    }
+
+    /// Mutable annotations for whole-block formatting.
+    pub fn annotations_mut(&mut self) -> &mut Annotations {
+        match self {
+            RichText::Text { annotations, .. }
+            | RichText::Mention { annotations, .. }
+            | RichText::Equation { annotations, .. } => annotations,
+        }
+    }
+
     pub fn set_plain_text(&mut self, value: impl Into<String>) {
         let value = value.into();
         match self {

@@ -62,7 +62,7 @@ impl BlockKind {
             BlockKind::Divider => "Divider",
             BlockKind::Table => "Table",
             BlockKind::TableRow => "Table row",
-            BlockKind::Toggle => "Toggle",
+            BlockKind::Toggle => "Toggle list",
             BlockKind::ChildPage => "Child page",
             BlockKind::ColumnList => "Column list",
             BlockKind::Column => "Column",

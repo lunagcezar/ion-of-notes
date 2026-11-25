@@ -9,6 +9,8 @@ use crate::collab::{Access, Role};
 use crate::model::{BlockKind, NumberFormat, TimeFormat, Workspace};
 use egui::Pos2;
 
+use super::block_selection::BlockFormat;
+
 /// Tabs of the page-icon picker (spec-013).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum IconTab {
@@ -190,6 +192,25 @@ pub(super) enum Command {
     CopyBlockSelection,
     ExtendBlockSelection(String),
     ClearBlockSelection,
+    /// Selection toolbar actions that apply to every selected block.
+    SetSelectedBlocksKind(BlockKind),
+    ToggleSelectedBlocksFormat(BlockFormat),
+    DuplicateBlockSelection,
+    DeleteBlockSelection,
+    ToggleBlockToolbarMenu,
+    CloseBlockToolbarMenu,
+    /// Inline text selection formatting and copying (spec-157).
+    ToggleBlockTextFormat {
+        block: String,
+        start: usize,
+        end: usize,
+        format: BlockFormat,
+    },
+    CopyBlockText {
+        block: String,
+        start: usize,
+        end: usize,
+    },
     DeleteBlock(String),
     ToggleTodo(String),
     CycleStatus(String),
@@ -386,6 +407,11 @@ impl Command {
                 | Command::HoverBlockDrag { .. }
                 | Command::DropBlock
                 | Command::DeleteBlock(_)
+                | Command::SetSelectedBlocksKind(_)
+                | Command::ToggleSelectedBlocksFormat(_)
+                | Command::DuplicateBlockSelection
+                | Command::DeleteBlockSelection
+                | Command::ToggleBlockTextFormat { .. }
                 | Command::ToggleTodo(_)
                 | Command::CycleStatus(_)
                 | Command::AddRow
@@ -461,6 +487,14 @@ impl Command {
             | Command::CopyBlockSelection
             | Command::ExtendBlockSelection(_)
             | Command::ClearBlockSelection
+            | Command::SetSelectedBlocksKind(_)
+            | Command::ToggleSelectedBlocksFormat(_)
+            | Command::DuplicateBlockSelection
+            | Command::DeleteBlockSelection
+            | Command::ToggleBlockToolbarMenu
+            | Command::CloseBlockToolbarMenu
+            | Command::ToggleBlockTextFormat { .. }
+            | Command::CopyBlockText { .. }
             | Command::DeleteBlock(_)
             | Command::ToggleTodo(_)
             | Command::CycleStatus(_)

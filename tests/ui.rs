@@ -10,16 +10,18 @@ use ion_of_notes::server::{
     ApiRequest, ApiResponse, CollabTransport, Envelope, Method, RequestTransport,
 };
 use ion_of_notes::ui::{
+    BlockFormat, EMOJI, ICONS, SelectAllStage, UndoCapture, UndoEntry, app_bar_left_width,
+    block_has_format, block_outside_viewport, catalog_matches, common_kind, drop_index,
+    estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors,
+    inline_comment_input, inline_threads, page_icon_letter, search_page_matches, select_all_stage,
+    selection_rects, split_index, text_has_format, toggle_block_format, toggle_text_format,
+    turn_into_kinds, visible_tree_rows, warmup_batch,
+};
+use ion_of_notes::ui::{
     CommitPlan, Palette, PendingEdits, SearchCache, block_menu_options, execute_plan,
     format_number, format_timestamp, is_valid_email, member_name_from_email, pages_for_view,
     parse_invite_emails, plan_for, rows_for, section_matches, settings_matches, status_color,
     visible_rows,
-};
-use ion_of_notes::ui::{
-    EMOJI, ICONS, UndoCapture, UndoEntry, app_bar_left_width, block_outside_viewport,
-    catalog_matches, drop_index, estimate_block_height, frame_may_mutate, glyph_visual_offset,
-    index_cursors, inline_comment_input, inline_threads, page_icon_letter, search_page_matches,
-    selection_rects, split_index, visible_tree_rows, warmup_batch,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -775,4 +777,132 @@ fn emoji_warmup_batches_cover_the_catalog_once() {
     assert_eq!(warmup_batch(total, total, 48), None);
     assert_eq!(warmup_batch(0, 0, 48), None);
     assert_eq!(warmup_batch(0, total, 0), None);
+}
+
+#[test]
+fn select_all_is_two_stage_inside_a_block() {
+    // The first press leaves the event to the text editor.
+    assert_eq!(select_all_stage(5, None, false), SelectAllStage::Text);
+    assert_eq!(
+        select_all_stage(5, Some((0, 4)), false),
+        SelectAllStage::Text
+    );
+    assert_eq!(
+        select_all_stage(5, Some((2, 5)), false),
+        SelectAllStage::Text
+    );
+    // A full text selection, an empty block or an active page selection moves
+    // to every block on the page.
+    assert_eq!(
+        select_all_stage(5, Some((0, 5)), false),
+        SelectAllStage::Blocks
+    );
+    assert_eq!(
+        select_all_stage(5, Some((5, 0)), false),
+        SelectAllStage::Blocks
+    );
+    assert_eq!(select_all_stage(0, None, false), SelectAllStage::Blocks);
+    assert_eq!(select_all_stage(5, None, true), SelectAllStage::Blocks);
+}
+
+#[test]
+fn block_formats_toggle_without_changing_the_text_projection() {
+    let mut block = Block::new("b1", BlockKind::Paragraph, "Hello world");
+    for format in [
+        BlockFormat::Bold,
+        BlockFormat::Italic,
+        BlockFormat::Underline,
+        BlockFormat::Strikethrough,
+        BlockFormat::Code,
+    ] {
+        assert!(!block_has_format(&block, format));
+        toggle_block_format(&mut block, format);
+        assert!(block_has_format(&block, format));
+        assert_eq!(block.text, "Hello world");
+        let joined: String = block
+            .rich_text
+            .iter()
+            .map(|span| span.plain_text())
+            .collect();
+        assert_eq!(joined, "Hello world");
+        toggle_block_format(&mut block, format);
+        assert!(!block_has_format(&block, format));
+    }
+}
+
+#[test]
+fn common_kind_reports_a_shared_kind_or_none_for_a_mixed_selection() {
+    let heading = Block::new("h", BlockKind::Heading2, "Title");
+    let paragraph = Block::new("p", BlockKind::Paragraph, "Body");
+    assert_eq!(
+        common_kind(&[heading.clone(), Block::new("p2", BlockKind::Paragraph, "")]),
+        None
+    );
+    assert_eq!(
+        common_kind(&[paragraph, Block::new("p2", BlockKind::Paragraph, "")]),
+        Some(BlockKind::Paragraph)
+    );
+    assert_eq!(common_kind(&[heading]), Some(BlockKind::Heading2));
+    assert_eq!(common_kind(&[]), None);
+}
+
+#[test]
+fn inline_text_formats_only_touch_the_selected_characters() {
+    let mut block = Block::new("b1", BlockKind::Paragraph, "Hello world");
+    toggle_text_format(&mut block, 0, 5, BlockFormat::Bold);
+    assert!(text_has_format(&block, 0, 5, BlockFormat::Bold));
+    assert!(!text_has_format(&block, 6, 11, BlockFormat::Bold));
+    assert_eq!(block.text, "Hello world");
+    let joined: String = block
+        .rich_text
+        .iter()
+        .map(|span| span.plain_text())
+        .collect();
+    assert_eq!(joined, "Hello world");
+
+    toggle_text_format(&mut block, 6, 11, BlockFormat::Italic);
+    assert!(text_has_format(&block, 6, 11, BlockFormat::Italic));
+    assert!(!text_has_format(&block, 0, 5, BlockFormat::Italic));
+
+    // Toggling the same range again removes the annotation.
+    toggle_text_format(&mut block, 0, 5, BlockFormat::Bold);
+    assert!(!text_has_format(&block, 0, 5, BlockFormat::Bold));
+
+    // A stale rich-text projection is replaced before formatting.
+    block.rich_text.clear();
+    toggle_text_format(&mut block, 0, 5, BlockFormat::Underline);
+    assert!(text_has_format(&block, 0, 5, BlockFormat::Underline));
+    assert_eq!(block.text, "Hello world");
+}
+
+#[test]
+fn turn_into_menu_only_offers_renderable_kinds() {
+    let kinds = turn_into_kinds();
+    for kind in [
+        BlockKind::Paragraph,
+        BlockKind::Heading1,
+        BlockKind::Heading2,
+        BlockKind::Heading3,
+        BlockKind::Heading4,
+        BlockKind::Bulleted,
+        BlockKind::Numbered,
+        BlockKind::Todo,
+        BlockKind::Toggle,
+        BlockKind::Code,
+        BlockKind::Quote,
+        BlockKind::Callout,
+        BlockKind::Divider,
+    ] {
+        assert!(kinds.contains(&kind), "missing {kind:?}");
+    }
+    for kind in [
+        BlockKind::Table,
+        BlockKind::TableRow,
+        BlockKind::ChildPage,
+        BlockKind::ColumnList,
+        BlockKind::Column,
+        BlockKind::Unsupported,
+    ] {
+        assert!(!kinds.contains(&kind), "unexpected {kind:?}");
+    }
 }

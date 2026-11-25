@@ -255,6 +255,14 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - The font rasterization stack (`epaint`, `vello_cpu`, `vello_common`, `skrifa`, `read-fonts`, `font-types`) is optimized in dev/test; first-open debug time dropped from ~21.7 s to ~3.1 s for 120 frames.
 - The emoji catalog is warmed in 48-glyph batches while open and 64 at idle, resumable across opens; the picker renders over the normal sidebar/page again.
 
+### Added - spec-157 block selection toolbar
+
+- `Ctrl+A` is two-stage in the editor: the first press selects the focused block's text, the second selects every block on the page and releases text focus.
+- Selected rows get the blue fill/outline, and a floating toolbar offers whole-block or selected-text `B`/`I`/`U`/strikethrough/code, copy, comment, duplicate/delete and the block-type menu.
+- The type menu turns the selection into Text, Heading 1-4, Bulleted/Numbered/To-do/Toggle list, Code, Quote, Callout or Divider; unsupported reference entries are deliberately absent instead of rendering as dead rows.
+- Annotated spans render through a `TextEdit::layouter`, so formatting is visible while the editor stays plain-text editable; stale spans fall back to plain text.
+- `ION_OF_NOTES_SHOW=selection` and `selection-text` preview the block and text toolbar states.
+
 ### Security - spec-155 third-review hardening
 
 - Registration requires a single-use invite token (hashed, 7-day expiry); the owner issues it per member.
