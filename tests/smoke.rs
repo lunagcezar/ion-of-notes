@@ -44,6 +44,22 @@ async fn real_listener_serves_operational_and_v2_endpoints() {
     assert_eq!(status, 200);
     assert!(body.contains("ion_of_notes_up 1"));
 
+    let (status, headers, body) = get(&format!("{base}/app"));
+    assert_eq!(status, 200);
+    assert!(
+        headers
+            .get("content-type")
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.starts_with("text/html"))
+    );
+    assert!(body.contains("/app.js"));
+    assert!(
+        headers
+            .get("content-security-policy")
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.contains("default-src 'self'"))
+    );
+
     let mut response = ureq::get(&format!("{base}/api/v2/workspace"))
         .header(VERSION_HEADER, API_VERSION)
         .header(AUTH_HEADER, format!("Bearer {OWNER_TOKEN}"))

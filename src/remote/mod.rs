@@ -77,6 +77,37 @@ pub fn login(base_url: &str, email: &str, password: &str) -> Result<SessionRespo
     })
 }
 
+/// Register an invited member and return its session (spec-152).
+pub fn register_account(
+    base_url: &str,
+    email: &str,
+    password: &str,
+) -> Result<SessionResponse, String> {
+    let base = base_url.trim_end_matches('/');
+    let body = serde_json::json!({ "email": email, "password": password }).to_string();
+    let mut response = agent()
+        .post(format!("{base}/api/v2/auth/register"))
+        .header(VERSION_HEADER, API_VERSION)
+        .header("Content-Type", "application/json")
+        .send(&body)
+        .map_err(|error| error.to_string())?;
+    let status = response.status().as_u16();
+    let text = response
+        .body_mut()
+        .read_to_string()
+        .map_err(|error| error.to_string())?;
+    if !(200..300).contains(&status) {
+        return Err(text);
+    }
+    let envelope: Envelope<SessionResponse> =
+        serde_json::from_str(&text).map_err(|error| error.to_string())?;
+    envelope.data.ok_or_else(|| {
+        envelope
+            .error
+            .unwrap_or_else(|| "empty response".to_string())
+    })
+}
+
 /// REST-only remote transport, safe to move into a background worker.
 ///
 /// It deliberately has no real-time state: the UI keeps the WebSocket in
@@ -102,6 +133,30 @@ impl RemoteRest {
     /// The bearer token this client sends.
     pub fn token(&self) -> &str {
         &self.token
+    }
+
+    /// Change the caller's password and return a fresh session.
+    pub fn change_password(
+        &self,
+        current_password: &str,
+        new_password: &str,
+    ) -> Result<SessionResponse, String> {
+        self.post_json(
+            "/api/v2/auth/password",
+            &serde_json::json!({
+                "current_password": current_password,
+                "new_password": new_password,
+            }),
+        )
+    }
+
+    /// Reset another member's password (owner only).
+    pub fn reset_password(&self, email: &str, new_password: &str) -> Result<(), String> {
+        let _: serde_json::Value = self.post_json(
+            "/api/v2/auth/reset",
+            &serde_json::json!({ "email": email, "new_password": new_password }),
+        )?;
+        Ok(())
     }
 
     fn post_json<T: Serialize, R: DeserializeOwned>(

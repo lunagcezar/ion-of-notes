@@ -18,6 +18,7 @@ use crate::collab::Change;
 
 mod http;
 mod operations;
+mod web_app;
 mod websocket;
 
 use axum::Router;
@@ -114,6 +115,9 @@ pub fn router_with_server(server: Arc<Mutex<WorkspaceServer>>) -> Router {
         .route("/health", get(health))
         .route("/ready", get(ready))
         .route("/metrics", get(metrics))
+        .route("/app", get(web_app::app_html))
+        .route("/app.js", get(web_app::app_js))
+        .route("/app.css", get(web_app::app_css))
         .route("/ws/workspace/{id}", get(ws_handler))
         .fallback(handle)
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))

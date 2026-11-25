@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ion-of-notes</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <section id="auth" class="auth">
+      <h1>ion-of-notes</h1>
+      <p class="muted">Sign in to your self-hosted workspace.</p>
+      <label>Server URL <input id="server" value="" placeholder="http://127.0.0.1:8787" /></label>
+      <label>Email <input id="email" type="email" autocomplete="username" /></label>
+      <label>Password <input id="password" type="password" autocomplete="current-password" /></label>
+      <label class="row"><input id="register-mode" type="checkbox" /> Create an account for an invited email</label>
+      <div class="actions">
+        <button id="login">Sign in</button>
+        <button id="logout" class="secondary hidden">Sign out</button>
+      </div>
+      <p id="auth-status" class="status" role="status"></p>
+    </section>
+
+    <main id="workspace" class="workspace hidden">
+      <aside class="sidebar">
+        <div class="brand">ion-of-notes</div>
+        <input id="search" placeholder="Search pages" />
+        <div class="new-page">
+          <input id="new-title" placeholder="New page title" />
+          <button id="create">Add</button>
+        </div>
+        <nav id="pages" class="pages"></nav>
+        <div id="search-results" class="pages"></div>
+        <section class="account">
+          <h2>Change password</h2>
+          <input id="current-password" type="password" placeholder="Current password" />
+          <input id="new-password" type="password" placeholder="New password (8+)" />
+          <input id="confirm-password" type="password" placeholder="Repeat new password" />
+          <button id="change-password">Change</button>
+          <h2>Reset a member (owner)</h2>
+          <input id="reset-email" type="email" placeholder="member@workspace.local" />
+          <input id="reset-password" type="password" placeholder="New password (8+)" />
+          <button id="reset-member">Reset</button>
+          <p id="account-status" class="status" role="status"></p>
+        </section>
+      </aside>
+      <article class="content">
+        <header>
+          <h1 id="page-title">Select a page</h1>
+          <span id="page-status" class="status" role="status"></span>
+        </header>
+        <div id="blocks" class="blocks"></div>
+      </article>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

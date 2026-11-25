@@ -125,8 +125,8 @@ checksums.
 
 | Finding | Why deferred | Where it is tracked |
 | ------- | ------------ | ------------------- |
-| Password reset / registration / account UI | Product decision and email delivery are missing | `docs/authorization.md`, roadmap |
-| Browser UI | Out of scope for the desktop-first product | roadmap |
+| Email delivery, verification and self-service reset tokens | Registration is invite-first and password reset is owner-driven; no mail transport is configured | `docs/authorization.md`, `docs/performance-roadmap.md` |
+| Multi-node realtime fan-out | The WebSocket hub is per process; PostgreSQL/Redis cover storage and rate limits | `docs/deployment.md`, `docs/performance-roadmap.md` |
 
 ## 4. Review scope and limitations
 

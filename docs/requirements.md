@@ -398,6 +398,12 @@ capabilities) is implemented; the rest are planned.
 - FR-120: HTTP servers publish a new read snapshot after writes (throttled for
   CRDT frames), so reads take an `Arc` instead of cloning under the lock
   (implemented in `spec-151`).
+- FR-121: Invited members can register an account with a password, users can
+  change their password, and the owner can reset a member's password; every
+  change revokes that member's sessions (implemented in `spec-152`).
+- FR-122: The server serves an embedded browser UI at `/app` with login,
+  registration, page list/create/open, block editing, search and password forms
+  (implemented in `spec-153`).
 
 ## 2. Non-functional requirements
 
@@ -585,6 +591,8 @@ capabilities) is implemented; the rest are planned.
 | FR-118 (implemented)          | `spec-149-release-checksums.md` |
 | FR-119 (implemented)          | `spec-150-v2-snapshot-reads.md` |
 | FR-120 (implemented)          | `spec-151-publish-snapshot-on-write.md` |
+| FR-121 (implemented)          | `spec-152-account-lifecycle.md` |
+| FR-122 (implemented)          | `spec-153-browser-ui.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

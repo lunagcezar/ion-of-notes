@@ -261,6 +261,10 @@ docker compose logs -f ion-of-notes
   request volume is sensitive.
 - The webhook worker runs every `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS` seconds
   (default 30); the outbox and delivery log are persisted in SQLite.
+- `GET /app` serves the embedded browser UI (login/register, pages, block text,
+  search, passwords) from the same origin with `default-src 'self'`. It uses
+  Bearer tokens in `sessionStorage`; the proxy needs no extra configuration.
+  Real-time WebSockets are not wired into the browser UI yet.
 
 ## 9. Multi-arch images
 

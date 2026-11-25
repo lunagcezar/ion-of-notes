@@ -128,6 +128,8 @@ pub trait AuthStore: Send + Sync {
     fn save_session(&self, session: &Session) -> io::Result<()>;
     fn find_session(&self, token_hash: &str) -> io::Result<Option<Session>>;
     fn delete_session(&self, token_hash: &str) -> io::Result<()>;
+    /// Remove every session for one member (password change/reset).
+    fn delete_member_sessions(&self, member_id: &str) -> io::Result<()>;
     fn prune_sessions(&self, now: &str) -> io::Result<()>;
 
     /// Whether requests must present a persisted session token.
@@ -161,6 +163,10 @@ impl AuthStore for NoAuthStore {
     }
 
     fn delete_session(&self, _token_hash: &str) -> io::Result<()> {
+        Ok(())
+    }
+
+    fn delete_member_sessions(&self, _member_id: &str) -> io::Result<()> {
         Ok(())
     }
 
@@ -228,6 +234,14 @@ impl AuthStore for MemoryAuthStore {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .retain(|session| session.token_hash != token_hash);
+        Ok(())
+    }
+
+    fn delete_member_sessions(&self, member_id: &str) -> io::Result<()> {
+        self.sessions
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .retain(|session| session.member_id != member_id);
         Ok(())
     }
 

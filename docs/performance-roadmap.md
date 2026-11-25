@@ -95,10 +95,10 @@ stay cheap.
 
 ## 4. Non-goals for this session
 
-- Replacing SQLite with PostgreSQL.
-- A browser UI.
+- Replacing SQLite with PostgreSQL (available as an optional adapter, spec-137).
 - A full CRDT model for every workspace object.
-- Multi-node rate limiting beyond the shared SQLite limiter.
+- Multi-node rate limiting beyond the shared SQLite/Redis limiter.
+- Multi-node realtime fan-out (the WebSocket hub remains per process).
 
 
 

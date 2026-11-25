@@ -327,6 +327,14 @@ pub(super) enum Command {
     SetServerUrl(String),
     SetServerEmail(String),
     SetServerPassword(String),
+    SetServerRegister(bool),
+    SetServerCurrentPassword(String),
+    SetServerNewPassword(String),
+    SetServerConfirmPassword(String),
+    ChangeServerPassword,
+    SetServerResetEmail(String),
+    SetServerResetPassword(String),
+    ResetServerPassword,
     ConnectServer,
     DisconnectServer,
     NoOp,
@@ -564,6 +572,14 @@ impl Command {
             Command::SetServerUrl(_)
             | Command::SetServerEmail(_)
             | Command::SetServerPassword(_)
+            | Command::SetServerRegister(_)
+            | Command::SetServerCurrentPassword(_)
+            | Command::SetServerNewPassword(_)
+            | Command::SetServerConfirmPassword(_)
+            | Command::ChangeServerPassword
+            | Command::SetServerResetEmail(_)
+            | Command::SetServerResetPassword(_)
+            | Command::ResetServerPassword
             | Command::ConnectServer
             | Command::DisconnectServer => Server,
             Command::NoOp => NoOp,

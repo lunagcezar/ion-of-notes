@@ -107,7 +107,11 @@ roadmap; do not treat a collaboration invite as a working login.
   `has_more`/cursor reflects the filtered set rather than the workspace total.
 - **Sharing UI**: the Share dialog still writes grants through the owner
   connection in local mode; remote member flows should use their own session.
-- **Password reset / registration**: not implemented.
+- **Account lifecycle**: invite-first registration (`POST /api/v2/auth/register`),
+  self-service password change (`POST /api/v2/auth/password`) and owner reset
+  (`POST /api/v2/auth/reset`) are implemented (spec-152). Every password change
+  revokes that member's sessions. Email verification and self-service reset
+  tokens are not implemented.
 
 ## 6. Adding a protected resource
 

@@ -6,6 +6,17 @@ use super::super::app::NotionApp;
 use super::super::commands::Command;
 
 impl NotionApp {
+    fn remote_rest(&self) -> Option<crate::remote::RemoteRest> {
+        match self.client.api() {
+            crate::app::DesktopApi::Remote(remote) => Some(remote.rest()),
+            crate::app::DesktopApi::Local(_) => None,
+        }
+    }
+
+    fn remote_server_url(&self) -> Option<String> {
+        self.remote_rest()
+            .map(|_| self.server.url.trim_end_matches('/').to_string())
+    }
     /// Start a background login/connect. The UI keeps rendering while the
     /// network call runs; `poll_server` applies the result on a later frame.
     fn start_server_connect(
@@ -103,6 +114,74 @@ impl NotionApp {
                 self.server.password = value;
                 self.server.status = None;
             }
+            Command::SetServerRegister(value) => {
+                self.server.register = value;
+                self.server.status = None;
+            }
+            Command::SetServerCurrentPassword(value) => {
+                self.server.current_password = value;
+                self.server.status = None;
+            }
+            Command::SetServerNewPassword(value) => {
+                self.server.new_password = value;
+                self.server.status = None;
+            }
+            Command::SetServerConfirmPassword(value) => {
+                self.server.confirm_password = value;
+                self.server.status = None;
+            }
+            Command::SetServerResetEmail(value) => {
+                self.server.reset_email = value;
+                self.server.status = None;
+            }
+            Command::SetServerResetPassword(value) => {
+                self.server.reset_password = value;
+                self.server.status = None;
+            }
+            Command::ChangeServerPassword => {
+                let Some(url) = self.remote_server_url() else {
+                    self.server.status = Some("Connect to a server first.".to_string());
+                    return;
+                };
+                if self.server.new_password != self.server.confirm_password {
+                    self.server.status = Some("The new passwords do not match.".to_string());
+                    return;
+                }
+                let Some(rest) = self.remote_rest() else {
+                    self.server.status = Some("Not connected to a server.".to_string());
+                    return;
+                };
+                match rest.change_password(&self.server.current_password, &self.server.new_password)
+                {
+                    Ok(_) => {
+                        let password = self.server.new_password.clone();
+                        self.server.current_password.clear();
+                        self.server.new_password.clear();
+                        self.server.confirm_password.clear();
+                        self.server.status = Some("Password changed. Reconnecting...".to_string());
+                        self.start_server_connect(
+                            url,
+                            self.server.email.clone(),
+                            Some(password),
+                            None,
+                        );
+                    }
+                    Err(error) => self.server.status = Some(error),
+                }
+            }
+            Command::ResetServerPassword => {
+                let Some(rest) = self.remote_rest() else {
+                    self.server.status = Some("Not connected to a server.".to_string());
+                    return;
+                };
+                match rest.reset_password(&self.server.reset_email, &self.server.reset_password) {
+                    Ok(()) => {
+                        self.server.reset_password.clear();
+                        self.server.status = Some("Member password reset.".to_string());
+                    }
+                    Err(error) => self.server.status = Some(error),
+                }
+            }
             Command::ConnectServer => {
                 if self.server.busy {
                     return;
@@ -113,6 +192,13 @@ impl NotionApp {
                 if url.is_empty() || email.is_empty() || password.is_empty() {
                     self.server.status =
                         Some("Server, email and password are required.".to_string());
+                } else if self.server.register {
+                    match crate::remote::register_account(&url, &email, &password) {
+                        Ok(_) => {
+                            self.start_server_connect(url, email, Some(password), None);
+                        }
+                        Err(error) => self.server.status = Some(error),
+                    }
                 } else {
                     self.start_server_connect(url, email, Some(password), None);
                 }

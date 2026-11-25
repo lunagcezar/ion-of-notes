@@ -238,6 +238,9 @@ impl AuthStore for CountingAuthStore {
     fn delete_session(&self, token_hash: &str) -> std::io::Result<()> {
         self.inner.delete_session(token_hash)
     }
+    fn delete_member_sessions(&self, member_id: &str) -> std::io::Result<()> {
+        self.inner.delete_member_sessions(member_id)
+    }
     fn prune_sessions(&self, now: &str) -> std::io::Result<()> {
         self.inner.prune_sessions(now)
     }
@@ -283,5 +286,84 @@ fn resolved_sessions_are_cached_and_invalidated_on_logout() {
         lookups.load(Ordering::Relaxed),
         2,
         "invalidated session goes back to the store"
+    );
+}
+
+#[test]
+fn invited_member_can_register_change_and_reset_password() {
+    let (mut server, _store) = server_with_account();
+
+    let body = serde_json::json!({
+        "email": "alex@workspace.local",
+        "password": "alexpass1",
+    })
+    .to_string();
+    let response = server.handle(&common::v2_request(
+        Method::Post,
+        "/api/v2/auth/register",
+        Some(body),
+    ));
+    assert_eq!(response.status, 200, "{}", response.body);
+    let session: SessionResponse = common::data(&response);
+    assert_eq!(session.email, "alex@workspace.local");
+
+    let repeated = serde_json::json!({
+        "email": "alex@workspace.local",
+        "password": "alexpass1",
+    })
+    .to_string();
+    let response = server.handle(&common::v2_request(
+        Method::Post,
+        "/api/v2/auth/register",
+        Some(repeated),
+    ));
+    assert_eq!(response.status, 409, "{}", response.body);
+
+    let change = serde_json::json!({
+        "current_password": "alexpass1",
+        "new_password": "alexpass2",
+    })
+    .to_string();
+    let response = server.handle(&common::v2_request_as(
+        &session.token,
+        Method::Post,
+        "/api/v2/auth/password",
+        Some(change),
+    ));
+    assert_eq!(response.status, 200, "{}", response.body);
+    let fresh: SessionResponse = common::data(&response);
+    assert!(
+        server
+            .resolve_connection(&session.token)
+            .expect("resolve")
+            .is_none(),
+        "changing the password revokes the previous session"
+    );
+
+    let owner = login(&mut server, "owner@workspace.local", "secret");
+    assert_eq!(owner.status, 200);
+    let owner: SessionResponse = common::data(&owner);
+    let reset = serde_json::json!({
+        "email": "alex@workspace.local",
+        "new_password": "alexpass3",
+    })
+    .to_string();
+    let response = server.handle(&common::v2_request_as(
+        &owner.token,
+        Method::Post,
+        "/api/v2/auth/reset",
+        Some(reset),
+    ));
+    assert_eq!(response.status, 200, "{}", response.body);
+    assert!(
+        server
+            .resolve_connection(&fresh.token)
+            .expect("resolve")
+            .is_none(),
+        "owner reset revokes member sessions"
+    );
+    assert_eq!(
+        login(&mut server, "alex@workspace.local", "alexpass3").status,
+        200
     );
 }

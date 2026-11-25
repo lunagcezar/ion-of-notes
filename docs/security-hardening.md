@@ -157,7 +157,11 @@ logs, traces or browser history.
 
 ## 7. Known limitations
 
-- No registration, password reset or account-management UI yet.
+- Registration is invite-first (the email must already belong to a member) and
+  password change/reset revoke the member's sessions; email verification and
+  self-service reset tokens are not implemented.
+- The browser UI is served from the same origin with a strict CSP; it uses
+  `sessionStorage` Bearer tokens and no cookies.
 - No external security audit.
 - Webhook delivery runs outside the workspace mutex; only the synchronous
   `process_webhook_deliveries` test/tooling wrapper sends inline.

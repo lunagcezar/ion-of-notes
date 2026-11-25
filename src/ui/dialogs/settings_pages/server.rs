@@ -82,6 +82,102 @@ pub(in crate::ui::dialogs) fn render_server_settings(
     }
     ui.add_space(metrics::SPACE_16);
 
+    if !server.connected {
+        let mut register = server.register;
+        if ui
+            .checkbox(&mut register, "Create an account for an invited email")
+            .changed()
+        {
+            commands.push(Command::SetServerRegister(register));
+        }
+    }
+
+    if server.connected {
+        ui.add_space(metrics::SECTION_GAP);
+        ui.label(
+            egui::RichText::new("Change password")
+                .size(metrics::FONT_CAPTION)
+                .color(palette.text),
+        );
+        let mut current = server.current_password.clone();
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut current)
+                    .desired_width(360.0)
+                    .password(true)
+                    .hint_text("Current password")
+                    .text_color(palette.text),
+            )
+            .changed()
+        {
+            commands.push(Command::SetServerCurrentPassword(current));
+        }
+        let mut new_password = server.new_password.clone();
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut new_password)
+                    .desired_width(360.0)
+                    .password(true)
+                    .hint_text("New password (8+ characters)")
+                    .text_color(palette.text),
+            )
+            .changed()
+        {
+            commands.push(Command::SetServerNewPassword(new_password));
+        }
+        let mut confirm = server.confirm_password.clone();
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut confirm)
+                    .desired_width(360.0)
+                    .password(true)
+                    .hint_text("Repeat the new password")
+                    .text_color(palette.text),
+            )
+            .changed()
+        {
+            commands.push(Command::SetServerConfirmPassword(confirm));
+        }
+        if ui.button("Change password").clicked() {
+            commands.push(Command::ChangeServerPassword);
+        }
+
+        ui.add_space(metrics::SECTION_GAP);
+        ui.label(
+            egui::RichText::new("Reset a member password (owner)")
+                .size(metrics::FONT_CAPTION)
+                .color(palette.text),
+        );
+        let mut reset_email = server.reset_email.clone();
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut reset_email)
+                    .desired_width(360.0)
+                    .hint_text("member@workspace.local")
+                    .text_color(palette.text),
+            )
+            .changed()
+        {
+            commands.push(Command::SetServerResetEmail(reset_email));
+        }
+        let mut reset_password = server.reset_password.clone();
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut reset_password)
+                    .desired_width(360.0)
+                    .password(true)
+                    .hint_text("New password (8+ characters)")
+                    .text_color(palette.text),
+            )
+            .changed()
+        {
+            commands.push(Command::SetServerResetPassword(reset_password));
+        }
+        if ui.button("Reset member password").clicked() {
+            commands.push(Command::ResetServerPassword);
+        }
+    }
+
     if server.connected {
         ui.label(
             egui::RichText::new("Connected")

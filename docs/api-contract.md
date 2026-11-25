@@ -94,6 +94,8 @@ v2 operational contract adds `409 conflict_error`, `429 rate_limited`,
 | Method | Path | Request body | Success response | Notes |
 | ------ | ---- | ------------ | ---------------- | ----- |
 | `GET` | `/health` | — | `"ok"` | Liveness probe |
+| `GET` | `/app` | — | HTML | Embedded browser UI (spec-153) |
+| `GET` | `/app.js` / `/app.css` | — | script/style | Browser assets, same-origin CSP |
 | `GET` | `/api/workspace` | — | `Workspace` | Full snapshot |
 | `PUT` | `/api/workspace` | `Workspace` | `Workspace` | Structural/settings replace; records versions for changed pages, then one `Replace` change |
 | `GET` | `/api/pages` | — | `Vec<PageSummary>` | Sidebar/list view |
@@ -372,6 +374,13 @@ v1 routes stay stable.
 - `POST /api/v2/auth/login` takes `{email, password}` and returns
   `{token, expires_at, member_id, email, name}`. The raw `sess_<uuid>` token is
   returned once.
+- `POST /api/v2/auth/register` claims an invited member email with
+  `{email, password}` and returns a session. Unknown emails are 403, an existing
+  account is 409, and the password needs 8+ characters (spec-152).
+- `POST /api/v2/auth/password` takes `{current_password, new_password}`, revokes
+  every session for the member and returns a fresh session.
+- `POST /api/v2/auth/reset` is owner-only: `{email, new_password}` resets the
+  member's password and revokes their sessions.
 - `POST /api/v2/auth/logout` revokes the current session.
 - `GET /api/v2/auth/session` returns the current member and expiry.
 - Passwords are Argon2id PHC strings; only the SHA-256 hash of a session token
@@ -438,6 +447,9 @@ Implemented v2 routes:
 | Method | Path | Required capability |
 | ------ | ---- | ------------------- |
 | `POST` | `/api/v2/auth/login` | none (version header only) |
+| `POST` | `/api/v2/auth/register` | none (version header only) |
+| `POST` | `/api/v2/auth/password` | read content |
+| `POST` | `/api/v2/auth/reset` | update content (owner only) |
 | `POST` | `/api/v2/crdt/sync` | read content |
 | `POST` | `/api/v2/crdt/update` | update content |
 | `POST` | `/api/v2/auth/logout` | read content |

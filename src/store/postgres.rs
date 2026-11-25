@@ -374,6 +374,14 @@ impl AuthStore for PostgresStore {
         Ok(())
     }
 
+    fn delete_member_sessions(&self, member_id: &str) -> io::Result<()> {
+        let mut client = self.lock();
+        client
+            .execute("DELETE FROM sessions WHERE member_id = $1", &[&member_id])
+            .map_err(io::Error::other)?;
+        Ok(())
+    }
+
     fn prune_sessions(&self, now: &str) -> io::Result<()> {
         let mut client = self.lock();
         client

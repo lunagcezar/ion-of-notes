@@ -869,6 +869,16 @@ impl AuthStore for SqliteStore {
         Ok(())
     }
 
+    fn delete_member_sessions(&self, member_id: &str) -> io::Result<()> {
+        self.with_connection(|connection| {
+            connection.execute(
+                "DELETE FROM sessions WHERE member_id = ?1",
+                params![member_id],
+            )
+        })?;
+        Ok(())
+    }
+
     fn prune_sessions(&self, now: &str) -> io::Result<()> {
         self.with_connection(|connection| {
             connection.execute("DELETE FROM sessions WHERE expires_at <= ?1", params![now])

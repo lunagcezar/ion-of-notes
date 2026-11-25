@@ -244,6 +244,17 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - `POST /api/v2/realtime/ticket` exchanges a session for a 30 s, single-use ticket; the socket accepts a Bearer header or `?ticket=`.
 - `?token=` on the WebSocket URL is rejected, and tests use the header.
 
+### Added - spec-152 account lifecycle
+
+- `POST /api/v2/auth/register` claims an invited email, creates the Argon2id account and returns a session.
+- `POST /api/v2/auth/password` changes the caller's password, revokes every session and returns a fresh token; `POST /api/v2/auth/reset` lets the owner reset a member.
+- Desktop Settings → Server and the browser UI expose registration, change and reset.
+
+### Added - spec-153 browser UI
+
+- The Axum adapter serves `/app`, `/app.js` and `/app.css` with a strict CSP and no external origin.
+- The page supports login/register, page list/create/open, block editing, search and password forms against `/api/v2`.
+
 ### Performance - spec-151 publish read snapshots on write
 
 - HTTP servers publish an Arc-backed workspace/collaboration snapshot after writes, so readers take only an Arc; CRDT publication is throttled to 250 ms.

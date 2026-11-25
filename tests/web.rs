@@ -416,3 +416,31 @@ async fn writes_publish_a_read_snapshot() {
     );
     assert_eq!(snapshot.version, snapshot.workspace.version);
 }
+
+#[tokio::test]
+async fn browser_app_is_served_with_a_restrictive_csp() {
+    let app = router(server());
+    for (path, content_type) in [
+        ("/app", "text/html"),
+        ("/app.js", "text/javascript"),
+        ("/app.css", "text/css"),
+    ] {
+        let (status, headers, body) = send(&app, request("GET", path, None)).await;
+        assert_eq!(status, StatusCode::OK, "{path}");
+        assert!(
+            header(&headers, "content-type").starts_with(content_type),
+            "{path}: {}",
+            header(&headers, "content-type")
+        );
+        let csp = header(&headers, "content-security-policy");
+        assert!(csp.contains("default-src 'self'"), "{path}: {csp}");
+        assert!(csp.contains("frame-ancestors 'none'"), "{path}: {csp}");
+        assert!(
+            !body.contains("https://"),
+            "{path} must not reference an external origin"
+        );
+    }
+    let (_, _, html) = send(&app, request("GET", "/app", None)).await;
+    assert!(html.contains("/app.js"));
+    assert!(html.contains("/app.css"));
+}

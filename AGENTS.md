@@ -55,8 +55,9 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
 
 Dependencies are kept deliberately small. No web view and no browser engine.
-The only runtime network access is the optional loopback API listener and the
-optional Ollama AI service (`OLLAMA_HOST`, default `127.0.0.1:11434`).
+The only runtime network access is the optional loopback API listener, the
+optional Ollama AI service (`OLLAMA_HOST`, default `127.0.0.1:11434`) and the
+optional browser UI served at `/app` from the same Axum origin (spec-153).
 
 ## Development Methodology
 
@@ -170,7 +171,13 @@ src/
     rate_limit.rs  in-process per-connection and workspace rate limiter
     realtime.rs    change-feed hub, protocol messages and presence (spec-040)
     crdt.rs        Yrs per-page text documents and projection (spec-042)
-    web.rs         Axum/Tokio HTTP + WebSocket adapter for --serve
+    web/           Axum/Tokio HTTP + WebSocket adapter for --serve
+      mod.rs       router, AppState, snapshot cache
+      http.rs      request/response adapter and snapshot reads
+      web_app.rs   embedded browser UI and security headers (spec-153)
+      assets/      app.html, app.js, app.css served at /app
+      operations.rs health, ready and metrics
+      websocket.rs WebSocket session and message budget
     webhook_sender.rs  WebhookSender port and ureq/rustls adapter (spec-041)
   remote.rs        remote WorkspaceApi: ureq REST + background WebSocket +
                    remembered session file
@@ -706,9 +713,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build --no-default-features --features postgres,redis` | Build the server with external stores |
 | `cargo test --no-default-features --features postgres,redis --test postgres_store --test redis_limits` | Opt-in PostgreSQL/Redis integration tests (need URLs) |
 | `pwsh -File scripts/smoke-external.ps1` | Starts disposable PostgreSQL/Redis containers, runs both opt-in tests, removes them |
-| `cargo test --all-targets --no-default-features` | Core integration tests (320, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (322, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (51) |
-| `cargo test --all-targets`               | All default-feature tests (370; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (372; the core-only seam test is skipped) |
 | `ION_OF_NOTES_PERF=1 cargo test --no-default-features --test perf -- --nocapture` | Opt-in 1k/10k/50k block load/search/CRDT timings |
 | `ION_OF_NOTES_LOAD=1 cargo test --no-default-features --test load -- --nocapture` | Opt-in 8-thread read/write p50/p95 under the workspace lock |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
@@ -852,6 +859,7 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
   <https://developers.notion.com/reference/webhooks>,
   <https://developers.notion.com/reference/request-limits>,
   <https://developers.notion.com/reference/versioning>.
+
 
 
 

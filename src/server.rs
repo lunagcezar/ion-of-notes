@@ -373,6 +373,11 @@ impl TicketStore {
         self.order.retain(|key| key != ticket);
         (expires_at > now).then_some(connection)
     }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+        self.order.clear();
+    }
 }
 
 impl SessionCache {
@@ -407,6 +412,11 @@ impl SessionCache {
     fn remove(&mut self, token_hash: &str) {
         self.entries.remove(token_hash);
         self.order.retain(|key| key != token_hash);
+    }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+        self.order.clear();
     }
 }
 
@@ -674,6 +684,25 @@ impl WorkspaceServer {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .remove(&token_hash);
+    }
+
+    /// Remove every session for one member and clear the in-memory auth caches
+    /// (password change/reset, spec-152).
+    pub fn revoke_member_sessions(&mut self, member_id: &str) -> std::io::Result<()> {
+        self.persistence
+            .auth_store
+            .delete_member_sessions(member_id)?;
+        self.runtime
+            .session_cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clear();
+        self.runtime
+            .realtime_tickets
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clear();
+        Ok(())
     }
 
     /// Issue a single-use WebSocket ticket for this connection.

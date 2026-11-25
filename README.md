@@ -168,6 +168,10 @@ curl http://127.0.0.1:8787/ready
 curl http://127.0.0.1:8787/metrics
 ```
 
+Open `http://127.0.0.1:8787/app` for the embedded browser UI (sign in, list and
+create pages, edit block text, search and manage passwords). It is served from
+the same origin with a strict CSP and needs no build step.
+
 ### Production stack with Caddy TLS
 
 ```sh
@@ -319,7 +323,7 @@ Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
 
 ```sh
 cargo build
-# 320 core tests without eframe/egui/wgpu
+# 322 core tests without eframe/egui/wgpu
 cargo test --all-targets --no-default-features
 # 51 desktop tests with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
@@ -327,7 +331,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-`cargo test --all-targets` still runs all default-feature tests (370), but the
+`cargo test --all-targets` still runs all default-feature tests (372), but the
 two passes above avoid linking the window into the core test binaries.
 
 Full gate, including Markdown link/Mermaid/table checks:
@@ -406,7 +410,7 @@ src/
   screenshot.rs    PNG output (desktop feature)
   cli.rs           argument parsing
   i18n.rs          locale switching
-tests/             one integration-test crate per module (320 tests)
+tests/             one integration-test crate per module (322 tests)
 Dockerfile         multi-stage server-only image
 compose.yml        development/self-hosted server stack
 compose.prod.yml   production app + Caddy TLS + optional backup profile
@@ -464,9 +468,12 @@ eframe, JSON files or sockets.
   remain REST-owned.
 - The remote-caret overlay uses first-line width, so multi-line positions are
   approximate.
-- SQLite is single-node; PostgreSQL and Redis/shared multi-node rate limiting
-  are not implemented.
-- There is no browser UI, registration, password reset or account-management UI.
+- SQLite is single-node; PostgreSQL and Redis are optional adapters, and
+  multi-node realtime fan-out is not implemented.
+- Registration is invite-first and password reset is owner-driven; email
+  verification and self-service reset tokens are not implemented.
+- The browser UI covers login/register, pages, block text, search and passwords;
+  it does not wire real-time WebSockets yet.
 - A development Compose stack and a production `compose.prod.yml` with Caddy
   TLS are included; automatic backups are optional via the `backup` profile.
   See `docs/deployment.md` for DNS, secrets, backups and upgrades.
@@ -523,6 +530,7 @@ directly to the public internet without TLS termination, a reverse proxy,
 backups and a security review. The development owner password must not be used
 in production; set `secrets/owner_password.txt` (or
 `ION_OF_NOTES_OWNER_PASSWORD`) before the first SQLite run.
+
 
 
 

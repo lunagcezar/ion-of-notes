@@ -15,6 +15,7 @@ fn error(response: &ApiResponse) -> ApiError {
 #[test]
 fn sqlite_rate_limits_are_shared_across_servers() {
     let db = common::temp_path("shared-limits", "sqlite3");
+    common::remove(&db);
     let workspace = Workspace::seed("shared-limits");
     let store1 = SqliteStore::open(&db).expect("store 1");
     let store2 = SqliteStore::open(&db).expect("store 2");
@@ -55,6 +56,7 @@ fn sqlite_rate_limit_preserves_the_count_across_concurrent_connections() {
     use std::thread;
 
     let db = common::temp_path("shared-limits-threads", "sqlite3");
+    common::remove(&db);
     let allowed = Arc::new(AtomicUsize::new(0));
     let denied = Arc::new(AtomicUsize::new(0));
     let mut handles = Vec::new();
@@ -86,6 +88,7 @@ fn sqlite_rate_limit_preserves_the_count_across_concurrent_connections() {
 #[test]
 fn sqlite_rate_limit_window_resets() {
     let db = common::temp_path("shared-window", "sqlite3");
+    common::remove(&db);
     let store = SqliteStore::open(&db).expect("store");
 
     assert!(store.check("window", 60, 1, 100).expect("first").allowed);

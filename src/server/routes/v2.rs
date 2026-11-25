@@ -111,6 +111,10 @@ impl WorkspaceServer {
             pipeline::check_login_rate(self, request, request_id)?;
             return Ok(self.login(request, request_id));
         }
+        if request.method == Method::Post && path == "/api/v2/auth/register" {
+            pipeline::check_login_rate(self, request, request_id)?;
+            return Ok(self.register(request, request_id));
+        }
 
         let connection = pipeline::authenticate(self, request, request_id)?;
         // Attribute this request's writes to the authenticated member
