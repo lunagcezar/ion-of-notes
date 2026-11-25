@@ -69,7 +69,7 @@ pt-BR:
   comment: "Comentar"
   delete: "Excluir"
   no_comments: "Ainda não há comentários."
-  inline_note: "Comentários embutidos estão ativados; âncoras por bloco ainda não foram implementadas."
+  inline_note: "Comentários inline são ancorados ao texto do bloco."
   copied_contents: "Conteúdo da página copiado."
   page_archived: "Página arquivada."
   page_restored: "Página restaurada do arquivo."
@@ -80,6 +80,7 @@ pt-BR:
   more_unavailable: "Mais ações ainda não estão disponíveis."
   write_comment_first: "Escreva um comentário primeiro."
   comment_added: "Comentário adicionado."
+  comment_deleted: "Comentário removido."
   every_page: "Todas as páginas deste espaço de trabalho"
   recents: "Recentes"
   shared: "Compartilhadas"
@@ -147,3 +148,4 @@ pt-BR:
   template_library: "Biblioteca de modelos"
   use_template: "Usar modelo"
   get_started: "Começar"
+

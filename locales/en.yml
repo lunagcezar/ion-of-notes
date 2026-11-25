@@ -69,7 +69,7 @@ en:
   comment: "Comment"
   delete: "Delete"
   no_comments: "No comments yet."
-  inline_note: "Inline comments are enabled; block-level anchors are not implemented yet."
+  inline_note: "Inline comments are anchored to block text."
   copied_contents: "Page contents copied."
   page_archived: "Page archived."
   page_restored: "Page restored from archive."
@@ -80,6 +80,7 @@ en:
   more_unavailable: "More actions are not available yet."
   write_comment_first: "Write a comment first."
   comment_added: "Comment added."
+  comment_deleted: "Comment deleted."
   every_page: "Every page in this workspace"
   recents: "Recents"
   shared: "Shared"
@@ -147,3 +148,4 @@ en:
   template_library: "Template library"
   use_template: "Use template"
   get_started: "Get started"
+

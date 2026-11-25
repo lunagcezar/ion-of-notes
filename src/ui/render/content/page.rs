@@ -260,6 +260,7 @@ fn render_page(
     commands: &mut Vec<Command>,
 ) {
     let cursors_by_block = super::cursors::index_cursors(&view.remote_cursors, &view.current_page);
+    let inline_threads = crate::ui::comments::inline_threads(ws, &view.current_page);
     let Some(page) = ws.page_mut_untracked(&view.current_page) else {
         ui.label(
             egui::RichText::new("No page selected. Create one from the sidebar.")
@@ -511,6 +512,59 @@ fn render_page(
                             .size(FONT_CAPTION)
                             .color(palette.muted),
                     );
+                }
+            });
+        });
+    }
+
+    if !inline_threads.is_empty() {
+        ui.add_space(PAGE_DISCUSSION_GAP);
+        ui.horizontal(|ui| {
+            ui.add_space(gutter);
+            ui.vertical(|ui| {
+                ui.set_width(width);
+                ui.label(
+                    egui::RichText::new(i18n::t("inline_comments"))
+                        .font(strong_font(FONT_SUBTITLE))
+                        .color(palette.text),
+                );
+                ui.add_space(SPACE_6);
+                for thread in &inline_threads {
+                    ui.label(
+                        egui::RichText::new(format!("\u{201c}{}\u{201d}", thread.excerpt))
+                            .italics()
+                            .size(FONT_CAPTION)
+                            .color(palette.muted),
+                    );
+                    for comment in &thread.comments {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                egui::RichText::new(&comment.author)
+                                    .strong()
+                                    .color(palette.text),
+                            );
+                            ui.label(
+                                egui::RichText::new(format_timestamp(
+                                    &comment.created_at,
+                                    view.settings.time_format,
+                                ))
+                                .size(FONT_MICRO)
+                                .color(palette.muted),
+                            );
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if ui.small_button(i18n::t("delete")).clicked() {
+                                        commands
+                                            .push(Command::DeleteInlineComment(comment.id.clone()));
+                                    }
+                                },
+                            );
+                        });
+                        ui.label(egui::RichText::new(&comment.text).color(palette.text));
+                        ui.add_space(SPACE_6);
+                    }
+                    ui.add_space(SPACE_6);
                 }
             });
         });

@@ -69,7 +69,7 @@ eo:
   comment: "Komenti"
   delete: "Forigi"
   no_comments: "Ankoraŭ ne estas komentoj."
-  inline_note: "Enliniaj komentoj estas ŝaltitaj; blokaj ankroj ankoraŭ ne estas implementitaj."
+  inline_note: "Enliniaj komentoj estas ankritaj al la bloka teksto."
   copied_contents: "Enhavo de la paĝo kopiita."
   page_archived: "Paĝo arkivita."
   page_restored: "Paĝo restarigita el la arkivo."
@@ -80,6 +80,7 @@ eo:
   more_unavailable: "Pliaj agoj ankoraŭ ne disponeblas."
   write_comment_first: "Unue skribu komenton."
   comment_added: "Komento aldonita."
+  comment_deleted: "Komento forigita."
   every_page: "Ĉiuj paĝoj en ĉi tiu laborspaco"
   recents: "Lastaj"
   shared: "Kunhavigitaj"
@@ -147,3 +148,4 @@ eo:
   template_library: "Ŝablona biblioteko"
   use_template: "Uzi ŝablonon"
   get_started: "Komenci"
+

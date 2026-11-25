@@ -87,6 +87,15 @@ impl NotionApp {
                     page.comments.retain(|comment| comment.id != id);
                 }
             }
+            Command::DeleteInlineComment(id) => {
+                if self.client.delete_comment_v2(&id).is_ok() {
+                    self.workspace.comments.retain(|comment| comment.id != id);
+                    self.last_committed
+                        .comments
+                        .retain(|comment| comment.id != id);
+                    self.page_status = Some(i18n::t("comment_deleted"));
+                }
+            }
             Command::SetPageStatus(message) => self.page_status = Some(message),
             Command::OpenVersionHistory => {
                 self.close_overlays();

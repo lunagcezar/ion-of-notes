@@ -173,6 +173,7 @@ Status vocabulary:
 | [133](spec-133-per-block-persistence.md) | Per-block SQLite persistence | implemented | One block row per edit; page JSON without blocks |
 | [134](spec-134-crdt-structure-properties-rows.md) | CRDT structure/properties/rows | implemented | Yrs maps for block order, page properties and row cells |
 | [135](spec-135-desktop-crdt-operations.md) | Desktop CRDT operations | implemented | Session seeds/projects and plans object-map updates |
+| [136](spec-136-inline-comment-threads.md) | Inline comment threads | implemented | Anchored threads rendered in the page panel |
 
 ## 3. Work status
 

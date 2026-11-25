@@ -268,6 +268,7 @@ pub(super) enum Command {
     SetCommentInput(String),
     AddPageComment,
     DeletePageComment(String),
+    DeleteInlineComment(String),
     SetPageStatus(String),
     // Version history (spec-015).
     OpenVersionHistory,
@@ -545,6 +546,7 @@ impl Command {
             | Command::SetCommentInput(_)
             | Command::AddPageComment
             | Command::DeletePageComment(_)
+            | Command::DeleteInlineComment(_)
             | Command::SetPageStatus(_)
             | Command::OpenVersionHistory
             | Command::CloseVersionHistory

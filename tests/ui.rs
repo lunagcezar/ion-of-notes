@@ -1,7 +1,10 @@
 //! Tests for the UI's public visual helpers (public API only).
 
 use ion_of_notes::client::Client;
-use ion_of_notes::model::{BlockKind, NumberFormat, Page, PageDiff, TimeFormat, Workspace};
+use ion_of_notes::model::{
+    BlockKind, CommentAnchor, CommentDto, NumberFormat, Page, PageDiff, ParentDto, RichText,
+    TimeFormat, UserRef, Workspace,
+};
 use ion_of_notes::server::realtime::Awareness;
 use ion_of_notes::server::{
     ApiRequest, ApiResponse, CollabTransport, Envelope, Method, RequestTransport,
@@ -14,8 +17,8 @@ use ion_of_notes::ui::{
 };
 use ion_of_notes::ui::{
     EMOJI, ICONS, app_bar_left_width, block_outside_viewport, catalog_matches, drop_index,
-    estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors, page_icon_letter,
-    search_page_matches, selection_rects, split_index,
+    estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors, inline_threads,
+    page_icon_letter, search_page_matches, selection_rects, split_index,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -44,6 +47,59 @@ fn remote_selection_rects_follow_wrapped_rows() {
         "the second row starts below the first"
     );
     assert!(rects.iter().all(|rect| rect.width() > 0.0));
+}
+
+#[test]
+fn inline_threads_group_anchored_comments_by_discussion() {
+    let mut workspace = Workspace::seed("inline-threads");
+    let comment = |id: &str, created_at: &str, text: &str| CommentDto {
+        object: "comment".to_string(),
+        id: id.to_string(),
+        parent: ParentDto::Block {
+            block_id: "h2".to_string(),
+        },
+        discussion_id: "discussion-1".to_string(),
+        property_id: None,
+        anchor: Some(CommentAnchor {
+            block_id: "h2".to_string(),
+            start: 0,
+            end: 4,
+        }),
+        created_time: created_at.to_string(),
+        last_edited_time: created_at.to_string(),
+        created_by: UserRef::new("m-owner"),
+        rich_text: vec![RichText::text(text)],
+        attachments: Vec::new(),
+        display_name: None,
+        has_pending_attachments: false,
+    };
+    workspace
+        .comments
+        .push(comment("c2", "2026-11-24T10:02:00Z", "Second"));
+    workspace
+        .comments
+        .push(comment("c1", "2026-11-24T10:01:00Z", "First"));
+    let mut unanchored = comment("c3", "2026-11-24T10:03:00Z", "Page level");
+    unanchored.anchor = None;
+    workspace.comments.push(unanchored);
+
+    let threads = inline_threads(&workspace, "p-home");
+    assert_eq!(threads.len(), 1);
+    assert_eq!(threads[0].discussion_id, "discussion-1");
+    assert_eq!(threads[0].block_id, "h2");
+    assert_eq!(threads[0].excerpt, "Over");
+    assert_eq!(
+        threads[0]
+            .comments
+            .iter()
+            .map(|comment| comment.text.as_str())
+            .collect::<Vec<_>>(),
+        vec!["First", "Second"]
+    );
+    assert!(
+        inline_threads(&workspace, "p-start").is_empty(),
+        "comments stay scoped to their page"
+    );
 }
 
 #[test]

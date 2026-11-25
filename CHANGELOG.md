@@ -179,6 +179,13 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   metadata/schema changes.
 - A split block remains visible when its first text update is projected.
 
+### Added - spec-136 inline comment threads
+
+- The page panel now groups anchored v2 comments by discussion and renders the
+  quoted block range, author, timestamp and comment body.
+- Inline comments can be deleted through the v2 client; strings are localized
+  in en, pt-BR and eo.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames
