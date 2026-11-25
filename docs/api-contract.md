@@ -393,9 +393,14 @@ v1 routes stay stable.
   `{page_id, update, actor?}` and returns `{update}`. Both are used by remote
   clients; the WebSocket `crdt_sync`/`crdt_update` messages carry the same
   payloads.
-- Yrs merges the page title and `block:<id>` text. The server projects the
-  merged text into the durable page snapshot; REST remains the structure source
-  and resets the page's CRDT document after a write.
+- Yrs merges the page title and `block:<id>` text, plus the `structure`,
+  `properties` and `rows` maps:
+  - `structure`: block id → `{ parent_id, position, block }`;
+  - `properties`: property key → serialized `PageProperty`;
+  - `rows`: `data_source_id/row_id` → `{ data_source_id, page, deleted }`.
+  The server projects the merged text/structure/properties/rows into the
+  durable snapshot. REST remains the structure source for local edits and
+  resets the page's CRDT document after a write.
 - CRDT history is in memory; the persisted page snapshot re-seeds after a
   restart.
 - `awareness { awareness }` carries `session_id`, `member_id`, `name`, `color`,

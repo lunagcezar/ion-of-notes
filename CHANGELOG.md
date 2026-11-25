@@ -162,6 +162,14 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Opening an older database migrates page JSON blocks into rows.
 - Loading rebuilds nested trees with cycle protection.
 
+### Added - spec-134 CRDT structure/properties/rows
+
+- The page Yrs document now carries `structure`, `properties` and `rows` maps.
+- Structure entries drive block parent/order/deletion; properties and row
+  registers project into the workspace with per-key last-writer-wins.
+- Text projection runs after the structural rebuild; REST writes reseed the
+  document on the next sync.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames
