@@ -25,6 +25,16 @@ impl WorkspaceServer {
                 200,
                 Envelope::ok(self.project_workspace(connection)),
             ))),
+            (Method::Post, "/api/v2/realtime/ticket") => {
+                let ticket = self.issue_realtime_ticket(connection);
+                ok(json(
+                    200,
+                    Envelope::ok(serde_json::json!({
+                        "ticket": ticket,
+                        "expires_in": crate::server::REALTIME_TICKET_TTL_SECS,
+                    })),
+                ))
+            }
             (Method::Put, "/api/v2/workspace") => {
                 let workspace: Workspace = body(request)?;
                 match replace_workspace(self, workspace) {

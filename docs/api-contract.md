@@ -110,7 +110,7 @@ v2 operational contract adds `409 conflict_error`, `429 rate_limited`,
 | `GET` | `/api/sync?since=` | — | `SyncBatch` | Changes with `seq > since`, plus cursor |
 | `GET` | `/api/export` | — | `Vec<ExportFile>` | Markdown page tree, People folder, CSV |
 | `GET` | `/api/realtime` | — | `RealtimeContract` | Socket URL, messages, resume and staged CRDT description |
-| `GET` | `/ws/workspace/{id}?token=&since=` | WebSocket upgrade | `ServerMessage` frames | Real-time change feed, presence and ping/pong |
+| `GET` | `/ws/workspace/{id}?ticket=&since=` | WebSocket upgrade | `ServerMessage` frames | Real-time change feed, presence and ping/pong |
 
 Unknown routes return `404` with an error envelope. Malformed JSON returns
 `400`. A failing store returns `500`; it is never reported as success.
@@ -263,7 +263,7 @@ This is the target shape; it is **not** served by the current build.
 | `GET` | `/api/v1/sync?since=` | Versioned changes after a cursor |
 | `GET` | `/api/v1/export` | Workspace export tree |
 | `GET` | `/api/v1/realtime` | Discover the real-time contract |
-| `WS` | `/ws/workspace/{id}?token=` | Real-time co-editing frames |
+| `WS` | `/ws/workspace/{id}?ticket=` | Real-time co-editing frames |
 
 ### 7.1 Auth and permissions (decided)
 
@@ -282,7 +282,7 @@ This is the target shape; it is **not** served by the current build.
 - Client polls `GET /api/v1/sync?since=<cursor>`; an up-to-date client gets an
   empty batch. A cursor older than the retained window gets
   `reset_required: true` with `oldest_seq`, meaning "download a full snapshot".
-- Real-time: WebSocket `wss`, channel `/ws/workspace/{id}?token=`, frames of
+- Real-time: WebSocket `wss`, channel `/ws/workspace/{id}?ticket=`, frames of
   `RealtimeEvent`. `ready` repeats `reset_required`; a lagged receiver gets
   `resync` and the socket closes so the client reconnects with cursor 0.
 - One socket may send 120 messages per 10 seconds; beyond that it receives
@@ -382,7 +382,7 @@ v1 routes stay stable.
 
 ### 8.1.3 WebSocket change feed (implemented, spec-040)
 
-- Connect to `GET /ws/workspace/{workspace_id}?token=<session>&since=<seq>`.
+- Connect to `GET /ws/workspace/{workspace_id}?ticket=<ticket>&since=<seq>`.
   The `Authorization: Bearer` header is also accepted.
 - The socket must match the server workspace; missing/invalid tokens fail with
   `401`, a wrong workspace with `404`.
@@ -480,6 +480,7 @@ Implemented v2 routes:
 | `POST` | `/api/v2/webhook_deliveries/retry` | insert content (owner-only) |
 | `POST` | `/api/v2/webhook_deliveries/requeue` | insert content (owner-only) |
 | `GET` | `/api/v2/realtime` | read content |
+| `POST` | `/api/v2/realtime/ticket` | read content (single-use socket ticket) |
 
 The capability column is the coarse route gate. In addition, every nested
 resource (block, comment, database, data source, view) resolves its owning page
@@ -747,3 +748,4 @@ Sync after cursor 4:
   "error": null
 }
 ```
+

@@ -134,6 +134,14 @@ entries, FIFO). Logout removes the entry immediately; any other revocation is
 observed within the TTL. The auth store remains the source of truth and a store
 failure is still answered with 503.
 
+## 5.2 WebSocket tickets
+
+The WebSocket handshake accepts `Authorization: Bearer <session>` or a
+single-use ticket from `POST /api/v2/realtime/ticket`. Tickets live 30 seconds,
+are capped at 512 entries and are removed when redeemed. Session tokens are no
+longer accepted as `?token=` in the socket URL, so they do not appear in proxy
+logs, traces or browser history.
+
 ## 6. Operational checklist
 
 - [ ] Set a strong owner password or mount a secret file.

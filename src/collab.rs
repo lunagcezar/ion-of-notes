@@ -212,7 +212,7 @@ pub struct RealtimeContract {
 pub fn realtime_contract() -> RealtimeContract {
     RealtimeContract {
         transport: "WebSocket over TLS, behind the self-hosted reverse proxy".to_string(),
-        channel: "/ws/workspace/{workspace_id}?token=<session>&since=<seq>".to_string(),
+        channel: "/ws/workspace/{workspace_id}?ticket=<ticket>&since=<seq>".to_string(),
         events: vec![
             "presence".to_string(),
             "change".to_string(),

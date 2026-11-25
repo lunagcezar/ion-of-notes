@@ -280,6 +280,7 @@ struct Runtime {
     uploads_dir: std::path::PathBuf,
     actor: Option<String>,
     session_cache: std::sync::Mutex<SessionCache>,
+    realtime_tickets: std::sync::Mutex<TicketStore>,
 }
 
 /// Bounded, short-lived cache of resolved bearer sessions (spec-145).
@@ -295,6 +296,51 @@ struct SessionCache {
 
 const SESSION_CACHE_TTL: Duration = Duration::from_secs(30);
 const SESSION_CACHE_CAP: usize = 1024;
+
+/// Single-use WebSocket connection tickets (spec-148).
+///
+/// A browser cannot set an `Authorization` header on a WebSocket handshake, so
+/// the client exchanges its session for a short-lived ticket instead of putting
+/// the session token in the URL.
+struct TicketStore {
+    entries: std::collections::HashMap<String, (Connection, std::time::Instant)>,
+    order: std::collections::VecDeque<String>,
+    cap: usize,
+}
+
+const TICKET_TTL: Duration = Duration::from_secs(30);
+const TICKET_CAP: usize = 512;
+/// Ticket lifetime reported to the client.
+pub const REALTIME_TICKET_TTL_SECS: u64 = 30;
+
+impl TicketStore {
+    fn new() -> Self {
+        Self {
+            entries: std::collections::HashMap::new(),
+            order: std::collections::VecDeque::new(),
+            cap: TICKET_CAP,
+        }
+    }
+
+    fn issue(&mut self, connection: Connection, now: std::time::Instant) -> String {
+        if self.entries.len() >= self.cap
+            && let Some(oldest) = self.order.pop_front()
+        {
+            self.entries.remove(&oldest);
+        }
+        let ticket = format!("rt_{}", uuid::Uuid::new_v4());
+        self.order.push_back(ticket.clone());
+        self.entries
+            .insert(ticket.clone(), (connection, now + TICKET_TTL));
+        ticket
+    }
+
+    fn redeem(&mut self, ticket: &str, now: std::time::Instant) -> Option<Connection> {
+        let (connection, expires_at) = self.entries.remove(ticket)?;
+        self.order.retain(|key| key != ticket);
+        (expires_at > now).then_some(connection)
+    }
+}
 
 impl SessionCache {
     fn new() -> Self {
@@ -451,6 +497,7 @@ impl WorkspaceServer {
                     .unwrap_or_else(|| std::env::temp_dir().join("ion-of-notes-uploads")),
                 actor: None,
                 session_cache: std::sync::Mutex::new(SessionCache::new()),
+                realtime_tickets: std::sync::Mutex::new(TicketStore::new()),
             },
             webhooks: WebhookRuntime {
                 allow_insecure: false,
@@ -542,6 +589,24 @@ impl WorkspaceServer {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .remove(&token_hash);
+    }
+
+    /// Issue a single-use WebSocket ticket for this connection.
+    pub fn issue_realtime_ticket(&self, connection: &Connection) -> String {
+        self.runtime
+            .realtime_tickets
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .issue(connection.clone(), std::time::Instant::now())
+    }
+
+    /// Redeem a WebSocket ticket. A ticket works once and expires after 30 s.
+    pub fn redeem_realtime_ticket(&self, ticket: &str) -> Option<Connection> {
+        self.runtime
+            .realtime_tickets
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .redeem(ticket, std::time::Instant::now())
     }
 
     /// The workspace role of a connection, if its member still exists.

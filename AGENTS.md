@@ -706,9 +706,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build --no-default-features --features postgres,redis` | Build the server with external stores |
 | `cargo test --no-default-features --features postgres,redis --test postgres_store --test redis_limits` | Opt-in PostgreSQL/Redis integration tests (need URLs) |
 | `pwsh -File scripts/smoke-external.ps1` | Starts disposable PostgreSQL/Redis containers, runs both opt-in tests, removes them |
-| `cargo test --all-targets --no-default-features` | Core integration tests (316, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (317, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (51) |
-| `cargo test --all-targets`               | All default-feature tests (366; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (367; the core-only seam test is skipped) |
 | `ION_OF_NOTES_PERF=1 cargo test --no-default-features --test perf -- --nocapture` | Opt-in 1k/10k/50k block load/search/CRDT timings |
 | `ION_OF_NOTES_LOAD=1 cargo test --no-default-features --test load -- --nocapture` | Opt-in 8-thread read/write p50/p95 under the workspace lock |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
@@ -852,6 +852,7 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
   <https://developers.notion.com/reference/webhooks>,
   <https://developers.notion.com/reference/request-limits>,
   <https://developers.notion.com/reference/versioning>.
+
 
 
 

@@ -354,6 +354,16 @@ pub const ROUTES: &[RoutePolicy] = &[
         owner_only: false,
         page_scoped: false,
     },
+    RoutePolicy {
+        methods: &[Method::Post],
+        path: "/api/v2/realtime/ticket",
+        kind: MatchKind::Exact,
+        suffix: None,
+        capability: Capability::ReadContent,
+        block_limit: BlockLimit::None,
+        owner_only: false,
+        page_scoped: false,
+    },
     // ---- specific prefixes ----------------------------------------------
     RoutePolicy {
         methods: &[Method::Patch],

@@ -17,11 +17,11 @@ pub(super) async fn ws_handler(
         .get("authorization")
         .and_then(|value| value.to_str().ok())
         .and_then(parse_bearer)
-        .map(str::to_string)
-        .or_else(|| query.get("token").cloned());
-    let Some(token) = token else {
-        return plain_error(StatusCode::UNAUTHORIZED, "missing token");
-    };
+        .map(str::to_string);
+    let ticket = query.get("ticket").cloned();
+    if token.is_none() && ticket.is_none() {
+        return plain_error(StatusCode::UNAUTHORIZED, "missing token or ticket");
+    }
     let since = query
         .get("since")
         .and_then(|value| value.parse::<u64>().ok())
@@ -34,8 +34,13 @@ pub(super) async fn ws_handler(
         if server.workspace.settings.id != workspace_id {
             return plain_error(StatusCode::NOT_FOUND, "workspace not found");
         }
-        let Some(connection) = server.connection_for_token(&token) else {
-            return plain_error(StatusCode::UNAUTHORIZED, "invalid token");
+        let connection = match (token.as_deref(), ticket.as_deref()) {
+            (Some(token), _) => server.connection_for_token(token),
+            (None, Some(ticket)) => server.redeem_realtime_ticket(ticket),
+            _ => None,
+        };
+        let Some(connection) = connection else {
+            return plain_error(StatusCode::UNAUTHORIZED, "invalid token or ticket");
         };
         let member_name = server
             .collab

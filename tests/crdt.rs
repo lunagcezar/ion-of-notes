@@ -16,6 +16,8 @@ use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 use yrs::updates::decoder::Decode;
 use yrs::{Doc, GetString, Map, ReadTxn, StateVector, Text, Transact, Update};
@@ -158,11 +160,14 @@ async fn websocket_crdt_sync_and_update_converge() {
     let (base, workspace_id, page_block, handle) = start_shared(shared.clone()).await;
     let (page_id, block_id) = page_block.split_once(':').expect("page:block");
 
-    let (mut socket, _) = connect_async(format!(
-        "{base}/ws/workspace/{workspace_id}?token=owner-token"
-    ))
-    .await
-    .expect("connect");
+    let mut request = format!("{base}/ws/workspace/{workspace_id}")
+        .into_client_request()
+        .expect("request");
+    request.headers_mut().insert(
+        "authorization",
+        HeaderValue::from_static("Bearer owner-token"),
+    );
+    let (mut socket, _) = connect_async(request).await.expect("connect");
 
     socket
         .send(Message::Text(

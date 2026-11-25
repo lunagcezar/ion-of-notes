@@ -87,6 +87,7 @@ authorization boundary.
 | Session looked up in the store per request | fixed | 30 s bounded cache with logout invalidation (spec-145) | `tests/auth.rs` |
 | Undo cloned the workspace per typing burst | fixed | page patches for text frames, snapshots for structure (spec-146) | `tests/ui.rs` |
 | Sidebar painted every expanded page | fixed | flat rows limited to the clip rect (spec-147) | `tests/ui.rs` |
+| WebSocket session token in the query string | fixed | single-use 30 s ticket; header still preferred (spec-148) | `tests/realtime.rs` |
 
 Still open and tracked in `docs/performance-roadmap.md`: the single-writer
 workspace mutex, the block-id index, session cache, patch-based undo, sidebar
@@ -136,6 +137,7 @@ not a substitute for an independent audit.
 The most valuable next step is a focused security review of the auth, session,
 webhook and authorization paths after these changes, followed by the nested
 resource authorization slice.
+
 
 
 

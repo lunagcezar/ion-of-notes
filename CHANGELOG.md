@@ -235,6 +235,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Snapshot cache relies on `workspace.version`; projections clone only
   authorized resources.
 
+### Security - spec-148 single-use WebSocket tickets
+
+- `POST /api/v2/realtime/ticket` exchanges a session for a 30 s, single-use ticket; the socket accepts a Bearer header or `?ticket=`.
+- `?token=` on the WebSocket URL is rejected, and tests use the header.
+
 ### Performance - spec-147 viewport-limited sidebar tree
 
 - The sidebar flattens the expanded tree and paints only rows intersecting the clip rect, allocating the rest for the scroll range.
@@ -1734,6 +1739,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   for each spec was observed before implementation. `cargo build` and
   `cargo test` are clean and green, and `--screenshot` was compared by eye
   with the 29 reference pictures after each build.
+
 
 
 

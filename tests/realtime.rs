@@ -14,9 +14,28 @@ use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
 type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+
+async fn connect_owner(
+    url: &str,
+) -> Result<
+    (
+        Socket,
+        tokio_tungstenite::tungstenite::handshake::client::Response,
+    ),
+    tokio_tungstenite::tungstenite::Error,
+> {
+    let mut request = url.into_client_request()?;
+    request.headers_mut().insert(
+        "authorization",
+        HeaderValue::from_static("Bearer owner-token"),
+    );
+    connect_async(request).await
+}
 
 fn workspace() -> Workspace {
     Workspace::seed("realtime-tests")
@@ -150,10 +169,7 @@ async fn websocket_rejects_missing_tokens_and_wrong_workspaces() {
         other => panic!("expected 401, got {other:?}"),
     }
 
-    let wrong = connect_async(format!(
-        "{base}/ws/workspace/not-this-workspace?token=owner-token"
-    ))
-    .await;
+    let wrong = connect_owner(&format!("{base}/ws/workspace/not-this-workspace")).await;
     match wrong {
         Err(tokio_tungstenite::tungstenite::Error::Http(response)) => {
             assert_eq!(response.status().as_u16(), 404);
@@ -167,11 +183,9 @@ async fn websocket_rejects_missing_tokens_and_wrong_workspaces() {
 #[tokio::test]
 async fn websocket_sends_ready_presence_and_pong() {
     let (base, workspace_id, handle) = start_server(WorkspaceServer::new(workspace())).await;
-    let (mut socket, _) = connect_async(format!(
-        "{base}/ws/workspace/{workspace_id}?token=owner-token"
-    ))
-    .await
-    .expect("connect");
+    let (mut socket, _) = connect_owner(&format!("{base}/ws/workspace/{workspace_id}"))
+        .await
+        .expect("connect");
 
     match next_message(&mut socket).await {
         ServerMessage::Ready {
@@ -226,11 +240,9 @@ async fn websocket_replays_backlog_after_a_cursor() {
     let page: Page = common::data(&response);
 
     let (base, workspace_id, handle) = start_server(server).await;
-    let (mut socket, _) = connect_async(format!(
-        "{base}/ws/workspace/{workspace_id}?token=owner-token&since=0"
-    ))
-    .await
-    .expect("connect");
+    let (mut socket, _) = connect_owner(&format!("{base}/ws/workspace/{workspace_id}?since=0"))
+        .await
+        .expect("connect");
 
     assert!(matches!(
         next_message(&mut socket).await,
@@ -256,11 +268,9 @@ async fn websocket_replays_backlog_after_a_cursor() {
 async fn websocket_receives_a_live_change_after_a_rest_write() {
     let shared = Arc::new(Mutex::new(WorkspaceServer::new(workspace())));
     let (base, workspace_id, handle) = start_shared(shared.clone()).await;
-    let (mut socket, _) = connect_async(format!(
-        "{base}/ws/workspace/{workspace_id}?token=owner-token"
-    ))
-    .await
-    .expect("connect");
+    let (mut socket, _) = connect_owner(&format!("{base}/ws/workspace/{workspace_id}"))
+        .await
+        .expect("connect");
     assert!(matches!(
         next_message(&mut socket).await,
         ServerMessage::Ready { .. }
@@ -313,4 +323,46 @@ fn realtime_contract_describes_the_running_socket() {
     assert!(contract.messages.contains(&"change".to_string()));
     assert!(contract.messages.contains(&"presence".to_string()));
     assert!(contract.resume.contains("since"));
+}
+
+#[tokio::test]
+async fn websocket_ticket_is_single_use_and_query_tokens_are_rejected() {
+    let mut server = WorkspaceServer::new(workspace());
+    let response = server.handle(&common::v2_request(
+        Method::Post,
+        "/api/v2/realtime/ticket",
+        None,
+    ));
+    assert_eq!(response.status, 200, "{}", response.body);
+    let body: serde_json::Value = common::data(&response);
+    let ticket = body["ticket"].as_str().expect("ticket").to_string();
+    let (base, workspace_id, handle) = start_server(server).await;
+
+    let url = format!("{base}/ws/workspace/{workspace_id}?ticket={ticket}");
+    let (mut socket, _) = connect_async(&url).await.expect("ticket connect");
+    match next_message(&mut socket).await {
+        ServerMessage::Ready { .. } => {}
+        other => panic!("expected ready, got {other:?}"),
+    }
+
+    let reused = connect_async(&url).await;
+    match reused {
+        Err(tokio_tungstenite::tungstenite::Error::Http(response)) => {
+            assert_eq!(response.status().as_u16(), 401);
+        }
+        other => panic!("expected single-use rejection, got {other:?}"),
+    }
+
+    let legacy = connect_async(format!(
+        "{base}/ws/workspace/{workspace_id}?token=owner-token"
+    ))
+    .await;
+    match legacy {
+        Err(tokio_tungstenite::tungstenite::Error::Http(response)) => {
+            assert_eq!(response.status().as_u16(), 401);
+        }
+        other => panic!("expected query-token rejection, got {other:?}"),
+    }
+
+    handle.abort();
 }

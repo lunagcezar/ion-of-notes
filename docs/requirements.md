@@ -387,6 +387,9 @@ capabilities) is implemented; the rest are planned.
   (implemented in `spec-146`).
 - FR-116: The sidebar flattens the expanded tree and renders only rows that
   intersect the viewport, keeping the scroll range (implemented in `spec-147`).
+- FR-117: The WebSocket handshake accepts a Bearer header or a single-use ticket
+  from `POST /api/v2/realtime/ticket`; session tokens are not accepted in the
+  URL (implemented in `spec-148`).
 
 ## 2. Non-functional requirements
 
@@ -570,6 +573,7 @@ capabilities) is implemented; the rest are planned.
 | FR-114 (implemented)          | `spec-145-session-cache.md` |
 | FR-115 (implemented)          | `spec-146-patch-based-undo.md` |
 | FR-116 (implemented)          | `spec-147-sidebar-virtualization.md` |
+| FR-117 (implemented)          | `spec-148-websocket-tickets.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 
