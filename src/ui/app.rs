@@ -769,11 +769,13 @@ impl eframe::App for NotionApp {
         let frame_before = if may_mutate && now - self.undo_snapshot_at > 0.8 {
             self.undo_snapshot_at = now;
             if full_capture {
-                Some(super::undo::UndoCapture::Snapshot(self.workspace.clone()))
+                Some(super::undo::UndoCapture::Snapshot(Box::new(
+                    self.workspace.clone(),
+                )))
             } else {
                 let page_id = self.current_page.clone();
                 Some(super::undo::UndoCapture::Page {
-                    page: self.workspace.page(&page_id).cloned(),
+                    page: self.workspace.page(&page_id).cloned().map(Box::new),
                     page_id,
                 })
             }

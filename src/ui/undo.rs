@@ -10,18 +10,21 @@ use crate::model::{Page, Workspace};
 /// What was captured before a frame rendered.
 #[derive(Debug, Clone)]
 pub enum UndoCapture {
-    Snapshot(Workspace),
-    Page { page_id: String, page: Option<Page> },
+    Snapshot(Box<Workspace>),
+    Page {
+        page_id: String,
+        page: Option<Box<Page>>,
+    },
 }
 
 /// One reversible operation.
 #[derive(Debug, Clone)]
 pub enum UndoEntry {
-    Snapshot(Workspace),
+    Snapshot(Box<Workspace>),
     Page {
         page_id: String,
-        before: Option<Page>,
-        after: Option<Page>,
+        before: Option<Box<Page>>,
+        after: Option<Box<Page>>,
     },
 }
 
@@ -30,10 +33,10 @@ impl UndoEntry {
     pub fn from_capture(capture: UndoCapture, workspace: &Workspace) -> Option<Self> {
         match capture {
             UndoCapture::Snapshot(before) => {
-                (before != *workspace).then_some(UndoEntry::Snapshot(before))
+                (before.as_ref() != workspace).then_some(UndoEntry::Snapshot(before))
             }
             UndoCapture::Page { page_id, page } => {
-                let after = workspace.page(&page_id).cloned();
+                let after = workspace.page(&page_id).cloned().map(Box::new);
                 (after != page).then_some(UndoEntry::Page {
                     page_id,
                     before: page,
@@ -46,7 +49,7 @@ impl UndoEntry {
     /// Apply the "before" side (undo).
     pub fn undo(&self, workspace: &mut Workspace) {
         match self {
-            UndoEntry::Snapshot(before) => *workspace = before.clone(),
+            UndoEntry::Snapshot(before) => *workspace = (**before).clone(),
             UndoEntry::Page {
                 page_id, before, ..
             } => restore(workspace, page_id, before),
@@ -57,19 +60,19 @@ impl UndoEntry {
     /// Apply the "after" side (redo).
     pub fn redo(&self, workspace: &mut Workspace) {
         match self {
-            UndoEntry::Snapshot(after) => *workspace = after.clone(),
+            UndoEntry::Snapshot(after) => *workspace = (**after).clone(),
             UndoEntry::Page { page_id, after, .. } => restore(workspace, page_id, after),
         }
         workspace.blocks_changed();
     }
 }
 
-fn restore(workspace: &mut Workspace, page_id: &str, page: &Option<Page>) {
+fn restore(workspace: &mut Workspace, page_id: &str, page: &Option<Box<Page>>) {
     // Page patches are only recorded for edits that keep the page in place;
     // structural commands (delete/add/reorder) use a full snapshot.
     if let Some(page) = page
         && let Some(slot) = workspace.page_mut(page_id)
     {
-        *slot = page.clone();
+        *slot = (**page).clone();
     }
 }

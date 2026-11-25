@@ -709,7 +709,7 @@ fn desktop_feature_exposes_the_screenshot_writer() {
 fn page_patch_undo_restores_only_the_edited_page() {
     let mut workspace = Workspace::seed("undo");
     let page_id = "p-home".to_string();
-    let before = workspace.page(&page_id).cloned();
+    let before = workspace.page(&page_id).cloned().map(Box::new);
     let capture = UndoCapture::Page {
         page_id: page_id.clone(),
         page: before.clone(),
@@ -734,7 +734,7 @@ fn unchanged_page_patch_produces_no_undo_entry() {
     let workspace = Workspace::seed("undo");
     let capture = UndoCapture::Page {
         page_id: "p-home".to_string(),
-        page: workspace.page("p-home").cloned(),
+        page: workspace.page("p-home").cloned().map(Box::new),
     };
     assert!(UndoEntry::from_capture(capture, &workspace).is_none());
 }
