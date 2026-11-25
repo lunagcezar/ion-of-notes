@@ -47,6 +47,12 @@ pub struct FileUpload {
     pub upload_url: Option<String>,
     #[serde(default)]
     pub complete_url: Option<String>,
+    /// Member that created the upload (spec-138).
+    #[serde(default)]
+    pub created_by: Option<String>,
+    /// Page the upload belongs to; `None` means a workspace-level upload.
+    #[serde(default)]
+    pub page_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -57,6 +63,9 @@ pub struct FileUploadInput {
     pub content_type: Option<String>,
     #[serde(default)]
     pub content_length: Option<u64>,
+    /// Page the upload belongs to; requires write access (spec-138).
+    #[serde(default)]
+    pub page_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

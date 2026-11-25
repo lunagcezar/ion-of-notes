@@ -57,6 +57,37 @@ single place to check whether a finding was fixed, mitigated or planned.
 The security items above are enforced server-side. The desktop UI is not an
 authorization boundary.
 
+### 1.1 Second audit and latency review (2026-11-25)
+
+| Finding | Status | Response | Evidence |
+| ------- | ------ | -------- | -------- |
+| View move skipped destination authorization | fixed | destination data source resolves (404) and needs write access (spec-138) | `tests/moves.rs`, `tests/views.rs` |
+| Database move skipped destination authorization | fixed | destination page must exist and be writable (spec-138) | `tests/moves.rs` |
+| Uploads had no creator/page and stored no content | fixed | `created_by`/`page_id`, creator checks, declared-length validation and atomic body storage (spec-138) | `tests/moves.rs`, `tests/comments.rs` |
+| Corrupt collaboration JSON was replaced by a seed | fixed | only `NotFound` seeds; other errors propagate and the file is preserved (spec-139) | `tests/collab_store.rs` |
+| Webhook persistence errors were only logged | fixed | non-durable outbox blocks sends until a persist succeeds (spec-139) | `tests/webhooks.rs` |
+| Retention could drop a pending delivery | fixed | only completed records are pruned; new work is refused instead (spec-139) | `tests/webhooks.rs` |
+| Stale sync cursor was not signalled | fixed | `oldest_seq` + `reset_required` on REST and WebSocket ready (spec-139) | `tests/collab.rs`, `tests/realtime.rs` |
+| Lagged WebSocket was ignored | fixed | server sends `resync` and closes; the client resets its cursor (spec-139) | `tests/realtime.rs` |
+| Delete events invisible after the page vanished | fixed | visibility resolves from shares, not the page tree (spec-139) | `tests/moves.rs` |
+| Awareness identity could be spoofed | fixed | session identity overwrites the payload; page/block/index validated (spec-140) | `tests/remote.rs` |
+| Awareness filtering dropped whole batches | fixed | entries are filtered individually (spec-140) | `src/server/web/websocket.rs` |
+| SSRF gaps for mapped IPv6/CGNAT | fixed | IPv4 normalization plus the special ranges (spec-140) | `tests/webhooks.rs` |
+| WebSocket bypassed rate limiting | fixed | 120 messages per 10 s per connection (spec-140) | `tests/realtime.rs` |
+| Typing sent the whole CRDT document and persisted per key | fixed | transaction-only update; local mode commits through the debounced REST write (spec-141) | `tests/ui_crdt.rs` |
+| Structural scan on every text edit | fixed | sync only on structural commands (spec-141) | `tests/ui_crdt.rs` |
+| Undo cloned the workspace on every key | fixed | one snapshot per 0.8 s typing burst (spec-141) | `tests/ui.rs` |
+| Emoji picker rebuilt the UI behind it | fixed | backdrop-only render while the picker is open (spec-141) | screenshot |
+| Snapshot cache invalidated on every write | fixed | version-keyed cache only (spec-141) | `tests/web.rs` |
+| Projection cloned the whole workspace | fixed | builds from authorized resources only (spec-141) | `tests/web.rs`, `tests/authorization.rs` |
+| Writes recorded the owner as actor | fixed | request actor context from the session (spec-142) | `tests/authorization.rs`, `tests/comments.rs` |
+| Session-store failure looked like a bad token | fixed | 503 `service_unavailable` (spec-142) | `tests/web.rs` |
+
+Still open and tracked in `docs/performance-roadmap.md`: the single-writer
+workspace mutex, the block-id index, session cache, patch-based undo, sidebar
+virtualization, the WebSocket query-token fallback and signed release
+checksums.
+
 ## 1. Implemented in this cycle
 
 | Area | Finding | Response | Spec | Evidence |

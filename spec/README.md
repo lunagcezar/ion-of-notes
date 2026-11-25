@@ -175,6 +175,11 @@ Status vocabulary:
 | [135](spec-135-desktop-crdt-operations.md) | Desktop CRDT operations | implemented | Session seeds/projects and plans object-map updates |
 | [136](spec-136-inline-comment-threads.md) | Inline comment threads | implemented | Anchored threads rendered in the page panel |
 | [137](spec-137-postgres-and-redis.md) | PostgreSQL and Redis adapters | implemented | Optional persistence/auth + shared rate limits |
+| [138](spec-138-resource-moves-and-uploads.md) | Resource moves and upload ownership | implemented | Destination write checks + durable upload bodies |
+| [139](spec-139-collaboration-durability.md) | Collaboration durability and resync | implemented | Non-destructive load, durable outbox, reset signal |
+| [140](spec-140-awareness-ssrf-and-ws-budget.md) | Awareness, SSRF and WS budget | implemented | Session identity, special ranges, message budget |
+| [141](spec-141-typing-and-overlay-latency.md) | Typing and overlay latency | implemented | Incremental CRDT updates, no background render |
+| [142](spec-142-actor-identity-and-session-errors.md) | Actor identity and session errors | implemented | Member attribution and 503 on store failure |
 
 ## 3. Work status
 

@@ -9,13 +9,14 @@ use crate::model::{Block, Page, Workspace};
 use std::collections::{BTreeMap, HashSet};
 use yrs::updates::decoder::Decode;
 use yrs::updates::encoder::Encode;
-use yrs::{Doc, GetString, ReadTxn, StateVector, Text, TextRef, Transact, Update};
+use yrs::{Doc, GetString, ReadTxn, Text, TextRef, Transact, Update};
 
 #[derive(Default)]
 pub struct CrdtSession {
     doc: Doc,
     page_id: Option<String>,
     last_text: BTreeMap<String, String>,
+    last_chars: BTreeMap<String, usize>,
     structure_ids: HashSet<String>,
 }
 
@@ -31,18 +32,23 @@ impl CrdtSession {
         self.doc = Doc::new();
         self.page_id = Some(page_id.to_string());
         self.last_text.clear();
+        self.last_chars.clear();
         self.structure_ids.clear();
     }
 
     /// Refresh the local diff baseline from the merged document.
     pub fn baseline_page(&mut self, page: &Page) {
         self.last_text.clear();
+        self.last_chars.clear();
         self.track_structure(page);
         let mut texts = BTreeMap::new();
         crate::crdt_text::collect_block_texts(&self.doc, &page.blocks, &mut texts);
         let txn = self.doc.transact();
         for (block_id, text) in texts {
-            self.last_text.insert(block_id, text.get_string(&txn));
+            let value = text.get_string(&txn);
+            self.last_chars
+                .insert(block_id.clone(), value.chars().count());
+            self.last_text.insert(block_id, value);
         }
     }
 
@@ -56,6 +62,7 @@ impl CrdtSession {
         self.doc = Doc::new();
         self.page_id = Some(page.id.clone());
         self.last_text.clear();
+        self.last_chars.clear();
         let title = self.doc.get_or_insert_text("title");
         let texts = crate::crdt_text::collect_text_snapshots(&self.doc, &page.blocks);
         {
@@ -65,6 +72,8 @@ impl CrdtSession {
                 if !value.is_empty() {
                     text.insert(&mut txn, 0, &value);
                 }
+                self.last_chars
+                    .insert(block_id.clone(), value.chars().count());
                 self.last_text.insert(block_id, value);
             }
         }
@@ -99,6 +108,13 @@ impl CrdtSession {
         self.doc.transact().state_vector().encode_v1()
     }
 
+    /// Encode the whole document, used to seed a peer before incremental
+    /// updates (spec-141).
+    pub fn full_update(&self) -> Vec<u8> {
+        let txn = self.doc.transact();
+        txn.encode_diff_v1(&yrs::StateVector::default())
+    }
+
     /// Apply a remote update and refresh the local diff baseline.
     pub fn apply_update(&mut self, update: &[u8]) -> Result<(), String> {
         let decoded = Update::decode_v1(update).map_err(|error| error.to_string())?;
@@ -121,23 +137,39 @@ impl CrdtSession {
         if old_text == new_text {
             return Ok(None);
         }
-        let old: Vec<char> = old_text.chars().collect();
-        let new: Vec<char> = new_text.chars().collect();
-        let prefix = old
-            .iter()
-            .zip(new.iter())
-            .take_while(|(left, right)| left == right)
-            .count();
-        let suffix = old
-            .iter()
-            .rev()
-            .zip(new.iter().rev())
-            .take_while(|(left, right)| left == right)
-            .count()
-            .min(old.len().min(new.len()).saturating_sub(prefix));
-        let delete_len = old.len() - prefix - suffix;
-        let insert_len = new.len() - prefix - suffix;
-        let inserted: String = new[prefix..prefix + insert_len].iter().collect();
+        let old_chars = self
+            .last_chars
+            .get(block_id)
+            .copied()
+            .unwrap_or_else(|| old_text.chars().count());
+        let new_chars = new_text.chars().count();
+
+        // Typing at the end and backspace are by far the common cases; they
+        // are answered without scanning both strings character by character.
+        let (prefix, delete_len, inserted): (usize, usize, &str) =
+            if new_text.starts_with(old_text.as_str()) {
+                (old_chars, 0, &new_text[old_text.len()..])
+            } else if old_text.starts_with(new_text) {
+                (new_chars, old_chars.saturating_sub(new_chars), "")
+            } else {
+                let prefix = old_text
+                    .chars()
+                    .zip(new_text.chars())
+                    .take_while(|(left, right)| left == right)
+                    .count();
+                let suffix = old_text
+                    .chars()
+                    .rev()
+                    .zip(new_text.chars().rev())
+                    .take_while(|(left, right)| left == right)
+                    .count()
+                    .min(old_chars.min(new_chars).saturating_sub(prefix));
+                let delete_len = old_chars - prefix - suffix;
+                let insert_chars = new_chars - prefix - suffix;
+                let start = char_byte_index(new_text, prefix);
+                let end = char_byte_index(new_text, prefix + insert_chars);
+                (prefix, delete_len, &new_text[start..end])
+            };
 
         let text = self.doc.get_or_insert_text(format!("block:{block_id}"));
         let mut txn = self.doc.transact_mut();
@@ -145,11 +177,15 @@ impl CrdtSession {
             text.remove_range(&mut txn, prefix as u32, delete_len as u32);
         }
         if !inserted.is_empty() {
-            text.insert(&mut txn, prefix as u32, &inserted);
+            text.insert(&mut txn, prefix as u32, inserted);
         }
         self.last_text
             .insert(block_id.to_string(), new_text.to_string());
-        Ok(Some(txn.encode_diff_v1(&StateVector::default())))
+        self.last_chars.insert(block_id.to_string(), new_chars);
+        // `encode_update_v1` encodes only this transaction; the previous
+        // `encode_diff_v1(&StateVector::default())` re-sent the whole document
+        // on every keystroke (spec-141).
+        Ok(Some(txn.encode_update_v1()))
     }
 
     /// Write the merged title/structure/properties/block text back into a page.
@@ -197,9 +233,19 @@ impl CrdtSession {
             .collect();
         let txn = self.doc.transact();
         for (key, text) in refs {
-            self.last_text.insert(key, text.get_string(&txn));
+            let value = text.get_string(&txn);
+            self.last_chars.insert(key.clone(), value.chars().count());
+            self.last_text.insert(key, value);
         }
     }
+}
+
+/// Byte offset of character `index` (or the string length).
+fn char_byte_index(text: &str, index: usize) -> usize {
+    text.char_indices()
+        .nth(index)
+        .map(|(offset, _)| offset)
+        .unwrap_or(text.len())
 }
 
 fn collect_block_ids(blocks: &[Block], out: &mut HashSet<String>) {

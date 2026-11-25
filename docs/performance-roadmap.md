@@ -9,12 +9,16 @@ the architecture.
 
 - The desktop local mode is in-process and synchronous; it does not cross a
   network boundary.
-- The remote desktop client calls the REST API synchronously from the UI
-  thread. A slow server can block the window.
+- The remote desktop client sends CRUD and CRDT work through a bounded worker;
+  when the queue is full, CRDT updates wait in a pending queue instead of
+  blocking the UI (spec-132, spec-141).
 - Workspace and collaboration snapshots are serialized as JSON. SQLite commits
   both in one transaction (spec-074), but the snapshot is still whole-document.
-- Yrs CRDT covers page titles and block text. Block structure, properties,
-  databases, comments and shares are REST-owned.
+- Yrs CRDT covers page titles, block text and structure/properties/database row
+  registers (spec-134, spec-135).
+- Typing sends only the transaction update and local mode persists through the
+  debounced REST write; the sidebar/page are not rebuilt behind the icon picker
+  (spec-141).
 - The Axum adapter runs the synchronous server in `spawn_blocking` behind one
   mutex, so one request at a time reaches the workspace.
 - The in-memory request log is capped; sessions are not retained in the
@@ -48,6 +52,18 @@ remain staged.
 | Query-level database pagination | Fixed in spec-118: index selection plus `PageWindow` materializes only the requested slice. | Add keyset cursors on property values if cursor stability becomes a requirement. |
 | Renderer height tree | Fixed in spec-119: a Fenwick tree renders only the visible window. | Add a variable-width cache if resizing becomes a measured bottleneck. |
 | Three HTTP layers | Fixed in spec-120/spec-121: one auth seam, a bounded parser helper, and `serve_on` now uses the Axum router. | Remove `serve_once` if its parser tests move to the Axum contract suite. |
+| Typing pipeline | Fixed in spec-141: transaction-only CRDT updates, no per-key server persist, structural sync only on structural commands, grouped undo snapshots. | Measure p50/p95 of `CrdtSession::local_text` and `commit_edits` at 1 KB/20 KB/100 KB texts. |
+| Background render behind overlays | Fixed in spec-141 for the icon picker (backdrop only). | Apply the same overlay rule to large dialogs if profiling shows it. |
+| Workspace projection clone | Fixed in spec-141: the projection clones only authorized pages/resources. | Move to borrowed DTOs if allocation profiling shows it matters. |
+| Snapshot cache invalidation | Fixed in spec-141: cache keyed by `workspace.version`; writes no longer clear it. | Replace the under-lock clone with an immutable `Arc` snapshot on write. |
+| Request actor identity | Fixed in spec-142: member id from the session reaches writes, versions, comments and blocks. | Add the actor to webhook aggregates where they are not already covered. |
+| Single-writer workspace mutex | Still the main limit: every v2 request and WebSocket operation takes one lock. | Introduce an immutable read snapshot plus short serialized write transactions; do not just swap to `RwLock`. |
+| Block lookup index | `block()` / `page_id_for_block()` still scan pages and trees. | Add a block→page index with explicit invalidation and an orphan check. |
+| Session cache | Every bearer request resolves the session in the auth store. | Add a bounded in-memory cache with expiry and logout invalidation. |
+| Patch-based undo | A typing burst still snapshots the whole workspace at 0.8 s intervals. | Record per-block before/after patches and group typing into one command. |
+| Sidebar virtualization | The tree still draws every expanded node. | Flatten visible nodes into a list and use `show_rows`. |
+| WebSocket query token | `?token=` remains as a browser fallback. | Add a short-lived single-use connection ticket and redact the query in logs. |
+| Release checksums | Tagged archives are not signed and have no `SHA256SUMS`. | Publish a checksum file and consider Sigstore in the release workflow. |
 
 ## 3. Measurement plan
 

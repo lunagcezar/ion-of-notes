@@ -3,8 +3,8 @@
 
 use ion_of_notes::client::Client;
 use ion_of_notes::collab::{
-    Access, ChangeOp, CollabState, MAX_VERSIONS_PER_PAGE, MemberDraft, Role, Share, export_tree,
-    general_access, page_markdown, people_csv, people_markdown, realtime_contract,
+    Access, ChangeOp, CollabState, MAX_CHANGES, MAX_VERSIONS_PER_PAGE, MemberDraft, Role, Share,
+    export_tree, general_access, page_markdown, people_csv, people_markdown, realtime_contract,
 };
 use ion_of_notes::model::{Block, BlockKind, Page, PageDraft, TableRow, Workspace};
 use ion_of_notes::server::WorkspaceServer;
@@ -80,6 +80,22 @@ fn sync_log_returns_only_changes_after_the_cursor() {
     assert_eq!(batch.changes[0].op, ChangeOp::Create);
     assert_eq!(state.changes_since(1).changes.len(), 1);
     assert!(state.changes_since(batch.cursor).changes.is_empty());
+}
+
+#[test]
+fn a_cursor_older_than_the_retained_log_requires_a_full_resync() {
+    let mut state = CollabState::new();
+    for _ in 0..=MAX_CHANGES {
+        state.record(ChangeOp::Update, "p-home", "m-owner");
+    }
+    let stale = state.changes_since(0);
+    assert!(stale.reset_required, "cursor 0 is outside the retained log");
+    assert_eq!(stale.oldest_seq, Some(2));
+    assert!(!stale.changes.is_empty());
+
+    let current = state.changes_since(stale.cursor);
+    assert!(!current.reset_required);
+    assert!(current.changes.is_empty());
 }
 
 #[test]

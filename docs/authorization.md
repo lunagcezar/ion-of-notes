@@ -63,9 +63,17 @@ After version, token, rate-limit and capability checks:
 `POST /api/v2/crdt/sync` requires read access to the body `page_id` and
 `POST /api/v2/crdt/update` requires write access before the document is read or
 merged. The same checks run for WebSocket `crdt_sync` and `crdt_update`
-messages. The connection backlog and live change/CRDT/awareness messages are
-dropped when they belong to a page the connection cannot read. Workspace-level
-change markers (`*`, `__workspace__`, resource markers) are owner-only.
+messages. The connection backlog and live change/CRDT messages are dropped when
+they belong to a page the connection cannot read. Workspace-level change markers
+(`*`, `__workspace__`, resource markers) are owner-only.
+
+Awareness identity is not trusted from the client: the server overwrites
+`session_id`, `member_id` and `name` from the authenticated session and rejects
+an update whose page is unreadable, whose block is not on that page, or whose
+cursor/selection is outside the block text. Broadcast awareness is filtered per
+entry, so one unreadable cursor neither drops the batch nor leaks a page the
+member cannot read. A deleted page keeps its delete event visible through the
+persisted share rules, even though the page itself is gone.
 
 ### Webhooks
 

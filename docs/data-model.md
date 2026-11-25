@@ -186,7 +186,7 @@ types. They are the DTOs of the decided API.
 | `Change` | `seq, page_id, op, actor` | One versioned sync-log entry |
 | `PageVersion` | `version, page_id, title, actor, updated_at, snapshot` | Stored page snapshot for version history |
 | `ChangeOp` | `Create \| Update \| Delete \| Replace` | Mutation kind |
-| `SyncBatch` | `cursor, changes: Vec<Change>` | `GET /api/sync?since=` response |
+| `SyncBatch` | `cursor, changes, oldest_seq, reset_required` | `GET /api/sync?since=` response |
 | `RealtimeEvent` | `kind, page_id, actor, payload` | WebSocket frame payload |
 | `RealtimeKind` | `Presence \| Edit \| Awareness \| Sync` | Frame category |
 | `RealtimeContract` | `transport, channel, events, conflict_resolution` | `GET /api/realtime` discovery |
@@ -317,7 +317,7 @@ erDiagram
 | `Comment` | `id`, `parent`, `discussion_id`, `rich_text`, `attachments`, `display_name` | 035 |
 | `User` | `id`, `type` (person/bot), `name`, `avatar_url`, profile/bot fields | 035 |
 | `FileObject` | `type` (file/file_upload/external), URL or upload id | 035 |
-| `FileUpload` | `id`, `status`, `filename`, `content_type`, `content_length`, URLs | 035 |
+| `FileUpload` | `id`, `status`, `filename`, `content_type`, `content_length`, URLs, `created_by`, `page_id`; the body lives in the uploads directory | 035, 138 |
 | `WebhookSubscription` | `id`, `url`, `events`, `verification_token`, `status`, `created_at` | 036 |
 | `WebhookEvent` | `id`, `timestamp`, `workspace_id`, `subscription_id`, `integration_id`, `type`, `authors`, `accessible_by`, `entity`, `data`, `attempt_number` | 036 |
 | `WebhookDelivery` | `id`, `subscription_id`, `event_id`, `payload`, `attempts`, `last_status`, `last_error`, `delivered`, `next_attempt_at` | 036 |

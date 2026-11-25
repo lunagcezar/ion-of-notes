@@ -1,7 +1,8 @@
 //! Users and file-upload use cases (the spec-035 resource family).
 
 use super::super::contract::{
-    CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
+    CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_RESTRICTED_RESOURCE,
+    CODE_VALIDATION_ERROR,
 };
 use super::super::error::{HandlerResult, fail, ok};
 use super::super::events::DomainEvent;
@@ -98,6 +99,26 @@ impl WorkspaceServer {
             };
             let now = now_iso();
             let id = format!("upload-{}", uuid::Uuid::new_v4());
+            if let Some(page_id) = input.page_id.as_deref() {
+                if self.workspace.page(page_id).is_none() {
+                    return fail(v2_error(
+                        404,
+                        CODE_NOT_FOUND,
+                        "page not found",
+                        request_id,
+                        None,
+                    ));
+                }
+                if !self.can_write_page(connection, page_id) {
+                    return fail(v2_error(
+                        403,
+                        CODE_RESTRICTED_RESOURCE,
+                        "write access to this page is not allowed",
+                        request_id,
+                        None,
+                    ));
+                }
+            }
             let upload = FileUpload {
                 object: "file_upload".to_string(),
                 id: id.clone(),
@@ -110,6 +131,8 @@ impl WorkspaceServer {
                 content_length: input.content_length,
                 upload_url: Some(format!("local://file_uploads/{id}/send")),
                 complete_url: None,
+                created_by: Some(connection.member_id.clone()),
+                page_id: input.page_id,
             };
             self.workspace.file_uploads.push(upload.clone());
             if let Err(error) = self.write(ChangeOp::Create, "__file_upload__") {
@@ -145,6 +168,62 @@ impl WorkspaceServer {
                         None,
                     ));
                 };
+                let Some(existing) = self
+                    .workspace
+                    .file_uploads
+                    .iter()
+                    .find(|upload| upload.id == id)
+                    .cloned()
+                else {
+                    return fail(v2_error(
+                        404,
+                        CODE_NOT_FOUND,
+                        "file upload not found",
+                        request_id,
+                        None,
+                    ));
+                };
+                if !upload_writable(self, connection, &existing) {
+                    return fail(v2_error(
+                        403,
+                        CODE_RESTRICTED_RESOURCE,
+                        "this file upload belongs to another member",
+                        request_id,
+                        None,
+                    ));
+                }
+                if existing.status != UploadStatus::Pending {
+                    return fail(v2_error(
+                        400,
+                        CODE_VALIDATION_ERROR,
+                        "file upload is not pending",
+                        request_id,
+                        None,
+                    ));
+                }
+                if let Some(declared) = existing.content_length
+                    && declared != content.len() as u64
+                {
+                    return fail(v2_error(
+                        400,
+                        CODE_VALIDATION_ERROR,
+                        "file content length does not match the declared length",
+                        request_id,
+                        None,
+                    ));
+                }
+                let length = match self.store_upload_content(&existing.id, content.as_bytes()) {
+                    Ok(length) => length,
+                    Err(error) => {
+                        return fail(v2_error(
+                            500,
+                            CODE_INTERNAL,
+                            error.to_string(),
+                            request_id,
+                            None,
+                        ));
+                    }
+                };
                 let dto = {
                     let Some(upload) = self
                         .workspace
@@ -161,7 +240,7 @@ impl WorkspaceServer {
                         ));
                     };
                     upload.status = UploadStatus::Uploaded;
-                    upload.content_length = Some(content.len() as u64);
+                    upload.content_length = Some(length);
                     upload.upload_url = None;
                     upload.expiry_time = None;
                     upload.last_edited_time = now_iso();
@@ -191,6 +270,57 @@ impl WorkspaceServer {
                         None,
                     ));
                 }
+                let Some(existing) = self
+                    .workspace
+                    .file_uploads
+                    .iter()
+                    .find(|upload| upload.id == id)
+                    .cloned()
+                else {
+                    return fail(v2_error(
+                        404,
+                        CODE_NOT_FOUND,
+                        "file upload not found",
+                        request_id,
+                        None,
+                    ));
+                };
+                if !upload_writable(self, connection, &existing) {
+                    return fail(v2_error(
+                        403,
+                        CODE_RESTRICTED_RESOURCE,
+                        "this file upload belongs to another member",
+                        request_id,
+                        None,
+                    ));
+                }
+                if existing.status != UploadStatus::Uploaded {
+                    return fail(v2_error(
+                        400,
+                        CODE_VALIDATION_ERROR,
+                        "file content has not been uploaded",
+                        request_id,
+                        None,
+                    ));
+                }
+                let Some(stored) = self.upload_content_len(&existing.id) else {
+                    return fail(v2_error(
+                        400,
+                        CODE_VALIDATION_ERROR,
+                        "file content has not been uploaded",
+                        request_id,
+                        None,
+                    ));
+                };
+                if existing.content_length != Some(stored) {
+                    return fail(v2_error(
+                        400,
+                        CODE_VALIDATION_ERROR,
+                        "stored file content does not match the upload record",
+                        request_id,
+                        None,
+                    ));
+                }
                 let dto = {
                     let Some(upload) = self
                         .workspace
@@ -206,15 +336,6 @@ impl WorkspaceServer {
                             None,
                         ));
                     };
-                    if upload.status != UploadStatus::Pending {
-                        return fail(v2_error(
-                            400,
-                            CODE_VALIDATION_ERROR,
-                            "file upload is not pending",
-                            request_id,
-                            None,
-                        ));
-                    }
                     upload.status = UploadStatus::Uploaded;
                     upload.upload_url = None;
                     upload.complete_url = None;
@@ -293,4 +414,19 @@ fn user_dto(member: &Member, level: u8) -> UserDto {
         }),
         bot: None,
     }
+}
+
+/// Whether this connection may mutate an upload record (spec-138).
+///
+/// The creator keeps control of its upload; the owner may always manage it.
+/// Uploads created before ownership existed (no `created_by`) keep the legacy
+/// behavior so stored workspaces stay usable.
+fn upload_writable(server: &WorkspaceServer, connection: &Connection, upload: &FileUpload) -> bool {
+    let creator = upload.created_by.as_deref();
+    let is_creator = creator.is_none_or(|id| id == connection.member_id);
+    let page_allowed = upload
+        .page_id
+        .as_deref()
+        .is_none_or(|page_id| server.can_write_page(connection, page_id));
+    (server.is_owner(connection) || is_creator) && page_allowed
 }

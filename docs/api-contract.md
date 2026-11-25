@@ -150,10 +150,10 @@ All DTOs are serde structs/enums in the matching `src/model/*` module and in `sr
 | `Share` | `page_id`, `subject`, `access` |
 | `Change` | `seq`, `page_id`, `op`, `actor` |
 | `PageVersion` | `version`, `page_id`, `title`, `actor`, `updated_at`, `snapshot` |
-| `SyncBatch` | `cursor`, `changes` |
+| `SyncBatch` | `cursor`, `changes`, `oldest_seq`, `reset_required` |
 | `RealtimeEvent` | `kind`, `page_id`, `actor`, `payload` |
 | `RealtimeContract` | `transport`, `channel`, `events`, `conflict_resolution`, `resume`, `messages` |
-| `ServerMessage` | `ready`, `change`, `presence`, `crdt_sync`, `crdt_update`, `awareness`, `pong`, `error` (tagged by `type`) |
+| `ServerMessage` | `ready`, `resync`, `change`, `presence`, `crdt_sync`, `crdt_update`, `awareness`, `pong`, `error` (tagged by `type`) |
 | `ClientMessage` | `ping`, `crdt_sync`, `crdt_update`, `awareness` |
 | `Awareness` | `session_id`, `member_id`, `name`, `color`, `page_id`, `block_id`, `index`, `selection_end` |
 | `PresenceMember` | `session_id`, `member_id`, `name`, `state` |
@@ -270,6 +270,8 @@ This is the target shape; it is **not** served by the current build.
 - Own email/password accounts; short-lived session token.
 - `Authorization: Bearer <token>`.
 - `401` for missing/invalid token; `403` for a valid token without permission.
+  A session-store failure is `503 service_unavailable`, so a transient database
+  problem is not reported as a bad token.
 - Auth is a transport-adapter concern, never a domain rule.
 - `Access::Full`/`Edit` can write; `View`/`None` cannot.
 
@@ -278,9 +280,13 @@ This is the target shape; it is **not** served by the current build.
 - Cold start: full workspace snapshot.
 - Incremental: every mutation appends `Change { seq, page_id, op, actor }`.
 - Client polls `GET /api/v1/sync?since=<cursor>`; an up-to-date client gets an
-  empty batch.
+  empty batch. A cursor older than the retained window gets
+  `reset_required: true` with `oldest_seq`, meaning "download a full snapshot".
 - Real-time: WebSocket `wss`, channel `/ws/workspace/{id}?token=`, frames of
-  `RealtimeEvent`.
+  `RealtimeEvent`. `ready` repeats `reset_required`; a lagged receiver gets
+  `resync` and the socket closes so the client reconnects with cursor 0.
+- One socket may send 120 messages per 10 seconds; beyond that it receives
+  `rate_limited` and closes.
 - Conflict resolution: CRDT per block (Yrs/automerge-style); presence and
   awareness are ephemeral.
 
@@ -381,7 +387,8 @@ v1 routes stay stable.
 - The socket must match the server workspace; missing/invalid tokens fail with
   `401`, a wrong workspace with `404`.
 - Server messages are JSON text frames tagged by `type`:
-  `ready {workspace_id,session_id,seq}`, `change {change}`,
+  `ready {workspace_id,session_id,seq,reset_required}`, `resync {reason}`,
+  `change {change}`,
   `presence {members}`, `pong`, `error {code,message}`.
 - `?since=<seq>` replays every change with a greater sequence before live
   events. Reconnect with the last seen `seq`.
@@ -480,6 +487,13 @@ and requires read or write access to it. `GET /api/v2/workspace`,
 `/api/v2/pages`, `/api/v2/search` and `/api/v2/sync` return principal-aware
 projections. Workspace-level databases are owner-only. See
 `docs/authorization.md`.
+
+Moving a view to a data source or a database to a page requires write access to
+the **destination** page. File uploads carry `created_by` and an optional
+`page_id`: creating one for a page requires write access, and `send`/`complete`
+require the creator (or the owner) plus page write access. `send` validates the
+declared length and persists the body under the server uploads directory;
+`complete` requires that stored body. See `spec-138`.
 
 ### 8.2 v2 list envelope (implemented)
 

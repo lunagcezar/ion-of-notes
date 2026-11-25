@@ -44,6 +44,7 @@ pub(super) fn spawn_ws(
                                         match &message {
                                             ServerMessage::Ready { seq, .. } => since = since.max(*seq),
                                             ServerMessage::Change { change } => since = since.max(change.seq),
+                                            ServerMessage::Resync { .. } => since = 0,
                                             _ => {}
                                         }
                                         let _ = realtime_tx.send(message);

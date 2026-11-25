@@ -12,6 +12,7 @@ use super::{ApiRequest, Connection, WorkspaceServer};
 pub enum AuthError {
     MissingToken,
     InvalidToken,
+    Unavailable,
 }
 
 impl AuthError {
@@ -20,6 +21,15 @@ impl AuthError {
         match self {
             AuthError::MissingToken => "missing or malformed bearer token",
             AuthError::InvalidToken => "invalid bearer token",
+            AuthError::Unavailable => "the session store is temporarily unavailable",
+        }
+    }
+
+    /// HTTP status for this failure.
+    pub fn status(self) -> u16 {
+        match self {
+            AuthError::Unavailable => 503,
+            AuthError::MissingToken | AuthError::InvalidToken => 401,
         }
     }
 }
@@ -31,7 +41,8 @@ impl WorkspaceServer {
             .header(AUTH_HEADER)
             .and_then(parse_bearer)
             .ok_or(AuthError::MissingToken)?;
-        self.connection_for_token(token)
+        self.resolve_connection(token)
+            .map_err(|_| AuthError::Unavailable)?
             .ok_or(AuthError::InvalidToken)
     }
 

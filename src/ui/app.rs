@@ -220,6 +220,9 @@ pub struct NotionApp {
     pub(super) fullscreen: bool,
     pub(super) undo_stack: Vec<Workspace>,
     pub(super) redo_stack: Vec<Workspace>,
+    /// Time of the last undo snapshot; continuous typing is grouped into one
+    /// entry instead of cloning the workspace on every key (spec-141).
+    pub(super) undo_snapshot_at: f64,
     pub(super) highlight_pane: bool,
     pub(super) filters: bool,
     pub(super) icon_picker_open: bool,
@@ -252,6 +255,9 @@ pub struct NotionApp {
     pub(super) collaboration: CollaborationState,
     // Background remote requests (spec-108).
     pub(super) remote: RemoteState,
+    /// CRDT updates that could not enter the remote worker queue yet
+    /// (spec-141). They are retried from the UI loop, never by blocking it.
+    pub(super) pending_crdt: Vec<(String, String, String, Vec<u8>)>,
     // Server login/settings.
     pub(super) server: ServerState,
 }
@@ -487,6 +493,7 @@ impl NotionApp {
                 last_awareness: None,
             },
             remote,
+            pending_crdt: Vec::new(),
             server: ServerState {
                 url: "http://127.0.0.1:8787".to_string(),
                 email: "owner@workspace.local".to_string(),
@@ -635,6 +642,7 @@ impl NotionApp {
             fullscreen: false,
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
+            undo_snapshot_at: f64::NEG_INFINITY,
             highlight_pane: true,
             filters: demo != "filter-hidden",
             icon_picker_open: matches!(
@@ -750,7 +758,15 @@ impl eframe::App for NotionApp {
             text_input_active,
             overlay_open,
         );
-        let frame_before = may_mutate.then(|| self.workspace.clone());
+        // Group a burst of typing into one undo entry and avoid cloning the
+        // workspace on every keystroke (spec-141).
+        let now = ctx.input(|i| i.time);
+        let frame_before = if may_mutate && now - self.undo_snapshot_at > 0.8 {
+            self.undo_snapshot_at = now;
+            Some(self.workspace.clone())
+        } else {
+            None
+        };
 
         // Search results are fetched through the client before rendering, but
         // only when the query or the workspace version changed (spec-015).
@@ -820,22 +836,35 @@ impl eframe::App for NotionApp {
                 );
             });
 
-        if view.sidebar_open || sidebar_width > 0.5 {
-            egui::Panel::left("sidebar")
-                .exact_size(sidebar_width)
-                .resizable(false)
-                .show_separator_line(false)
-                .frame(
-                    egui::Frame::NONE
-                        .fill(palette.sidebar)
-                        .inner_margin(egui::Margin::symmetric(10, 6)),
-                )
+        if view.icon_picker_open {
+            // The icon picker is a floating window; do not rebuild the sidebar
+            // tree and the page behind it while the user scrolls the picker
+            // (spec-141).
+            egui::CentralPanel::default()
+                .frame(egui::Frame::NONE.fill(palette.content))
                 .show(ui, |ui| {
-                    render_sidebar(ui, &self.workspace, &view, &palette, &mut commands);
+                    ui.painter().rect_filled(
+                        ui.max_rect(),
+                        0.0,
+                        palette.sidebar.gamma_multiply(0.4),
+                    );
                 });
-        }
+        } else {
+            if view.sidebar_open || sidebar_width > 0.5 {
+                egui::Panel::left("sidebar")
+                    .exact_size(sidebar_width)
+                    .resizable(false)
+                    .show_separator_line(false)
+                    .frame(
+                        egui::Frame::NONE
+                            .fill(palette.sidebar)
+                            .inner_margin(egui::Margin::symmetric(10, 6)),
+                    )
+                    .show(ui, |ui| {
+                        render_sidebar(ui, &self.workspace, &view, &palette, &mut commands);
+                    });
+            }
 
-        {
             let workspace_mut = &mut self.workspace;
             egui::CentralPanel::default()
                 .frame(egui::Frame::NONE.fill(palette.content))

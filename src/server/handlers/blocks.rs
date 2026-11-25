@@ -126,7 +126,7 @@ impl WorkspaceServer {
                 };
                 ensure_access(self, connection, &page_id, ResourceAccess::Write)?;
                 let parent_block = (!is_page_parent).then(|| id.to_string());
-                let actor = self.collab.owner_id();
+                let actor = self.current_actor();
                 let mut created = Vec::new();
                 {
                     let Some(children) = self.workspace.block_children_mut(id) else {
@@ -180,7 +180,7 @@ impl WorkspaceServer {
                     ));
                 };
                 ensure_access(self, connection, &page_id, ResourceAccess::Write)?;
-                let actor = self.collab.owner_id();
+                let actor = self.current_actor();
                 let dto = {
                     let Some(block) = self.workspace.block_mut(id) else {
                         return fail(v2_error(
@@ -241,7 +241,7 @@ impl WorkspaceServer {
                     ));
                 };
                 ensure_access(self, connection, &page_id, ResourceAccess::Write)?;
-                let actor = self.collab.owner_id();
+                let actor = self.current_actor();
                 let dto = {
                     let Some(block) = self.workspace.block_mut(id) else {
                         return fail(v2_error(

@@ -2,7 +2,8 @@
 
 use super::super::authorization::ResourceAccess;
 use super::super::contract::{
-    CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
+    CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_RESTRICTED_RESOURCE,
+    CODE_VALIDATION_ERROR,
 };
 use super::super::error::{HandlerError, HandlerResult, fail, ok};
 use super::super::pagination::{PageRequest, page_window};
@@ -239,6 +240,28 @@ impl WorkspaceServer {
                         return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
+                if let Some(page_id) = input.parent_page_id.as_deref() {
+                    if self.workspace.page(page_id).is_none() {
+                        return fail(v2_error(
+                            404,
+                            CODE_NOT_FOUND,
+                            "destination page not found",
+                            request_id,
+                            None,
+                        ));
+                    }
+                    // A parent change moves the database to another page, so
+                    // the destination needs its own write check (spec-138).
+                    if !self.can_write_page(connection, page_id) {
+                        return fail(v2_error(
+                            403,
+                            CODE_RESTRICTED_RESOURCE,
+                            "write access to the destination page is not allowed",
+                            request_id,
+                            None,
+                        ));
+                    }
+                }
                 let dto = {
                     let Some(database) = self.workspace.database_mut(id) else {
                         return fail(v2_error(

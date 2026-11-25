@@ -1,6 +1,6 @@
 use super::*;
 use crate::model::{Page, PageSummary, Workspace};
-use crate::server::response::{forbidden, json, not_found, unauthorized};
+use crate::server::response::{forbidden, json, not_found, service_unavailable, unauthorized};
 use crate::server::{Connection, Envelope};
 use axum::extract::ConnectInfo;
 use std::net::{IpAddr, SocketAddr};
@@ -53,7 +53,6 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
         return to_http(response);
     }
 
-    let is_read = api_request.method == Method::Get;
     let server = Arc::clone(&state.server);
     let response = match tokio::task::spawn_blocking(move || {
         let mut guard = server
@@ -72,9 +71,8 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
             );
         }
     };
-    if !is_read && let Ok(mut snapshot) = state.snapshot.write() {
-        *snapshot = None;
-    }
+    // The snapshot cache is keyed by `workspace.version`, which every write
+    // bumps, so there is no need to invalidate it by hand (spec-141).
     to_http(response)
 }
 
@@ -147,7 +145,10 @@ fn read_snapshot(
 fn authenticate(server: &WorkspaceServer, request: &ApiRequest) -> Result<Connection, ApiResponse> {
     server
         .authenticate_local_or_session(request)
-        .map_err(|error| unauthorized(error.message()))
+        .map_err(|error| match error.status() {
+            503 => service_unavailable(error.message()),
+            _ => unauthorized(error.message()),
+        })
 }
 
 fn snapshot_for(

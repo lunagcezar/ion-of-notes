@@ -106,11 +106,7 @@ pub fn build_server_at_paths(
     collab_path: PathBuf,
 ) -> io::Result<WorkspaceServer> {
     let workspace = store::load_or_seed(&workspace_path)?;
-    Ok(WorkspaceServer::with_paths(
-        workspace,
-        workspace_path,
-        collab_path,
-    ))
+    WorkspaceServer::with_paths(workspace, workspace_path, collab_path)
 }
 
 /// Compose and run the Axum API server for `--serve`.
@@ -144,7 +140,7 @@ pub fn build_server_postgres(url: &str) -> io::Result<WorkspaceServer> {
     let collab_path = store::collab_path();
     let collab = match postgres.load_collab()? {
         Some(collab) => collab,
-        None => store::load_collab_or_seed(&collab_path),
+        None => store::load_collab_or_seed(&collab_path)?,
     };
     let workspace = match postgres.load_workspace()? {
         Some(workspace) => workspace,
@@ -211,7 +207,7 @@ pub fn build_server_sqlite_at_with_password(
     let collab = match sqlite.load_collab()? {
         Some(collab) => collab,
         None => {
-            let collab = store::load_collab_or_seed(&collab_path);
+            let collab = store::load_collab_or_seed(&collab_path)?;
             sqlite.persist_collab(&collab)?;
             collab
         }
@@ -326,7 +322,7 @@ pub fn build_desktop_catalog_at_paths(
         active.clone(),
         workspace_path,
         collab_path,
-    ))));
+    )?)));
     let workspace = client.workspace().unwrap_or(active);
     Ok((client, workspace, catalog))
 }
@@ -359,7 +355,7 @@ pub fn build_desktop_at_paths(
         loaded.clone(),
         workspace_path,
         collab_path,
-    ))));
+    )?)));
     let workspace = client.workspace().unwrap_or(loaded);
     Ok((client, workspace))
 }

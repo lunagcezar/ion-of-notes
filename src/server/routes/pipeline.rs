@@ -71,9 +71,14 @@ pub(super) fn authenticate(
     request: &ApiRequest,
     request_id: &str,
 ) -> Result<Connection, ApiResponse> {
-    server
-        .authenticate_bearer(request)
-        .map_err(|error| v2_error(401, CODE_UNAUTHORIZED, error.message(), request_id, None))
+    server.authenticate_bearer(request).map_err(|error| {
+        let code = if error.status() == 503 {
+            super::super::contract::CODE_SERVICE_UNAVAILABLE
+        } else {
+            CODE_UNAUTHORIZED
+        };
+        v2_error(error.status(), code, error.message(), request_id, None)
+    })
 }
 
 pub(super) fn check_runtime(

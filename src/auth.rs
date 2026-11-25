@@ -291,9 +291,11 @@ pub fn session_is_expired(session: &Session) -> bool {
 }
 
 fn to_hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
     let mut output = String::with_capacity(bytes.len() * 2);
     for byte in bytes {
-        output.push_str(&format!("{byte:02x}"));
+        // `write!` avoids one temporary String per byte.
+        let _ = write!(output, "{byte:02x}");
     }
     output
 }

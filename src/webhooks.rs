@@ -449,25 +449,49 @@ pub(crate) fn is_private_host(host: &str) -> bool {
 }
 
 /// Whether an IP address must not be used as an outbound webhook target.
+///
+/// IPv4-mapped/compatible IPv6 addresses are normalized first so
+/// `[::ffff:127.0.0.1]` cannot bypass the IPv4 classification (spec-140).
 pub(crate) fn is_private_ip(address: IpAddr) -> bool {
     match address {
-        IpAddr::V4(address) => {
-            let octets = address.octets();
-            address.is_loopback()
-                || address.is_private()
-                || address.is_link_local()
-                || address.is_unspecified()
-                || address.is_multicast()
-                || octets[0] == 0
-                || octets[0] == 255
-        }
+        IpAddr::V4(address) => is_special_v4(address),
         IpAddr::V6(address) => {
+            if let Some(mapped) = address.to_ipv4() {
+                return is_special_v4(mapped);
+            }
             let segments = address.segments();
             address.is_loopback()
                 || address.is_unspecified()
                 || address.is_multicast()
                 || (segments[0] & 0xfe00) == 0xfc00
                 || (segments[0] & 0xffc0) == 0xfe80
+                || segments[0] == 0x2001 && segments[1] == 0x0db8
+                || segments[0] == 0x2002
+                || segments[0] == 0x2001 && segments[1] == 0x0000
         }
     }
+}
+
+/// IPv4 ranges that must not be reached by outbound webhooks.
+fn is_special_v4(address: std::net::Ipv4Addr) -> bool {
+    let octets = address.octets();
+    address.is_loopback()
+        || address.is_private()
+        || address.is_link_local()
+        || address.is_unspecified()
+        || address.is_multicast()
+        || address.is_broadcast()
+        || octets[0] == 0
+        || octets[0] == 255
+        // RFC 6598 carrier-grade NAT.
+        || octets[0] == 100 && (64..128).contains(&octets[1])
+        // IETF protocol assignments, TEST-NET-1/2/3 and benchmarking.
+        || (octets[0] == 192 && octets[1] == 0 && matches!(octets[2], 0 | 2))
+        || (octets[0] == 192 && octets[1] == 88 && octets[2] == 99)
+        || (octets[0] == 198 && octets[1] == 18)
+        || (octets[0] == 198 && octets[1] == 19)
+        || (octets[0] == 198 && octets[1] == 51 && octets[2] == 100)
+        || (octets[0] == 203 && octets[1] == 0 && octets[2] == 113)
+        // Reserved for future use.
+        || (octets[0] & 0xf0) == 0xf0
 }

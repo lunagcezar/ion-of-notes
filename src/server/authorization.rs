@@ -10,7 +10,7 @@
 
 use super::{Connection, WorkspaceServer};
 use crate::model::{
-    CommentDto, DataSource, Database, Page, PageSummary, ParentDto, View, Workspace,
+    CommentDto, DataSource, Database, FileUpload, Page, PageSummary, ParentDto, View, Workspace,
 };
 use std::collections::HashSet;
 
@@ -113,16 +113,14 @@ impl WorkspaceServer {
     /// the databases, data sources, views, comments or file uploads attached to
     /// such a page. Workspace-level resources stay owner-only.
     pub fn project_workspace(&self, connection: &Connection) -> Workspace {
-        let mut workspace = self.workspace.clone();
-        let readable: HashSet<String> = self
+        let pages: Vec<Page> = self
             .workspace
             .pages
             .iter()
             .filter(|page| self.can_read_page(connection, &page.id))
-            .map(|page| page.id.clone())
+            .cloned()
             .collect();
-
-        workspace.retain_pages(|page| readable.contains(&page.id));
+        let readable: HashSet<String> = pages.iter().map(|page| page.id.clone()).collect();
 
         let databases: Vec<Database> = self
             .workspace
@@ -131,7 +129,6 @@ impl WorkspaceServer {
             .filter(|database| self.resource_readable(connection, &readable, database))
             .cloned()
             .collect();
-        workspace.databases = databases;
 
         let data_sources: Vec<DataSource> = self
             .workspace
@@ -140,7 +137,6 @@ impl WorkspaceServer {
             .filter(|data_source| self.data_source_readable(connection, &readable, data_source))
             .cloned()
             .collect();
-        workspace.data_sources = data_sources;
 
         let views: Vec<View> = self
             .workspace
@@ -149,7 +145,6 @@ impl WorkspaceServer {
             .filter(|view| self.view_readable(connection, &readable, view))
             .cloned()
             .collect();
-        workspace.views = views;
 
         let comments: Vec<CommentDto> = self
             .workspace
@@ -166,11 +161,25 @@ impl WorkspaceServer {
             .flat_map(|comment| comment.attachments.iter())
             .filter_map(|attachment| upload_id(&attachment.file))
             .collect();
-        workspace.comments = comments;
-        workspace
+        let file_uploads: Vec<FileUpload> = self
+            .workspace
             .file_uploads
-            .retain(|upload| self.is_owner(connection) || referenced_uploads.contains(&upload.id));
-        workspace
+            .iter()
+            .filter(|upload| self.is_owner(connection) || referenced_uploads.contains(&upload.id))
+            .cloned()
+            .collect();
+
+        Workspace::from_stored_parts(
+            self.workspace.name.clone(),
+            pages,
+            self.workspace.version,
+            self.workspace.settings.clone(),
+            databases,
+            data_sources,
+            views,
+            comments,
+            file_uploads,
+        )
     }
 
     /// Filter search results to pages the connection may read.
@@ -196,11 +205,15 @@ impl WorkspaceServer {
     }
 
     /// Whether one change-feed entry is visible to the connection.
+    ///
+    /// Uses the persisted share rules rather than the current page tree, so a
+    /// delete event still reaches members who had access to the page
+    /// (spec-139). Workspace-level markers stay owner-only.
     pub fn change_visible(&self, connection: &Connection, page_id: &str) -> bool {
-        self.workspace
-            .page(page_id)
-            .is_some_and(|page| self.can_read_page(connection, &page.id))
-            || self.is_owner(connection)
+        if page_id == "*" || page_id.starts_with("__") {
+            return self.is_owner(connection);
+        }
+        self.is_owner(connection) || self.can_read_page(connection, page_id)
     }
 
     fn resource_readable(

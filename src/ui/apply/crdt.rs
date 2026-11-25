@@ -4,8 +4,27 @@ use crate::server::realtime::Awareness;
 
 use super::super::app::NotionApp;
 use super::super::commands::Command;
-use super::set_block_text;
 impl NotionApp {
+    /// Retry CRDT updates that could not enter the remote worker queue.
+    pub(super) fn flush_pending_crdt(&mut self) {
+        while let Some((page_id, block_id, text, update)) = self.pending_crdt.first().cloned() {
+            if !self.dispatch_crdt_update(page_id, block_id, text, update) {
+                break;
+            }
+            self.pending_crdt.remove(0);
+        }
+    }
+
+    /// Sync blocks created or removed by a structural command.
+    pub(super) fn sync_crdt_structure(&mut self) {
+        let page_id = self.current_page.clone();
+        if page_id == self.collaboration.page
+            && let Some(page) = self.workspace.page(&page_id).cloned()
+        {
+            self.collaboration.crdt.sync_new_blocks(&page);
+        }
+    }
+
     pub(super) fn apply_crdt(&mut self, command: Command) {
         match command {
             Command::CrdtTextChanged {
@@ -13,30 +32,26 @@ impl NotionApp {
                 block_id,
                 text,
             } => {
-                if page_id == self.collaboration.page
-                    && let Some(page) = self.workspace.page(&page_id).cloned()
-                {
-                    self.collaboration.crdt.sync_new_blocks(&page);
-                }
+                // Local mode keeps the text in the workspace and commits it
+                // through the debounced REST write; only a remote server needs
+                // the incremental CRDT update (spec-141).
                 if page_id == self.collaboration.page
                     && let Ok(Some(update)) = self.collaboration.crdt.local_text(&block_id, &text)
+                    && self.remote.is_remote()
                 {
-                    if self.remote.is_remote() {
-                        if !self.dispatch_crdt_update(
-                            page_id.clone(),
-                            block_id.clone(),
-                            text.clone(),
-                            update.clone(),
-                        ) {
-                            let _ = self.client.apply_crdt_update(&page_id, &update, "m-owner");
+                    self.flush_pending_crdt();
+                    if !self.dispatch_crdt_update(
+                        page_id.clone(),
+                        block_id.clone(),
+                        text.clone(),
+                        update.clone(),
+                    ) {
+                        // Never block the UI on an HTTP round trip when the
+                        // worker queue is full (spec-141).
+                        if self.pending_crdt.len() >= 512 {
+                            self.pending_crdt.remove(0);
                         }
-                    } else if self
-                        .client
-                        .apply_crdt_update(&page_id, &update, "m-owner")
-                        .is_ok()
-                        && let Some(page) = self.last_committed.page_mut(&page_id)
-                    {
-                        set_block_text(&mut page.blocks, &block_id, &text);
+                        self.pending_crdt.push((page_id, block_id, text, update));
                     }
                 }
             }

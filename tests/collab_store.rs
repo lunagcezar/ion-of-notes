@@ -49,7 +49,7 @@ fn json_collab_store_roundtrip() {
 fn missing_collab_file_is_seeded_and_saved() {
     let path = temp_path("collab-seed", "json");
     remove(&path);
-    let state = load_collab_or_seed(&path);
+    let state = load_collab_or_seed(&path).unwrap();
     assert!(!state.members.is_empty());
     assert!(path.exists());
     assert_eq!(load_collab(&path).unwrap(), state);
@@ -57,11 +57,16 @@ fn missing_collab_file_is_seeded_and_saved() {
 }
 
 #[test]
-fn corrupt_collab_file_falls_back_to_seed() {
+fn corrupt_collab_file_is_preserved_and_reported() {
     let path = temp_path("collab-corrupt", "json");
     std::fs::write(&path, "not json at all").unwrap();
-    let state = load_collab_or_seed(&path);
-    assert!(!state.members.is_empty());
+    let error = load_collab_or_seed(&path).expect_err("corruption must be an error");
+    assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    assert_eq!(
+        std::fs::read_to_string(&path).unwrap(),
+        "not json at all",
+        "the corrupt document must not be replaced"
+    );
     remove(&path);
 }
 
@@ -78,7 +83,8 @@ fn server_restart_restores_members_shares_changes_and_versions() {
             workspace.clone(),
             workspace_path.clone(),
             collab_path.clone(),
-        );
+        )
+        .expect("server");
 
         let invited = server.handle(&ApiRequest::new(
             Method::Post,
@@ -108,7 +114,8 @@ fn server_restart_restores_members_shares_changes_and_versions() {
     }
 
     let restarted =
-        WorkspaceServer::with_paths(workspace, workspace_path.clone(), collab_path.clone());
+        WorkspaceServer::with_paths(workspace, workspace_path.clone(), collab_path.clone())
+            .expect("restarted");
     assert_eq!(restarted.collab().members.len(), 4);
     assert!(
         restarted

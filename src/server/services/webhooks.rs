@@ -13,6 +13,10 @@ use crate::webhooks::{
     is_allowed_url, sign,
 };
 
+/// Hard bound for events waiting to become deliveries. The delivery outbox has
+/// its own, larger bound and never discards pending deliveries (spec-139).
+const MAX_WEBHOOK_QUEUE: usize = 2_000;
+
 /// One delivery ready to be sent outside the server lock.
 #[derive(Debug, Clone)]
 pub(crate) struct WebhookSendJob {
@@ -156,7 +160,7 @@ impl WorkspaceServer {
         data: impl Into<String>,
     ) {
         let data = data.into();
-        let actor = self.collab.owner_id();
+        let actor = self.current_actor();
         let workspace_id = self.workspace.settings.id.clone();
         let subscriptions: Vec<WebhookSubscription> = self
             .collab
@@ -191,11 +195,16 @@ impl WorkspaceServer {
                 })
             {
                 *existing = event;
-            } else {
+            } else if self.collab.webhook_queue.len() < MAX_WEBHOOK_QUEUE {
                 self.collab.webhook_queue.push(event);
+            } else {
+                eprintln!(
+                    "webhook queue is full ({MAX_WEBHOOK_QUEUE}); dropping event for {}",
+                    event.subscription_id
+                );
             }
         }
-        self.persist_collab_logged();
+        self.persist_outbox();
     }
 
     /// Move queued events into persisted delivery records. This is the first
@@ -207,6 +216,7 @@ impl WorkspaceServer {
             return;
         }
         let now = now_iso();
+        let mut refused = Vec::new();
         for event in aggregate_events(queued) {
             if let Some(subscription) = self
                 .collab
@@ -214,19 +224,35 @@ impl WorkspaceServer {
                 .iter()
                 .find(|subscription| subscription.id == event.subscription_id)
                 .cloned()
+                && !self.enqueue_delivery(&subscription, event.clone(), &now)
             {
-                self.enqueue_delivery(&subscription, event, &now);
+                refused.push(event);
             }
         }
+        // Backpressure: keep refused events for a later tick instead of
+        // discarding them (spec-139).
+        for event in refused.into_iter().rev() {
+            self.collab.webhook_queue.insert(0, event);
+        }
         self.prune_deliveries();
-        self.persist_collab_logged();
+        self.persist_outbox();
     }
 
     /// Collect due deliveries as send jobs. The caller sends them outside the
     /// server lock and then calls [`Self::apply_webhook_delivery_results`].
     pub(crate) fn prepare_webhook_deliveries(&mut self) -> Vec<WebhookSendJob> {
+        // Never send a record the durable store does not have yet
+        // (spec-139).
+        if !self.webhooks.outbox_durable && !self.persist_outbox() {
+            return Vec::new();
+        }
         let now = chrono::Utc::now();
-        let subscriptions: Vec<WebhookSubscription> = self.collab.webhooks.clone();
+        let subscriptions: std::collections::HashMap<&str, &WebhookSubscription> = self
+            .collab
+            .webhooks
+            .iter()
+            .map(|subscription| (subscription.id.as_str(), subscription))
+            .collect();
         let mut jobs = Vec::new();
         let mut changed = false;
         for delivery in &mut self.collab.webhook_deliveries {
@@ -247,10 +273,7 @@ impl WorkspaceServer {
             {
                 continue;
             }
-            let Some(subscription) = subscriptions
-                .iter()
-                .find(|subscription| subscription.id == delivery.subscription_id)
-            else {
+            let Some(subscription) = subscriptions.get(delivery.subscription_id.as_str()) else {
                 continue;
             };
             let signature = sign(&subscription.verification_token, &delivery.payload);
@@ -262,7 +285,7 @@ impl WorkspaceServer {
             });
         }
         if changed {
-            self.persist_collab_logged();
+            self.persist_outbox();
         }
         jobs
     }
@@ -308,7 +331,7 @@ impl WorkspaceServer {
         }
         if changed {
             self.prune_deliveries();
-            self.persist_collab_logged();
+            self.persist_outbox();
         }
     }
 
@@ -334,7 +357,7 @@ impl WorkspaceServer {
                 delivery.next_attempt_at = Some(now.clone());
             }
         }
-        self.persist_collab_logged();
+        self.persist_outbox();
     }
 
     fn enqueue_delivery(
@@ -342,7 +365,18 @@ impl WorkspaceServer {
         subscription: &WebhookSubscription,
         mut event: WebhookEvent,
         now: &str,
-    ) {
+    ) -> bool {
+        if self.collab.webhook_deliveries.len() >= MAX_WEBHOOK_DELIVERIES
+            && !self
+                .collab
+                .webhook_deliveries
+                .iter()
+                .any(|delivery| delivery.delivered || delivery.dead_lettered)
+        {
+            // Backpressure: never discard a pending delivery just to respect
+            // the retention bound (spec-139).
+            return false;
+        }
         event.attempt_number = 1;
         let payload = serde_json::to_string(&event).unwrap_or_default();
         self.collab.webhook_deliveries.push(WebhookDelivery {
@@ -357,25 +391,37 @@ impl WorkspaceServer {
             next_attempt_at: Some(now.to_string()),
             dead_lettered: false,
         });
+        true
     }
 
-    /// Log a failed webhook persistence attempt instead of silently dropping
-    /// the durability error. The in-memory delivery state remains available to
-    /// the next worker tick.
-    fn persist_collab_logged(&self) {
-        if let Err(error) = self.persist_collab() {
-            eprintln!("webhook persistence error: {error}");
+    /// Persist the outbox. A failure marks the outbox as not durable so the
+    /// worker does not send records that a restart would not replay.
+    fn persist_outbox(&mut self) -> bool {
+        match self.persist_collab() {
+            Ok(()) => {
+                self.webhooks.outbox_durable = true;
+                true
+            }
+            Err(error) => {
+                self.webhooks.outbox_durable = false;
+                eprintln!("webhook persistence error: {error}");
+                false
+            }
         }
     }
 
     fn prune_deliveries(&mut self) {
         while self.collab.webhook_deliveries.len() > MAX_WEBHOOK_DELIVERIES {
-            let position = self
+            let Some(position) = self
                 .collab
                 .webhook_deliveries
                 .iter()
                 .position(|delivery| delivery.delivered || delivery.dead_lettered)
-                .unwrap_or(0);
+            else {
+                // Everything left is pending; keep it and stop adding new
+                // deliveries instead of dropping one (spec-139).
+                break;
+            };
             self.collab.webhook_deliveries.remove(position);
         }
     }

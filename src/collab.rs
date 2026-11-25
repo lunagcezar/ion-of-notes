@@ -162,10 +162,18 @@ pub struct PageVersion {
 }
 
 /// A page of the sync log: all changes after a cursor plus the new cursor.
+///
+/// `reset_required` means the cursor is older than the retained window, so the
+/// client must download a full workspace snapshot before continuing
+/// (spec-139).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SyncBatch {
     pub cursor: u64,
     pub changes: Vec<Change>,
+    #[serde(default)]
+    pub oldest_seq: Option<u64>,
+    #[serde(default)]
+    pub reset_required: bool,
 }
 
 /// Categories of real-time message carried over the WebSocket channel.
@@ -250,7 +258,7 @@ impl ExportFile {
 pub struct CollabState {
     pub members: Vec<Member>,
     pub shares: Vec<Share>,
-    pub changes: Vec<Change>,
+    pub changes: std::collections::VecDeque<Change>,
     pub next_seq: u64,
     #[serde(default)]
     pub versions: Vec<PageVersion>,
@@ -295,7 +303,7 @@ impl CollabState {
                 subject: "Everyone at workspace".to_string(),
                 access: Access::Full,
             }],
-            changes: Vec::new(),
+            changes: std::collections::VecDeque::new(),
             next_seq: 1,
             versions: Vec::new(),
             webhooks: Vec::new(),
@@ -382,7 +390,7 @@ impl CollabState {
             actor: actor.to_string(),
         };
         self.next_seq += 1;
-        self.changes.push(change.clone());
+        self.changes.push_back(change.clone());
         if self.changes.len() > MAX_CHANGES {
             let excess = self.changes.len() - MAX_CHANGES;
             self.changes.drain(0..excess);
@@ -441,6 +449,8 @@ impl CollabState {
 
     /// Return only changes newer than `since`, plus the new cursor.
     pub fn changes_since(&self, since: u64) -> SyncBatch {
+        let oldest_seq = self.changes.front().map(|change| change.seq);
+        let reset_required = oldest_seq.is_some_and(|oldest| since.saturating_add(1) < oldest);
         let changes = self
             .changes
             .iter()
@@ -450,6 +460,8 @@ impl CollabState {
         SyncBatch {
             cursor: self.next_seq.saturating_sub(1),
             changes,
+            oldest_seq,
+            reset_required,
         }
     }
 }

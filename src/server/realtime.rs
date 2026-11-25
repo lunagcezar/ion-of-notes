@@ -19,6 +19,14 @@ pub enum ServerMessage {
         workspace_id: String,
         session_id: String,
         seq: u64,
+        /// The client cursor is older than the retained log (spec-139).
+        #[serde(default)]
+        reset_required: bool,
+    },
+    /// The server dropped messages or cannot replay the cursor; the client must
+    /// fetch a full snapshot and reconnect.
+    Resync {
+        reason: String,
     },
     Change {
         change: Change,

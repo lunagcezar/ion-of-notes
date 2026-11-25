@@ -382,6 +382,9 @@ impl NotionApp {
     /// from sending one request per frame (spec-020).
     pub(super) fn commit_edits(&mut self, now: f64, force: bool) {
         let _span = tracing::trace_span!("ui.commit_edits").entered();
+        if self.remote.is_remote() {
+            self.flush_pending_crdt();
+        }
         if self.remote.is_remote() && self.remote_commit_busy() {
             return;
         }

@@ -329,14 +329,20 @@ pub fn load_collab(path: &Path) -> io::Result<CollabState> {
     read_json(path)
 }
 
-/// Load collaboration state, or create and save the documented seed.
-pub fn load_collab_or_seed(path: &Path) -> CollabState {
+/// Load collaboration state, or create and save the documented seed when the
+/// file does not exist.
+///
+/// Any other error (corrupt JSON, permissions, I/O) is returned and the
+/// existing file is left untouched (spec-139); it must never be replaced by a
+/// fresh empty collaboration document.
+pub fn load_collab_or_seed(path: &Path) -> io::Result<CollabState> {
     match load_collab(path) {
-        Ok(state) => state,
-        Err(_) => {
+        Ok(state) => Ok(state),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
             let state = CollabState::new();
-            let _ = save_collab(path, &state);
-            state
+            save_collab(path, &state)?;
+            Ok(state)
         }
+        Err(error) => Err(error),
     }
 }

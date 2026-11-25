@@ -470,7 +470,8 @@ fn aggregated_events_survive_a_restart() {
         workspace.clone(),
         workspace_path.clone(),
         collab_path.clone(),
-    );
+    )
+    .expect("server");
     server.allow_insecure_webhooks(true);
     subscribe(
         &mut server,
@@ -487,7 +488,8 @@ fn aggregated_events_survive_a_restart() {
     drop(server);
 
     let mut reopened =
-        WorkspaceServer::with_paths(workspace, workspace_path.clone(), collab_path.clone());
+        WorkspaceServer::with_paths(workspace, workspace_path.clone(), collab_path.clone())
+            .expect("reopened");
     reopened.allow_insecure_webhooks(true);
     let calls = Arc::new(Mutex::new(Vec::new()));
     reopened.set_webhook_sender(RecordingSender {
@@ -559,6 +561,13 @@ fn private_https_targets_are_rejected() {
         "https://[::1]/hook",
         "https://localhost/hook",
         "https://foo.localhost/hook",
+        // IPv4-mapped IPv6 must not bypass the IPv4 rules (spec-140).
+        "https://[::ffff:127.0.0.1]/hook",
+        "https://[::ffff:169.254.169.254]/hook",
+        // RFC 6598 carrier-grade NAT, TEST-NET and benchmarking ranges.
+        "https://100.64.0.1/hook",
+        "https://198.18.0.1/hook",
+        "https://203.0.113.9/hook",
     ] {
         assert!(!is_allowed_url(url, false), "{url} must be rejected");
     }

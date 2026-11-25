@@ -2,7 +2,8 @@
 
 use super::super::authorization::ResourceAccess;
 use super::super::contract::{
-    CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
+    CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_RESTRICTED_RESOURCE,
+    CODE_VALIDATION_ERROR,
 };
 use super::super::error::{HandlerError, HandlerResult, fail, ok};
 use super::super::events::DomainEvent;
@@ -226,11 +227,39 @@ impl WorkspaceServer {
                         return fail(v2_error(400, CODE_INVALID_JSON, message, request_id, None));
                     }
                 };
-                let new_parent = input.data_source_id.as_ref().and_then(|data_source_id| {
-                    self.workspace
-                        .data_source(data_source_id)
-                        .map(|data_source| (data_source_id.clone(), data_source.parent.clone()))
-                });
+                let new_parent = match input.data_source_id.as_ref() {
+                    Some(data_source_id) => {
+                        let Some(data_source) = self.workspace.data_source(data_source_id) else {
+                            return fail(v2_error(
+                                404,
+                                CODE_NOT_FOUND,
+                                "data source not found",
+                                request_id,
+                                None,
+                            ));
+                        };
+                        // Moving a view to another data source changes its
+                        // owning page, so the destination needs its own write
+                        // check (spec-138).
+                        let parent = data_source.parent.clone();
+                        let destination = self.page_for_data_source(data_source_id);
+                        if !self.can_access_resource(
+                            connection,
+                            destination.as_deref(),
+                            ResourceAccess::Write,
+                        ) {
+                            return fail(v2_error(
+                                403,
+                                CODE_RESTRICTED_RESOURCE,
+                                "write access to the destination page is not allowed",
+                                request_id,
+                                None,
+                            ));
+                        }
+                        Some((data_source_id.clone(), parent))
+                    }
+                    None => None,
+                };
                 let dto = {
                     let Some(view) = self.workspace.view_mut(rest) else {
                         return fail(v2_error(

@@ -43,7 +43,7 @@ in what order, and which document is the source of truth for each concern.
   (deterministic performance harness); `spec-098` is implemented
   (sidebar command grouping); `spec-099` is implemented
   (block/comment DTO separation); `spec-100` is implemented
-  (domain events for webhook-emitting writes); `spec-101`-`spec-137` implement
+  (domain events for webhook-emitting writes); `spec-101`-`spec-142` implement
   the performance pass (frame mutation gating, normalized emoji filtering,
   cursor indexing, search-body reuse, frame tracing, a shared expanded set, a
   bounded awareness queue, the background remote request worker, an incremental
@@ -62,7 +62,7 @@ in what order, and which document is the source of truth for each concern.
   (spec-051), deployment hardening II (spec-052), the supply-chain/tooling baseline
   (spec-053), webhook reliability (spec-054), remote-mode UX (spec-055) and the production
   Compose/TLS manifest (spec-056) are implemented.
-- **Tests:** 312 tests across the core and desktop passes (275 + 37); both
+- **Tests:** 360 tests across the core and desktop passes (313 + 47); both
   clippy feature passes and `cargo fmt --check` are clean.
 - **Runtime:** in-process server + Axum HTTP/WebSocket adapter; `--database`
   selects SQLite with Argon2id accounts and sessions. The desktop can connect
@@ -193,3 +193,4 @@ flowchart TD
 - New visual surface → update `docs/visual-reference-inventory.md` if it comes
   from the pictures.
 - Completed spec → update `CHANGELOG.md`, `spec/README.md`, and commit.
+

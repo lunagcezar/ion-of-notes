@@ -23,8 +23,15 @@ impl WorkspaceServer {
         // every production-capable store requires a persisted session token.
         let connection = match self.authenticate_local_or_session(request) {
             Ok(connection) => connection,
-            Err(error) => return unauthorized(error.message()),
+            Err(error) => {
+                return if error.status() == 503 {
+                    server_error(error.message())
+                } else {
+                    unauthorized(error.message())
+                };
+            }
         };
+        self.set_actor(&connection.member_id);
 
         if matches!(
             (request.method, path),

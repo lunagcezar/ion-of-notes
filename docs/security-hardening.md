@@ -104,8 +104,12 @@ Webhook URLs are validated in two layers:
 
 1. **Creation-time policy** (`webhooks::is_allowed_url`):
    - HTTPS is accepted only for public hosts.
-   - Loopback, private, link-local, unique-local and multicast addresses are
-     rejected.
+   - Loopback, private, link-local, unique-local, CGNAT (`100.64.0.0/10`),
+     TEST-NET-1/2/3, benchmarking (`198.18.0.0/15`), IETF protocol assignments,
+     6to4 relay, IPv6 documentation, 6to4, Teredo and reserved (`240/4`)
+     addresses are rejected.
+   - IPv4-mapped and IPv4-compatible IPv6 literals are normalized through
+     `to_ipv4` first, so `[::ffff:127.0.0.1]` is treated as `127.0.0.1`.
    - Plain HTTP is only allowed for loopback when
      `allow_insecure_webhooks(true)` is set (development and tests).
 2. **Delivery-time resolution and pinning** (`UreqWebhookSender`):

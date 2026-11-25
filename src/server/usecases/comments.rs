@@ -71,7 +71,7 @@ pub(in crate::server) fn create_comment(
         anchor,
         created_time: now.clone(),
         last_edited_time: now,
-        created_by: crate::model::UserRef::new(server.collab.owner_id()),
+        created_by: crate::model::UserRef::new(server.current_actor()),
         rich_text: input.rich_text,
         attachments,
         display_name: input
@@ -264,7 +264,7 @@ fn resolve_display_name(
                 .collab
                 .members
                 .iter()
-                .find(|member| member.id == server.collab.owner_id())
+                .find(|member| member.id == server.current_actor())
                 .map(|member| member.name.clone())
                 .unwrap_or_else(|| "User".to_string());
             CommentDisplayNameDto {

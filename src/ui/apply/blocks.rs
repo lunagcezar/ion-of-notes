@@ -54,6 +54,7 @@ impl NotionApp {
                         Block::new(Uuid::new_v4().to_string(), BlockKind::Paragraph, ""),
                     );
                 }
+                self.sync_crdt_structure();
             }
             Command::AppendBlock => {
                 if let Some(page) = self.current_page_mut() {
@@ -63,6 +64,7 @@ impl NotionApp {
                         "",
                     ));
                 }
+                self.sync_crdt_structure();
             }
             Command::AddBlock { block, above, pos } => {
                 // The "+" beside a block adds a new block below (or above
@@ -78,6 +80,7 @@ impl NotionApp {
                     self.slash_pos = pos;
                     self.slash_query.clear();
                 }
+                self.sync_crdt_structure();
             }
             Command::StartBlockDrag(id) => {
                 self.drag_from = Some(id);
@@ -112,6 +115,7 @@ impl NotionApp {
                         crate::ui::block_ops::drop_index(page.blocks.len(), target, before);
                     page.blocks.insert(target, block);
                 }
+                self.sync_crdt_structure();
             }
             Command::CancelBlockDrag => {
                 self.drag_from = None;
@@ -128,12 +132,14 @@ impl NotionApp {
                         .insert(at, Block::new(new_id.clone(), BlockKind::Paragraph, ""));
                     self.focus_block = Some(new_id);
                 }
+                self.sync_crdt_structure();
             }
             Command::ClearBlockFocus => self.focus_block = None,
             Command::DeleteBlock(block_id) => {
                 if let Some(page) = self.current_page_mut() {
                     page.blocks.retain(|b| b.id != block_id);
                 }
+                self.sync_crdt_structure();
             }
             Command::ToggleTodo(block_id) => {
                 if let Some(b) = self.find_block_mut(&block_id) {

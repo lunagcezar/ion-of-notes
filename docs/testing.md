@@ -42,14 +42,15 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (354 tests across the two feature passes, 2026-11-24)
+## 3. Test-crate map (360 tests across the two feature passes, 2026-11-25)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
 | `tests/model.rs` | 30 | entities, tree, search, diff, index, settings, comments, view indices, invariant fuzz, JSON round-trip |
 | `tests/server.rs` | 14 | routes, envelopes, status codes, HTTP parse/format, malformed framing, concurrent loopback |
-| `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
+| `tests/collab.rs` | 13 | members, shares, access resolution, sync log, versions, export, realtime contract |
 | `tests/authorization.rs` | 8 | direct and nested page shares, workspace/search/sync projections, CRDT and webhook scope |
+| `tests/moves.rs` | 4 | destination-page checks for database moves, upload creator/page access, delete-event visibility |
 | `tests/security.rs` | 9 | auth boundary, owner token, login budgets, password resolution, session growth |
 | `tests/ui.rs` | 33 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, caret geometry, inline threads/input, catalog normalization |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
@@ -63,7 +64,7 @@ flowchart TD
 | `tests/webhooks.rs` | 16 | subscriptions, verification, signatures, outbox/worker, delivery/retry, dead letter/requeue |
 | `tests/shared_limits.rs` | 3 | SQLite shared workspace budget, window reset and four-connection contention |
 | `tests/web.rs` | 15 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, projections, `/ready`, `/metrics` |
-| `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
+| `tests/realtime.rs` | 8 | WebSocket auth, ready/backlog/resync, live change, presence, awareness, ping, message budget |
 | `tests/crdt.rs` | 6 | Yrs convergence, structure/property/row registers, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 7 | client Yrs diff, structure/property/row planning, empty-sync baseline, projection, convergence |
 | `tests/remote.rs` | 7 | login, remote REST/CRUD/CRDT and WebSocket change/awareness, pending awareness, remembered session |
@@ -72,13 +73,13 @@ flowchart TD
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
 | `tests/shortcuts.rs` | 8 | shortcut table, exactness, focus/modifier guard |
 | `tests/ollama.rs` | 7 | endpoint parsing, request/response decoding, chunked bodies, status |
-| `tests/collab_store.rs` | 6 | collaboration JSON round-trip, seed/corrupt fallback, restart restore, failing store |
+| `tests/collab_store.rs` | 6 | collaboration JSON round-trip, missing-file seed, corrupt-file preservation, restart restore, failing store |
 | `tests/fidelity.rs` | 6 | chrome colors, strong font, tab truncation, seeded page shape |
 | `tests/store_port.rs` | 5 | injectable store, failing store → `500`, null store |
 | `tests/store.rs` | 5 | JSON save/load, atomic write, missing file seed, workspace catalog |
 | `tests/cli.rs` | 5 | argument parsing for desktop, screenshot and serve |
 | `tests/templates.rs` | 3 | template catalog, stable page building, purpose mapping |
-| `tests/app.rs` | 4 | composition root wiring, replace-workspace, core-without-desktop feature seam |
+| `tests/app.rs` | 5 | composition root wiring, replace-workspace, core-without-desktop feature seam |
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
 | `tests/deployment.rs` | 6 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
 | `tests/perf.rs` | 1 | opt-in load/serialize/search/CRDT timings at 1k/10k/50k blocks |
@@ -93,7 +94,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 307 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 313 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 48 desktop tests: the four UI crates, with the default-on desktop feature
@@ -119,10 +120,10 @@ ION_OF_NOTES_POSTGRES_TEST_URL=... ION_OF_NOTES_REDIS_TEST_URL=... \
   --test postgres_store --test redis_limits
 ```
 
-`cargo test --all-targets` runs all 354 default-feature tests with the
+`cargo test --all-targets` runs all 360 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 355 unique tests because each feature pass includes its
+(spec-048) and cover 361 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam
@@ -278,7 +279,7 @@ flowchart LR
 ### Infrastructure tests
 
 - **store:** atomic save, load, seed on missing file, no temporary file left.
-- **collab_store:** round-trip, missing/corrupt file, restart restore, failing
+- **collab_store:** round-trip, missing/corrupt file (seed vs preserved), restart restore, failing
   store → `500`.
 - **server/http:** covered through `tests/server.rs`; no separate crate.
 
@@ -412,3 +413,5 @@ public Notion service.
 - [ ] `--screenshot` was checked if the UI changed.
 - [ ] Requirements, data model, ADR, docs and `CHANGELOG.md` are updated.
 - [ ] The spec is committed with a message naming it.
+
+

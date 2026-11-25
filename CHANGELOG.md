@@ -198,6 +198,50 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - `scripts/smoke-external.ps1` starts disposable PostgreSQL/Redis containers,
   runs both opt-in integration tests and removes the containers.
 
+### Fixed - spec-138 resource moves and upload ownership
+
+- View and database moves now require write access to the destination page
+  before the parent changes.
+- File uploads record the creator and optional page, enforce creator/page access
+  on `send`/`complete`, validate the declared length and persist the body.
+
+### Fixed - spec-139 collaboration durability and resync
+
+- A corrupt collaboration document is an error, not a new seed; `with_paths`
+  fails closed.
+- The webhook outbox never sends non-durable records and never prunes a pending
+  delivery; refused events stay queued.
+- `SyncBatch` and the WebSocket `ready` message report `reset_required`, lagged
+  receivers get `resync`, and delete events follow the share rules.
+- The change log is a `VecDeque`.
+
+### Fixed - spec-140 awareness, SSRF and WebSocket budget
+
+- Awareness identity comes from the session, its page/block/index are validated
+  and broadcast entries are filtered individually.
+- SSRF classification normalizes IPv4-mapped IPv6 and blocks CGNAT, TEST-NET,
+  benchmarking, 6to4 and IPv6 documentation ranges.
+- WebSockets enforce 120 messages per 10 seconds per connection.
+
+### Performance - spec-141 typing and overlay latency
+
+- CRDT text edits send only the transaction update and avoid two `Vec<char>`
+  allocations per keystroke.
+- Local typing no longer applies and persists through the server on each key;
+  remote saturation uses a bounded pending queue.
+- Structural CRDT sync runs only on structural commands; typing bursts share one
+  undo snapshot.
+- The icon picker no longer renders the sidebar/page behind it.
+- Snapshot cache relies on `workspace.version`; projections clone only
+  authorized resources.
+
+### Fixed - spec-142 actor identity and session errors
+
+- Writes, versions, comments and blocks are attributed to the authenticated
+  member.
+- Session-store failures answer 503 `service_unavailable` instead of 401.
+- Hex encoding no longer allocates per byte.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

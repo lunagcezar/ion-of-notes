@@ -36,6 +36,10 @@ pub(super) fn server_error(message: &str) -> ApiResponse {
     json::<()>(500, Envelope::err(message))
 }
 
+pub(super) fn service_unavailable(message: &str) -> ApiResponse {
+    json::<()>(503, Envelope::err(message))
+}
+
 pub(super) fn parse_body<T: DeserializeOwned>(request: &ApiRequest) -> Result<T, String> {
     let body = request
         .body

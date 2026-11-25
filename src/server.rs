@@ -16,6 +16,7 @@ use crate::store::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -58,7 +59,7 @@ pub use limits::{
 };
 pub use pagination::{PageRequest, PageWindow, PaginationError, page_window, paginate};
 pub use rate_limit::{
-    REASON_CONNECTION, REASON_WORKSPACE, RateDecision, RateLimitPolicy, RateLimiter,
+    MessageBudget, REASON_CONNECTION, REASON_WORKSPACE, RateDecision, RateLimitPolicy, RateLimiter,
     SqliteRateLimiter,
 };
 pub use routes::capabilities::{
@@ -275,6 +276,8 @@ struct Runtime {
     rate_limiter: Box<dyn RateLimitPolicy>,
     login_limiter: RateLimiter,
     shared_rate_store: Option<Arc<dyn crate::store::RateLimitStore>>,
+    uploads_dir: std::path::PathBuf,
+    actor: Option<String>,
 }
 
 /// Keep the in-memory request log bounded (spec-073).
@@ -287,6 +290,9 @@ pub const DEFAULT_LOGIN_PER_WORKSPACE: u32 = 100;
 struct WebhookRuntime {
     allow_insecure: bool,
     sender: Arc<dyn WebhookSender>,
+    /// False when the last outbox persistence failed; the worker then refuses
+    /// to send records that a restart would not replay (spec-139).
+    outbox_durable: bool,
 }
 
 impl WorkspaceServer {
@@ -309,14 +315,18 @@ impl WorkspaceServer {
     }
 
     /// A server that persists both the workspace and collaboration state.
-    pub fn with_paths(workspace: Workspace, workspace_path: PathBuf, collab_path: PathBuf) -> Self {
-        let collab = crate::store::load_collab_or_seed(&collab_path);
-        Self::with_stores(
+    pub fn with_paths(
+        workspace: Workspace,
+        workspace_path: PathBuf,
+        collab_path: PathBuf,
+    ) -> io::Result<Self> {
+        let collab = crate::store::load_collab_or_seed(&collab_path)?;
+        Ok(Self::with_stores(
             workspace,
             collab,
             JsonStore::new(workspace_path),
             JsonCollabStore::new(collab_path),
-        )
+        ))
     }
 
     /// Inject a workspace persistence adapter (DIP/OCP).
@@ -384,10 +394,16 @@ impl WorkspaceServer {
                     Duration::from_secs(60),
                 ),
                 shared_rate_store: None,
+                uploads_dir: crate::store::data_path()
+                    .parent()
+                    .map(|dir| dir.join("uploads"))
+                    .unwrap_or_else(|| std::env::temp_dir().join("ion-of-notes-uploads")),
+                actor: None,
             },
             webhooks: WebhookRuntime {
                 allow_insecure: false,
                 sender: Arc::new(UreqWebhookSender::new()),
+                outbox_durable: true,
             },
             realtime: realtime::RealtimeHub::new(256),
             crdt: crdt::CrdtStore::new(),
@@ -415,32 +431,38 @@ impl WorkspaceServer {
     }
 
     pub fn connection_for_token(&self, token: &str) -> Option<Connection> {
+        self.resolve_connection(token).ok().flatten()
+    }
+
+    /// Resolve a bearer token, reporting storage failures separately from an
+    /// invalid token so the HTTP layer can answer 503 instead of 401
+    /// (spec-142).
+    pub fn resolve_connection(&self, token: &str) -> io::Result<Option<Connection>> {
         if let Some(connection) = self.runtime.connections.iter().find(|c| c.token == token) {
-            return Some(connection.clone());
+            return Ok(Some(connection.clone()));
         }
         let token_hash = auth::hash_token(token);
-        let session = self
-            .persistence
-            .auth_store
-            .find_session(&token_hash)
-            .ok()
-            .flatten()?;
+        let Some(session) = self.persistence.auth_store.find_session(&token_hash)? else {
+            return Ok(None);
+        };
         if auth::session_is_expired(&session) {
             let _ = self.persistence.auth_store.delete_session(&token_hash);
-            return None;
+            return Ok(None);
         }
         let member = self
             .collab
             .members
             .iter()
-            .find(|member| member.id == session.member_id)?;
-        Some(Connection::new(
-            format!("session-{}", member.id),
-            token,
-            member.id.clone(),
-            self.workspace.settings.id.clone(),
-            capabilities_for_role(member.role),
-        ))
+            .find(|member| member.id == session.member_id);
+        Ok(member.map(|member| {
+            Connection::new(
+                format!("session-{}", member.id),
+                token,
+                member.id.clone(),
+                self.workspace.settings.id.clone(),
+                capabilities_for_role(member.role),
+            )
+        }))
     }
 
     /// The workspace role of a connection, if its member still exists.
@@ -589,6 +611,51 @@ impl WorkspaceServer {
             Box::new(RateLimiter::new(per_connection, per_workspace, window));
     }
 
+    /// Override the directory that stores uploaded file content (spec-138).
+    pub fn use_uploads_dir(&mut self, dir: std::path::PathBuf) {
+        self.runtime.uploads_dir = dir;
+    }
+
+    /// Directory that stores uploaded file content.
+    pub fn uploads_dir(&self) -> &std::path::Path {
+        &self.runtime.uploads_dir
+    }
+
+    /// Persist one upload body atomically and return its size.
+    pub fn store_upload_content(&self, upload_id: &str, content: &[u8]) -> std::io::Result<u64> {
+        let dir = &self.runtime.uploads_dir;
+        std::fs::create_dir_all(dir)?;
+        let target = dir.join(upload_id);
+        let temporary = dir.join(format!("{upload_id}.tmp"));
+        std::fs::write(&temporary, content)?;
+        if std::fs::rename(&temporary, &target).is_err() {
+            let _ = std::fs::remove_file(&target);
+            std::fs::rename(&temporary, &target)?;
+        }
+        Ok(content.len() as u64)
+    }
+
+    /// Size of the stored body for one upload, if it was written.
+    pub fn upload_content_len(&self, upload_id: &str) -> Option<u64> {
+        std::fs::metadata(self.runtime.uploads_dir.join(upload_id))
+            .ok()
+            .filter(|metadata| metadata.is_file())
+            .map(|metadata| metadata.len())
+    }
+
+    /// Record the authenticated member that performs the current request.
+    pub fn set_actor(&mut self, member_id: &str) {
+        self.runtime.actor = Some(member_id.to_string());
+    }
+
+    /// The effective actor for writes: the request member or the workspace owner.
+    pub fn current_actor(&self) -> String {
+        self.runtime
+            .actor
+            .clone()
+            .unwrap_or_else(|| self.collab.owner_id())
+    }
+
     /// Use a shared rate-limit store with the current plan defaults.
     pub fn use_shared_rate_limits<S>(&mut self, store: Arc<S>)
     where
@@ -725,7 +792,7 @@ impl WorkspaceServer {
         block_id: Option<&str>,
     ) -> std::io::Result<()> {
         self.workspace.bump_version();
-        let actor = self.collab.owner_id();
+        let actor = self.current_actor();
         let change = self.collab.record(op, page_id, &actor);
         let persisted = match block_id {
             Some(block_id) => self.persist_block(page_id, block_id),

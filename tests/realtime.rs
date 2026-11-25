@@ -9,7 +9,7 @@ use ion_of_notes::server::realtime::{
     Awareness, ClientMessage, PresenceMember, RealtimeHub, ServerMessage,
 };
 use ion_of_notes::server::web::{router, router_with_server};
-use ion_of_notes::server::{Method, RequestTransport, WorkspaceServer};
+use ion_of_notes::server::{MessageBudget, Method, RequestTransport, WorkspaceServer};
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
@@ -178,10 +178,12 @@ async fn websocket_sends_ready_presence_and_pong() {
             workspace_id: ready_id,
             session_id,
             seq,
+            reset_required,
         } => {
             assert_eq!(ready_id, workspace_id);
             assert!(session_id.starts_with("ws-"));
             assert_eq!(seq, 0);
+            assert!(!reset_required);
         }
         other => panic!("expected ready, got {other:?}"),
     }
@@ -289,6 +291,17 @@ async fn websocket_receives_a_live_change_after_a_rest_write() {
     }
 
     handle.abort();
+}
+
+#[test]
+fn websocket_message_budget_refills_after_the_window() {
+    use std::time::{Duration, Instant};
+    let mut budget = MessageBudget::new(2, Duration::from_secs(10));
+    let start = Instant::now();
+    assert!(budget.allow(start));
+    assert!(budget.allow(start));
+    assert!(!budget.allow(start));
+    assert!(budget.allow(start + Duration::from_secs(10)));
 }
 
 #[test]

@@ -63,6 +63,9 @@ impl WorkspaceServer {
         }
 
         let connection = pipeline::authenticate(self, request, request_id)?;
+        // Attribute this request's writes to the authenticated member
+        // (spec-142).
+        self.set_actor(&connection.member_id);
         pipeline::check_runtime(self, &connection, request, path, request_id)?;
         pipeline::check_capability(&connection, request, path, request_id)?;
         pipeline::check_authorization(self, &connection, request, path, request_id)?;

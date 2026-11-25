@@ -358,6 +358,22 @@ capabilities) is implemented; the rest are planned.
   limits are available behind the `postgres`/`redis` features and selected via
   `ION_OF_NOTES_POSTGRES_URL`/`ION_OF_NOTES_REDIS_URL` (implemented in
   `spec-137`).
+- FR-107: Moving a view or database to another page requires write access to the
+  destination; file uploads record their creator and optional page, enforce that
+  access and persist the uploaded body (implemented in `spec-138`).
+- FR-108: Collaboration state is never replaced after a read error, the webhook
+  outbox only sends durable records and never drops pending deliveries, and a
+  stale sync cursor or lagged socket asks the client to resynchronize
+  (implemented in `spec-139`).
+- FR-109: Awareness identity comes from the session; SSRF classification covers
+  mapped IPv6 and the IANA special ranges; WebSocket messages have a
+  per-connection budget (implemented in `spec-140`).
+- FR-110: Text edits send only the CRDT transaction, local typing persists
+  through the debounced write, structural sync runs only on structural commands
+  and overlays do not rebuild the background UI (implemented in `spec-141`).
+- FR-111: Writes, versions, comments and blocks are attributed to the
+  authenticated member; a session-store failure is a 503, not an invalid token
+  (implemented in `spec-142`).
 
 ## 2. Non-functional requirements
 
@@ -531,6 +547,11 @@ capabilities) is implemented; the rest are planned.
 | FR-77 (implemented)           | `spec-027-onboarding-and-templates.md` |
 | FR-105 (implemented)          | `spec-115-resource-scoped-authorization.md` |
 | FR-106 (implemented)          | `spec-137-postgres-and-redis.md` |
+| FR-107 (implemented)          | `spec-138-resource-moves-and-uploads.md` |
+| FR-108 (implemented)          | `spec-139-collaboration-durability.md` |
+| FR-109 (implemented)          | `spec-140-awareness-ssrf-and-ws-budget.md` |
+| FR-110 (implemented)          | `spec-141-typing-and-overlay-latency.md` |
+| FR-111 (implemented)          | `spec-142-actor-identity-and-session-errors.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

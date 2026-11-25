@@ -161,7 +161,7 @@ async fn remote_client_receives_changes_and_awareness() {
             color: "#4C8BF5".to_string(),
             page_id: page.id.clone(),
             block_id: page.blocks[0].id.clone(),
-            index: 1,
+            index: 0,
             selection_end: None,
         })
         .expect("awareness");
@@ -169,9 +169,11 @@ async fn remote_client_receives_changes_and_awareness() {
     let awareness = tokio::time::timeout(Duration::from_secs(3), async {
         loop {
             if let Ok(ServerMessage::Awareness { members }) = realtime.recv().await
-                && members
-                    .iter()
-                    .any(|member| member.name == "Remote Tester" && member.index == 1)
+                && members.iter().any(|member| {
+                    member.member_id == "m-owner"
+                        && member.name == "Workspace Owner"
+                        && member.index == 0
+                })
             {
                 break members;
             }

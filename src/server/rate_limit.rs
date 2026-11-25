@@ -12,8 +12,45 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// The connection's own budget is exhausted.
 pub const REASON_CONNECTION: &str = "public_api_request_rate_limit";
-/// The workspace's shared budget is exhausted.
 pub const REASON_WORKSPACE: &str = "public_api_space_request_rate_limit";
+
+/// Fixed-window budget for WebSocket client messages (spec-140).
+///
+/// The HTTP pipeline rate-limits v2 requests, but the WebSocket route bypasses
+/// that pipeline. This bound protects parsing, CRDT merges and the workspace
+/// lock from one chatty connection.
+#[derive(Debug, Clone)]
+pub struct MessageBudget {
+    limit: u32,
+    window: std::time::Duration,
+    start: Instant,
+    count: u32,
+}
+
+impl MessageBudget {
+    /// Create a budget of `limit` messages per `window`.
+    pub fn new(limit: u32, window: std::time::Duration) -> Self {
+        Self {
+            limit,
+            window,
+            start: Instant::now(),
+            count: 0,
+        }
+    }
+
+    /// Consume one message; false means the budget is exhausted for this window.
+    pub fn allow(&mut self, now: Instant) -> bool {
+        if now.saturating_duration_since(self.start) >= self.window {
+            self.start = now;
+            self.count = 0;
+        }
+        if self.count >= self.limit {
+            return false;
+        }
+        self.count += 1;
+        true
+    }
+}
 
 /// One allow/deny decision with the wait the client should observe.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

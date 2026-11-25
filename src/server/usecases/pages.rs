@@ -43,7 +43,7 @@ pub(in crate::server) fn create_page(
         .add_page(page.clone())
         .map_err(|error| UseCaseError::Invalid(error.to_string()))?;
     let page_id = page.id.clone();
-    let actor = server.collab.owner_id();
+    let actor = server.current_actor();
     server.collab.record_version(&page, &actor);
     server
         .write(ChangeOp::Create, &page_id)
@@ -73,7 +73,7 @@ pub(in crate::server) fn update_page(
         };
         *slot = page.clone();
     }
-    let actor = server.collab.owner_id();
+    let actor = server.current_actor();
     server.collab.record_version(&page, &actor);
     server
         .write(ChangeOp::Update, id)

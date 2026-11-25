@@ -13,6 +13,7 @@ use ion_of_notes::server::{
 };
 
 fn upload(server: &mut WorkspaceServer, filename: &str) -> String {
+    server.use_uploads_dir(common::temp_dir("uploads"));
     let response = server.handle(&v2_request(
         Method::Post,
         "/api/v2/file_uploads",
@@ -21,6 +22,7 @@ fn upload(server: &mut WorkspaceServer, filename: &str) -> String {
                 filename: Some(filename.to_string()),
                 content_type: Some("image/png".to_string()),
                 content_length: None,
+                page_id: None,
             })
             .unwrap(),
         ),
@@ -257,6 +259,7 @@ fn comment_rejects_pending_attachments_and_too_many() {
                 filename: Some("pending.txt".to_string()),
                 content_type: None,
                 content_length: None,
+                page_id: None,
             })
             .unwrap(),
         ),
@@ -371,6 +374,7 @@ fn users_respect_user_info_capabilities() {
 #[test]
 fn file_upload_lifecycle_and_listing() {
     let mut server = WorkspaceServer::new(Workspace::seed("x"));
+    server.use_uploads_dir(common::temp_dir("uploads"));
     let response = server.handle(&v2_request(
         Method::Post,
         "/api/v2/file_uploads",
@@ -379,6 +383,7 @@ fn file_upload_lifecycle_and_listing() {
                 filename: Some("doc.pdf".to_string()),
                 content_type: Some("application/pdf".to_string()),
                 content_length: None,
+                page_id: None,
             })
             .unwrap(),
         ),
@@ -402,7 +407,10 @@ fn file_upload_lifecycle_and_listing() {
         &format!("/api/v2/file_uploads/{}/complete", pending.id),
         None,
     ));
-    assert_eq!(response.status, 400);
+    assert_eq!(response.status, 200);
+    let completed: FileUpload = data(&response);
+    assert_eq!(completed.status, UploadStatus::Uploaded);
+    assert_eq!(completed.content_length, Some(9));
 
     let response = server.handle(&v2_request(
         Method::Get,
@@ -416,12 +424,15 @@ fn file_upload_lifecycle_and_listing() {
 
 #[test]
 fn client_comment_and_upload_roundtrip() {
-    let mut client = Client::with_token(WorkspaceServer::new(Workspace::seed("x")), "owner-token");
+    let mut server = WorkspaceServer::new(Workspace::seed("x"));
+    server.use_uploads_dir(common::temp_dir("uploads"));
+    let mut client = Client::with_token(server, "owner-token");
     let upload = client
         .create_file_upload_v2(&FileUploadInput {
             filename: Some("client.txt".to_string()),
             content_type: Some("text/plain".to_string()),
             content_length: None,
+            page_id: None,
         })
         .unwrap();
     let uploaded = client.send_file_upload_v2(&upload.id, "hello").unwrap();

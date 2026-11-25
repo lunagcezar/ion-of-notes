@@ -32,6 +32,13 @@ pub fn remove(path: &Path) {
     let _ = std::fs::remove_file(path);
 }
 
+/// A unique temporary directory for one test artifact.
+pub fn temp_dir(tag: &str) -> PathBuf {
+    let path = temp_path(tag, "dir");
+    let _ = std::fs::create_dir_all(&path);
+    path
+}
+
 /// JSON body for a create-page request.
 pub fn page_draft_json(title: &str, parent: Option<&str>) -> String {
     serde_json::to_string(&PageDraft {

@@ -164,7 +164,13 @@ fn two_client_sessions_converge() {
     let mut left = CrdtSession::new();
     let mut right = CrdtSession::new();
     left.open_page(&page);
-    right.open_page(&page);
+    // Real clients start empty and sync the server document before editing;
+    // seed the second session from the first so incremental updates share
+    // their dependencies.
+    right.open_empty(&page.id);
+    let seed = left.full_update();
+    right.apply_update(&seed).expect("seed right");
+    right.baseline_page(&page);
 
     let update_left = left
         .local_text(&block_id, "left")
@@ -196,7 +202,14 @@ fn two_client_sessions_converge() {
         .unwrap()
         .text
         .clone();
-    assert_eq!(left_text, right_text);
+    assert_eq!(
+        left_text,
+        right_text,
+        "seed update {} left {:?} right {:?}",
+        update_left.len(),
+        left.state_vector(),
+        right.state_vector()
+    );
 }
 
 #[test]

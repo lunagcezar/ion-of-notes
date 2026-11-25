@@ -37,6 +37,23 @@ the load returns an error instead of seeding a new workspace over it. JSON
 files cannot commit two documents atomically; JSON mode is a local
 single-process mode. Use SQLite for multi-user or remote deployments.
 
+Collaboration state follows the same rule as the workspace: only a missing file
+is seeded. A corrupt, unreadable or permission-denied `collab.json` makes
+`load_collab_or_seed` return the error and leaves the bytes untouched, and
+`WorkspaceServer::with_paths` fails closed instead of starting with empty
+members/shares.
+
+### Webhook outbox
+
+Webhook deliveries are part of the collaboration document. The outbox is
+considered durable only after a successful persist. When a persist fails, the
+worker stops sending (`prepare_webhook_deliveries` returns no jobs) until a
+later persist succeeds, so a delivery is never sent before the server could
+replay it. Retention removes delivered or dead-lettered records only; if the
+outbox is full of pending records, new deliveries are refused and the events
+stay queued (bounded at `MAX_WEBHOOK_QUEUE`) instead of dropping a pending
+delivery. Delivery is therefore at-least-once.
+
 ## 3. SQLite schema posture
 
 The SQLite adapter stores workspace metadata in `workspace_meta`, pages in
