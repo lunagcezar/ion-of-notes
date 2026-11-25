@@ -111,6 +111,9 @@ sh scripts/quality.sh
 
 # Optional external stores:
 cargo check --no-default-features --features postgres,redis
+# Starts disposable PostgreSQL/Redis containers, runs both opt-in tests and
+# removes the containers again (needs Docker):
+pwsh -File scripts/smoke-external.ps1
 ION_OF_NOTES_POSTGRES_TEST_URL=... ION_OF_NOTES_REDIS_TEST_URL=... \
   cargo test --no-default-features --features postgres,redis \
   --test postgres_store --test redis_limits

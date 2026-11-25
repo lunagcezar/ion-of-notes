@@ -15,6 +15,7 @@ fn postgres_roundtrip_when_configured() {
     let Ok(url) = std::env::var("ION_OF_NOTES_POSTGRES_TEST_URL") else {
         return;
     };
+    let store = PostgresStore::open(&url).expect("open");
     let mut client = postgres::Client::connect(&url, postgres::NoTls).expect("postgres connect");
     client
         .batch_execute(
@@ -23,7 +24,6 @@ fn postgres_roundtrip_when_configured() {
         .expect("truncate");
     drop(client);
 
-    let store = PostgresStore::open(&url).expect("open");
     let workspace = Workspace::seed("postgres-tests");
     let collab = CollabState::new();
     store

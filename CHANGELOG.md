@@ -195,6 +195,8 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   budgets in Redis with an atomic Lua INCR/EXPIRE.
 - `ION_OF_NOTES_POSTGRES_URL` and `ION_OF_NOTES_REDIS_URL` select them at
   startup; default builds remain JSON/SQLite-only. Recorded in ADR-016.
+- `scripts/smoke-external.ps1` starts disposable PostgreSQL/Redis containers,
+  runs both opt-in integration tests and removes the containers.
 
 ### Performance - spec-101..spec-110
 

@@ -705,6 +705,7 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
 | `cargo build --no-default-features --features postgres,redis` | Build the server with external stores |
 | `cargo test --no-default-features --features postgres,redis --test postgres_store --test redis_limits` | Opt-in PostgreSQL/Redis integration tests (need URLs) |
+| `pwsh -File scripts/smoke-external.ps1` | Starts disposable PostgreSQL/Redis containers, runs both opt-in tests, removes them |
 | `cargo test --all-targets --no-default-features` | Core integration tests (307, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (48) |
 | `cargo test --all-targets`               | All default-feature tests (354; the core-only seam test is skipped) |

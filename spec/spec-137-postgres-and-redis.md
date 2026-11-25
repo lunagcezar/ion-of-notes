@@ -64,10 +64,30 @@ P5. **Given** default features, **then** neither client crate is compiled.
 
 - `tests/postgres_store.rs` (opt-in round-trip, auth/session).
 - `tests/redis_limits.rs` (opt-in fixed-window limit).
+- `pwsh -File scripts/smoke-external.ps1` starts disposable containers, runs
+  both opt-in tests and removes the containers.
 - `cargo check --features postgres,redis`.
 - `cargo check --features desktop,postgres,redis`.
 - Existing SQLite/limits tests.
 - Full quality gate.
+
+## Verification evidence (2026-11-24)
+
+Run against `postgres:16-alpine` and `redis:7-alpine` containers on ports
+`15432`/`16379`:
+
+- `tests/postgres_store.rs` and `tests/redis_limits.rs` pass with the URLs set
+  (and no-op without them); they also pass with each feature enabled alone.
+- `ion-of-notes-server --serve` with `ION_OF_NOTES_POSTGRES_URL` and
+  `ION_OF_NOTES_REDIS_URL` served `/health` (200), `/ready` (200), `/metrics`
+  (200) and `/api/v2/workspace` after login.
+- The containers held the state: 13 pages / 40 block rows after seeding, one
+  account and one session; a page created through the API appeared in
+  `workspace_pages` and survived a server restart.
+- Redis received the `ion:rate:conn:*` and `ion:rate:ws:*` counters.
+- Stopping Redis mid-run logged `shared rate limit error, using local
+  contingency` and requests stayed 200, which is the documented fail-safe
+  behavior in `docs/security-hardening.md`.
 
 ## Design
 
