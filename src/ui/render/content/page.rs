@@ -262,6 +262,12 @@ fn render_page(
 ) {
     let cursors_by_block = super::cursors::index_cursors(&view.remote_cursors, &view.current_page);
     let inline_threads = crate::ui::comments::inline_threads(ws, &view.current_page);
+    let recent_pages: Vec<(String, String, String)> = ws
+        .pages
+        .iter()
+        .take(8)
+        .map(|page| (page.id.clone(), page.title.clone(), page.icon.clone()))
+        .collect();
     let Some(page) = ws.page_mut_untracked(&view.current_page) else {
         ui.label(
             egui::RichText::new("No page selected. Create one from the sidebar.")
@@ -456,7 +462,40 @@ fn render_page(
     {
         commands.push(Command::CopyBlockSelection);
     }
-    let anchor = selection_rect.or_else(|| text_selection.as_ref().map(|text| text.rect));
+    if !view.page_selection.is_empty()
+        && ui.memory(|memory| memory.focused().is_none())
+        && ui.input_mut(|i| {
+            i.consume_key(egui::Modifiers::NONE, egui::Key::Backspace)
+                || i.consume_key(egui::Modifiers::NONE, egui::Key::Delete)
+        })
+    {
+        commands.push(Command::DeleteBlockSelection);
+    }
+    let clicked = ui.input(|i| i.pointer.any_click());
+    let inside_toolbar = clicked
+        && ui
+            .input(|i| i.pointer.interact_pos())
+            .is_some_and(|pointer| {
+                ui.ctx().data(|data| {
+                    data.get_temp::<egui::Rect>(egui::Id::unique("block_toolbar_hit"))
+                        .is_some_and(|rect| rect.contains(pointer))
+                })
+            });
+    let outside_click = clicked && !inside_toolbar;
+    if outside_click && text_selection.is_none() && view.inline_selection.is_some() {
+        commands.push(Command::ClearInlineSelection);
+    }
+    let show_inline = view.inline_selection.is_some() && !outside_click;
+    let anchor = selection_rect
+        .or_else(|| text_selection.as_ref().map(|text| text.rect))
+        .or_else(|| {
+            if show_inline || view.block_toolbar_panel.is_some() {
+                ui.ctx()
+                    .data(|data| data.get_temp(egui::Id::unique("block_toolbar_anchor")))
+            } else {
+                None
+            }
+        });
     if let Some(anchor) = anchor
         && !view.lock_page
     {
@@ -464,14 +503,14 @@ fn render_page(
             ui.ctx(),
             anchor,
             &page.blocks,
-            page.inline_comments,
+            &recent_pages,
             text_selection.as_ref(),
             view,
             palette,
             commands,
         );
-    } else if view.block_toolbar_menu {
-        commands.push(Command::CloseBlockToolbarMenu);
+    } else if view.block_toolbar_panel.is_some() {
+        commands.push(Command::CloseBlockToolbarPanel);
     }
 
     // Subtle add-block row.

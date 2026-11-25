@@ -19,6 +19,17 @@ pub(super) enum IconTab {
     Upload,
 }
 
+/// One floating panel of the block selection toolbar (spec-158).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) enum BlockToolbarPanel {
+    Type,
+    Color,
+    Link,
+    Comment,
+    React,
+    More,
+}
+
 /// Page body font style chosen from Appearance & layout (spec-013).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum FontStyle {
@@ -197,20 +208,63 @@ pub(super) enum Command {
     ToggleSelectedBlocksFormat(BlockFormat),
     DuplicateBlockSelection,
     DeleteBlockSelection,
-    ToggleBlockToolbarMenu,
-    CloseBlockToolbarMenu,
-    /// Inline text selection formatting and copying (spec-157).
+    ToggleBlockToolbarPanel(BlockToolbarPanel),
+    CloseBlockToolbarPanel,
+    /// Inline text selection formatting and copying (spec-157/158).
     ToggleBlockTextFormat {
         block: String,
         start: usize,
         end: usize,
         format: BlockFormat,
     },
+    SetBlockTextColor {
+        block: String,
+        start: usize,
+        end: usize,
+        color: String,
+    },
+    SetSelectedBlocksTextColor(String),
+    ClearSelectedBlocksFormatting,
+    ClearBlockTextFormatting {
+        block: String,
+        start: usize,
+        end: usize,
+    },
+    SetBlockTextLink {
+        block: String,
+        start: usize,
+        end: usize,
+        url: String,
+    },
+    SetSelectedBlocksLink(String),
+    MarkBlockTextEquation {
+        block: String,
+        start: usize,
+        end: usize,
+    },
+    ToggleBlockReaction {
+        block: String,
+        start: usize,
+        end: usize,
+        emoji: String,
+    },
+    ToggleSelectedBlocksReaction(String),
     CopyBlockText {
         block: String,
         start: usize,
         end: usize,
     },
+    SetInlineLinkInput(String),
+    SetInlineSelection {
+        block: String,
+        start: usize,
+        end: usize,
+    },
+    ClearInlineSelection,
+    SetInlineCommentAttachment(String),
+    SetInlineCommentStatus(String),
+    ToggleInlineCommentMentions,
+    MentionInlineComment(String),
     DeleteBlock(String),
     ToggleTodo(String),
     CycleStatus(String),
@@ -388,6 +442,53 @@ impl Command {
         )
     }
 
+    /// True when the command changes the document and therefore deserves an
+    /// undo entry even inside the typing debounce window (spec-158).
+    pub(super) fn forces_undo_snapshot(&self) -> bool {
+        matches!(
+            self,
+            Command::DeleteBlock(_)
+                | Command::DeleteBlockSelection
+                | Command::DuplicateBlockSelection
+                | Command::SetBlockKind(_, _)
+                | Command::SetSelectedBlocksKind(_)
+                | Command::ToggleSelectedBlocksFormat(_)
+                | Command::ToggleBlockTextFormat { .. }
+                | Command::SetBlockTextColor { .. }
+                | Command::SetSelectedBlocksTextColor(_)
+                | Command::ClearSelectedBlocksFormatting
+                | Command::ClearBlockTextFormatting { .. }
+                | Command::SetBlockTextLink { .. }
+                | Command::SetSelectedBlocksLink(_)
+                | Command::MarkBlockTextEquation { .. }
+                | Command::ToggleBlockReaction { .. }
+                | Command::ToggleSelectedBlocksReaction(_)
+                | Command::ApplyMarkdown { .. }
+                | Command::InsertBlockAfter(_)
+                | Command::AppendBlock
+                | Command::AddBlock { .. }
+                | Command::SplitBlock(_)
+                | Command::DropBlock
+                | Command::ToggleTodo(_)
+                | Command::CycleStatus(_)
+                | Command::AddRow
+                | Command::DeletePage(_)
+                | Command::NewPage(_)
+                | Command::DuplicatePage
+                | Command::RestoreVersion(_)
+                | Command::SetPageIcon(_)
+                | Command::TogglePageToc
+                | Command::TogglePageDiscussions
+                | Command::TogglePageArchive
+                | Command::AddPageComment
+                | Command::DeletePageComment(_)
+                | Command::AddInlineComment
+                | Command::DeleteInlineComment(_)
+                | Command::CompleteOnboarding(_)
+                | Command::ApplyTemplate(_)
+        )
+    }
+
     /// Commands refused while the current page is locked. One list, consumed
     /// by `apply_commands`.
     pub(super) fn blocked_when_locked(&self) -> bool {
@@ -412,6 +513,15 @@ impl Command {
                 | Command::DuplicateBlockSelection
                 | Command::DeleteBlockSelection
                 | Command::ToggleBlockTextFormat { .. }
+                | Command::SetBlockTextColor { .. }
+                | Command::SetSelectedBlocksTextColor(_)
+                | Command::ClearSelectedBlocksFormatting
+                | Command::ClearBlockTextFormatting { .. }
+                | Command::SetBlockTextLink { .. }
+                | Command::SetSelectedBlocksLink(_)
+                | Command::MarkBlockTextEquation { .. }
+                | Command::ToggleBlockReaction { .. }
+                | Command::ToggleSelectedBlocksReaction(_)
                 | Command::ToggleTodo(_)
                 | Command::CycleStatus(_)
                 | Command::AddRow
@@ -491,9 +601,25 @@ impl Command {
             | Command::ToggleSelectedBlocksFormat(_)
             | Command::DuplicateBlockSelection
             | Command::DeleteBlockSelection
-            | Command::ToggleBlockToolbarMenu
-            | Command::CloseBlockToolbarMenu
+            | Command::ToggleBlockToolbarPanel(_)
+            | Command::CloseBlockToolbarPanel
             | Command::ToggleBlockTextFormat { .. }
+            | Command::SetBlockTextColor { .. }
+            | Command::SetSelectedBlocksTextColor(_)
+            | Command::ClearSelectedBlocksFormatting
+            | Command::ClearBlockTextFormatting { .. }
+            | Command::SetBlockTextLink { .. }
+            | Command::SetSelectedBlocksLink(_)
+            | Command::MarkBlockTextEquation { .. }
+            | Command::ToggleBlockReaction { .. }
+            | Command::ToggleSelectedBlocksReaction(_)
+            | Command::SetInlineLinkInput(_)
+            | Command::SetInlineSelection { .. }
+            | Command::ClearInlineSelection
+            | Command::SetInlineCommentAttachment(_)
+            | Command::SetInlineCommentStatus(_)
+            | Command::ToggleInlineCommentMentions
+            | Command::MentionInlineComment(_)
             | Command::CopyBlockText { .. }
             | Command::DeleteBlock(_)
             | Command::ToggleTodo(_)

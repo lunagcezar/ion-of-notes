@@ -2,7 +2,11 @@
 
 use crate::collab::page_markdown;
 use crate::i18n;
-use crate::model::{Comment, Page, now_label};
+use crate::model::{
+    AttachmentInput, Comment, CommentAnchor, CommentDisplayName, CommentInput, FileUploadInput,
+    Page, ParentDto, RichText, now_label,
+};
+use std::path::Path;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -82,7 +86,10 @@ impl NotionApp {
                     self.page_status = Some(i18n::t("comment_added"));
                 }
             }
-            Command::SetInlineCommentBlock(block) => self.inline_comment_block = block,
+            Command::SetInlineCommentBlock(block) => {
+                self.inline_comment_block = block;
+                self.inline_selection = None;
+            }
             Command::SetInlineCommentInput(input) => self.inline_comment_input = input,
             Command::AddInlineComment => {
                 let text = self.inline_comment_input.trim().to_string();
@@ -90,24 +97,98 @@ impl NotionApp {
                     self.page_status = Some(i18n::t("write_comment_first"));
                     return;
                 }
-                let Some(block_id) = self.inline_comment_block.clone() else {
+                let target = self.inline_selection.clone().or_else(|| {
+                    self.inline_comment_block.clone().map(|block_id| {
+                        let end = self
+                            .workspace
+                            .block(&block_id)
+                            .map(|block| block.text.chars().count())
+                            .unwrap_or(0);
+                        (block_id, 0, end)
+                    })
+                });
+                let Some((block_id, start, end)) = target else {
                     self.page_status = Some(i18n::t("write_comment_first"));
                     return;
                 };
-                let Some(block) = self.workspace.block(&block_id).cloned() else {
+                if self.workspace.block(&block_id).is_none() {
                     self.page_status = Some(i18n::t("write_comment_first"));
                     return;
+                }
+                let mut attachments = Vec::new();
+                let attachment_path = self.inline_comment_attachment.trim().to_string();
+                if !attachment_path.is_empty() {
+                    let bytes = match std::fs::read(&attachment_path) {
+                        Ok(bytes) => bytes,
+                        Err(error) => {
+                            self.inline_comment_status = Some(error.to_string());
+                            return;
+                        }
+                    };
+                    let filename = Path::new(&attachment_path)
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .map(str::to_string);
+                    let upload_input = FileUploadInput {
+                        filename,
+                        content_type: None,
+                        content_length: Some(bytes.len() as u64),
+                        page_id: Some(self.current_page.clone()),
+                    };
+                    let upload = match self.client.create_file_upload_v2(&upload_input) {
+                        Ok(upload) => upload,
+                        Err(error) => {
+                            self.inline_comment_status = Some(error.to_string());
+                            return;
+                        }
+                    };
+                    if let Err(error) = self.client.send_file_upload_bytes_v2(&upload.id, &bytes) {
+                        self.inline_comment_status = Some(error.to_string());
+                        return;
+                    }
+                    match self.client.complete_file_upload_v2(&upload.id) {
+                        Ok(upload) => {
+                            self.workspace.file_uploads.push(upload.clone());
+                            self.last_committed.file_uploads.push(upload.clone());
+                            attachments.push(AttachmentInput {
+                                file_upload_id: upload.id,
+                            });
+                        }
+                        Err(error) => {
+                            self.inline_comment_status = Some(error.to_string());
+                            return;
+                        }
+                    }
+                }
+                let input = CommentInput {
+                    parent: ParentDto::Block {
+                        block_id: block_id.clone(),
+                    },
+                    discussion_id: None,
+                    property_id: None,
+                    anchor: Some(CommentAnchor {
+                        block_id: block_id.clone(),
+                        start,
+                        end,
+                    }),
+                    rich_text: vec![RichText::text(text)],
+                    attachments,
+                    display_name: Some(CommentDisplayName::Custom {
+                        name: "Local user".to_string(),
+                    }),
                 };
-                let input = crate::ui::inline_comment_input(&block, &text);
                 match self.client.create_comment_v2(&input) {
                     Ok(comment) => {
                         self.workspace.comments.push(comment.clone());
                         self.last_committed.comments.push(comment);
                         self.inline_comment_input.clear();
+                        self.inline_comment_attachment.clear();
                         self.inline_comment_block = None;
+                        self.inline_selection = None;
+                        self.inline_comment_status = Some(i18n::t("comment_added"));
                         self.page_status = Some(i18n::t("comment_added"));
                     }
-                    Err(error) => self.page_status = Some(error.to_string()),
+                    Err(error) => self.inline_comment_status = Some(error.to_string()),
                 }
             }
             Command::DeletePageComment(id) => {

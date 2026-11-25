@@ -18,6 +18,7 @@ mod constants;
 mod crdt;
 mod dialogs;
 mod edit_queue;
+mod emoji_picker;
 mod format;
 mod icon_catalog;
 mod icons;
@@ -39,8 +40,10 @@ mod widgets;
 pub use app::NotionApp;
 pub use block_ops::{block_outside_viewport, drop_index, estimate_block_height, split_index};
 pub use block_selection::{
-    BlockFormat, SelectAllStage, block_has_format, common_kind, select_all_stage, text_has_format,
-    toggle_block_format, toggle_text_format, turn_into_kinds,
+    BlockFormat, InlineAction, SelectAllStage, block_has_format, clear_text_format, common_kind,
+    inline_action, mark_text_equation, reaction_counts, select_all_stage, set_text_color,
+    set_text_link, text_color, text_has_format, text_has_link, text_is_equation,
+    toggle_block_format, toggle_block_reaction, toggle_text_format, turn_into_kinds,
 };
 pub use commands::frame_may_mutate;
 pub use comments::{InlineCommentView, InlineThreadView, inline_comment_input, inline_threads};

@@ -10,11 +10,13 @@ use ion_of_notes::server::{
     ApiRequest, ApiResponse, CollabTransport, Envelope, Method, RequestTransport,
 };
 use ion_of_notes::ui::{
-    BlockFormat, EMOJI, ICONS, SelectAllStage, UndoCapture, UndoEntry, app_bar_left_width,
-    block_has_format, block_outside_viewport, catalog_matches, common_kind, drop_index,
-    estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors,
-    inline_comment_input, inline_threads, page_icon_letter, search_page_matches, select_all_stage,
-    selection_rects, split_index, text_has_format, toggle_block_format, toggle_text_format,
+    BlockFormat, EMOJI, ICONS, InlineAction, SelectAllStage, UndoCapture, UndoEntry,
+    app_bar_left_width, block_has_format, block_outside_viewport, catalog_matches,
+    clear_text_format, common_kind, drop_index, estimate_block_height, frame_may_mutate,
+    glyph_visual_offset, index_cursors, inline_action, inline_comment_input, inline_threads,
+    mark_text_equation, page_icon_letter, search_page_matches, select_all_stage, selection_rects,
+    set_text_color, set_text_link, split_index, text_color, text_has_format, text_has_link,
+    text_is_equation, toggle_block_format, toggle_block_reaction, toggle_text_format,
     turn_into_kinds, visible_tree_rows, warmup_batch,
 };
 use ion_of_notes::ui::{
@@ -905,4 +907,114 @@ fn turn_into_menu_only_offers_renderable_kinds() {
     ] {
         assert!(!kinds.contains(&kind), "unexpected {kind:?}");
     }
+}
+
+#[test]
+fn rich_text_range_helpers_keep_the_rest_of_the_block_intact() {
+    let mut block = Block::new("b1", BlockKind::Paragraph, "Hello world");
+
+    set_text_color(&mut block, 0, 5, "red");
+    assert_eq!(text_color(&block, 0, 5), Some("red".to_string()));
+    assert_eq!(text_color(&block, 6, 11), Some("default".to_string()));
+    assert_eq!(block.text, "Hello world");
+
+    set_text_link(&mut block, 6, 11, "https://example.com");
+    assert!(text_has_link(&block, 6, 11));
+    assert!(!text_has_link(&block, 0, 5));
+
+    mark_text_equation(&mut block, 0, 5);
+    assert!(text_is_equation(&block, 0, 5));
+    assert!(!text_is_equation(&block, 6, 11));
+
+    clear_text_format(&mut block, 0, 11);
+    assert_eq!(text_color(&block, 0, 5), Some("default".to_string()));
+    assert!(!text_has_link(&block, 6, 11));
+    assert!(!text_is_equation(&block, 0, 5));
+    assert_eq!(block.text, "Hello world");
+}
+
+#[test]
+fn block_reactions_toggle_for_the_selected_range() {
+    let mut block = Block::new("b1", BlockKind::Paragraph, "Hello world");
+    assert!(toggle_block_reaction(&mut block, 0, 5, "👍", "Local user"));
+    assert_eq!(block.reactions.len(), 1);
+    assert!(!toggle_block_reaction(&mut block, 0, 5, "👍", "Local user"));
+    assert!(block.reactions.is_empty());
+}
+
+#[test]
+fn snapshot_undo_restores_a_deleted_block() {
+    let mut workspace = Workspace::seed("undo-delete");
+    let before = UndoCapture::Snapshot(Box::new(workspace.clone()));
+    let page = workspace.page_mut("p-home").expect("home");
+    let block_id = page.blocks.first().expect("block").id.clone();
+    page.blocks.retain(|block| block.id != block_id);
+    assert!(
+        !workspace
+            .page("p-home")
+            .expect("home")
+            .blocks
+            .iter()
+            .any(|block| block.id == block_id)
+    );
+    let entry = UndoEntry::from_capture(before, &workspace).expect("undo entry");
+    entry.undo(&mut workspace);
+    assert!(
+        workspace
+            .page("p-home")
+            .expect("home")
+            .blocks
+            .iter()
+            .any(|block| block.id == block_id)
+    );
+}
+
+#[test]
+fn inline_shortcut_mapper_matches_the_documented_combos() {
+    assert_eq!(
+        inline_action(true, false, false, "b"),
+        Some(InlineAction::Bold)
+    );
+    assert_eq!(
+        inline_action(true, false, false, "i"),
+        Some(InlineAction::Italic)
+    );
+    assert_eq!(
+        inline_action(true, false, false, "u"),
+        Some(InlineAction::Underline)
+    );
+    assert_eq!(
+        inline_action(true, true, false, "s"),
+        Some(InlineAction::Strikethrough)
+    );
+    assert_eq!(
+        inline_action(true, true, false, "x"),
+        Some(InlineAction::Strikethrough)
+    );
+    assert_eq!(
+        inline_action(true, false, false, "e"),
+        Some(InlineAction::Code)
+    );
+    assert_eq!(
+        inline_action(true, true, false, "e"),
+        Some(InlineAction::Equation)
+    );
+    assert_eq!(
+        inline_action(true, true, false, "h"),
+        Some(InlineAction::ColorPicker)
+    );
+    assert_eq!(
+        inline_action(true, false, true, "\\"),
+        Some(InlineAction::ClearFormatting)
+    );
+    assert_eq!(
+        inline_action(true, false, false, "k"),
+        Some(InlineAction::LinkPicker)
+    );
+    assert_eq!(
+        inline_action(true, true, false, "m"),
+        Some(InlineAction::CommentComposer)
+    );
+    assert_eq!(inline_action(false, false, false, "b"), None);
+    assert_eq!(inline_action(true, false, true, "b"), None);
 }

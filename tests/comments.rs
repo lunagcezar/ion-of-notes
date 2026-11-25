@@ -461,6 +461,26 @@ fn client_comment_and_upload_roundtrip() {
 }
 
 #[test]
+fn client_binary_upload_preserves_the_body() {
+    let mut server = WorkspaceServer::new(Workspace::seed("x"));
+    server.use_uploads_dir(common::temp_dir("uploads-binary"));
+    let mut client = Client::with_token(server, "owner-token");
+    let upload = client
+        .create_file_upload_v2(&FileUploadInput {
+            filename: Some("image.bin".to_string()),
+            content_type: Some("application/octet-stream".to_string()),
+            content_length: Some(4),
+            page_id: None,
+        })
+        .unwrap();
+    let uploaded = client
+        .send_file_upload_bytes_v2(&upload.id, &[0xff, 0x00, 0xfe, 0x7f])
+        .unwrap();
+    assert_eq!(uploaded.status, UploadStatus::Uploaded);
+    assert_eq!(uploaded.content_length, Some(4));
+}
+
+#[test]
 fn upload_limits_and_expired_pending_files_are_pruned() {
     let mut server = WorkspaceServer::new(Workspace::seed("upload-limits"));
     server.use_uploads_dir(common::temp_dir("upload-limits"));

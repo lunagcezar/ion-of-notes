@@ -146,6 +146,16 @@ fn default_block_object() -> String {
     "block".to_string()
 }
 
+/// One emoji reaction attached to a character range inside a block (spec-158).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BlockReaction {
+    pub emoji: String,
+    pub start: usize,
+    pub end: usize,
+    #[serde(default)]
+    pub created_by: Option<String>,
+}
+
 /// One editable content block.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Block {
@@ -185,6 +195,9 @@ pub struct Block {
     pub cells: Vec<Vec<RichText>>,
     #[serde(default)]
     pub child_page_title: Option<String>,
+    /// Emoji reactions on text ranges (spec-158).
+    #[serde(default)]
+    pub reactions: Vec<BlockReaction>,
 }
 
 impl Block {
@@ -211,6 +224,7 @@ impl Block {
             has_row_header: false,
             cells: Vec::new(),
             child_page_title: None,
+            reactions: Vec::new(),
         }
     }
 
@@ -253,6 +267,18 @@ impl Block {
         } else {
             self.text.clone()
         }
+    }
+
+    /// Update the compatibility text and reset stale spans only when the text
+    /// actually changed. CRDT projection can call this on every sync without
+    /// erasing annotations (spec-158).
+    pub fn apply_plain_text(&mut self, text: impl Into<String>) {
+        let text = text.into();
+        if self.text == text {
+            return;
+        }
+        self.text = text;
+        self.rich_text = vec![RichText::text(self.text.clone())];
     }
 
     pub fn has_children(&self) -> bool {

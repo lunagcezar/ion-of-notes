@@ -88,6 +88,22 @@ impl<A: RequestTransport> Client<A> {
         self.call_v2(request)
     }
 
+    /// Upload a binary body without UTF-8 conversion (spec-158).
+    pub fn send_file_upload_bytes_v2(
+        &mut self,
+        id: &str,
+        content: &[u8],
+    ) -> Result<FileUpload, ClientError> {
+        let mut request = self.v2_request(
+            Method::Post,
+            format!("/api/v2/file_uploads/{id}/send"),
+            None,
+        )?;
+        request.body = Some(String::from_utf8_lossy(content).into_owned());
+        request.body_bytes = Some(content.to_vec());
+        self.call_v2(request)
+    }
+
     pub fn complete_file_upload_v2(&mut self, id: &str) -> Result<FileUpload, ClientError> {
         let request = self.v2_request(
             Method::Post,

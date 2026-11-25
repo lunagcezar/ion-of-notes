@@ -163,4 +163,21 @@ impl RichText {
     pub fn is_plain_text(&self) -> bool {
         matches!(self, RichText::Text { text, .. } if text.link.is_none())
     }
+
+    /// The link URL attached to this span, if any.
+    pub fn link(&self) -> Option<&str> {
+        match self {
+            RichText::Text { text, href, .. } => text
+                .link
+                .as_ref()
+                .map(|link| link.url.as_str())
+                .or(href.as_deref()),
+            _ => None,
+        }
+    }
+
+    /// True for an equation span.
+    pub fn is_equation(&self) -> bool {
+        matches!(self, RichText::Equation { .. })
+    }
 }

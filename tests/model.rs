@@ -1,8 +1,8 @@
 //! Tests for the pure workspace data model (public API only).
 
 use ion_of_notes::model::{
-    Block, BlockKind, Comment, Page, PageDiff, SidebarLayout, SidebarSectionSource, Workspace,
-    WorkspaceError,
+    Annotations, Block, BlockKind, BlockReaction, Comment, Page, PageDiff, SidebarLayout,
+    SidebarSectionSource, Workspace, WorkspaceError,
 };
 
 fn block(id: &str, kind: BlockKind, text: &str) -> Block {
@@ -615,4 +615,36 @@ fn block_lookup_uses_the_derived_index_and_survives_structural_changes() {
     workspace.remove_page("p-start").expect("remove");
     assert!(workspace.page_id_for_block("new-block").is_none());
     assert!(workspace.block("new-block").is_none());
+}
+
+#[test]
+fn block_reactions_roundtrip_and_unchanged_text_keeps_annotations() {
+    let mut block = block("b1", BlockKind::Paragraph, "Hello");
+    let annotations = Annotations {
+        bold: true,
+        color: "red".to_string(),
+        ..Default::default()
+    };
+    *block.rich_text[0].annotations_mut() = annotations.clone();
+
+    // The same text preserves the annotations (CRDT projection would
+    // otherwise erase formatting on every sync).
+    block.apply_plain_text("Hello");
+    assert!(block.rich_text[0].annotations().bold);
+    assert_eq!(block.rich_text[0].annotations().color, "red");
+
+    // A real text change resets them because the old ranges are stale.
+    block.apply_plain_text("Hello!");
+    assert!(!block.rich_text[0].annotations().bold);
+    assert_eq!(block.rich_text[0].annotations().color, "default");
+
+    block.reactions.push(BlockReaction {
+        emoji: "👍".to_string(),
+        start: 0,
+        end: 5,
+        created_by: Some("Local user".to_string()),
+    });
+    let encoded = serde_json::to_string(&block).expect("serialize");
+    let decoded: Block = serde_json::from_str(&encoded).expect("deserialize");
+    assert_eq!(decoded.reactions, block.reactions);
 }

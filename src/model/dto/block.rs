@@ -197,6 +197,7 @@ impl Block {
             has_row_header: input.has_row_header,
             cells: input.cells,
             child_page_title: input.child_page_title,
+            reactions: Vec::new(),
         }
     }
 }

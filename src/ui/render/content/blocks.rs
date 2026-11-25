@@ -13,10 +13,13 @@ use crate::ui::constants::{
     SPACE_70, STROKE_EMPHASIS, STROKE_HAIRLINE,
 };
 
-use super::super::super::block_selection::{SelectAllStage, rich_spans, select_all_stage};
-use super::super::super::commands::Command;
+use super::super::super::block_selection::{
+    BlockFormat, InlineAction, SelectAllStage, inline_action, reaction_counts, rich_runs,
+    select_all_stage,
+};
+use super::super::super::commands::{BlockToolbarPanel, Command};
 use super::super::super::icons::{draw_bullet_dot, draw_dots, draw_page, draw_plus, icon_button};
-use super::super::super::palette::{Palette, strong_font};
+use super::super::super::palette::{Palette, strong_font, text_color};
 use super::super::super::view::ViewState;
 use super::cursors::draw_remote_cursors;
 use super::page::body_font;
@@ -42,6 +45,101 @@ pub(super) struct BlockSelectionState {
 
 fn backspace_on_empty(ui: &egui::Ui, response: &egui::Response, text: &str) -> bool {
     response.has_focus() && text.is_empty() && ui.input(|i| i.key_pressed(egui::Key::Backspace))
+}
+
+fn shortcut_modifiers(ctrl: bool, shift: bool, alt: bool) -> egui::Modifiers {
+    egui::Modifiers {
+        ctrl,
+        shift,
+        alt,
+        ..Default::default()
+    }
+}
+
+/// Apply one of the documented inline-editor shortcuts to the selected range.
+/// Shift/Alt variants are checked before the plain Ctrl variants because
+/// `consume_key` deliberately ignores extra modifiers.
+fn apply_inline_shortcuts(
+    ui: &egui::Ui,
+    block: &str,
+    start: usize,
+    end: usize,
+    commands: &mut Vec<Command>,
+) {
+    let combos = [
+        (true, true, false, egui::Key::S, "s"),
+        (true, true, false, egui::Key::X, "x"),
+        (true, true, false, egui::Key::E, "e"),
+        (true, true, false, egui::Key::H, "h"),
+        (true, true, false, egui::Key::M, "m"),
+        (true, false, true, egui::Key::Backslash, "\\"),
+        (true, false, false, egui::Key::B, "b"),
+        (true, false, false, egui::Key::I, "i"),
+        (true, false, false, egui::Key::U, "u"),
+        (true, false, false, egui::Key::E, "e"),
+        (true, false, false, egui::Key::K, "k"),
+    ];
+    for (ctrl, shift, alt, key, name) in combos {
+        let modifiers = shortcut_modifiers(ctrl, shift, alt);
+        if !ui.input_mut(|input| input.consume_key(modifiers, key)) {
+            continue;
+        }
+        let Some(action) = inline_action(ctrl, shift, alt, name) else {
+            continue;
+        };
+        match action {
+            InlineAction::Bold
+            | InlineAction::Italic
+            | InlineAction::Underline
+            | InlineAction::Strikethrough
+            | InlineAction::Code => {
+                let format = match action {
+                    InlineAction::Bold => BlockFormat::Bold,
+                    InlineAction::Italic => BlockFormat::Italic,
+                    InlineAction::Underline => BlockFormat::Underline,
+                    InlineAction::Strikethrough => BlockFormat::Strikethrough,
+                    InlineAction::Code => BlockFormat::Code,
+                    _ => unreachable!(),
+                };
+                commands.push(Command::ToggleBlockTextFormat {
+                    block: block.to_string(),
+                    start,
+                    end,
+                    format,
+                });
+            }
+            InlineAction::Equation => {
+                commands.push(Command::MarkBlockTextEquation {
+                    block: block.to_string(),
+                    start,
+                    end,
+                });
+            }
+            InlineAction::ClearFormatting => {
+                commands.push(Command::ClearBlockTextFormatting {
+                    block: block.to_string(),
+                    start,
+                    end,
+                });
+            }
+            InlineAction::ColorPicker
+            | InlineAction::LinkPicker
+            | InlineAction::CommentComposer => {
+                let panel = match action {
+                    InlineAction::ColorPicker => BlockToolbarPanel::Color,
+                    InlineAction::LinkPicker => BlockToolbarPanel::Link,
+                    InlineAction::CommentComposer => BlockToolbarPanel::Comment,
+                    _ => unreachable!(),
+                };
+                commands.push(Command::SetInlineSelection {
+                    block: block.to_string(),
+                    start,
+                    end,
+                });
+                commands.push(Command::ToggleBlockToolbarPanel(panel));
+            }
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -187,8 +285,8 @@ pub(super) fn render_block(
             ui.memory_mut(|memory| memory.request_focus(edit_id));
             commands.push(Command::ClearBlockFocus);
         }
-        let spans = rich_spans(block);
-        let spans_joined: String = spans.iter().map(|(text, _)| text.as_str()).collect();
+        let runs = rich_runs(block);
+        let runs_joined: String = runs.iter().map(|run| run.text.as_str()).collect();
         let edit = |ui: &mut egui::Ui,
                     text: &mut String,
                     font: FontId,
@@ -196,24 +294,34 @@ pub(super) fn render_block(
          -> egui::widgets::text_edit::TextEditOutput {
             let mut layouter = |ui: &egui::Ui, buffer: &dyn egui::TextBuffer, wrap_width: f32| {
                 let mut job = egui::text::LayoutJob::default();
-                if !spans.is_empty() && spans_joined == buffer.as_str() {
-                    for (span, annotations) in &spans {
+                if !runs.is_empty() && runs_joined == buffer.as_str() {
+                    for run in &runs {
+                        let annotations = &run.annotations;
                         let mut format = egui::TextFormat {
                             font_id: font.clone(),
-                            color: palette.text,
+                            color: text_color(&annotations.color, palette.dark),
                             italics: annotations.italic,
-                            underline: if annotations.underline {
-                                Stroke::new(STROKE_HAIRLINE, palette.text)
+                            underline: if annotations.underline || run.link.is_some() {
+                                Stroke::new(
+                                    STROKE_HAIRLINE,
+                                    text_color(&annotations.color, palette.dark),
+                                )
                             } else {
                                 Stroke::NONE
                             },
                             strikethrough: if annotations.strikethrough {
-                                Stroke::new(STROKE_HAIRLINE, palette.text)
+                                Stroke::new(
+                                    STROKE_HAIRLINE,
+                                    text_color(&annotations.color, palette.dark),
+                                )
                             } else {
                                 Stroke::NONE
                             },
                             ..Default::default()
                         };
+                        if run.link.is_some() && annotations.color == "default" {
+                            format.color = palette.accent;
+                        }
                         if annotations.bold {
                             format.font_id = strong_font(font.size);
                         }
@@ -221,7 +329,14 @@ pub(super) fn render_block(
                             format.font_id = FontId::monospace(font.size);
                             format.background = palette.code_bg;
                         }
-                        job.append(span.as_str(), 0.0, format);
+                        if run.equation {
+                            format.font_id = FontId::monospace(font.size);
+                            format.italics = true;
+                            if annotations.color == "default" {
+                                format.color = text_color("purple", palette.dark);
+                            }
+                        }
+                        job.append(run.text.as_str(), 0.0, format);
                     }
                 } else {
                     job.append(
@@ -267,9 +382,22 @@ pub(super) fn render_block(
                 let selection_end = (range.primary.index != range.secondary.index)
                     .then_some(range.secondary.index.0);
                 let chars = range.as_sorted_char_range();
+                let any_click = ui.input(|i| i.pointer.any_click());
+                let toolbar_click = any_click
+                    && ui
+                        .input(|i| i.pointer.interact_pos())
+                        .is_some_and(|pointer| {
+                            ui.ctx().data(|data| {
+                                data.get_temp::<Rect>(egui::Id::unique("block_toolbar_hit"))
+                                    .is_some_and(|rect| rect.contains(pointer))
+                            })
+                        });
                 if chars.start.0 != chars.end.0
                     && !is_selected
-                    && (ui.memory(|memory| memory.has_focus(edit_id)) || view.block_toolbar_menu)
+                    && (ui.memory(|memory| memory.has_focus(edit_id))
+                        || view.block_toolbar_panel.is_some()
+                        || toolbar_click)
+                    && !(any_click && !toolbar_click)
                     && !ui.input(|i| i.pointer.primary_down())
                 {
                     let cursor_rect = output
@@ -282,6 +410,16 @@ pub(super) fn render_block(
                         end: chars.end.0,
                         rect: cursor_rect,
                     });
+                    let selection = (block_id_for_edit.clone(), chars.start.0, chars.end.0);
+                    if view.inline_selection.as_ref() != Some(&selection) {
+                        pending_commands
+                            .borrow_mut()
+                            .push(Command::SetInlineSelection {
+                                block: selection.0,
+                                start: selection.1,
+                                end: selection.2,
+                            });
+                    }
                 }
                 pending_commands.borrow_mut().push(Command::CrdtCursor {
                     page_id: page_id_for_edit.clone(),
@@ -307,6 +445,9 @@ pub(super) fn render_block(
         // text editor and selects the block's text; a second Ctrl+A while the
         // whole text is selected promotes the selection to the whole page.
         if !locked && ui.memory(|m| m.has_focus(edit_id)) {
+            ui.ctx().data_mut(|data| {
+                data.insert_temp(egui::Id::unique("block_editor_focused"), true);
+            });
             let selected_chars = egui::TextEdit::load_state(ui.ctx(), edit_id)
                 .and_then(|state| state.cursor.char_range())
                 .map(|range| {
@@ -336,6 +477,9 @@ pub(super) fn render_block(
                 && ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::C))
             {
                 commands.push(Command::CopyBlockSelection);
+            }
+            if let Some((start, end)) = selected_chars.filter(|(start, end)| start != end) {
+                apply_inline_shortcuts(ui, &block.id, start, end, commands);
             }
         }
 
@@ -610,6 +754,38 @@ pub(super) fn render_block(
             palette.text,
         );
     }
+    if !block.reactions.is_empty() {
+        let reactions = reaction_counts(block);
+        ui.horizontal(|ui| {
+            ui.add_space(gutter + 2.0 * BLOCK_CONTROL_WIDTH + BLOCK_CONTROL_GAP);
+            for (emoji, start, end, count) in reactions {
+                let label = if count > 1 {
+                    format!("{emoji} {count}")
+                } else {
+                    emoji.clone()
+                };
+                let chip = ui.add(
+                    egui::Button::new(
+                        egui::RichText::new(label)
+                            .size(FONT_ROW)
+                            .color(palette.text),
+                    )
+                    .frame(false)
+                    .fill(palette.hover)
+                    .corner_radius(CornerRadius::same(ROW_RADIUS)),
+                );
+                if chip.on_hover_text("Remove reaction").clicked() {
+                    commands.push(Command::ToggleBlockReaction {
+                        block: block.id.clone(),
+                        start,
+                        end,
+                        emoji,
+                    });
+                }
+            }
+        });
+    }
+
     if delete_empty {
         commands.push(Command::DeleteBlock(block.id.clone()));
     }

@@ -408,6 +408,12 @@ capabilities) is implemented; the rest are planned.
   text and a second press selects every block on the page. Text and block
   selections open one toolbar with whole-block or selected-text formats, copy,
   comment, duplicate/delete and a block-type menu (implemented in `spec-157`).
+- FR-124: The selection toolbar also edits the selected range with text color,
+  bold, italic, underline, strikethrough, code, links, equations and clear
+  formatting; its panels compose anchored comments (with mentions and file
+  attachments), pick a reaction from the shared emoji catalog and expose the
+  overflow actions. The documented inline shortcuts work and structural
+  toolbar actions are undoable (implemented in `spec-158`).
 
 ## 2. Non-functional requirements
 
@@ -598,6 +604,7 @@ capabilities) is implemented; the rest are planned.
 | FR-121 (implemented)          | `spec-152-account-lifecycle.md` |
 | FR-122 (implemented)          | `spec-153-browser-ui.md` |
 | FR-123 (implemented)          | `spec-157-block-selection-toolbar.md` |
+| FR-124 (implemented)          | `spec-158-rich-inline-toolbar.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

@@ -210,6 +210,7 @@ src/
     render/          chrome, sidebar, content, library, database
     render/content/  page, blocks, cursors, height index, selection toolbar
     block_selection.rs pure select-all stage and format toggles
+    emoji_picker.rs shared page-icon/reaction emoji grid
     dialogs.rs       dialog facade
     dialogs/         settings, sharing, page actions, menus, help,
                      search window, onboarding, templates

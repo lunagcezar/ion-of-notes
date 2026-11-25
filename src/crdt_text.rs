@@ -4,7 +4,7 @@
 //! tree and address each block's text as `block:{id}`; keeping the walk and
 //! projection here avoids two slightly different copies.
 
-use crate::model::{Block, RichText, walk_blocks, walk_blocks_mut};
+use crate::model::{Block, walk_blocks, walk_blocks_mut};
 use std::collections::BTreeMap;
 use yrs::{Doc, GetString, TextRef, Transaction};
 
@@ -51,10 +51,7 @@ pub(crate) fn project_blocks(
 ) {
     walk_blocks_mut(blocks, &mut |block| {
         if let Some(text) = texts.get(&block.id) {
-            block.text = text.get_string(txn);
-            if block.rich_text.len() <= 1 {
-                block.rich_text = vec![RichText::text(block.text.clone())];
-            }
+            block.apply_plain_text(text.get_string(txn));
         }
     });
 }

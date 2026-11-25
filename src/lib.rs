@@ -58,13 +58,14 @@ pub use collab::{
 };
 pub use model::{
     Annotations, AttachmentInput, Block, BlockChildrenRequest, BlockDto, BlockInput, BlockKind,
-    Bot, BotOwner, Comment, CommentAttachment, CommentDisplayName, CommentDisplayNameDto,
-    CommentDto, CommentInput, DataSource, DataSourceInput, DataSourceRef, Database, DatabaseInput,
-    DateValue, Equation, FileObject, FileRef, FileUpload, FileUploadInput, FormulaResult, Mention,
-    OptionRef, Page, PageDiff, PageDraft, PagePropertiesInput, PageProperty, PageRef, PageSummary,
-    ParentDto, Person, Property, PropertyConfig, PropertyType, PropertyValue, RichText,
-    RollupResult, SearchResult, SelectOption, StatusGroup, TableRow, TextContent, TextLink,
-    UploadStatus, UserDto, UserRef, UserType, Workspace, WorkspaceError, WorkspaceLimits,
+    BlockReaction, Bot, BotOwner, Comment, CommentAttachment, CommentDisplayName,
+    CommentDisplayNameDto, CommentDto, CommentInput, DataSource, DataSourceInput, DataSourceRef,
+    Database, DatabaseInput, DateValue, Equation, FileObject, FileRef, FileUpload, FileUploadInput,
+    FormulaResult, Mention, OptionRef, Page, PageDiff, PageDraft, PagePropertiesInput,
+    PageProperty, PageRef, PageSummary, ParentDto, Person, Property, PropertyConfig, PropertyType,
+    PropertyValue, RichText, RollupResult, SearchResult, SelectOption, StatusGroup, TableRow,
+    TextContent, TextLink, UploadStatus, UserDto, UserRef, UserType, Workspace, WorkspaceError,
+    WorkspaceLimits,
 };
 pub use ollama::{
     DEFAULT_HOST, DEFAULT_MODEL, DEFAULT_PORT, OllamaConfig, OllamaStatus, build_generate_body,

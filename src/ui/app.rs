@@ -36,7 +36,8 @@ use super::render::{
 use super::search_cache::SearchCache;
 
 pub(super) use super::commands::{
-    Command, FontStyle, IconTab, NewTabChoice, SidebarMenu, WorkspaceDialogMode, frame_may_mutate,
+    BlockToolbarPanel, Command, FontStyle, IconTab, NewTabChoice, SidebarMenu, WorkspaceDialogMode,
+    frame_may_mutate,
 };
 use super::input::collect_shortcuts;
 pub(super) use super::view::ViewState;
@@ -258,8 +259,13 @@ pub struct NotionApp {
     pub(super) focus_block: Option<String>,
     pub(super) page_selection: Vec<String>,
     pub(super) block_selecting: bool,
-    /// The block-type dropdown of the selection toolbar (spec-157).
-    pub(super) block_toolbar_menu: bool,
+    /// One open selection-toolbar panel (spec-158).
+    pub(super) block_toolbar_panel: Option<BlockToolbarPanel>,
+    pub(super) inline_link_input: String,
+    pub(super) inline_selection: Option<(String, usize, usize)>,
+    pub(super) inline_comment_attachment: String,
+    pub(super) inline_comment_status: Option<String>,
+    pub(super) inline_comment_mention_open: bool,
     /// Preview hook: select this block's text on the first frame.
     pub(super) demo_text_selection: Option<String>,
     // Real-time CRDT and awareness.
@@ -375,6 +381,14 @@ impl NotionApp {
                 .page("p-tasks")
                 .map(|p| p.id.clone())
                 .unwrap_or_else(|| current_page.clone())
+        } else if demo.starts_with("selection")
+            && workspace
+                .page("p-start")
+                .is_some_and(|page| !page.blocks.is_empty())
+        {
+            // Selection previews need a page with text even when the person
+            // deleted the blocks on Home while testing.
+            "p-start".to_string()
         } else {
             current_page.clone()
         };
@@ -443,7 +457,12 @@ impl NotionApp {
         } else {
             Vec::new()
         };
-        let demo_text_selection = if demo == "selection-text" {
+        let demo_with_text_selection = demo.starts_with("selection-text")
+            || matches!(
+                demo.as_str(),
+                "selection-comment" | "selection-react" | "selection-more"
+            );
+        let demo_text_selection = if demo_with_text_selection {
             workspace.page(&demo_current_page).and_then(|page| {
                 page.blocks
                     .iter()
@@ -453,6 +472,39 @@ impl NotionApp {
         } else {
             None
         };
+        if let Some(block_id) = demo_text_selection.clone()
+            && let Some(block) = workspace
+                .pages
+                .iter_mut()
+                .flat_map(|page| page.blocks.iter_mut())
+                .find(|block| block.id == block_id)
+        {
+            let len = block.text.chars().count();
+            match demo.as_str() {
+                "selection-text-color" => {
+                    super::block_selection::set_text_color(block, 0, len, "red");
+                    super::block_selection::toggle_text_format(
+                        block,
+                        0,
+                        len,
+                        super::block_selection::BlockFormat::Bold,
+                    );
+                }
+                "selection-text-link" => {
+                    super::block_selection::set_text_link(block, 0, len, "https://example.com");
+                }
+                "selection-react" => {
+                    super::block_selection::toggle_block_reaction(
+                        block,
+                        0,
+                        len,
+                        "👍",
+                        "Local user",
+                    );
+                }
+                _ => {}
+            }
+        }
         let ai_config = OllamaConfig::from_env();
         let ai_status = OllamaStatus::Unavailable;
         let ai_status_slot = Arc::new(Mutex::new(None));
@@ -710,7 +762,26 @@ impl NotionApp {
             focus_block: None,
             page_selection,
             block_selecting: false,
-            block_toolbar_menu: demo == "selection" || demo == "selection-text",
+            block_toolbar_panel: if demo == "selection" || demo == "selection-text" {
+                Some(BlockToolbarPanel::Type)
+            } else if demo == "selection-text-color" {
+                Some(BlockToolbarPanel::Color)
+            } else if demo == "selection-text-link" {
+                Some(BlockToolbarPanel::Link)
+            } else if demo == "selection-comment" {
+                Some(BlockToolbarPanel::Comment)
+            } else if demo == "selection-react" {
+                Some(BlockToolbarPanel::React)
+            } else if demo == "selection-more" {
+                Some(BlockToolbarPanel::More)
+            } else {
+                None
+            },
+            inline_link_input: String::new(),
+            inline_selection: None,
+            inline_comment_attachment: String::new(),
+            inline_comment_status: None,
+            inline_comment_mention_open: false,
             demo_text_selection,
         }
     }
@@ -768,7 +839,14 @@ impl eframe::App for NotionApp {
             || self.version_history_open
             || self.shortcuts_open
             || self.slash_for.is_some();
-        let (actions, consumed) = collect_shortcuts(&ctx, popup_open);
+        let block_editor_focused = ctx.data(|data| {
+            data.get_temp::<bool>(egui::Id::unique("block_editor_focused"))
+                .unwrap_or(false)
+        });
+        ctx.data_mut(|data| {
+            data.insert_temp(egui::Id::unique("block_editor_focused"), false);
+        });
+        let (actions, consumed) = collect_shortcuts(&ctx, popup_open, block_editor_focused);
         if !consumed.is_empty() {
             ctx.input_mut(|i| {
                 i.events.retain(|event| match event {
@@ -820,7 +898,7 @@ impl eframe::App for NotionApp {
         let full_capture = !commands.is_empty()
             || ctx.input(|i| i.pointer.any_click() || i.pointer.any_down())
             || overlay_open;
-        let frame_before = if may_mutate && now - self.undo_snapshot_at > 0.8 {
+        let mut frame_before = if may_mutate && now - self.undo_snapshot_at > 0.8 {
             self.undo_snapshot_at = now;
             if full_capture {
                 Some(super::undo::UndoCapture::Snapshot(Box::new(
@@ -998,6 +1076,12 @@ impl eframe::App for NotionApp {
             render_grid_menu(&ctx, &palette, &mut commands);
         }
 
+        if frame_before.is_none() && commands.iter().any(Command::forces_undo_snapshot) {
+            self.undo_snapshot_at = now;
+            frame_before = Some(super::undo::UndoCapture::Snapshot(Box::new(
+                self.workspace.clone(),
+            )));
+        }
         self.apply_commands(commands, &ctx, frame_before);
 
         // --screenshot: draw ~120 frames, capture the window, save a PNG, exit.
@@ -1023,6 +1107,9 @@ impl eframe::App for NotionApp {
 
     fn on_exit(&mut self) {
         // Flush pending edits even when the window is closed by the OS.
-        self.commit_edits(f64::MAX, true);
+        // Screenshot previews are disposable and never touch the real store.
+        if self.screenshot.is_none() {
+            self.commit_edits(f64::MAX, true);
+        }
     }
 }

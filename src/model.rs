@@ -27,7 +27,7 @@ mod user;
 mod view;
 mod workspace;
 
-pub use block::{Block, BlockKind};
+pub use block::{Block, BlockKind, BlockReaction};
 pub(crate) use block::{walk_blocks, walk_blocks_mut};
 pub use catalog::{WorkspaceCatalog, WorkspaceSummary};
 pub use comment::{Comment, CommentDisplayName};

@@ -358,4 +358,19 @@ pub const SHORTCUT_TABLE: &[ShortcutDoc] = &[
         keys: "* , [] , > + space",
         source: "help site · Markdown style",
     },
+    ShortcutDoc {
+        label: "Inline formatting",
+        keys: "Ctrl+B / I / U · Ctrl+Shift+S or X · Ctrl+E",
+        source: "editor · selection toolbar",
+    },
+    ShortcutDoc {
+        label: "Text color / clear formatting",
+        keys: "Ctrl+Shift+H · Ctrl+Alt+\\",
+        source: "editor · selection toolbar",
+    },
+    ShortcutDoc {
+        label: "Link / equation / comment selection",
+        keys: "Ctrl+K · Ctrl+Shift+E · Ctrl+Shift+M",
+        source: "editor · selection toolbar",
+    },
 ];

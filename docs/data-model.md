@@ -104,11 +104,17 @@ custom section owns an explicit shortcut list (spec-062).
 | `id`        | `String`    | UUID v4                                         |
 | `kind`      | `BlockKind` | Rendering and behavior variant                  |
 | `text`      | `String`    | Editable text (empty for a divider)             |
+| `rich_text` | `Vec<RichText>` | Inline text, link, mention and equation spans |
+| `reactions` | `Vec<BlockReaction>` | Emoji range reactions (spec-158)          |
 | `checked`   | `bool`      | Only meaningful for `Todo`                      |
 | `collapsed` | `bool`      | Reserved for a future toggle variant            |
 
 `BlockKind` variants: `Paragraph`, `Heading1`, `Heading2`, `Heading3`,
 `Bulleted`, `Numbered`, `Todo`, `Quote`, `Callout`, `Code`, `Divider`.
+
+`BlockReaction` is `{ emoji, start, end, created_by? }`: a character range
+inside the block's `text` plus the reacting member. The UI renders grouped
+chips below the block and toggles the current user's reaction.
 
 ## Entity: TableRow
 

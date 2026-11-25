@@ -5,8 +5,11 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 use super::super::app::NotionApp;
-use super::super::block_selection::{toggle_block_format, toggle_text_format};
-use super::super::commands::Command;
+use super::super::block_selection::{
+    clear_text_format, mark_text_equation, set_text_color, set_text_link, toggle_block_format,
+    toggle_block_reaction, toggle_text_format,
+};
+use super::super::commands::{BlockToolbarPanel, Command};
 impl NotionApp {
     pub(super) fn apply_blocks(&mut self, command: Command, ctx: &egui::Context) {
         match command {
@@ -180,7 +183,8 @@ impl NotionApp {
                     .map(|page| page.blocks.iter().map(|b| b.id.clone()).collect())
                     .unwrap_or_default();
                 self.block_selecting = false;
-                self.block_toolbar_menu = false;
+                self.block_toolbar_panel = None;
+                self.inline_selection = None;
             }
             Command::ExtendBlockSelection(id) => {
                 if !self.page_selection.contains(&id) {
@@ -191,7 +195,8 @@ impl NotionApp {
             Command::ClearBlockSelection => {
                 self.page_selection.clear();
                 self.block_selecting = false;
-                self.block_toolbar_menu = false;
+                self.block_toolbar_panel = None;
+                self.inline_selection = None;
             }
             Command::SetSelectedBlocksKind(kind) => {
                 let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
@@ -205,7 +210,8 @@ impl NotionApp {
                         }
                     }
                 }
-                self.block_toolbar_menu = false;
+                self.block_toolbar_panel = None;
+                self.inline_selection = None;
                 self.sync_crdt_structure();
             }
             Command::ToggleSelectedBlocksFormat(format) => {
@@ -241,7 +247,8 @@ impl NotionApp {
                     self.page_selection = duplicates;
                 }
                 self.block_selecting = false;
-                self.block_toolbar_menu = false;
+                self.block_toolbar_panel = None;
+                self.inline_selection = None;
                 self.sync_crdt_structure();
             }
             Command::DeleteBlockSelection => {
@@ -258,13 +265,21 @@ impl NotionApp {
                 }
                 self.page_selection.clear();
                 self.block_selecting = false;
-                self.block_toolbar_menu = false;
+                self.block_toolbar_panel = None;
+                self.inline_selection = None;
                 self.sync_crdt_structure();
             }
-            Command::ToggleBlockToolbarMenu => {
-                self.block_toolbar_menu = !self.block_toolbar_menu;
+            Command::ToggleBlockToolbarPanel(panel) => {
+                self.block_toolbar_panel = if self.block_toolbar_panel == Some(panel) {
+                    None
+                } else {
+                    Some(panel)
+                };
+                if self.block_toolbar_panel == Some(BlockToolbarPanel::Comment) {
+                    self.refresh_members();
+                }
             }
-            Command::CloseBlockToolbarMenu => self.block_toolbar_menu = false,
+            Command::CloseBlockToolbarPanel => self.block_toolbar_panel = None,
             Command::ToggleBlockTextFormat {
                 block,
                 start,
@@ -274,6 +289,115 @@ impl NotionApp {
                 if let Some(block) = self.find_block_mut(&block) {
                     toggle_text_format(block, start, end, format);
                 }
+            }
+            Command::SetBlockTextColor {
+                block,
+                start,
+                end,
+                color,
+            } => {
+                if let Some(block) = self.find_block_mut(&block) {
+                    set_text_color(block, start, end, &color);
+                }
+            }
+            Command::SetSelectedBlocksTextColor(color) => {
+                let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
+                if let Some(page) = self.current_page_mut() {
+                    for block in &mut page.blocks {
+                        if selection.contains(&block.id) {
+                            let len = block.text.chars().count();
+                            set_text_color(block, 0, len, &color);
+                        }
+                    }
+                }
+            }
+            Command::ClearSelectedBlocksFormatting => {
+                let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
+                if let Some(page) = self.current_page_mut() {
+                    for block in &mut page.blocks {
+                        if selection.contains(&block.id) {
+                            let len = block.text.chars().count();
+                            clear_text_format(block, 0, len);
+                        }
+                    }
+                }
+            }
+            Command::ClearBlockTextFormatting { block, start, end } => {
+                if let Some(block) = self.find_block_mut(&block) {
+                    clear_text_format(block, start, end);
+                }
+            }
+            Command::SetBlockTextLink {
+                block,
+                start,
+                end,
+                url,
+            } => {
+                if let Some(block) = self.find_block_mut(&block) {
+                    set_text_link(block, start, end, &url);
+                }
+            }
+            Command::SetSelectedBlocksLink(url) => {
+                let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
+                if let Some(page) = self.current_page_mut() {
+                    for block in &mut page.blocks {
+                        if selection.contains(&block.id) {
+                            let len = block.text.chars().count();
+                            set_text_link(block, 0, len, &url);
+                        }
+                    }
+                }
+            }
+            Command::MarkBlockTextEquation { block, start, end } => {
+                if let Some(block) = self.find_block_mut(&block) {
+                    mark_text_equation(block, start, end);
+                }
+            }
+            Command::ToggleBlockReaction {
+                block,
+                start,
+                end,
+                emoji,
+            } => {
+                if let Some(block) = self.find_block_mut(&block) {
+                    toggle_block_reaction(block, start, end, &emoji, "Local user");
+                }
+            }
+            Command::ToggleSelectedBlocksReaction(emoji) => {
+                let selection: HashSet<String> = self.page_selection.iter().cloned().collect();
+                if let Some(page) = self.current_page_mut() {
+                    for block in &mut page.blocks {
+                        if selection.contains(&block.id) {
+                            let len = block.text.chars().count();
+                            toggle_block_reaction(block, 0, len, &emoji, "Local user");
+                        }
+                    }
+                }
+            }
+            Command::SetInlineLinkInput(input) => self.inline_link_input = input,
+            Command::SetInlineSelection { block, start, end } => {
+                self.inline_selection = Some((block, start, end));
+                self.inline_comment_block = None;
+                self.inline_comment_status = None;
+            }
+            Command::ClearInlineSelection => {
+                self.inline_selection = None;
+                self.block_toolbar_panel = None;
+            }
+            Command::SetInlineCommentAttachment(path) => self.inline_comment_attachment = path,
+            Command::SetInlineCommentStatus(status) => self.inline_comment_status = Some(status),
+            Command::ToggleInlineCommentMentions => {
+                self.inline_comment_mention_open = !self.inline_comment_mention_open;
+            }
+            Command::MentionInlineComment(name) => {
+                if !self.inline_comment_input.is_empty()
+                    && !self.inline_comment_input.ends_with(' ')
+                {
+                    self.inline_comment_input.push(' ');
+                }
+                self.inline_comment_input.push('@');
+                self.inline_comment_input.push_str(&name);
+                self.inline_comment_input.push(' ');
             }
             Command::CopyBlockText { block, start, end } => {
                 if let Some(block) = self.workspace.block(&block) {

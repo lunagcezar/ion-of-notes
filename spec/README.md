@@ -195,6 +195,7 @@ Status vocabulary:
 | [155](spec-155-third-review-hardening.md) | Third-review hardening | implemented | Invite tokens, proxy trust, TLS, uploads, locks, WS |
 | [156](spec-156-emoji-picker-warmup.md) | Emoji picker warm-up | implemented | Font-stack opt, progressive glyph warm-up, background restored |
 | [157](spec-157-block-selection-toolbar.md) | Two-stage select-all and selection toolbar | implemented | Ctrl+A text→blocks, inline/block formats, turn-into menu |
+| [158](spec-158-rich-inline-toolbar.md) | Rich inline toolbar, comments and reactions | implemented | Color/link/equation, comments, reactions, undo, delete-all |
 
 ## 3. Work status
 

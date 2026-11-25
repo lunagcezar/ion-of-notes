@@ -263,6 +263,16 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Annotated spans render through a `TextEdit::layouter`, so formatting is visible while the editor stays plain-text editable; stale spans fall back to plain text.
 - `ION_OF_NOTES_SHOW=selection` and `selection-text` preview the block and text toolbar states.
 
+### Fixed - spec-158 rich inline toolbar, comments and reactions
+
+- Formatting no longer disappears: CRDT projection only resets rich text when the plain text actually changes, so bold/italic/underline/strikethrough/code/color/link/equation survive while the text is unchanged.
+- The toolbar now applies text color, `B`/`I`/`U`/strikethrough/code, clear formatting, links with a recent-page picker, equation marks and the three-dot menu. The documented `Ctrl+B/I/U`, `Ctrl+Shift+S/X/E/H/M`, `Ctrl+Alt+\\`, `Ctrl+E` and `Ctrl+K` shortcuts run the same actions.
+- The comment composer opens beside the selection with a text field, `@member` mention list and a file path that is uploaded through the v2 API and attached to the comment.
+- Reactions reuse the page-icon emoji catalog in a shared grid, render as chips below the block and can be toggled off.
+- `Ctrl+A` twice followed by `Backspace`/`Delete` removes every selected block.
+- Structural toolbar commands force an undo snapshot inside the typing debounce window, so `Ctrl+Z` restores deleted, duplicated and restyled selections.
+- Selection previews: `selection-text-color`, `selection-text-link`, `selection-comment`, `selection-react`, `selection-more`.
+
 ### Security - spec-155 third-review hardening
 
 - Registration requires a single-use invite token (hashed, 7-day expiry); the owner issues it per member.

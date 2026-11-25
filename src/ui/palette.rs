@@ -27,6 +27,8 @@ pub struct Palette {
     pub callout: Color32,
     pub code_bg: Color32,
     pub icon_bg: Color32,
+    /// Whether this palette is the dark theme.
+    pub dark: bool,
     pub chip_text: Color32,
 }
 
@@ -47,6 +49,7 @@ impl Palette {
             code_bg: Color32::from_rgb(246, 246, 244),
             icon_bg: Color32::from_rgb(238, 238, 236),
             chip_text: Color32::from_rgb(55, 53, 47),
+            dark: false,
         }
     }
 
@@ -67,6 +70,7 @@ impl Palette {
             code_bg: Color32::from_rgb(36, 36, 36),
             icon_bg: Color32::from_rgb(48, 48, 48),
             chip_text: Color32::from_rgb(230, 230, 228),
+            dark: true,
         }
     }
 
@@ -82,6 +86,37 @@ pub fn status_color(status: &str) -> Color32 {
         "In progress" => Color32::from_rgb(253, 236, 200),
         "Not started" => Color32::from_rgb(227, 226, 224),
         _ => Color32::from_rgb(211, 229, 239),
+    }
+}
+
+/// Named inline text colors offered by the selection toolbar (spec-158).
+pub const TEXT_COLOR_NAMES: &[&str] = &[
+    "default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red",
+];
+
+/// Resolve a stored text color name for the current theme.
+pub fn text_color(name: &str, dark: bool) -> Color32 {
+    match (name, dark) {
+        ("gray", false) => Color32::from_rgb(120, 119, 116),
+        ("gray", true) => Color32::from_rgb(155, 154, 151),
+        ("brown", false) => Color32::from_rgb(159, 107, 83),
+        ("brown", true) => Color32::from_rgb(186, 133, 111),
+        ("orange", false) => Color32::from_rgb(217, 115, 13),
+        ("orange", true) => Color32::from_rgb(245, 147, 66),
+        ("yellow", false) => Color32::from_rgb(203, 145, 47),
+        ("yellow", true) => Color32::from_rgb(230, 180, 80),
+        ("green", false) => Color32::from_rgb(68, 131, 97),
+        ("green", true) => Color32::from_rgb(92, 168, 126),
+        ("blue", false) => Color32::from_rgb(51, 126, 169),
+        ("blue", true) => Color32::from_rgb(85, 155, 214),
+        ("purple", false) => Color32::from_rgb(144, 101, 176),
+        ("purple", true) => Color32::from_rgb(174, 128, 208),
+        ("pink", false) => Color32::from_rgb(193, 76, 138),
+        ("pink", true) => Color32::from_rgb(224, 108, 168),
+        ("red", false) => Color32::from_rgb(212, 76, 71),
+        ("red", true) => Color32::from_rgb(238, 108, 103),
+        (_, false) => Palette::light().text,
+        (_, true) => Palette::dark().text,
     }
 }
 

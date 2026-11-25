@@ -84,6 +84,7 @@ fn key_name(key: egui::Key) -> &'static str {
 pub(super) fn collect_shortcuts(
     ctx: &egui::Context,
     popup_open: bool,
+    block_editor_focused: bool,
 ) -> (Vec<Action>, Vec<(egui::Key, egui::Modifiers)>) {
     // Read the frame's trusted input context together with the events. A key
     // is only allowed to become a shortcut when the pointer is over the
@@ -136,6 +137,17 @@ pub(super) fn collect_shortcuts(
             && !modifiers.shift
             && !modifiers.alt;
         if popup_only && !popup_open {
+            continue;
+        }
+        // Ctrl+K inside a focused block editor is the inline "add link"
+        // action, not the global quick search (spec-158). Leave the event for
+        // the editor's shortcut handler.
+        if block_editor_focused
+            && key == egui::Key::K
+            && modifiers.ctrl
+            && !modifiers.shift
+            && !modifiers.alt
+        {
             continue;
         }
         let combo = Combo::new(modifiers.ctrl, modifiers.shift, modifiers.alt, name);

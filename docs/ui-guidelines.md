@@ -207,6 +207,13 @@ right padding explicitly with `ui.add_space(...)`.
 - The expanded type menu uses `BLOCK_TYPE_MENU_WIDTH`, `MENU_ROW_HEIGHT` and
   `BLOCK_TYPE_MENU_MAX_HEIGHT` with a vertical scroll area; the active kind gets
   a check mark and the menu closes after a choice.
+- One panel is open at a time (`BlockToolbarPanel`: Type, Color, Link, Comment,
+  React, More). Panels use the shared `block_toolbar_panel` area id, a
+  `POPOVER_RADIUS` frame and close on an outside click or `Esc`.
+- The color panel shows the `TEXT_COLOR_NAMES` swatches; the link panel lists
+  recent pages with their real page icons; the comment composer uses the
+  paperclip, person and Send controls; the reaction panel reuses
+  `ui::emoji_picker::emoji_grid`.
 - Keep every action in a `Command`; the toolbar never mutates the document.
 
 ## 4. Surface metrics

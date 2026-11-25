@@ -42,17 +42,17 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (382 tests across the two feature passes, 2026-11-25)
+## 3. Test-crate map (388 tests across the two feature passes, 2026-11-25)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
-| `tests/model.rs` | 31 | entities, tree, search, diff, index, settings, comments, view indices, invariant fuzz, JSON round-trip |
+| `tests/model.rs` | 32 | entities, tree, search, diff, index, settings, comments, view indices, invariant fuzz, JSON round-trip, reaction round-trip |
 | `tests/server.rs` | 14 | routes, envelopes, status codes, HTTP parse/format, malformed framing, concurrent loopback |
 | `tests/collab.rs` | 13 | members, shares, access resolution, sync log, versions, export, realtime contract |
 | `tests/authorization.rs` | 9 | direct and nested page shares, workspace/search/sync projections, CRDT and webhook scope |
 | `tests/moves.rs` | 4 | destination-page checks for database moves, upload creator/page access, delete-event visibility |
 | `tests/security.rs` | 9 | auth boundary, owner token, login budgets, password resolution, session growth |
-| `tests/ui.rs` | 42 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, caret geometry, inline threads/input, catalog normalization, two-stage select-all, text/block formatting |
+| `tests/ui.rs` | 46 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, caret geometry, inline threads/input, catalog normalization, two-stage select-all, text/block formatting, reactions, inline shortcuts, snapshot undo |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
 | `tests/contract.rs` | 20 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/routes.rs` | 5 | declarative route policy: capability, owner-only, page-scoped, block limit |
@@ -60,7 +60,7 @@ flowchart TD
 | `tests/blocks.rs` | 12 | rich text, block metadata, nesting, tables, unsupported types, block endpoints |
 | `tests/properties.rs` | 9 | property schemas/values, clear rules, row migration, databases/data sources, property items |
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
-| `tests/comments.rs` | 10 | comment CRUD/pagination, anchors, attachments, users, file uploads |
+| `tests/comments.rs` | 11 | comment CRUD/pagination, anchors, attachments, users, file uploads, binary upload client |
 | `tests/webhooks.rs` | 16 | subscriptions, verification, signatures, outbox/worker, delivery/retry, dead letter/requeue |
 | `tests/shared_limits.rs` | 3 | SQLite shared workspace budget, window reset and four-connection contention |
 | `tests/web.rs` | 19 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, projections, `/ready`, `/metrics` |
@@ -94,10 +94,10 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 325 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 327 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
-# 57 desktop tests: the four UI crates, with the default-on desktop feature
+# 61 desktop tests: the four UI crates, with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
 
 cargo clippy --all-targets -- -D warnings
@@ -120,7 +120,7 @@ ION_OF_NOTES_POSTGRES_TEST_URL=... ION_OF_NOTES_REDIS_TEST_URL=... \
   --test postgres_store --test redis_limits
 ```
 
-`cargo test --all-targets` runs all 382 default-feature tests with the
+`cargo test --all-targets` runs all 388 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
 (spec-048) and cover 377 unique tests because each feature pass includes its

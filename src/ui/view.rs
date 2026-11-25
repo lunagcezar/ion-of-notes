@@ -143,5 +143,10 @@ pub(super) struct ViewState {
     pub(super) focus_block: Option<String>,
     pub(super) page_selection: Vec<String>,
     pub(super) block_selecting: bool,
-    pub(super) block_toolbar_menu: bool,
+    pub(super) block_toolbar_panel: Option<super::commands::BlockToolbarPanel>,
+    pub(super) inline_link_input: String,
+    pub(super) inline_selection: Option<(String, usize, usize)>,
+    pub(super) inline_comment_attachment: String,
+    pub(super) inline_comment_status: Option<String>,
+    pub(super) inline_comment_mention_open: bool,
 }

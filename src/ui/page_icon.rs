@@ -13,10 +13,7 @@ use crate::ui::constants as metrics;
 use egui::{Color32, CornerRadius, FontId, Margin, Pos2, Sense, Stroke, Vec2};
 
 use super::app::{Command, IconTab, ViewState};
-use super::icon_catalog::{
-    EMOJI, Emoji, ICONS, IconGlyph, catalog_matches_normalized, warmup_batch,
-};
-use super::icons::draw_glyph_centered;
+use super::icon_catalog::{EMOJI, ICONS, IconGlyph, catalog_matches_normalized, warmup_batch};
 use super::palette::Palette;
 use std::sync::Arc;
 
@@ -81,28 +78,6 @@ fn warm_emoji_glyphs(ctx: &egui::Context, budget: usize) {
 /// Continue warming the emoji atlas while the app is idle (spec-156).
 pub(super) fn warm_emoji_background(ctx: &egui::Context) {
     warm_emoji_glyphs(ctx, 64);
-}
-
-/// One selectable emoji in the grid.
-fn emoji_button(
-    ui: &mut egui::Ui,
-    entry: &Emoji,
-    selected: bool,
-    palette: &Palette,
-    commands: &mut Vec<Command>,
-) {
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(34.0, 30.0), Sense::click());
-    if selected {
-        ui.painter()
-            .rect_filled(rect, CornerRadius::same(5), palette.selected);
-    } else if response.hovered() {
-        ui.painter()
-            .rect_filled(rect, CornerRadius::same(5), palette.hover);
-    }
-    draw_glyph_centered(ui.painter(), rect, entry.glyph, 19.0, palette.text);
-    if response.clicked() {
-        commands.push(Command::SetPageIcon(entry.glyph.to_string()));
-    }
 }
 
 /// One selectable monochrome icon in the grid.
@@ -310,17 +285,30 @@ pub(super) fn render_icon_picker(
                         commands.push(Command::SetPageIcon(format!("path:{}", reference.trim())));
                     }
                 }
-                IconTab::Emoji | IconTab::Icons => {
+                IconTab::Emoji => {
+                    let query = view.icon_picker_query.trim();
+                    if let Some(glyph) = super::emoji_picker::emoji_grid(
+                        ui,
+                        query,
+                        Some(view.page_icon.as_str()),
+                        palette,
+                        ui.available_height(),
+                    ) {
+                        commands.push(Command::SetPageIcon(glyph));
+                    } else if !query.is_empty() {
+                        ui.label(
+                            egui::RichText::new(format!("No emoji match “{query}”"))
+                                .size(metrics::FONT_CAPTION)
+                                .color(palette.muted),
+                        );
+                    }
+                }
+                IconTab::Icons => {
                     let query = view.icon_picker_query.trim();
                     let indices = cached_indices(ctx, view.icon_picker_tab, query);
                     if indices.is_empty() {
-                        let label = if view.icon_picker_tab == IconTab::Emoji {
-                            format!("No emoji match “{query}”")
-                        } else {
-                            format!("No icons match “{query}”")
-                        };
                         ui.label(
-                            egui::RichText::new(label)
+                            egui::RichText::new(format!("No icons match “{query}”"))
                                 .size(metrics::FONT_CAPTION)
                                 .color(palette.muted),
                         );
@@ -337,19 +325,10 @@ pub(super) fn render_icon_picker(
                                             let Some(&index) = indices.get(slot) else {
                                                 break;
                                             };
-                                            if view.icon_picker_tab == IconTab::Emoji {
-                                                let entry = &EMOJI[index];
-                                                let selected = view.page_icon == entry.glyph;
-                                                emoji_button(
-                                                    ui, entry, selected, palette, commands,
-                                                );
-                                            } else {
-                                                let entry = &ICONS[index];
-                                                let selected =
-                                                    view.page_icon.strip_prefix("shape:")
-                                                        == Some(entry.name);
-                                                icon_button(ui, entry, selected, palette, commands);
-                                            }
+                                            let entry = &ICONS[index];
+                                            let selected = view.page_icon.strip_prefix("shape:")
+                                                == Some(entry.name);
+                                            icon_button(ui, entry, selected, palette, commands);
                                         }
                                     });
                                 }
