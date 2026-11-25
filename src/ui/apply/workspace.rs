@@ -17,16 +17,16 @@ impl NotionApp {
             }
             // ---- Editing history / misc --------------------------------
             Command::Undo => {
-                if let Some(previous) = self.undo_stack.pop() {
-                    self.redo_stack.push(self.workspace.clone());
-                    self.workspace = previous;
+                if let Some(entry) = self.undo_stack.pop() {
+                    entry.undo(&mut self.workspace);
+                    self.redo_stack.push(entry);
                 }
                 had_undo_redo = true;
             }
             Command::Redo => {
-                if let Some(next) = self.redo_stack.pop() {
-                    self.undo_stack.push(self.workspace.clone());
-                    self.workspace = next;
+                if let Some(entry) = self.redo_stack.pop() {
+                    entry.redo(&mut self.workspace);
+                    self.undo_stack.push(entry);
                 }
                 had_undo_redo = true;
             }

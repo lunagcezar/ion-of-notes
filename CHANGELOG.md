@@ -235,6 +235,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Snapshot cache relies on `workspace.version`; projections clone only
   authorized resources.
 
+### Performance - spec-146 patch-based undo
+
+- Typing frames record a page patch instead of cloning the workspace; undo/redo move the entry between stacks.
+- Pointer, overlay and keyboard-command frames still take a full snapshot; the block index refreshes after either direction.
+
 ### Performance - spec-145 bounded session cache
 
 - Resolved bearer sessions are cached for 30 s (1024 entries, FIFO) and removed on logout, so a request no longer hits the auth store every time.
@@ -1725,6 +1730,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   for each spec was observed before implementation. `cargo build` and
   `cargo test` are clean and green, and `--screenshot` was compared by eye
   with the 29 reference pictures after each build.
+
 
 
 

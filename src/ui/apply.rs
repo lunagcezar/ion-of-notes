@@ -636,7 +636,7 @@ impl NotionApp {
         &mut self,
         mut commands: Vec<Command>,
         ctx: &egui::Context,
-        frame_before: Option<Workspace>,
+        frame_before: Option<super::undo::UndoCapture>,
     ) {
         let _span = tracing::trace_span!("ui.apply_commands").entered();
         let now = ctx.input(|i| i.time);
@@ -673,11 +673,11 @@ impl NotionApp {
         }
 
         let workspace_may_have_changed = frame_before.is_some();
-        if let Some(frame_before) = frame_before
+        if let Some(capture) = frame_before
             && !had_undo_redo
-            && self.workspace != frame_before
+            && let Some(entry) = super::undo::UndoEntry::from_capture(capture, &self.workspace)
         {
-            self.undo_stack.push(frame_before);
+            self.undo_stack.push(entry);
             if self.undo_stack.len() > 60 {
                 self.undo_stack.remove(0);
             }

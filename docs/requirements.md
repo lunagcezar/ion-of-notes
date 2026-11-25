@@ -382,6 +382,9 @@ capabilities) is implemented; the rest are planned.
 - FR-114: Resolved bearer sessions are cached for a short TTL, bounded and
   invalidated on logout, while the auth store stays the source of truth
   (implemented in `spec-145`).
+- FR-115: Undo records a page patch for text-only frames and a full workspace
+  snapshot for structural commands; undo/redo move the entry without cloning
+  (implemented in `spec-146`).
 
 ## 2. Non-functional requirements
 
@@ -563,6 +566,7 @@ capabilities) is implemented; the rest are planned.
 | FR-112 (implemented)          | `spec-143-read-view-outside-lock.md` |
 | FR-113 (implemented)          | `spec-144-block-page-index.md` |
 | FR-114 (implemented)          | `spec-145-session-cache.md` |
+| FR-115 (implemented)          | `spec-146-patch-based-undo.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

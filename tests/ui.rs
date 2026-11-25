@@ -16,10 +16,10 @@ use ion_of_notes::ui::{
     visible_rows,
 };
 use ion_of_notes::ui::{
-    EMOJI, ICONS, app_bar_left_width, block_outside_viewport, catalog_matches, drop_index,
-    estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors,
-    inline_comment_input, inline_threads, page_icon_letter, search_page_matches, selection_rects,
-    split_index,
+    EMOJI, ICONS, UndoCapture, UndoEntry, app_bar_left_width, block_outside_viewport,
+    catalog_matches, drop_index, estimate_block_height, frame_may_mutate, glyph_visual_offset,
+    index_cursors, inline_comment_input, inline_threads, page_icon_letter, search_page_matches,
+    selection_rects, split_index,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -703,4 +703,38 @@ fn search_cache_only_refreshes_when_query_or_version_changes() {
 #[test]
 fn desktop_feature_exposes_the_screenshot_writer() {
     let _ = ion_of_notes::screenshot::color_image_to_rgba;
+}
+
+#[test]
+fn page_patch_undo_restores_only_the_edited_page() {
+    let mut workspace = Workspace::seed("undo");
+    let page_id = "p-home".to_string();
+    let before = workspace.page(&page_id).cloned();
+    let capture = UndoCapture::Page {
+        page_id: page_id.clone(),
+        page: before.clone(),
+    };
+    workspace.page_mut(&page_id).expect("page").title = "Changed".to_string();
+    let entry = UndoEntry::from_capture(capture, &workspace).expect("change");
+
+    entry.undo(&mut workspace);
+    assert_eq!(
+        workspace.page(&page_id).map(|page| page.title.clone()),
+        before.map(|page| page.title)
+    );
+    entry.redo(&mut workspace);
+    assert_eq!(
+        workspace.page(&page_id).map(|page| page.title.as_str()),
+        Some("Changed")
+    );
+}
+
+#[test]
+fn unchanged_page_patch_produces_no_undo_entry() {
+    let workspace = Workspace::seed("undo");
+    let capture = UndoCapture::Page {
+        page_id: "p-home".to_string(),
+        page: workspace.page("p-home").cloned(),
+    };
+    assert!(UndoEntry::from_capture(capture, &workspace).is_none());
 }

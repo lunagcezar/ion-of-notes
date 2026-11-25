@@ -218,8 +218,8 @@ pub struct NotionApp {
     // Help / window.
     pub(super) shortcuts_open: bool,
     pub(super) fullscreen: bool,
-    pub(super) undo_stack: Vec<Workspace>,
-    pub(super) redo_stack: Vec<Workspace>,
+    pub(super) undo_stack: Vec<super::undo::UndoEntry>,
+    pub(super) redo_stack: Vec<super::undo::UndoEntry>,
     /// Time of the last undo snapshot; continuous typing is grouped into one
     /// entry instead of cloning the workspace on every key (spec-141).
     pub(super) undo_snapshot_at: f64,
@@ -759,11 +759,24 @@ impl eframe::App for NotionApp {
             overlay_open,
         );
         // Group a burst of typing into one undo entry and avoid cloning the
-        // workspace on every keystroke (spec-141).
+        // workspace on every keystroke (spec-141, spec-146). Pure text edits
+        // capture only the current page; clicks, overlays and keyboard
+        // commands still take a full snapshot.
         let now = ctx.input(|i| i.time);
+        let full_capture = !commands.is_empty()
+            || ctx.input(|i| i.pointer.any_click() || i.pointer.any_down())
+            || overlay_open;
         let frame_before = if may_mutate && now - self.undo_snapshot_at > 0.8 {
             self.undo_snapshot_at = now;
-            Some(self.workspace.clone())
+            if full_capture {
+                Some(super::undo::UndoCapture::Snapshot(self.workspace.clone()))
+            } else {
+                let page_id = self.current_page.clone();
+                Some(super::undo::UndoCapture::Page {
+                    page: self.workspace.page(&page_id).cloned(),
+                    page_id,
+                })
+            }
         } else {
             None
         };
