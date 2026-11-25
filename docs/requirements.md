@@ -377,6 +377,8 @@ capabilities) is implemented; the rest are planned.
 - FR-112: Read authorization and projection share one implementation between the
   mutable server and an immutable `ReadView`; v1 snapshot reads release the
   workspace lock before projecting and serializing (implemented in `spec-143`).
+- FR-113: Block lookup uses a derived block→page map with verified fallback,
+  refreshed after structural changes (implemented in `spec-144`).
 
 ## 2. Non-functional requirements
 
@@ -556,6 +558,7 @@ capabilities) is implemented; the rest are planned.
 | FR-110 (implemented)          | `spec-141-typing-and-overlay-latency.md` |
 | FR-111 (implemented)          | `spec-142-actor-identity-and-session-errors.md` |
 | FR-112 (implemented)          | `spec-143-read-view-outside-lock.md` |
+| FR-113 (implemented)          | `spec-144-block-page-index.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 
@@ -574,4 +577,5 @@ capabilities) is implemented; the rest are planned.
 - **Public API alignment (planned):** FR-78..FR-94 and NFR-17..NFR-20 come from
   the B4 public-documentation review and ADR-006. They are scheduled in
   specs 030–038 and are not part of the current v1 behavior.
+
 

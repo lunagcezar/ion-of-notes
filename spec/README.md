@@ -181,6 +181,7 @@ Status vocabulary:
 | [141](spec-141-typing-and-overlay-latency.md) | Typing and overlay latency | implemented | Incremental CRDT updates, no background render |
 | [142](spec-142-actor-identity-and-session-errors.md) | Actor identity and session errors | implemented | Member attribution and 503 on store failure |
 | [143](spec-143-read-view-outside-lock.md) | Read view outside the workspace lock | implemented | Shared authorization macro + v1 projection after unlock |
+| [144](spec-144-block-page-index.md) | Block-to-page index | implemented | Derived map with verified fallback |
 
 ## 3. Work status
 
@@ -238,4 +239,5 @@ Where the code goes and why.
 6. A retired spec keeps a status note at the top and is not silently rewritten.
 7. Historical plans keep their checkboxes honest: `[x]` only when the item is
    actually done, with a note when a later spec completed it.
+
 

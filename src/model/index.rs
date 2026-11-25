@@ -7,13 +7,14 @@
 
 use std::collections::HashMap;
 
-use super::Page;
+use super::{Block, Page};
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct WorkspaceIndex {
     positions: HashMap<String, usize>,
     children: HashMap<String, Vec<String>>,
     roots: Vec<String>,
+    block_pages: HashMap<String, String>,
 }
 
 impl WorkspaceIndex {
@@ -29,8 +30,21 @@ impl WorkspaceIndex {
                     .push(page.id.clone()),
                 None => index.roots.push(page.id.clone()),
             }
+            collect_block_pages(&page.blocks, &page.id, &mut index.block_pages);
         }
         index
+    }
+
+    /// Rebuild only the block→page map after a structural block change.
+    pub(super) fn rebuild_blocks(&mut self, pages: &[Page]) {
+        self.block_pages.clear();
+        for page in pages {
+            collect_block_pages(&page.blocks, &page.id, &mut self.block_pages);
+        }
+    }
+
+    pub(super) fn block_page(&self, id: &str) -> Option<&str> {
+        self.block_pages.get(id).map(String::as_str)
     }
 
     pub(super) fn len(&self) -> usize {
@@ -46,5 +60,12 @@ impl WorkspaceIndex {
             Some(id) => self.children.get(id).map(Vec::as_slice).unwrap_or(&[]),
             None => &self.roots,
         }
+    }
+}
+
+fn collect_block_pages(blocks: &[Block], page_id: &str, map: &mut HashMap<String, String>) {
+    for block in blocks {
+        map.insert(block.id.clone(), page_id.to_string());
+        collect_block_pages(&block.children, page_id, map);
     }
 }

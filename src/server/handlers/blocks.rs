@@ -150,6 +150,7 @@ impl WorkspaceServer {
                         created.push(child);
                     }
                 }
+                self.workspace.blocks_changed();
                 if let Err(error) = self.write(ChangeOp::Update, &page_id) {
                     return fail(v2_error(
                         500,

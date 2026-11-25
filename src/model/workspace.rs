@@ -213,27 +213,46 @@ impl Workspace {
 
     /// Find a block anywhere in the page tree.
     pub fn block(&self, id: &str) -> Option<&Block> {
-        self.pages
-            .iter()
-            .find_map(|page| find_block_in(&page.blocks, id))
+        if let Some(page_id) = self.page_id_for_block(id)
+            && let Some(page) = self.page(&page_id)
+        {
+            return find_block_in(&page.blocks, id);
+        }
+        None
     }
 
     /// Find a block anywhere in the page tree for mutation.
     pub fn block_mut(&mut self, id: &str) -> Option<&mut Block> {
-        if let Some(page_id) = self.page_id_for_block(id) {
-            self.search_cache.mark_dirty(&page_id);
-        }
-        self.pages
-            .iter_mut()
-            .find_map(|page| find_block_in_mut(&mut page.blocks, id))
+        let page_id = self.page_id_for_block(id)?;
+        self.search_cache.mark_dirty(&page_id);
+        let page = self.page_mut_untracked(&page_id)?;
+        find_block_in_mut(&mut page.blocks, id)
     }
 
     /// The page that contains a block.
+    ///
+    /// Uses the derived block→page map and verifies the hit against the actual
+    /// tree, so a stale map falls back to the scan instead of returning a wrong
+    /// page. Call [`Self::blocks_changed`] after a structural block change.
     pub fn page_id_for_block(&self, id: &str) -> Option<String> {
+        if self.index.len() == self.pages.len()
+            && let Some(candidate) = self.index.block_page(id)
+            && self
+                .page(candidate)
+                .is_some_and(|page| find_block_in(&page.blocks, id).is_some())
+        {
+            return Some(candidate.to_string());
+        }
         self.pages
             .iter()
             .find(|page| find_block_in(&page.blocks, id).is_some())
             .map(|page| page.id.clone())
+    }
+
+    /// Rebuild the derived block→page map after inserting, removing or moving
+    /// blocks outside the page/page-tree methods.
+    pub fn blocks_changed(&mut self) {
+        self.index.rebuild_blocks(&self.pages);
     }
 
     /// Direct children of a block, or the top-level blocks of a page id.

@@ -235,6 +235,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Snapshot cache relies on `workspace.version`; projections clone only
   authorized resources.
 
+### Performance - spec-144 block-to-page index
+
+- `WorkspaceIndex` maps block ids to pages; `block`, `block_mut` and `page_id_for_block` use it with a verified fallback.
+- The map refreshes on page changes, structural UI commands, server block appends and CRDT projection.
+
 ### Performance - spec-143 read view outside the workspace lock
 
 - Authorization and projection rules are shared by ReadView and WorkspaceServer through one macro.
@@ -1716,4 +1721,5 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   for each spec was observed before implementation. `cargo build` and
   `cargo test` are clean and green, and `--screenshot` was compared by eye
   with the 29 reference pictures after each build.
+
 

@@ -23,6 +23,7 @@ impl NotionApp {
         {
             self.collaboration.crdt.sync_new_blocks(&page);
         }
+        self.workspace.blocks_changed();
     }
 
     pub(super) fn apply_crdt(&mut self, command: Command) {

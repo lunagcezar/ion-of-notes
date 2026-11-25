@@ -58,7 +58,7 @@ remain staged.
 | Snapshot cache invalidation | Fixed in spec-141: cache keyed by `workspace.version`; writes no longer clear it. | Replace the under-lock clone with an immutable `Arc` snapshot on write. |
 | Request actor identity | Fixed in spec-142: member id from the session reaches writes, versions, comments and blocks. | Add the actor to webhook aggregates where they are not already covered. |
 | Single-writer workspace mutex | v1 reads now clone and project outside the lock (spec-143); v2 reads and all writes still take one lock. | Publish an immutable per-workspace snapshot on write for v2 reads; do not just swap to `RwLock`. |
-| Block lookup index | `block()` / `page_id_for_block()` still scan pages and trees. | Add a block→page index with explicit invalidation and an orphan check. |
+| Block lookup index | Fixed in spec-144: derived map with verified fallback; refreshed on page changes, structural commands, server appends and CRDT projection. | Add an orphan/consistency check to the model test suite. |
 | Session cache | Every bearer request resolves the session in the auth store. | Add a bounded in-memory cache with expiry and logout invalidation. |
 | Patch-based undo | A typing burst still snapshots the whole workspace at 0.8 s intervals. | Record per-block before/after patches and group typing into one command. |
 | Sidebar virtualization | The tree still draws every expanded node. | Flatten visible nodes into a list and use `show_rows`. |
@@ -99,4 +99,5 @@ stay cheap.
 - A browser UI.
 - A full CRDT model for every workspace object.
 - Multi-node rate limiting beyond the shared SQLite limiter.
+
 

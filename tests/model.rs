@@ -591,3 +591,28 @@ fn workspace_catalog_adds_switches_and_refuses_to_remove_the_last_workspace() {
     assert_eq!(catalog.summaries().len(), 1);
     assert!(!catalog.remove("first"));
 }
+
+#[test]
+fn block_lookup_uses_the_derived_index_and_survives_structural_changes() {
+    let mut workspace = Workspace::seed("index");
+    assert_eq!(workspace.page_id_for_block("h2").as_deref(), Some("p-home"));
+    assert!(workspace.block("h2").is_some());
+
+    let extra = block("new-block", BlockKind::Paragraph, "New");
+    workspace
+        .page_mut("p-start")
+        .expect("page")
+        .blocks
+        .push(extra);
+    workspace.blocks_changed();
+    assert_eq!(
+        workspace.page_id_for_block("new-block").as_deref(),
+        Some("p-start")
+    );
+    assert!(workspace.block("new-block").is_some());
+    assert!(workspace.block_mut("new-block").is_some());
+
+    workspace.remove_page("p-start").expect("remove");
+    assert!(workspace.page_id_for_block("new-block").is_none());
+    assert!(workspace.block("new-block").is_none());
+}

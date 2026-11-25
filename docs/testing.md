@@ -42,11 +42,11 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (361 tests across the two feature passes, 2026-11-25)
+## 3. Test-crate map (362 tests across the two feature passes, 2026-11-25)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
-| `tests/model.rs` | 30 | entities, tree, search, diff, index, settings, comments, view indices, invariant fuzz, JSON round-trip |
+| `tests/model.rs` | 31 | entities, tree, search, diff, index, settings, comments, view indices, invariant fuzz, JSON round-trip |
 | `tests/server.rs` | 14 | routes, envelopes, status codes, HTTP parse/format, malformed framing, concurrent loopback |
 | `tests/collab.rs` | 13 | members, shares, access resolution, sync log, versions, export, realtime contract |
 | `tests/authorization.rs` | 9 | direct and nested page shares, workspace/search/sync projections, CRDT and webhook scope |
@@ -94,7 +94,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 314 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 315 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 48 desktop tests: the four UI crates, with the default-on desktop feature
@@ -120,10 +120,10 @@ ION_OF_NOTES_POSTGRES_TEST_URL=... ION_OF_NOTES_REDIS_TEST_URL=... \
   --test postgres_store --test redis_limits
 ```
 
-`cargo test --all-targets` runs all 361 default-feature tests with the
+`cargo test --all-targets` runs all 362 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 362 unique tests because each feature pass includes its
+(spec-048) and cover 363 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam
@@ -413,6 +413,7 @@ public Notion service.
 - [ ] `--screenshot` was checked if the UI changed.
 - [ ] Requirements, data model, ADR, docs and `CHANGELOG.md` are updated.
 - [ ] The spec is committed with a message naming it.
+
 
 
 

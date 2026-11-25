@@ -151,6 +151,7 @@ impl CrdtStore {
         if let Some(slot) = workspace.page_mut(page_id) {
             *slot = page;
         }
+        workspace.blocks_changed();
         project_page_rows(doc, workspace, page_id)?;
         Ok(())
     }

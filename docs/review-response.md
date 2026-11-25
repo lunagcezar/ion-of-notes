@@ -83,6 +83,7 @@ authorization boundary.
 | Writes recorded the owner as actor | fixed | request actor context from the session (spec-142) | `tests/authorization.rs`, `tests/comments.rs` |
 | Session-store failure looked like a bad token | fixed | 503 `service_unavailable` (spec-142) | `tests/web.rs` |
 | Authorization/projection ran under the workspace lock | partial | rules shared by `ReadView`; v1 reads project after unlock (spec-143); v2 reads still serialize | `tests/authorization.rs` |
+| Block lookup scanned every page | fixed | block→page index with verified fallback (spec-144) | `tests/model.rs` |
 
 Still open and tracked in `docs/performance-roadmap.md`: the single-writer
 workspace mutex, the block-id index, session cache, patch-based undo, sidebar
@@ -132,4 +133,5 @@ not a substitute for an independent audit.
 The most valuable next step is a focused security review of the auth, session,
 webhook and authorization paths after these changes, followed by the nested
 resource authorization slice.
+
 
