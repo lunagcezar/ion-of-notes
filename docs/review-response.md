@@ -82,7 +82,7 @@ authorization boundary.
 | Projection cloned the whole workspace | fixed | builds from authorized resources only (spec-141) | `tests/web.rs`, `tests/authorization.rs` |
 | Writes recorded the owner as actor | fixed | request actor context from the session (spec-142) | `tests/authorization.rs`, `tests/comments.rs` |
 | Session-store failure looked like a bad token | fixed | 503 `service_unavailable` (spec-142) | `tests/web.rs` |
-| Authorization/projection ran under the workspace lock | fixed | rules shared by `ReadView`; v1 and the heavy v2 GETs project after unlock from a version-keyed snapshot (spec-143, spec-150) | `tests/authorization.rs`, `tests/web.rs` |
+| Authorization/projection ran under the workspace lock | fixed | rules shared by `ReadView`; v1 and the heavy v2 GETs project after unlock from a snapshot published by writes (spec-143, spec-150, spec-151) | `tests/authorization.rs`, `tests/web.rs` |
 | Block lookup scanned every page | fixed | block→page index with verified fallback (spec-144) | `tests/model.rs` |
 | Session looked up in the store per request | fixed | 30 s bounded cache with logout invalidation (spec-145) | `tests/auth.rs` |
 | Undo cloned the workspace per typing burst | fixed | page patches for text frames, snapshots for structure (spec-146) | `tests/ui.rs` |
@@ -138,6 +138,7 @@ not a substitute for an independent audit.
 The most valuable next step is a focused security review of the auth, session,
 webhook and authorization paths after these changes, followed by the nested
 resource authorization slice.
+
 
 
 

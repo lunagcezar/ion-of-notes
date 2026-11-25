@@ -188,6 +188,7 @@ Status vocabulary:
 | [148](spec-148-websocket-tickets.md) | Single-use WebSocket tickets | implemented | Header or ticket; query tokens rejected |
 | [149](spec-149-release-checksums.md) | Release checksums | implemented | `SHA256SUMS` after both platforms |
 | [150](spec-150-v2-snapshot-reads.md) | V2 reads from an immutable snapshot | implemented | Version-keyed snapshot outside the lock |
+| [151](spec-151-publish-snapshot-on-write.md) | Publish read snapshots on write | implemented | Arc snapshot published by writes; opt-in and throttled |
 
 ## 3. Work status
 
@@ -245,6 +246,7 @@ Where the code goes and why.
 6. A retired spec keeps a status note at the top and is not silently rewritten.
 7. Historical plans keep their checkboxes honest: `[x]` only when the item is
    actually done, with a note when a later spec completed it.
+
 
 
 

@@ -283,6 +283,10 @@ pub struct WorkspaceServer {
     webhooks: WebhookRuntime,
     realtime: realtime::RealtimeHub,
     crdt: crdt::CrdtStore,
+    /// Published immutable read snapshot; updated by writes (spec-151).
+    snapshot_cell: Arc<std::sync::RwLock<Option<WorkspaceSnapshot>>>,
+    last_snapshot_publish: std::sync::Mutex<std::time::Instant>,
+    publish_reads: std::sync::atomic::AtomicBool,
 }
 
 /// The three injected persistence ports.
@@ -535,7 +539,59 @@ impl WorkspaceServer {
             },
             realtime: realtime::RealtimeHub::new(256),
             crdt: crdt::CrdtStore::new(),
+            snapshot_cell: Arc::new(std::sync::RwLock::new(None)),
+            last_snapshot_publish: std::sync::Mutex::new(
+                std::time::Instant::now() - Duration::from_secs(1),
+            ),
+            publish_reads: std::sync::atomic::AtomicBool::new(false),
         }
+    }
+
+    /// The shared snapshot cell used by the HTTP read fast path.
+    pub fn snapshot_cell(&self) -> Arc<std::sync::RwLock<Option<WorkspaceSnapshot>>> {
+        Arc::clone(&self.snapshot_cell)
+    }
+
+    /// Start publishing read snapshots on write. The HTTP adapter calls this;
+    /// in-process-only servers do not pay the clone (spec-151).
+    pub fn enable_read_snapshots(&self) {
+        self.publish_reads
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.publish_snapshot();
+    }
+
+    /// Publish the current state for lock-free readers. Called by writes; the
+    /// clone happens on the write path, not in a reader (spec-151).
+    pub fn publish_snapshot(&self) {
+        if !self
+            .publish_reads
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            return;
+        }
+        let snapshot = WorkspaceSnapshot {
+            workspace: Arc::new(self.workspace.clone()),
+            collab: Arc::new(self.collab.clone()),
+            version: self.workspace.version,
+            collab_version: self.collab.version,
+        };
+        if let Ok(mut cell) = self.snapshot_cell.write() {
+            *cell = Some(snapshot);
+        }
+    }
+
+    /// Best-effort publish for high-frequency CRDT updates.
+    fn publish_snapshot_throttled(&self) {
+        let now = std::time::Instant::now();
+        let Ok(mut last) = self.last_snapshot_publish.lock() else {
+            return;
+        };
+        if now.duration_since(*last) < Duration::from_millis(250) {
+            return;
+        }
+        *last = now;
+        drop(last);
+        self.publish_snapshot();
     }
 
     pub fn snapshot(&self) -> &Workspace {
@@ -890,6 +946,7 @@ impl WorkspaceServer {
         if let Ok(Some(collab)) = self.persistence.collab_store.load() {
             self.collab = collab;
         }
+        self.publish_snapshot();
     }
 
     /// Persist only the collaboration document.
@@ -952,6 +1009,8 @@ impl WorkspaceServer {
             self.crdt.reset_page(page_id);
         }
         self.realtime.publish_change(change);
+        // Readers can now take this snapshot without cloning under the lock.
+        self.publish_snapshot();
         Ok(())
     }
 
@@ -982,6 +1041,7 @@ impl WorkspaceServer {
             self.crdt.reset_page(page_id);
             return Err(error.to_string());
         }
+        self.publish_snapshot_throttled();
         Ok(merged)
     }
 }

@@ -57,7 +57,7 @@ remain staged.
 | Workspace projection clone | Fixed in spec-141: the projection clones only authorized pages/resources. | Move to borrowed DTOs if allocation profiling shows it matters. |
 | Snapshot cache invalidation | Fixed in spec-141: cache keyed by `workspace.version`; writes no longer clear it. | Replace the under-lock clone with an immutable `Arc` snapshot on write. |
 | Request actor identity | Fixed in spec-142: member id from the session reaches writes, versions, comments and blocks. | Add the actor to webhook aggregates where they are not already covered. |
-| Single-writer workspace mutex | v1 and the heavy v2 GETs now read a version-keyed snapshot and serialize outside the lock (spec-143, spec-150); writes remain serialized. | Replace the snapshot clone under lock with an Arc-swapped immutable state if write latency shows up. |
+| Single-writer workspace mutex | v1 and the heavy v2 GETs read an Arc snapshot outside the lock (spec-143, spec-150); HTTP writes publish it (spec-151); writes remain serialized. | Writes still clone the workspace when publishing; measure write p95 before adding Arc-swapped state. |
 | Block lookup index | Fixed in spec-144: derived map with verified fallback; refreshed on page changes, structural commands, server appends and CRDT projection. | Add an orphan/consistency check to the model test suite. |
 | Session cache | Fixed in spec-145: 30 s TTL, 1024 entries, logout invalidation. | Move to a shared cache when multiple server instances must revoke across processes. |
 | Patch-based undo | Fixed in spec-146: text-only frames record a page patch; structural frames keep a snapshot; undo/redo move the entry. | Move to per-block command patches if page-level patches show up in profiling. |
@@ -99,6 +99,7 @@ stay cheap.
 - A browser UI.
 - A full CRDT model for every workspace object.
 - Multi-node rate limiting beyond the shared SQLite limiter.
+
 
 
 

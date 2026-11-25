@@ -395,6 +395,9 @@ capabilities) is implemented; the rest are planned.
 - FR-119: V2 workspace, page, page-detail and search reads use a version-keyed
   immutable snapshot and project/serialize outside the workspace lock
   (implemented in `spec-150`).
+- FR-120: HTTP servers publish a new read snapshot after writes (throttled for
+  CRDT frames), so reads take an `Arc` instead of cloning under the lock
+  (implemented in `spec-151`).
 
 ## 2. Non-functional requirements
 
@@ -581,6 +584,7 @@ capabilities) is implemented; the rest are planned.
 | FR-117 (implemented)          | `spec-148-websocket-tickets.md` |
 | FR-118 (implemented)          | `spec-149-release-checksums.md` |
 | FR-119 (implemented)          | `spec-150-v2-snapshot-reads.md` |
+| FR-120 (implemented)          | `spec-151-publish-snapshot-on-write.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

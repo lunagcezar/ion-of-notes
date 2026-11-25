@@ -386,3 +386,33 @@ async fn v2_snapshot_reads_are_invalidated_by_writes() {
         "{body}"
     );
 }
+
+#[tokio::test]
+async fn writes_publish_a_read_snapshot() {
+    let server = server();
+    let cell = server.snapshot_cell();
+    let app = router(server);
+    let draft = serde_json::json!({
+        "title": "Published snapshot",
+        "icon": "",
+        "parent": null,
+    })
+    .to_string();
+    let (status, _, _) = send(&app, v2_request("POST", "/api/v2/pages", Some(draft))).await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let snapshot = cell
+        .read()
+        .expect("snapshot cell")
+        .clone()
+        .expect("published snapshot");
+    assert!(
+        snapshot
+            .workspace
+            .pages
+            .iter()
+            .any(|page| page.title == "Published snapshot"),
+        "the write must publish the new page"
+    );
+    assert_eq!(snapshot.version, snapshot.workspace.version);
+}

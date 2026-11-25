@@ -96,9 +96,17 @@ pub fn router(server: WorkspaceServer) -> Router {
 
 /// Build the router around an already shared server (tests, embedding).
 pub fn router_with_server(server: Arc<Mutex<WorkspaceServer>>) -> Router {
+    let snapshot = server
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .snapshot_cell();
+    server
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .enable_read_snapshots();
     let state = AppState {
         server,
-        snapshot: Arc::new(RwLock::new(None)),
+        snapshot,
         started: Instant::now(),
         requests: Arc::new(AtomicU64::new(0)),
     };
