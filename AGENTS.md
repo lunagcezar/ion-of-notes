@@ -796,6 +796,9 @@ source-of-truth rules. `spec/README.md` owns the spec index and status.
 - Public API review → update `docs/public-api-analysis.md`,
   `docs/api-observations.md` (mark **Observed (public docs)**), the relevant
   ADR, and the specs; do not claim wire compatibility with Notion.
+- External wiki (DeepWiki) review → update `docs/wiki-findings.md` with the
+  source URL, base commit/date, adopted findings, stale claims and remaining
+  limitations; move adopted material into the owning document.
 - Keep `docs/unknowns.md` in sync with open questions about the reconstruction.
 - Keep `docs/review-findings.md` current when a review finds drift; resolve it
   in a spec rather than silently editing history.

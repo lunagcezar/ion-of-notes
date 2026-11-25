@@ -191,6 +191,7 @@ Status vocabulary:
 | [151](spec-151-publish-snapshot-on-write.md) | Publish read snapshots on write | implemented | Arc snapshot published by writes; opt-in and throttled |
 | [152](spec-152-account-lifecycle.md) | Account registration and passwords | implemented | Invite registration, change and owner reset |
 | [153](spec-153-browser-ui.md) | Browser UI | implemented | Embedded login/pages/blocks/search app |
+| [154](spec-154-deepwiki-documentation-review.md) | DeepWiki documentation review | implemented | Adopted findings and reconciled stale claims |
 
 ## 3. Work status
 

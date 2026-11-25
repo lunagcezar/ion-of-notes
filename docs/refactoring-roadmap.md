@@ -17,6 +17,9 @@ deliberately deferred. It complements `docs/architecture.md` and
 | Transport adapter split | `server/web/` is split into router/state, HTTP translation, operations and WebSocket modules; `remote/` is split into session, HTTP, realtime and CRDT modules. | `spec-085` |
 | Typed handler errors | `HandlerError`/`HandlerResult`/`body()` and the comments handler are converted. | `spec-087` |
 | Search state/view | Search fields are grouped into `SearchState` and `SearchView`; references use `self.search.*` / `view.search.*`. | `spec-088` |
+| Per-block SQLite persistence | SQLite stores one `workspace_blocks` row per block; single-block edits use `persist_block` and legacy page JSON migrates once. Workspace metadata and collaboration remain JSON documents in their tables. | `spec-133` |
+| Read snapshot outside the lock | `ReadView` shares the authorization/projection rules; v1 and heavy v2 GETs project from a version-keyed snapshot and HTTP writes publish it. | `spec-143`, `spec-150`, `spec-151` |
+| Normalized block index | `WorkspaceIndex` keeps `block_id -> page_id` with a verified fallback. | `spec-144` |
 
 ## 2. Deferred: server request layer
 
@@ -36,7 +39,6 @@ deliberately deferred. It complements `docs/architecture.md` and
 | Narrow view models | The settings pages now receive only `AiView`, `ServerView`, `SettingsView` or `SharingView`; the remaining renderers still receive `ViewState` for shared fields. | Narrow sidebar/content/chrome one renderer at a time. |
 | Command grouping | Sidebar commands are grouped into `SidebarCmd` behind `Command::Sidebar`; the other families remain flat. | Group page/block commands next if the flat enum becomes hard to scan. |
 | DTO/domain separation | Block and comment DTOs live in `model/dto/` with their conversions; `model.rs` keeps the public names stable. Page/database/view/file/user DTOs remain in their domain modules. | Move the next family when its wire shape changes. |
-| Normalized SQLite | Workspace and collaboration are whole-document JSON snapshots. `tests/perf.rs` measures ~1.3 s serialize / ~0.9 s deserialize at 50k blocks (debug), ~32 MiB JSON; 1k/10k stay cheap. | Add per-page rows or an operation log when a workspace is expected above ~20k blocks or write latency becomes user-visible; keep snapshots below that. |
 | Benchmarks/load tests | `tests/perf.rs` measures 1k/10k/50k blocks (serialize, deserialize, search, page lookup, CRDT sync) and is opt-in via `ION_OF_NOTES_PERF=1`. | Add release-build numbers and a CI job when a regression budget is needed. |
 
 ## 4. Rules for the next refactor

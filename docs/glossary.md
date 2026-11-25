@@ -44,6 +44,15 @@ definition.
 | **Hardened stack** | Loopback bind, read-only root, `/tmp` tmpfs, dropped capabilities, `no-new-privileges`, `init`, stop grace period and log rotation. | `compose.yml`, `docs/deployment.md` |
 | **Caddy example** | Reverse proxy and automatic TLS configuration for the server. | `deploy/Caddyfile.example` |
 | **CommandFamily** | Routing classification for `Command` into the `ui/apply/*` family modules. | `src/ui/commands.rs` |
+| **ReadView** | Borrowed `Workspace` + `CollabState` used to authorize/project a read after the server lock is released. | `src/server/authorization.rs` |
+| **WorkspaceSnapshot** | `Arc<Workspace>` + `Arc<CollabState>` + version pair; published by HTTP writes and cached by version. | `src/server.rs`, `src/server/web/mod.rs` |
+| **Read snapshot** | The immutable state a read path uses; a write publishes a new one instead of mutating a shared document. | `spec-150`, `spec-151` |
+| **Single-use ticket** | Short-lived WebSocket credential (`?ticket=`) exchanged from a bearer session; removed on first use. | `spec-148` |
+| **Session cache** | 30 s, 1024-entry cache of resolved bearer sessions, invalidated on logout/revocation. | `spec-145` |
+| **Block index** | Derived `block_id -> page_id` map with a verified scan fallback. | `src/model/index.rs` |
+| **Fenwick height index** | Binary-indexed tree of block heights for logarithmic visible-window lookup. | `src/ui/render/content/heights.rs` |
+| **PageWindow** | Offset/limit slice of view or data-source rows materialized for one request. | `src/server/pagination.rs` |
+| **DeepWiki review** | External wiki reading used as an independent architectural cross-check; reconciled in `docs/wiki-findings.md`. | `docs/wiki-findings.md` |
 | **Readiness probe** | `GET /ready`; reports that the router is serving, distinct from the `/health` liveness probe. | `src/server/web.rs` |
 | **Prometheus metrics** | `GET /metrics` text with up, uptime and API request count. | `src/server/web.rs` |
 | **Docker secret** | `secrets/owner_password.txt`, mounted at `/run/secrets/owner_password` and read through `ION_OF_NOTES_OWNER_PASSWORD_FILE`. | `compose.yml`, `src/auth.rs` |

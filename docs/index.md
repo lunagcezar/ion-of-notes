@@ -12,7 +12,7 @@ in what order, and which document is the source of truth for each concern.
 | Working on the server/API | `docs/api-contract.md` → `docs/security-hardening.md` → `docs/authorization.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014/ADR-015/ADR-016 |
 | Reviewing a security finding | `docs/review-response.md` → `docs/security-hardening.md` → `docs/authorization.md` → the relevant spec |
 | Deploying the server | `docs/deployment.md` → `compose.yml` → `Dockerfile` → `spec-050`/`spec-051` |
-| Reviewing quality | `docs/review-findings.md` → `docs/refactoring-roadmap.md` → `docs/testing.md` → `CHANGELOG.md` |
+| Reviewing quality | `docs/review-findings.md` → `docs/wiki-findings.md` → `docs/refactoring-roadmap.md` → `docs/testing.md` → `CHANGELOG.md` |
 | Working on visuals | `docs/ui-guidelines.md` → `docs/visual-reference-inventory.md` → `reference/` and `screenshots/` → the relevant spec |
 
 ## Current status (2026-11-12)
@@ -109,6 +109,7 @@ flowchart TD
     INDEX --> TEST[docs/testing.md]
     INDEX --> GLOSS[docs/glossary.md]
     INDEX --> REVIEW[docs/review-findings.md]
+    INDEX --> WIKI[docs/wiki-findings.md]
     INDEX --> API[docs/api-contract.md]
     INDEX --> PUBLIC[docs/public-api-analysis.md]
     API --> PUBLIC
@@ -123,6 +124,7 @@ flowchart TD
     AGENTS[AGENTS.md] --> INDEX
     SPECS --> ARCH
     REVIEW --> SPECS
+    WIKI --> ARCH
 ```
 
 ## Document catalog
@@ -146,6 +148,7 @@ flowchart TD
 | `docs/testing.md` | contributors, agents | Test strategy, test crates, fakes, red/green discipline |
 | `docs/glossary.md` | everyone | Shared vocabulary (domain, ports, adapters, DTOs, CRDT, clean room, …) |
 | `docs/review-findings.md` | maintainers, reviewers | Findings from the architecture/performance review and their resolution |
+| `docs/wiki-findings.md` | maintainers, reviewers | DeepWiki source/commit, page map, adopted findings and stale-claim reconciliation |
 | `docs/requirements.md` | everyone | Functional and non-functional requirements, requirement → spec map |
 | `docs/data-model.md` | contributors, agents | Entities, fields, relationships, invariants, persistence shape |
 | `docs/api-contract.md` | client/server contributors | Current loopback API, decided `/api/v1` target, DTOs, status codes |

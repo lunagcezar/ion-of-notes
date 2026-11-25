@@ -58,6 +58,40 @@ behind the default-on `desktop` feature (spec-048). The binary and the four UI
 test crates declare `required-features = ["desktop"]`; the core test pass uses
 `--no-default-features`, so it compiles and links no window code.
 
+### 2.1 Ports and adapters at a glance
+
+| Port | Contract | Adapters |
+| ---- | -------- | -------- |
+| `RequestTransport` | one REST-shaped request/response | in-process `WorkspaceServer`, Axum adapter, remote REST client |
+| `CollabTransport` | CRDT sync/update, realtime subscription, awareness | in-process server, WebSocket remote transport |
+| `WorkspaceApi` | composite of both transport ports | every client transport, including test stubs |
+| `WorkspaceStore` | load/persist the workspace document | `JsonStore`, `NoStore`, `SqliteStore`, `PostgresStore` |
+| `CollabStore` | load/persist collaboration state | `JsonCollabStore`, `NoCollabStore`, `SqliteStore`, `PostgresStore` |
+| `SnapshotStore` | commit workspace + collaboration atomically and persist one page/block | `SqliteStore`, `PostgresStore` |
+| `AuthStore` | accounts, sessions, session pruning | `NoAuthStore`, `MemoryAuthStore`, `SqliteStore`, `PostgresStore` |
+| `RateLimitStore` | shared fixed-window counters | `SqliteStore`, `RedisRateLimitStore` |
+| `WebhookSender` | one outbound delivery | ureq/rustls adapter, recording test sender |
+
+Adapters never own business rules; they implement a port the application
+declares. New transports or stores are added as new implementations instead of
+editing `WorkspaceServer`.
+
+### 2.2 Composition root
+
+`src/app.rs` is the only module that wires concrete adapters into the core:
+
+- chooses JSON, SQLite or PostgreSQL from the CLI/environment;
+- loads or seeds the workspace and collaboration documents, failing closed on a
+  corrupt document;
+- installs the store as workspace/collaboration/auth/snapshot port;
+- builds `WorkspaceServer`, then either wraps it in `Client` for the in-process
+  window or hands it to the Axum listener for `--serve`;
+- seeds the owner account and enables read-snapshot publication for the HTTP
+  adapter.
+
+`main.rs` and `bin/ion-of-notes-server.rs` only parse arguments and call this
+root; the window and the listener never assemble the object graph themselves.
+
 ## 3. Module map
 
 ```text
@@ -124,8 +158,10 @@ src/
     http.rs          legacy HTTP/1.1 parser/formatter and serve_once helper;
                      serve_on hands the listener to Axum
     web/             Axum/Tokio HTTP + WebSocket adapter for --serve
-      mod.rs         router, state, startup, webhook worker
-      http.rs        HTTP translation and response helpers
+      mod.rs         router, state, startup, webhook worker, snapshot cache
+      http.rs        HTTP translation, snapshot reads and response helpers
+      web_app.rs     embedded browser UI at /app and security headers
+      assets/        app.html, app.js and app.css
       operations.rs  health, readiness and metrics
       websocket.rs   WebSocket session and CRDT messages
     realtime.rs      change-feed hub, protocol messages and presence
@@ -229,9 +265,28 @@ sequenceDiagram
 - the render modules stay pure and testable;
 - undo/redo and persistence can observe a single boundary.
 
+### Read path and snapshots
+
+Read-heavy HTTP routes do not keep the workspace mutex during projection or JSON
+serialization:
+
+1. the adapter takes the lock to run version/auth/rate-limit/capability checks
+   and to take an `Arc<Workspace>` + `Arc<CollabState>` snapshot;
+2. it releases the lock;
+3. `ReadView` authorizes and projects, and the response is serialized, outside
+   the critical section.
+
+The snapshot is keyed by `workspace.version` and `collab.version`. HTTP writes
+publish a new snapshot (CRDT publication is throttled to 250 ms); an in-process
+desktop server does not pay that clone. Writes themselves still serialize on the
+single workspace mutex (`spec-143`, `spec-150`, `spec-151`).
+
 ## 5. Persistence and write path
 
-The workspace and collaboration state are separate JSON documents:
+JSON mode stores the workspace and collaboration state as separate documents.
+SQLite normalizes pages and blocks into rows while keeping workspace metadata and
+collaboration as JSON (`spec-039`, `spec-133`). PostgreSQL mirrors the SQLite
+schema (`spec-137`).
 
 ```mermaid
 flowchart LR
@@ -423,17 +478,18 @@ new stores and delivery workers.
 ## 11. Known constraints
 
 - The workspace is still small enough for full snapshots on structural
-  changes; per-page writes and debounce reduce the common case.
+  changes; per-page and per-block writes plus debounce reduce the common case.
 - `ui/apply.rs` is the single `apply_commands` entry point; the command
   families live in `ui/apply/*` and `CommandFamily` is the routing table. The
   flush and lock classifications remain on `Command`, so a new variant has one
   source of truth.
 - Real-time collaboration runs through the WebSocket change feed and Yrs text
   merge (specs 040 and 042); the desktop client uses its own Yrs session and
-  awareness cursors (spec 043).
-- Accounts, Argon2id sessions and SQLite persistence are implemented
-  (spec-039); the remote desktop transport and login UI are implemented
-  (specs 044 and 045).
+  awareness cursors (spec 043), and the server uses single-use socket tickets
+  (spec-148).
+- Accounts, Argon2id sessions, invite registration, password change and owner
+  reset are implemented (specs 039, 152); the remote desktop transport and login
+  UI are implemented (specs 044, 045).
 - v1 and v2 adapt the same `server/usecases` functions; v2 no longer rewrites
   routes into v1. `route_capability` is the single capability table and is
   covered by `tests/contract.rs` (spec-047).
@@ -446,17 +502,31 @@ new stores and delivery workers.
   `docs/deployment.md` (spec-051).
 - The Library More menu and page-action placeholders still contain
   presentation-only views.
-- Inline comments persist a preference; block anchors are not implemented.
-- The v2 **foundation, pagination, rich text/blocks, properties/data sources,
-  views, comments/users/files, webhooks and limits** exist (specs 030-045):
+- Inline comments render block-anchored threads and can create/delete them from
+  the page panel (specs 131, 136).
+- The v2 **foundation and resource families** exist (specs 030-038, 115-153):
   `/api/v2`, version/auth/capability checks, structured errors, request IDs,
   cursor list envelopes, rich text, block metadata/children, typed properties,
   databases, data sources, views, comments, users, file uploads, signed webhook
   delivery, the operational limits/retry contract, the Axum production HTTP
   adapter, SQLite-backed accounts/sessions, the WebSocket change feed, TLS
-  webhook delivery, shared SQLite rate limits, Yrs CRDT text merge,
-  client-side awareness cursors, the remote desktop transport and the server
-  login UI.
+  webhook delivery, shared SQLite/Redis rate limits, Yrs CRDT merge,
+  client-side awareness cursors, the remote desktop transport, the server login
+  UI, the browser UI, account lifecycle and the versioned read snapshot.
+
+### 11.1 Refactoring status
+
+Implemented: central route policy, shared CRDT text helpers, sidebar
+decomposition, pipeline stages, transport segregation, resource-oriented client
+modules, web adapter split, typed handler errors, search state/view,
+per-block SQLite persistence and the read snapshot.
+
+Deferred: extracting `AuthService`/`WebhookService` from inherent
+`WorkspaceServer` methods (the seam already isolates the logic), extending
+`DomainEvent` to the remaining write families, and replacing the test-only
+HTTP/1.1 parser. Full detail: `docs/refactoring-roadmap.md`.
+
+## 12. Further reading
 
 ## 12. Further reading
 

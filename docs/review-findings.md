@@ -440,3 +440,21 @@ introduced by the new module declarations.
 | Done | Settings pages, page-column render, command families and retry split | `spec-049` |
 | Done | Group `WorkspaceServer` state into sub-structs | `spec-047` |
 | Done | Extract `client/retry.rs` | `spec-049` |
+
+## 10. DeepWiki review (2026-11-25)
+
+An independent DeepWiki pass described the repository at commit
+`75a4587ddaeff0fd2cb4cd0d9c22410c4d03dbc5`. Its page map, adopted findings,
+stale claims and open limitations are reconciled in `docs/wiki-findings.md`.
+
+- **Adopted:** ports/adapters table, composition-root responsibilities,
+  refactoring status, tracing span list and glossary terms.
+- **Corrected as stale:** normalized SQLite, reads under the workspace lock,
+  WebSocket `?token=` fallback, and the absence of registration/reset/browser
+  UI.
+- **Confirmed limitations:** writes remain serialized, realtime is per process,
+  email verification/reset tokens are absent and the browser UI has no
+  WebSocket yet.
+
+No runtime behavior changed in this review; `spec-154` records the
+documentation pass.

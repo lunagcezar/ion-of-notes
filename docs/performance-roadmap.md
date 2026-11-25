@@ -12,19 +12,23 @@ the architecture.
 - The remote desktop client sends CRUD and CRDT work through a bounded worker;
   when the queue is full, CRDT updates wait in a pending queue instead of
   blocking the UI (spec-132, spec-141).
-- Workspace and collaboration snapshots are serialized as JSON. SQLite commits
-  both in one transaction (spec-074), but the snapshot is still whole-document.
+- Workspace and collaboration snapshots are serialized as JSON in the JSON
+  adapter. SQLite commits both in one transaction and normalizes pages and
+  blocks into rows (spec-074, spec-133); only workspace metadata and the
+  collaboration document remain JSON in their tables.
 - Yrs CRDT covers page titles, block text and structure/properties/database row
   registers (spec-134, spec-135).
 - Typing sends only the transaction update and local mode persists through the
   debounced REST write; the sidebar/page are not rebuilt behind the icon picker
   (spec-141).
 - The Axum adapter runs the synchronous server in `spawn_blocking` behind one
-  mutex, so one request at a time reaches the workspace.
-- The in-memory request log is capped; sessions are not retained in the
-  runtime connection list.
-- SQLite updates one page row per edit and skips the position rewrite unless
-  the order changed (spec-114, spec-116).
+  mutex. v1 and the heavy v2 GETs project and serialize from a versioned snapshot
+  outside the lock; HTTP writes publish it. Writes still serialize (spec-143,
+  spec-150, spec-151).
+- The in-memory request log is capped; resolved sessions are cached for 30 s
+  (`spec-145`), so most requests do not touch the auth store.
+- SQLite updates one page row and one block row per edit and skips the position
+  rewrite unless the order changed (spec-114, spec-116, spec-133).
 - The in-memory rate limiter purges expired windows at a bound; the shared
   limiter has a local contingency.
 - Webhook events queue in the persisted outbox and the worker sends outside the
@@ -92,6 +96,23 @@ Run it with
 These are single-run debug indicators, not release budgets; they show that
 whole-document serialization dominates at 50k blocks while search and CRDT sync
 stay cheap.
+
+### 3.2 Tracing spans
+
+The UI emits structured `tracing` spans at the main frame boundaries, so a
+profile can separate rendering, command dispatch, persistence and I/O:
+
+| Span | Boundary |
+| ---- | -------- |
+| `ui.view_state` | build the immutable `ViewState` snapshot |
+| `ui.apply_commands` | apply the collected command queue |
+| `ui.commit_edits` | diff, debounce and dispatch persistence |
+| `ui.render_sidebar` | sidebar tree and sections |
+| `ui.render_content` | page title, blocks and inline comments |
+
+Server-side timing comes from the `tests/perf.rs` harness and the metrics
+endpoint; add a span before changing a hot path so before/after numbers share a
+boundary.
 
 ## 4. Non-goals for this session
 

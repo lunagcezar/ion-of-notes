@@ -250,6 +250,12 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - `POST /api/v2/auth/password` changes the caller's password, revokes every session and returns a fresh token; `POST /api/v2/auth/reset` lets the owner reset a member.
 - Desktop Settings → Server and the browser UI expose registration, change and reset.
 
+### Documentation - spec-154 DeepWiki review
+
+- Added `docs/wiki-findings.md` with the wiki page map, adopted findings, stale-claim reconciliation and open limitations.
+- Enriched the architecture ports/adapters table, composition root, refactoring status, performance tracing spans and glossary.
+- Corrected the normalized-SQLite, read-snapshot, WebSocket-ticket and account/browser claims.
+
 ### Added - spec-153 browser UI
 
 - The Axum adapter serves `/app`, `/app.js` and `/app.css` with a strict CSP and no external origin.
