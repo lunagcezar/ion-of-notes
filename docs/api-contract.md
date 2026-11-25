@@ -554,8 +554,12 @@ and `href`.
 ### 8.6 v2 comments, users and files (implemented)
 
 - `CommentDto` carries `parent` (page or block), `discussion_id`,
-  `property_id`, timestamps, `created_by`, rich text, attachments, an optional
-  display name and `has_pending_attachments`.
+  `property_id`, an optional `anchor { block_id, start, end }`, timestamps,
+  `created_by`, rich text, attachments, an optional display name and
+  `has_pending_attachments`.
+- The anchor is a character range inside a block on the comment's page; the
+  server validates block ownership, parent consistency and the range on create
+  and update.
 - Comments support page/block parents, up to three uploaded attachments and
   connection/user/custom display names.
 - `UserDto` distinguishes `person` and `bot`; profile fields are filtered by

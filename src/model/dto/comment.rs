@@ -11,6 +11,14 @@ pub struct CommentDisplayNameDto {
     pub resolved_name: String,
 }
 
+/// A text range inside one block, used by inline comments.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommentAnchor {
+    pub block_id: String,
+    pub start: usize,
+    pub end: usize,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CommentDto {
     pub object: String,
@@ -19,6 +27,8 @@ pub struct CommentDto {
     pub discussion_id: String,
     #[serde(default)]
     pub property_id: Option<String>,
+    #[serde(default)]
+    pub anchor: Option<CommentAnchor>,
     pub created_time: String,
     pub last_edited_time: String,
     pub created_by: UserRef,
@@ -44,6 +54,8 @@ pub struct CommentInput {
     pub discussion_id: Option<String>,
     #[serde(default)]
     pub property_id: Option<String>,
+    #[serde(default)]
+    pub anchor: Option<CommentAnchor>,
     #[serde(default)]
     pub rich_text: Vec<RichText>,
     #[serde(default)]

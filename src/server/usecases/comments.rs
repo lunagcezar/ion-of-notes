@@ -5,8 +5,8 @@ use super::super::events::DomainEvent;
 use super::UseCaseError;
 use crate::collab::ChangeOp;
 use crate::model::{
-    AttachmentInput, CommentAttachment, CommentDisplayName, CommentDisplayNameDto, CommentDto,
-    CommentInput, FileObject, ParentDto, UploadStatus, now_iso,
+    AttachmentInput, CommentAnchor, CommentAttachment, CommentDisplayName, CommentDisplayNameDto,
+    CommentDto, CommentInput, FileObject, ParentDto, UploadStatus, now_iso,
 };
 
 /// The documented per-comment attachment limit.
@@ -52,6 +52,7 @@ pub(in crate::server) fn create_comment(
         )));
     }
     let page_id = resolve_parent_page(server, &input.parent)?;
+    let anchor = validate_anchor(server, &input.parent, &page_id, input.anchor)?;
     let attachments = resolve_attachments(server, &input.attachments)?;
     if input.rich_text.is_empty() && attachments.is_empty() {
         return Err(UseCaseError::Invalid(
@@ -67,6 +68,7 @@ pub(in crate::server) fn create_comment(
             .discussion_id
             .unwrap_or_else(|| format!("discussion-{}", uuid::Uuid::new_v4())),
         property_id: input.property_id,
+        anchor,
         created_time: now.clone(),
         last_edited_time: now,
         created_by: crate::model::UserRef::new(server.collab.owner_id()),
@@ -104,6 +106,15 @@ pub(in crate::server) fn update_comment(
         .display_name
         .as_ref()
         .map(|display| resolve_display_name(server, display));
+    let existing = server
+        .workspace
+        .comments
+        .iter()
+        .find(|comment| comment.id == id)
+        .cloned()
+        .ok_or_else(|| UseCaseError::NotFound("comment not found".to_string()))?;
+    let page_id = resolve_parent_page(server, &existing.parent)?;
+    let anchor = validate_anchor(server, &existing.parent, &page_id, input.anchor)?;
     let dto = {
         let Some(comment) = server.workspace.comments.iter_mut().find(|c| c.id == id) else {
             return Err(UseCaseError::NotFound("comment not found".to_string()));
@@ -111,6 +122,7 @@ pub(in crate::server) fn update_comment(
         comment.rich_text = input.rich_text;
         comment.attachments = attachments;
         comment.property_id = input.property_id;
+        comment.anchor = anchor;
         comment.display_name = display_name;
         comment.last_edited_time = now_iso();
         comment.clone()
@@ -141,6 +153,51 @@ pub(in crate::server) fn delete_comment(
         data: serde_json::json!({ "parent": comment.parent }).to_string(),
     });
     Ok(comment)
+}
+
+/// Validate an optional inline-comment anchor against the owning page and the
+/// block text. Indices are character offsets, matching awareness positions.
+fn validate_anchor(
+    server: &WorkspaceServer,
+    parent: &ParentDto,
+    page_id: &str,
+    anchor: Option<CommentAnchor>,
+) -> Result<Option<CommentAnchor>, UseCaseError> {
+    let Some(anchor) = anchor else {
+        return Ok(None);
+    };
+    if anchor.block_id.trim().is_empty() {
+        return Err(UseCaseError::Invalid(
+            "anchor block_id must not be empty".to_string(),
+        ));
+    }
+    let Some(block) = server.workspace.block(&anchor.block_id) else {
+        return Err(UseCaseError::Invalid("anchor block not found".to_string()));
+    };
+    if server
+        .workspace
+        .page_id_for_block(&anchor.block_id)
+        .as_deref()
+        != Some(page_id)
+    {
+        return Err(UseCaseError::Invalid(
+            "anchor block does not belong to the comment page".to_string(),
+        ));
+    }
+    if let ParentDto::Block { block_id } = parent
+        && block_id != &anchor.block_id
+    {
+        return Err(UseCaseError::Invalid(
+            "anchor block must match the comment parent block".to_string(),
+        ));
+    }
+    let length = block.text.chars().count();
+    if anchor.start > anchor.end || anchor.end > length {
+        return Err(UseCaseError::Invalid(format!(
+            "anchor range must be within 0..={length}"
+        )));
+    }
+    Ok(Some(anchor))
 }
 
 fn resolve_parent_page(

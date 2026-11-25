@@ -280,6 +280,10 @@ properties/data sources (spec-033), views (spec-034), comments/users/files
 (spec-035), webhooks (spec-036), limits (spec-037), the Axum adapter (spec-038)
 and accounts/sessions (spec-039) are implemented.
 
+Comments support an optional inline anchor `{ block_id, start, end }` with
+character offsets inside that block; the server validates ownership and range
+(spec-131).
+
 ```mermaid
 erDiagram
     WORKSPACE ||--o{ PAGE : contains

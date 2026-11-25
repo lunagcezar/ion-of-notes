@@ -5,8 +5,8 @@ mod common;
 use common::{data, list_data, v2_request, v2_request_as};
 use ion_of_notes::client::Client;
 use ion_of_notes::model::{
-    AttachmentInput, CommentDisplayName, CommentDto, CommentInput, FileObject, FileUpload,
-    FileUploadInput, ParentDto, RichText, UploadStatus, UserDto, UserType, Workspace,
+    AttachmentInput, CommentAnchor, CommentDisplayName, CommentDto, CommentInput, FileObject,
+    FileUpload, FileUploadInput, ParentDto, RichText, UploadStatus, UserDto, UserType, Workspace,
 };
 use ion_of_notes::server::{
     Capability, Connection, ListResponse, Method, RequestTransport, WorkspaceServer,
@@ -45,12 +45,75 @@ fn comment_input(parent: ParentDto, text: &str) -> CommentInput {
         parent,
         discussion_id: None,
         property_id: None,
+        anchor: None,
         rich_text: vec![RichText::text(text)],
         attachments: Vec::new(),
         display_name: Some(CommentDisplayName::Custom {
             name: "Test bot".to_string(),
         }),
     }
+}
+
+#[test]
+fn comment_anchor_is_validated_against_the_block_text() {
+    let mut server = WorkspaceServer::new(Workspace::seed("anchors"));
+    let mut input = comment_input(
+        ParentDto::Block {
+            block_id: "h2".to_string(),
+        },
+        "Inline note",
+    );
+    input.anchor = Some(CommentAnchor {
+        block_id: "h2".to_string(),
+        start: 0,
+        end: 4,
+    });
+    let response = server.handle(&v2_request(
+        Method::Post,
+        "/api/v2/comments",
+        Some(serde_json::to_string(&input).unwrap()),
+    ));
+    assert_eq!(response.status, 201);
+    let comment: CommentDto = data(&response);
+    assert_eq!(
+        comment.anchor,
+        Some(CommentAnchor {
+            block_id: "h2".to_string(),
+            start: 0,
+            end: 4,
+        })
+    );
+
+    input.anchor = Some(CommentAnchor {
+        block_id: "h2".to_string(),
+        start: 2,
+        end: 999,
+    });
+    let response = server.handle(&v2_request(
+        Method::Post,
+        "/api/v2/comments",
+        Some(serde_json::to_string(&input).unwrap()),
+    ));
+    assert_eq!(response.status, 400);
+
+    // The anchor block must belong to the page named by the parent.
+    let mut cross_page = comment_input(
+        ParentDto::Page {
+            page_id: "p-home".to_string(),
+        },
+        "Wrong block",
+    );
+    cross_page.anchor = Some(CommentAnchor {
+        block_id: "s1".to_string(),
+        start: 0,
+        end: 1,
+    });
+    let response = server.handle(&v2_request(
+        Method::Post,
+        "/api/v2/comments",
+        Some(serde_json::to_string(&cross_page).unwrap()),
+    ));
+    assert_eq!(response.status, 400);
 }
 
 #[test]
@@ -370,6 +433,7 @@ fn client_comment_and_upload_roundtrip() {
         },
         discussion_id: None,
         property_id: None,
+        anchor: None,
         rich_text: vec![RichText::text("Client comment")],
         attachments: vec![AttachmentInput {
             file_upload_id: uploaded.id,

@@ -43,6 +43,7 @@ single place to check whether a finding was fixed, mitigated or planned.
 | PowerShell-free quality gate | fixed | Markdown checks run in `tests/docs.rs` and `scripts/quality.sh` needs no pwsh (spec-128) | `tests/docs.rs` |
 | Concurrent SQLite instances could fail on startup/count | fixed | busy timeout, bounded schema retry and a four-connection count test (spec-129) | `tests/shared_limits.rs` |
 | No tagged binaries | fixed | `v*` tag workflow builds Linux server and Windows desktop/server archives (spec-130) | `.github/workflows/release.yml` |
+| No inline comment text ranges | fixed at the API/model layer | optional `anchor { block_id, start, end }` with ownership/range validation (spec-131); the desktop comment panel still renders page-level threads | `tests/comments.rs` |
 | Webhook network I/O under the global mutex | fixed | events queue in the outbox; the worker sends outside the lock (spec-117) | `tests/webhooks.rs` |
 | Database view pagination after loading every row | fixed | index selection + `PageWindow`; only the requested slice is cloned (spec-118) | `tests/model.rs`, `tests/pagination.rs` |
 | Renderer still visits every block; height tree absent | fixed | Fenwick height index renders only the visible window (spec-119) | `tests/ui.rs`, screenshot |
@@ -88,7 +89,7 @@ authorization boundary.
 | PostgreSQL / Redis | SQLite is intentionally single-node for now | `docs/performance-roadmap.md` |
 | Password reset / registration / account UI | Product decision and email delivery are missing | `docs/authorization.md`, roadmap |
 | Browser UI | Out of scope for the desktop-first product | roadmap |
-| Block anchors for inline comments | Needs a comment model change | roadmap |
+| Block anchors for inline comments | API/model anchors are implemented (spec-131); UI inline threads remain | roadmap |
 
 ## 4. Review scope and limitations
 

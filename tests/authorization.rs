@@ -181,6 +181,7 @@ fn nested_comment_routes_resolve_the_owning_page() {
         attachments: Vec::new(),
         display_name: None,
         property_id: None,
+        anchor: None,
     })
     .expect("body");
     let denied = server.handle(&v2(&member, Method::Post, "/api/v2/comments", Some(body)));
@@ -195,6 +196,7 @@ fn nested_comment_routes_resolve_the_owning_page() {
         attachments: Vec::new(),
         display_name: None,
         property_id: None,
+        anchor: None,
     })
     .expect("body");
     let allowed = server.handle(&v2(

@@ -168,6 +168,7 @@ Status vocabulary:
 | [128](spec-128-portable-docs-gate.md) | PowerShell-free docs gate | implemented | Markdown checks in `tests/docs.rs` + `quality.sh` |
 | [129](spec-129-sqlite-concurrent-instances.md) | SQLite concurrent instances | implemented | Busy timeout + bounded schema retry |
 | [130](spec-130-release-artifacts.md) | Tagged release artifacts | implemented | Linux server + Windows desktop/server on `v*` |
+| [131](spec-131-inline-comment-anchors.md) | Inline comment block anchors | implemented | Validated block/text range on comments |
 
 ## 3. Work status
 

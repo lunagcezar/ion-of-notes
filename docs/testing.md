@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (342 tests across the two feature passes, 2026-11-24)
+## 3. Test-crate map (343 tests across the two feature passes, 2026-11-24)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -59,7 +59,7 @@ flowchart TD
 | `tests/blocks.rs` | 12 | rich text, block metadata, nesting, tables, unsupported types, block endpoints |
 | `tests/properties.rs` | 9 | property schemas/values, clear rules, row migration, databases/data sources, property items |
 | `tests/views.rs` | 10 | view CRUD, filters/sorts, board/calendar grouping, query pagination |
-| `tests/comments.rs` | 8 | comment CRUD/pagination, attachments, users, file uploads |
+| `tests/comments.rs` | 9 | comment CRUD/pagination, anchors, attachments, users, file uploads |
 | `tests/webhooks.rs` | 16 | subscriptions, verification, signatures, outbox/worker, delivery/retry, dead letter/requeue |
 | `tests/shared_limits.rs` | 3 | SQLite shared workspace budget, window reset and four-connection contention |
 | `tests/web.rs` | 15 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, projections, `/ready`, `/metrics` |
@@ -91,7 +91,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 299 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 300 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 44 desktop tests: the four UI crates, with the default-on desktop feature
@@ -108,10 +108,10 @@ pwsh -File scripts/quality.ps1
 sh scripts/quality.sh
 ```
 
-`cargo test --all-targets` runs all 342 default-feature tests with the
+`cargo test --all-targets` runs all 343 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 343 unique tests because each feature pass includes its
+(spec-048) and cover 344 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam

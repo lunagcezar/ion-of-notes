@@ -9,4 +9,6 @@ mod block;
 mod comment;
 
 pub use block::{BlockChildrenRequest, BlockDto, BlockInput, ParentDto};
-pub use comment::{AttachmentInput, CommentDisplayNameDto, CommentDto, CommentInput};
+pub use comment::{
+    AttachmentInput, CommentAnchor, CommentDisplayNameDto, CommentDto, CommentInput,
+};

@@ -37,8 +37,8 @@ pub use database::{
 };
 pub use diff::PageDiff;
 pub use dto::{
-    AttachmentInput, BlockChildrenRequest, BlockDto, BlockInput, CommentDisplayNameDto, CommentDto,
-    CommentInput, ParentDto,
+    AttachmentInput, BlockChildrenRequest, BlockDto, BlockInput, CommentAnchor,
+    CommentDisplayNameDto, CommentDto, CommentInput, ParentDto,
 };
 pub use file::{CommentAttachment, FileObject, FileUpload, FileUploadInput, UploadStatus};
 pub use page::{Page, PageDraft, PageSummary, SearchResult, WorkspaceError};

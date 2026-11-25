@@ -138,6 +138,13 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - A `v*` tag workflow builds and packages the Linux headless server and the
   Windows desktop/server binaries, then publishes them with `gh release`.
 
+### Added - spec-131 inline comment block anchors
+
+- `CommentDto`/`CommentInput` accept an optional
+  `anchor { block_id, start, end }`.
+- The server validates block existence, page ownership, parent consistency and
+  the character range on create and update.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames
