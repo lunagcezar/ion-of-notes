@@ -390,6 +390,8 @@ capabilities) is implemented; the rest are planned.
 - FR-117: The WebSocket handshake accepts a Bearer header or a single-use ticket
   from `POST /api/v2/realtime/ticket`; session tokens are not accepted in the
   URL (implemented in `spec-148`).
+- FR-118: Tagged releases publish a deterministic `SHA256SUMS` after every
+  platform archive (implemented in `spec-149`).
 
 ## 2. Non-functional requirements
 
@@ -574,6 +576,7 @@ capabilities) is implemented; the rest are planned.
 | FR-115 (implemented)          | `spec-146-patch-based-undo.md` |
 | FR-116 (implemented)          | `spec-147-sidebar-virtualization.md` |
 | FR-117 (implemented)          | `spec-148-websocket-tickets.md` |
+| FR-118 (implemented)          | `spec-149-release-checksums.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

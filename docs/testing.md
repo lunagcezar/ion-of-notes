@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (367 tests across the two feature passes, 2026-11-25)
+## 3. Test-crate map (368 tests across the two feature passes, 2026-11-25)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -81,7 +81,7 @@ flowchart TD
 | `tests/templates.rs` | 3 | template catalog, stable page building, purpose mapping |
 | `tests/app.rs` | 5 | composition root wiring, replace-workspace, core-without-desktop feature seam |
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
-| `tests/deployment.rs` | 6 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
+| `tests/deployment.rs` | 7 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
 | `tests/perf.rs` | 1 | opt-in load/serialize/search/CRDT timings at 1k/10k/50k blocks |
 | `tests/load.rs` | 1 | opt-in 8-thread read/write p50/p95 under the workspace lock |
 | `tests/docs.rs` | 1 | relative links, table columns and Mermaid fences |
@@ -94,7 +94,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 317 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 318 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 51 desktop tests: the four UI crates, with the default-on desktop feature
@@ -120,10 +120,10 @@ ION_OF_NOTES_POSTGRES_TEST_URL=... ION_OF_NOTES_REDIS_TEST_URL=... \
   --test postgres_store --test redis_limits
 ```
 
-`cargo test --all-targets` runs all 367 default-feature tests with the
+`cargo test --all-targets` runs all 368 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 368 unique tests because each feature pass includes its
+(spec-048) and cover 369 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam
@@ -413,6 +413,7 @@ public Notion service.
 - [ ] `--screenshot` was checked if the UI changed.
 - [ ] Requirements, data model, ADR, docs and `CHANGELOG.md` are updated.
 - [ ] The spec is committed with a message naming it.
+
 
 
 

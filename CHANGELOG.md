@@ -235,6 +235,10 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Snapshot cache relies on `workspace.version`; projections clone only
   authorized resources.
 
+### Security - spec-149 release checksums
+
+- A final workflow job downloads both platform archives and publishes `SHA256SUMS`; `sha256sum -c` verifies a download.
+
 ### Security - spec-148 single-use WebSocket tickets
 
 - `POST /api/v2/realtime/ticket` exchanges a session for a 30 s, single-use ticket; the socket accepts a Bearer header or `?ticket=`.

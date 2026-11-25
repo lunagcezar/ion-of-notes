@@ -305,12 +305,14 @@ Pushing a `v*` tag runs `.github/workflows/release.yml`. It publishes:
 
 - `ion-of-notes-server-<tag>-x86_64-unknown-linux-gnu.tar.gz`;
 - `ion-of-notes-<tag>-x86_64-pc-windows-msvc.zip`;
-- `ion-of-notes-server-<tag>-x86_64-pc-windows-msvc.zip`.
+- `ion-of-notes-server-<tag>-x86_64-pc-windows-msvc.zip`;
+- `SHA256SUMS` (published by a final job that waits for both platforms).
 
 The workflow builds with `--locked` and uses `gh release upload --clobber`, so a
-re-run replaces the same asset names. Signing, macOS bundles and installers
-remain separate packaging work. For the container path, use `compose.yml` or
-`compose.prod.yml` as described above.
+re-run replaces the same asset names. Verify a download with
+`sha256sum -c SHA256SUMS`. Signing (Sigstore/cosign), macOS bundles and
+installers remain separate packaging work. For the container path, use
+`compose.yml` or `compose.prod.yml` as described above.
 
 ## 12. Optional PostgreSQL and Redis
 

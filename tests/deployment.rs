@@ -87,3 +87,14 @@ fn toolchain_and_update_automation_are_pinned() {
             .exists()
     );
 }
+
+#[test]
+fn release_workflow_publishes_checksums_after_both_platforms() {
+    let workflow = read(".github/workflows/release.yml");
+    assert!(workflow.contains("tags:"));
+    assert!(workflow.contains("needs: [linux-server, windows]"));
+    assert!(workflow.contains("sha256sum"));
+    assert!(workflow.contains("SHA256SUMS"));
+    assert!(workflow.contains("gh release upload"));
+    assert!(workflow.contains("--generate-notes"));
+}

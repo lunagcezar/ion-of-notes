@@ -88,6 +88,7 @@ authorization boundary.
 | Undo cloned the workspace per typing burst | fixed | page patches for text frames, snapshots for structure (spec-146) | `tests/ui.rs` |
 | Sidebar painted every expanded page | fixed | flat rows limited to the clip rect (spec-147) | `tests/ui.rs` |
 | WebSocket session token in the query string | fixed | single-use 30 s ticket; header still preferred (spec-148) | `tests/realtime.rs` |
+| Releases had no checksums | fixed | `SHA256SUMS` job after both platforms (spec-149) | `tests/deployment.rs` |
 
 Still open and tracked in `docs/performance-roadmap.md`: the single-writer
 workspace mutex, the block-id index, session cache, patch-based undo, sidebar
@@ -137,6 +138,7 @@ not a substitute for an independent audit.
 The most valuable next step is a focused security review of the auth, session,
 webhook and authorization paths after these changes, followed by the nested
 resource authorization slice.
+
 
 
 

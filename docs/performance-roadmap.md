@@ -63,7 +63,7 @@ remain staged.
 | Patch-based undo | Fixed in spec-146: text-only frames record a page patch; structural frames keep a snapshot; undo/redo move the entry. | Move to per-block command patches if page-level patches show up in profiling. |
 | Sidebar virtualization | Fixed in spec-147: flat rows painted only inside the clip rect; scroll range preserved. | Move to `show_rows` if the outer scroll area is split in a future redesign. |
 | WebSocket query token | Fixed in spec-148: single-use 30 s ticket; `?token=` is rejected. | Keep proxies from logging `?ticket=` (it is single-use and short-lived). |
-| Release checksums | Tagged archives are not signed and have no `SHA256SUMS`. | Publish a checksum file and consider Sigstore in the release workflow. |
+| Release checksums | Fixed in spec-149: a final job downloads both platforms and publishes `SHA256SUMS`. | Add Sigstore/cosign signing when keyless OIDC is available. |
 
 ## 3. Measurement plan
 
@@ -99,6 +99,7 @@ stay cheap.
 - A browser UI.
 - A full CRDT model for every workspace object.
 - Multi-node rate limiting beyond the shared SQLite limiter.
+
 
 
 

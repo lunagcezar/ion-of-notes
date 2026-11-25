@@ -186,6 +186,7 @@ Status vocabulary:
 | [146](spec-146-patch-based-undo.md) | Patch-based undo | implemented | Page patches for typing, snapshots for structure |
 | [147](spec-147-sidebar-virtualization.md) | Viewport-limited sidebar tree | implemented | Flat rows, clip-limited painting |
 | [148](spec-148-websocket-tickets.md) | Single-use WebSocket tickets | implemented | Header or ticket; query tokens rejected |
+| [149](spec-149-release-checksums.md) | Release checksums | implemented | `SHA256SUMS` after both platforms |
 
 ## 3. Work status
 
