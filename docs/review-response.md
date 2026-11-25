@@ -43,7 +43,7 @@ single place to check whether a finding was fixed, mitigated or planned.
 | PowerShell-free quality gate | fixed | Markdown checks run in `tests/docs.rs` and `scripts/quality.sh` needs no pwsh (spec-128) | `tests/docs.rs` |
 | Concurrent SQLite instances could fail on startup/count | fixed | busy timeout, bounded schema retry and a four-connection count test (spec-129) | `tests/shared_limits.rs` |
 | No tagged binaries | fixed | `v*` tag workflow builds Linux server and Windows desktop/server archives (spec-130) | `.github/workflows/release.yml` |
-| Block anchors for inline comments | fixed at the API/model layer | optional `anchor { block_id, start, end }` with ownership/range validation (spec-131); anchored threads render in the page panel (spec-136), but creating one from the panel is a separate flow | `tests/comments.rs`, `tests/ui.rs` |
+| Block anchors for inline comments | fixed | anchors validate at the API/model layer (spec-131); the page panel renders threads and creates a whole-block anchor (spec-136) | `tests/comments.rs`, `tests/ui.rs` |
 | Remote UI blocked on CRUD | fixed | create/delete/invite/share/version restore run on the worker (spec-132) | `tests/remote.rs` |
 | Page writes rewrote every block | fixed | `workspace_blocks` rows; single-block writes use `persist_block` and legacy pages migrate (spec-133) | `tests/sqlite_store.rs` |
 | CRDT only covered text | fixed | server registers plus desktop seeding/projection/planning (spec-134, spec-135) | `tests/crdt.rs`, `tests/ui_crdt.rs` |

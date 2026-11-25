@@ -119,6 +119,8 @@ pub(super) struct ViewState {
     pub(super) page_actions_open: bool,
     pub(super) page_status: Option<String>,
     pub(super) comment_input: String,
+    pub(super) inline_comment_block: Option<String>,
+    pub(super) inline_comment_input: String,
     pub(super) version_history_open: bool,
     pub(super) versions: Arc<Vec<PageVersion>>,
     pub(super) version_selected: usize,

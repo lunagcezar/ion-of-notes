@@ -21,6 +21,8 @@ This spec adds:
     is empty) and resolves author/text/timestamp;
 - an **Inline comments** section in the page panel showing each thread's quote
   and comments;
+- a composer in that section: choose a block, write a comment, and create a v2
+  comment anchored to the whole block (`0..block.text.chars().count()`);
 - a delete button calling `delete_comment_v2` and removing the comment from the
   workspace and committed baseline;
 - localized `comment_deleted` and updated inline-comment hint text in en,
@@ -28,8 +30,8 @@ This spec adds:
 
 Out of scope:
 
-- creating an inline comment from the panel (the API/model and rendering are
-  ready; a block-selection/comment composer is a separate UI flow);
+- dragging/selecting an arbitrary text range in the composer (the whole block
+  is anchored today);
 - replies within a thread beyond the comments sharing a `discussion_id`;
 - resolved/unresolved thread state.
 
@@ -47,10 +49,15 @@ not in the inline section.
 P4. **Given** a delete of an inline comment, **then** the server call succeeds
 and the comment disappears from the workspace.
 
+P5. **Given** a selected block and comment text, **when** the composer submits,
+**then** a v2 comment is created with a `0..block text length` anchor and appears
+in the inline section.
+
 ## Test scenarios
 
 - `tests/ui.rs`
   (`inline_threads_group_anchored_comments_by_discussion`,
+  `inline_comment_input_anchors_the_whole_block`,
   existing page/sidebar tests).
 - `tests/comments.rs` (anchor validation and CRUD).
 - `cargo test --features desktop --test ui`.
@@ -69,6 +76,7 @@ and the comment disappears from the workspace.
 
 - [x] Group anchored comments by discussion and block order.
 - [x] Render the quote and comment rows in the page panel.
+- [x] Add the block picker + composer and create a v2 comment.
 - [x] Add comment deletion through the v2 client.
 - [x] Localize the new strings.
-- [x] Add the projection test.
+- [x] Add the projection and input tests.

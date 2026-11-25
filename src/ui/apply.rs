@@ -160,6 +160,8 @@ impl NotionApp {
             page_actions_open: self.page_actions_open,
             page_status: self.page_status.clone(),
             comment_input: self.comment_input.clone(),
+            inline_comment_block: self.inline_comment_block.clone(),
+            inline_comment_input: self.inline_comment_input.clone(),
             version_history_open: self.version_history_open,
             versions: Arc::clone(&self.versions),
             version_selected: self.version_selected,
@@ -218,6 +220,8 @@ impl NotionApp {
         self.current_page = id.clone();
         self.library_open = false;
         self.comment_input.clear();
+        self.inline_comment_block = None;
+        self.inline_comment_input.clear();
         self.page_status = None;
         self.page_selection.clear();
         self.block_selecting = false;

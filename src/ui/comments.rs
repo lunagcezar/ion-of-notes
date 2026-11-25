@@ -4,7 +4,10 @@
 //! anchor. This module groups them per discussion and resolves the quoted block
 //! text so the renderer stays independent of the comment model.
 
-use crate::model::{CommentDto, ParentDto, RichText, Workspace};
+use crate::model::{
+    Block, CommentAnchor, CommentDisplayName, CommentDto, CommentInput, ParentDto, RichText,
+    Workspace,
+};
 use std::collections::BTreeMap;
 
 /// One rendered comment inside an inline thread.
@@ -90,6 +93,27 @@ pub fn inline_threads(workspace: &Workspace, page_id: &str) -> Vec<InlineThreadV
             .sort_by(|a, b| a.created_at.cmp(&b.created_at));
     }
     threads
+}
+
+/// Build the API input for an inline comment spanning the whole block.
+pub fn inline_comment_input(block: &Block, text: &str) -> CommentInput {
+    CommentInput {
+        parent: ParentDto::Block {
+            block_id: block.id.clone(),
+        },
+        discussion_id: None,
+        property_id: None,
+        anchor: Some(CommentAnchor {
+            block_id: block.id.clone(),
+            start: 0,
+            end: block.text.chars().count(),
+        }),
+        rich_text: vec![RichText::text(text)],
+        attachments: Vec::new(),
+        display_name: Some(CommentDisplayName::Custom {
+            name: "Local user".to_string(),
+        }),
+    }
 }
 
 fn comment_page(workspace: &Workspace, comment: &CommentDto) -> Option<String> {

@@ -2,7 +2,7 @@
 
 use ion_of_notes::client::Client;
 use ion_of_notes::model::{
-    BlockKind, CommentAnchor, CommentDto, NumberFormat, Page, PageDiff, ParentDto, RichText,
+    Block, BlockKind, CommentAnchor, CommentDto, NumberFormat, Page, PageDiff, ParentDto, RichText,
     TimeFormat, UserRef, Workspace,
 };
 use ion_of_notes::server::realtime::Awareness;
@@ -17,8 +17,9 @@ use ion_of_notes::ui::{
 };
 use ion_of_notes::ui::{
     EMOJI, ICONS, app_bar_left_width, block_outside_viewport, catalog_matches, drop_index,
-    estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors, inline_threads,
-    page_icon_letter, search_page_matches, selection_rects, split_index,
+    estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors,
+    inline_comment_input, inline_threads, page_icon_letter, search_page_matches, selection_rects,
+    split_index,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -100,6 +101,27 @@ fn inline_threads_group_anchored_comments_by_discussion() {
         inline_threads(&workspace, "p-start").is_empty(),
         "comments stay scoped to their page"
     );
+}
+
+#[test]
+fn inline_comment_input_anchors_the_whole_block() {
+    let block = Block::new("h2", BlockKind::Heading1, "Overview");
+    let input = inline_comment_input(&block, "Looks good");
+    assert_eq!(
+        input.parent,
+        ParentDto::Block {
+            block_id: "h2".to_string()
+        }
+    );
+    assert_eq!(
+        input.anchor,
+        Some(CommentAnchor {
+            block_id: "h2".to_string(),
+            start: 0,
+            end: 8,
+        })
+    );
+    assert_eq!(input.rich_text, vec![RichText::text("Looks good")]);
 }
 
 #[test]

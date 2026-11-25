@@ -1,7 +1,7 @@
 //! Page header, breadcrumbs and page body entry point.
 
 use crate::i18n;
-use crate::model::{BlockKind, Workspace};
+use crate::model::{Block, BlockKind, Workspace};
 use egui::{Align2, CornerRadius, FontFamily, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 use std::collections::HashSet;
 
@@ -517,7 +517,7 @@ fn render_page(
         });
     }
 
-    if !inline_threads.is_empty() {
+    if page.inline_comments || !inline_threads.is_empty() {
         ui.add_space(PAGE_DISCUSSION_GAP);
         ui.horizontal(|ui| {
             ui.add_space(gutter);
@@ -529,6 +529,45 @@ fn render_page(
                         .color(palette.text),
                 );
                 ui.add_space(SPACE_6);
+                if page.inline_comments {
+                    let selected = view
+                        .inline_comment_block
+                        .as_deref()
+                        .and_then(|id| page.blocks.iter().find(|block| block.id == id))
+                        .map(block_choice_label)
+                        .unwrap_or_else(|| i18n::t("add_comment"));
+                    egui::ComboBox::from_id_salt("inline_comment_block")
+                        .selected_text(selected)
+                        .width(width)
+                        .show_ui(ui, |ui| {
+                            for block in &page.blocks {
+                                let selected =
+                                    view.inline_comment_block.as_deref() == Some(block.id.as_str());
+                                if ui
+                                    .selectable_label(selected, block_choice_label(block))
+                                    .clicked()
+                                {
+                                    commands.push(Command::SetInlineCommentBlock(Some(
+                                        block.id.clone(),
+                                    )));
+                                }
+                            }
+                        });
+                    let mut input = view.inline_comment_input.clone();
+                    let edit = ui.add(
+                        egui::TextEdit::multiline(&mut input)
+                            .desired_rows(2)
+                            .desired_width(width)
+                            .hint_text(i18n::t("add_comment"))
+                            .text_color(palette.text),
+                    );
+                    if edit.changed() {
+                        commands.push(Command::SetInlineCommentInput(input));
+                    }
+                    if ui.button(i18n::t("comment")).clicked() {
+                        commands.push(Command::AddInlineComment);
+                    }
+                }
                 for thread in &inline_threads {
                     ui.label(
                         egui::RichText::new(format!("\u{201c}{}\u{201d}", thread.excerpt))
@@ -573,5 +612,14 @@ fn render_page(
     if !page.rows.is_empty() || page.title == "Tasks" {
         ui.add_space(PAGE_DISCUSSION_GAP);
         render_database(ui, page, view, width, gutter, palette, commands);
+    }
+}
+
+fn block_choice_label(block: &Block) -> String {
+    let text: String = block.plain_text().chars().take(48).collect();
+    if text.trim().is_empty() {
+        format!("{} (empty)", block.kind.label())
+    } else {
+        text
     }
 }

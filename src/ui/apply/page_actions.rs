@@ -82,6 +82,34 @@ impl NotionApp {
                     self.page_status = Some(i18n::t("comment_added"));
                 }
             }
+            Command::SetInlineCommentBlock(block) => self.inline_comment_block = block,
+            Command::SetInlineCommentInput(input) => self.inline_comment_input = input,
+            Command::AddInlineComment => {
+                let text = self.inline_comment_input.trim().to_string();
+                if text.is_empty() {
+                    self.page_status = Some(i18n::t("write_comment_first"));
+                    return;
+                }
+                let Some(block_id) = self.inline_comment_block.clone() else {
+                    self.page_status = Some(i18n::t("write_comment_first"));
+                    return;
+                };
+                let Some(block) = self.workspace.block(&block_id).cloned() else {
+                    self.page_status = Some(i18n::t("write_comment_first"));
+                    return;
+                };
+                let input = crate::ui::inline_comment_input(&block, &text);
+                match self.client.create_comment_v2(&input) {
+                    Ok(comment) => {
+                        self.workspace.comments.push(comment.clone());
+                        self.last_committed.comments.push(comment);
+                        self.inline_comment_input.clear();
+                        self.inline_comment_block = None;
+                        self.page_status = Some(i18n::t("comment_added"));
+                    }
+                    Err(error) => self.page_status = Some(error.to_string()),
+                }
+            }
             Command::DeletePageComment(id) => {
                 if let Some(page) = self.current_page_mut() {
                     page.comments.retain(|comment| comment.id != id);

@@ -181,10 +181,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 
 ### Added - spec-136 inline comment threads
 
-- The page panel now groups anchored v2 comments by discussion and renders the
+- The page panel groups anchored v2 comments by discussion and renders the
   quoted block range, author, timestamp and comment body.
-- Inline comments can be deleted through the v2 client; strings are localized
-  in en, pt-BR and eo.
+- A block picker + composer creates a v2 comment anchored to the whole block;
+  inline comments can be deleted through the v2 client.
+- Strings are localized in en, pt-BR and eo.
 
 ### Performance - spec-101..spec-110
 
