@@ -105,7 +105,11 @@ impl NotionApp {
                     && let Ok(mut page) = serde_json::from_str::<Page>(&version.snapshot)
                 {
                     page.id = self.current_page.clone();
-                    if self.client.update_page(&page).is_ok() {
+                    if self.remote.is_remote() {
+                        if self.dispatch_save(page) {
+                            self.pending_reload = true;
+                        }
+                    } else if self.client.update_page(&page).is_ok() {
                         self.pending_reload = true;
                     }
                 }

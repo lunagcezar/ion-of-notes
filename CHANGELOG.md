@@ -145,6 +145,13 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - The server validates block existence, page ownership, parent consistency and
   the character range on create and update.
 
+### Changed - spec-132 asynchronous remote CRUD
+
+- Page create/delete, invite batches, permission updates and version restores
+  now run on the background remote worker in remote mode.
+- The UI applies results on the egui thread, keeps tab/history behavior and
+  falls back to the synchronous path if the worker queue is unavailable.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

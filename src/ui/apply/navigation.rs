@@ -31,6 +31,9 @@ impl NotionApp {
                     icon: String::new(),
                     parent,
                 };
+                if self.remote.is_remote() && self.dispatch_create_page(draft.clone(), false) {
+                    return;
+                }
                 if let Ok(page) = self.client.create_page(&draft) {
                     self.current_page = page.id.clone();
                     if let Some(tab) = self.tabs.get_mut(self.active_tab) {
@@ -43,6 +46,9 @@ impl NotionApp {
                 }
             }
             Command::DeletePage(id) => {
+                if self.remote.is_remote() && self.dispatch_delete_page(id.clone()) {
+                    return;
+                }
                 let _ = self.client.delete_page(&id);
                 self.pending_reload = true;
             }

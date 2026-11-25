@@ -29,30 +29,26 @@ impl NotionApp {
                     self.sharing.invite_error = Some(i18n::t("invalid_email"));
                     self.sharing.invite_status = None;
                 } else {
-                    let mut invited = 0;
-                    let mut errors = Vec::new();
-                    for email in emails {
-                        let draft = MemberDraft {
+                    let drafts: Vec<MemberDraft> = emails
+                        .into_iter()
+                        .map(|email| MemberDraft {
                             name: member_name_from_email(&email),
                             email,
                             role: self.sharing.invite_role,
-                        };
+                        })
+                        .collect();
+                    if self.remote.is_remote() && self.dispatch_invite_members(drafts.clone()) {
+                        return;
+                    }
+                    let mut invited = 0;
+                    let mut errors = Vec::new();
+                    for draft in drafts {
                         match self.client.invite_member(&draft) {
                             Ok(_) => invited += 1,
                             Err(error) => errors.push(error.to_string()),
                         }
                     }
-                    if invited > 0 {
-                        self.sharing.invite_input.clear();
-                        self.sharing.invite_status =
-                            Some(i18n::t_count("invited_members", invited));
-                    }
-                    self.sharing.invite_error = if errors.is_empty() {
-                        None
-                    } else {
-                        Some(errors.join("; "))
-                    };
-                    self.refresh_share();
+                    self.finish_invites(invited, errors);
                 }
             }
             Command::SetGeneralAccess(access) => {
@@ -61,14 +57,14 @@ impl NotionApp {
                     subject: "Everyone at workspace".to_string(),
                     access,
                 };
-                match self.client.set_share(&share) {
-                    Ok(_) => {
-                        self.sharing.general_access = access;
-                        self.sharing.invite_error = None;
-                        self.sharing.invite_status = Some(i18n::t("general_updated"));
-                    }
-                    Err(error) => self.sharing.invite_error = Some(error.to_string()),
+                if self.remote.is_remote() && self.dispatch_set_share(share.clone()) {
+                    return;
                 }
+                let result = self
+                    .client
+                    .set_share(&share)
+                    .map_err(|error| error.to_string());
+                self.finish_share(&share, result);
             }
             Command::OpenInbox => {
                 self.close_overlays();
@@ -76,6 +72,32 @@ impl NotionApp {
             }
             Command::CloseInbox => self.inbox_open = false,
             other => debug_assert!(false, "unexpected sharing command: {other:?}"),
+        }
+    }
+
+    /// Apply an invite batch result from the sync or async path.
+    pub(super) fn finish_invites(&mut self, invited: usize, errors: Vec<String>) {
+        if invited > 0 {
+            self.sharing.invite_input.clear();
+            self.sharing.invite_status = Some(i18n::t_count("invited_members", invited));
+        }
+        self.sharing.invite_error = if errors.is_empty() {
+            None
+        } else {
+            Some(errors.join("; "))
+        };
+        self.refresh_share();
+    }
+
+    /// Apply one permission-grant result from the sync or async path.
+    pub(super) fn finish_share(&mut self, share: &Share, result: Result<Share, String>) {
+        match result {
+            Ok(_) => {
+                self.sharing.general_access = share.access;
+                self.sharing.invite_error = None;
+                self.sharing.invite_status = Some(i18n::t("general_updated"));
+            }
+            Err(error) => self.sharing.invite_error = Some(error),
         }
     }
 }

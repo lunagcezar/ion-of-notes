@@ -6,7 +6,8 @@
 //! an unbounded backlog.
 
 use crate::client::Client;
-use crate::model::{Page, SearchResult, Workspace};
+use crate::collab::{MemberDraft, Share};
+use crate::model::{Page, PageDraft, SearchResult, Workspace};
 use crate::remote::RemoteRest;
 use std::sync::mpsc::{self, Receiver, SyncSender, TrySendError};
 use std::thread;
@@ -21,6 +22,19 @@ pub(super) enum RemoteCommand {
     },
     ReplaceWorkspace {
         workspace: Box<Workspace>,
+    },
+    CreatePage {
+        draft: PageDraft,
+        open_in_new_tab: bool,
+    },
+    DeletePage {
+        id: String,
+    },
+    InviteMembers {
+        drafts: Vec<MemberDraft>,
+    },
+    SetShare {
+        share: Share,
     },
     CrdtSync {
         page_id: String,
@@ -45,6 +59,22 @@ pub(super) enum RemoteResult {
     },
     ReplaceWorkspace {
         result: Box<Result<Workspace, String>>,
+    },
+    CreatePage {
+        result: Result<Box<Page>, String>,
+        open_in_new_tab: bool,
+    },
+    DeletePage {
+        id: String,
+        result: Result<Vec<String>, String>,
+    },
+    InviteMembers {
+        invited: usize,
+        errors: Vec<String>,
+    },
+    SetShare {
+        share: Share,
+        result: Result<Share, String>,
     },
     CrdtSync {
         page_id: String,
@@ -117,6 +147,38 @@ fn run(
                         .map_err(|error| error.to_string()),
                 ),
             },
+            RemoteCommand::CreatePage {
+                draft,
+                open_in_new_tab,
+            } => RemoteResult::CreatePage {
+                result: client
+                    .create_page(&draft)
+                    .map(Box::new)
+                    .map_err(|error| error.to_string()),
+                open_in_new_tab,
+            },
+            RemoteCommand::DeletePage { id } => {
+                let result = match client.delete_page(&id) {
+                    Ok(removed) => Ok(removed),
+                    Err(error) => Err(error.to_string()),
+                };
+                RemoteResult::DeletePage { id, result }
+            }
+            RemoteCommand::InviteMembers { drafts } => {
+                let mut invited = 0;
+                let mut errors = Vec::new();
+                for draft in drafts {
+                    match client.invite_member(&draft) {
+                        Ok(_) => invited += 1,
+                        Err(error) => errors.push(error.to_string()),
+                    }
+                }
+                RemoteResult::InviteMembers { invited, errors }
+            }
+            RemoteCommand::SetShare { share } => {
+                let result = client.set_share(&share).map_err(|error| error.to_string());
+                RemoteResult::SetShare { share, result }
+            }
             RemoteCommand::CrdtSync { page_id } => RemoteResult::CrdtSync {
                 result: client
                     .crdt_sync(&page_id, None)

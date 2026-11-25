@@ -61,6 +61,10 @@ impl NotionApp {
                         icon: String::new(),
                         parent: None,
                     };
+                    if self.remote.is_remote() && self.dispatch_create_page(draft.clone(), true) {
+                        self.close_overlays();
+                        return;
+                    }
                     if let Ok(page) = self.client.create_page(&draft) {
                         self.open_in_tab(page.id);
                         self.pending_reload = true;

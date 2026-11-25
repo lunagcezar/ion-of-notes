@@ -5,7 +5,7 @@ mod common;
 use ion_of_notes::app::DesktopApi;
 use ion_of_notes::auth::{Account, AuthStore, MemoryAuthStore, hash_password};
 use ion_of_notes::client::Client;
-use ion_of_notes::collab::{ChangeOp, CollabState, Role};
+use ion_of_notes::collab::{Access, ChangeOp, CollabState, MemberDraft, Role, Share};
 use ion_of_notes::model::{PageDraft, Workspace, now_iso};
 use ion_of_notes::remote::{
     PendingAwareness, RemoteApi, RemoteRest, RemoteSession, clear_session_at, load_session_at,
@@ -199,6 +199,41 @@ async fn remote_rest_client_roundtrips_without_the_websocket() {
     assert_eq!(page.id, page_id);
     let results = client.search("Home").expect("search");
     assert!(!results.is_empty());
+    handle.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn remote_crud_operations_roundtrip() {
+    let (base, handle) = start().await;
+    let mut client = remote_client(&base);
+
+    let page = client
+        .create_page_v2(&PageDraft {
+            title: "Async CRUD".to_string(),
+            icon: "A".to_string(),
+            parent: None,
+        })
+        .expect("create");
+    let member = client
+        .invite_member(&MemberDraft {
+            name: "Remote Member".to_string(),
+            email: "remote-member@workspace.local".to_string(),
+            role: Role::Guest,
+        })
+        .expect("invite");
+    assert_eq!(member.email, "remote-member@workspace.local");
+
+    let share = client
+        .set_share(&Share {
+            page_id: page.id.clone(),
+            subject: "remote-member@workspace.local".to_string(),
+            access: Access::View,
+        })
+        .expect("share");
+    assert_eq!(share.access, Access::View);
+
+    let removed = client.delete_page(&page.id).expect("delete");
+    assert!(removed.contains(&page.id));
     handle.abort();
 }
 

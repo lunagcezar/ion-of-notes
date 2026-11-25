@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (343 tests across the two feature passes, 2026-11-24)
+## 3. Test-crate map (344 tests across the two feature passes, 2026-11-24)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -66,7 +66,7 @@ flowchart TD
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 5 | client Yrs diff, empty-sync baseline, projection, convergence |
-| `tests/remote.rs` | 6 | login, remote REST/CRDT and WebSocket change/awareness, pending awareness, remembered session |
+| `tests/remote.rs` | 7 | login, remote REST/CRUD/CRDT and WebSocket change/awareness, pending awareness, remembered session |
 | `tests/auth.rs` | 7 | Argon2id, login, logout, demo token, sessions, SQLite restart, password-file secret |
 | `tests/sqlite_store.rs` | 4 | workspace/collab round-trip, accounts/sessions, JSON migration |
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
@@ -91,7 +91,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 300 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 301 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 44 desktop tests: the four UI crates, with the default-on desktop feature
@@ -108,10 +108,10 @@ pwsh -File scripts/quality.ps1
 sh scripts/quality.sh
 ```
 
-`cargo test --all-targets` runs all 343 default-feature tests with the
+`cargo test --all-targets` runs all 344 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 344 unique tests because each feature pass includes its
+(spec-048) and cover 345 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam

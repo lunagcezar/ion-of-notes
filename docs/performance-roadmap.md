@@ -37,7 +37,7 @@ work (specs 101-104; see `docs/performance-improvements.md`). The items below
 remain staged.
 | Item | Why it is deferred | Suggested next step |
 | ---- | ------------------ | ------------------- |
-| Asynchronous remote CRUD | Requires a UI request/response model and loading states; it is a product change, not a local refactor. | Add a background command queue with per-request cancellation and a busy indicator. |
+| Asynchronous remote CRUD | Fixed in spec-132 for page create/delete, invites, shares and version restore. | Add per-operation loading state and cancellation. |
 | CRDT coverage for structure/properties/databases | Needs a merge model for ordered rows, property schemas and deletions. | Start with one object family (database rows) and define its conflict semantics. |
 | Awareness queue while offline | Fixed in spec-122: a one-entry pending cursor is flushed on reconnect. | Add a fixed-port reconnect integration test if the harness becomes stable. |
 | Multi-line remote caret overlay | Fixed in spec-123: carets and selections use the laid-out galley. | Add bidi affinity tests if the target scripts require them. |

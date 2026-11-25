@@ -3,7 +3,8 @@
 //! The UI enqueues blocking REST/CRDT work on [`RemoteWorker`] and polls the
 //! results here. Local mode keeps the synchronous path.
 
-use crate::model::Page;
+use crate::collab::{MemberDraft, Share};
+use crate::model::{Page, PageDraft};
 use crate::ui::remote_worker::{RemoteCommand, RemoteResult};
 
 use super::super::app::NotionApp;
@@ -81,6 +82,42 @@ impl NotionApp {
             self.remote.replace_in_flight = true;
         }
         sent
+    }
+
+    /// Enqueue a page creation. Returns false when the worker is unavailable
+    /// or its queue is full, so the caller can fall back to the sync path.
+    pub(crate) fn dispatch_create_page(&mut self, draft: PageDraft, open_in_new_tab: bool) -> bool {
+        let Some(worker) = self.remote.worker.as_ref() else {
+            return false;
+        };
+        worker.send(RemoteCommand::CreatePage {
+            draft,
+            open_in_new_tab,
+        })
+    }
+
+    /// Enqueue a page deletion.
+    pub(crate) fn dispatch_delete_page(&mut self, id: String) -> bool {
+        let Some(worker) = self.remote.worker.as_ref() else {
+            return false;
+        };
+        worker.send(RemoteCommand::DeletePage { id })
+    }
+
+    /// Enqueue one invite batch.
+    pub(crate) fn dispatch_invite_members(&mut self, drafts: Vec<MemberDraft>) -> bool {
+        let Some(worker) = self.remote.worker.as_ref() else {
+            return false;
+        };
+        worker.send(RemoteCommand::InviteMembers { drafts })
+    }
+
+    /// Enqueue one permission-grant update.
+    pub(crate) fn dispatch_set_share(&mut self, share: Share) -> bool {
+        let Some(worker) = self.remote.worker.as_ref() else {
+            return false;
+        };
+        worker.send(RemoteCommand::SetShare { share })
     }
 
     /// Enqueue a commit plan; the pending edit is retried if the queue is full.
@@ -177,6 +214,37 @@ impl NotionApp {
                     self.last_committed = saved;
                 }
                 self.finish_remote_commit(now);
+            }
+            RemoteResult::CreatePage {
+                result,
+                open_in_new_tab,
+            } => match result {
+                Ok(page) => {
+                    let page = *page;
+                    if open_in_new_tab {
+                        self.open_in_tab(page.id.clone());
+                    } else {
+                        self.current_page = page.id.clone();
+                        if let Some(tab) = self.tabs.get_mut(self.active_tab) {
+                            *tab = page.id.clone();
+                        }
+                        self.library_open = false;
+                        self.close_overlays();
+                        self.push_history(page.id.clone());
+                    }
+                    self.pending_reload = true;
+                }
+                Err(error) => self.page_status = Some(error),
+            },
+            RemoteResult::DeletePage { id, result } => match result {
+                Ok(_) => self.pending_reload = true,
+                Err(error) => self.page_status = Some(format!("Could not delete {id}: {error}")),
+            },
+            RemoteResult::InviteMembers { invited, errors } => {
+                self.finish_invites(invited, errors);
+            }
+            RemoteResult::SetShare { share, result } => {
+                self.finish_share(&share, result);
             }
             RemoteResult::CrdtSync { page_id, result } => {
                 if self.remote.crdt_sync_in_flight.as_deref() == Some(page_id.as_str()) {
