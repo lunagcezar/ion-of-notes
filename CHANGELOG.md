@@ -170,6 +170,15 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Text projection runs after the structural rebuild; REST writes reseed the
   document on the next sync.
 
+### Added - spec-135 desktop CRDT operations
+
+- The desktop `CrdtSession` seeds and projects the object maps and tracks
+  locally created blocks.
+- `plan_page_changes` builds one Yrs update for block structure/properties/row
+  cells; remote commits try it before a REST save and fall back for title/page
+  metadata/schema changes.
+- A split block remains visible when its first text update is projected.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

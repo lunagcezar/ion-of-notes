@@ -399,8 +399,9 @@ v1 routes stay stable.
   - `properties`: property key → serialized `PageProperty`;
   - `rows`: `data_source_id/row_id` → `{ data_source_id, page, deleted }`.
   The server projects the merged text/structure/properties/rows into the
-  durable snapshot. REST remains the structure source for local edits and
-  resets the page's CRDT document after a write.
+  durable snapshot. The desktop plans structure/property/row changes into these
+  maps; title, page flags and data-source schema still use REST, which resets
+  the page's CRDT document after a write.
 - CRDT history is in memory; the persisted page snapshot re-seeds after a
   restart.
 - `awareness { awareness }` carries `session_id`, `member_id`, `name`, `color`,

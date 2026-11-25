@@ -400,6 +400,9 @@ impl NotionApp {
             if self.remote_commit_busy() {
                 return;
             }
+            if self.try_dispatch_crdt_commit(&diff) {
+                return;
+            }
             self.dispatch_plan(&plan);
             self.pending_edits.waiting();
             return;
@@ -426,7 +429,9 @@ impl NotionApp {
             self.collaboration.crdt.open_empty(&self.current_page);
             if self.remote.is_remote() {
                 if !self.dispatch_crdt_sync(self.current_page.clone()) {
-                    self.collaboration.crdt.open_page(&page);
+                    self.collaboration
+                        .crdt
+                        .open_page_with_workspace(&page, &self.workspace);
                 }
             } else if let Ok((update, _)) = self.client.crdt_sync(&self.current_page, None)
                 && self.collaboration.crdt.apply_update(&update).is_ok()
@@ -434,7 +439,9 @@ impl NotionApp {
                 self.collaboration.crdt.baseline_page(&page);
                 self.project_crdt_page();
             } else {
-                self.collaboration.crdt.open_page(&page);
+                self.collaboration
+                    .crdt
+                    .open_page_with_workspace(&page, &self.workspace);
             }
         }
 
@@ -598,14 +605,23 @@ impl NotionApp {
 
     fn project_crdt_page(&mut self) {
         let page_id = self.collaboration.page.clone();
-        if let Some(mut page) = self.workspace.page(&page_id).cloned() {
-            self.collaboration.crdt.project_page(&mut page);
+        if let Some(mut page) = self.workspace.page(&page_id).cloned()
+            && self.collaboration.crdt.project_page(&mut page).is_ok()
+        {
             if let Some(slot) = self.workspace.page_mut(&page_id) {
                 *slot = page.clone();
             }
             if let Some(committed) = self.last_committed.page_mut(&page_id) {
                 *committed = page;
             }
+        }
+        if self
+            .collaboration
+            .crdt
+            .project_rows(&mut self.workspace)
+            .is_ok()
+        {
+            self.last_committed.data_sources = self.workspace.data_sources.clone();
         }
     }
 

@@ -4,7 +4,7 @@
 //! results here. Local mode keeps the synchronous path.
 
 use crate::collab::{MemberDraft, Share};
-use crate::model::{Page, PageDraft};
+use crate::model::{Page, PageDiff, PageDraft};
 use crate::ui::remote_worker::{RemoteCommand, RemoteResult};
 
 use super::super::app::NotionApp;
@@ -118,6 +118,48 @@ impl NotionApp {
             return false;
         };
         worker.send(RemoteCommand::SetShare { share })
+    }
+
+    /// Try to send one page's structure/property/row diff through CRDT.
+    ///
+    /// Returns false when the diff includes page metadata or data-source
+    /// schema, or when the worker queue is full, so the caller uses REST.
+    pub(crate) fn try_dispatch_crdt_commit(&mut self, diff: &PageDiff) -> bool {
+        if !self.remote.is_remote()
+            || !diff.added.is_empty()
+            || !diff.removed.is_empty()
+            || diff.reordered
+            || diff.settings_changed
+            || diff.changed.len() != 1
+        {
+            return false;
+        }
+        let page_id = diff.changed[0].clone();
+        if page_id != self.collaboration.page {
+            return false;
+        }
+        let Some(old) = self.last_committed.page(&page_id).cloned() else {
+            return false;
+        };
+        let Some(new) = self.workspace.page(&page_id).cloned() else {
+            return false;
+        };
+        let update = match self.collaboration.crdt.plan_page_changes(
+            &old,
+            &new,
+            &self.last_committed,
+            &self.workspace,
+        ) {
+            Ok(Some(update)) => update,
+            _ => return false,
+        };
+        if self.dispatch_crdt_update(page_id, String::new(), String::new(), update) {
+            self.last_committed = self.workspace.clone();
+            self.pending_edits.flushed();
+            true
+        } else {
+            false
+        }
     }
 
     /// Enqueue a commit plan; the pending edit is retried if the queue is full.
@@ -264,7 +306,9 @@ impl NotionApp {
                     }
                     Err(_) => {
                         if let Some(page) = self.workspace.page(&page_id).cloned() {
-                            self.collaboration.crdt.open_page(&page);
+                            self.collaboration
+                                .crdt
+                                .open_page_with_workspace(&page, &self.workspace);
                         }
                     }
                 }

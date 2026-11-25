@@ -38,7 +38,7 @@ remain staged.
 | Item | Why it is deferred | Suggested next step |
 | ---- | ------------------ | ------------------- |
 | Asynchronous remote CRUD | Fixed in spec-132 for page create/delete, invites, shares and version restore. | Add per-operation loading state and cancellation. |
-| CRDT coverage for structure/properties/databases | Fixed server-side in spec-134: Yrs maps for block order, page properties and row cells. | Wire desktop structure/property/row edits to the maps. |
+| CRDT coverage for structure/properties/databases | Fixed in spec-134/spec-135: server maps plus desktop seeding, projection and update planning. | Add title/CRDT and schema conflict handling when those become collaborative. |
 | Awareness queue while offline | Fixed in spec-122: a one-entry pending cursor is flushed on reconnect. | Add a fixed-port reconnect integration test if the harness becomes stable. |
 | Multi-line remote caret overlay | Fixed in spec-123: carets and selections use the laid-out galley. | Add bidi affinity tests if the target scripts require them. |
 | Per-block persistence | Fixed in spec-133: blocks live in `workspace_blocks` and single-block edits write one row. | Add an operation log only if block-level history is required. |

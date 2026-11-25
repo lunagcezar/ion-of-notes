@@ -5,6 +5,8 @@
 //! workspace snapshot after every update, so a restart can re-seed from the
 //! durable page document.
 
+#[cfg(feature = "desktop")]
+use crate::model::DataSource;
 use crate::model::{Block, Page, PageProperty, ParentDto, Workspace};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -57,9 +59,6 @@ impl CrdtStore {
             .ok_or_else(|| format!("page not found: {page_id}"))?;
         let doc = Doc::new();
         let title = doc.get_or_insert_text("title");
-        let structure = doc.get_or_insert_map("structure");
-        let properties = doc.get_or_insert_map("properties");
-        let rows = doc.get_or_insert_map("rows");
         let texts = crate::crdt_text::collect_text_snapshots(&doc, &page.blocks);
         {
             let mut txn = doc.transact_mut();
@@ -69,14 +68,8 @@ impl CrdtStore {
                     text.insert(&mut txn, 0, &value);
                 }
             }
-            seed_structure(&structure, &mut txn, &page.blocks, None)
-                .map_err(|error| error.to_string())?;
-            for (key, property) in &page.properties {
-                let json = serde_json::to_string(property).map_err(|error| error.to_string())?;
-                properties.insert(&mut txn, key.clone(), json);
-            }
-            seed_rows(workspace, page_id, &rows, &mut txn).map_err(|error| error.to_string())?;
         }
+        seed_page_objects(&doc, page, workspace)?;
         docs.insert(page_id.to_string(), doc);
         Ok(())
     }
@@ -143,34 +136,22 @@ impl CrdtStore {
             .get(page_id)
             .ok_or_else(|| format!("page not found: {page_id}"))?;
         let title = doc.get_or_insert_text("title");
-        let structure = doc.get_or_insert_map("structure");
-        let properties = doc.get_or_insert_map("properties");
-        let rows = doc.get_or_insert_map("rows");
-
-        let mut blocks = {
-            let txn = doc.transact();
-            project_structure(&structure, &txn)?
-        };
+        let mut page = workspace
+            .page(page_id)
+            .cloned()
+            .ok_or_else(|| format!("page not found: {page_id}"))?;
+        project_page_objects(doc, &mut page)?;
         let mut texts = BTreeMap::new();
-        crate::crdt_text::collect_block_texts(doc, &blocks, &mut texts);
-
+        crate::crdt_text::collect_block_texts(doc, &page.blocks, &mut texts);
         let txn = doc.transact();
-        crate::crdt_text::project_blocks(&texts, &txn, &mut blocks);
-        let title_text = title.get_string(&txn);
-        let page_properties = project_properties(&properties, &txn)?;
-        let row_registers = project_rows(&rows, &txn)?;
+        crate::crdt_text::project_blocks(&texts, &txn, &mut page.blocks);
+        page.title = title.get_string(&txn);
         drop(txn);
-
-        {
-            let page = workspace
-                .page_mut(page_id)
-                .ok_or_else(|| format!("page not found: {page_id}"))?;
-            page.title = title_text;
-            page.blocks = blocks;
-            page.properties = page_properties;
-            page.updated_at = crate::model::now_label();
+        page.updated_at = crate::model::now_label();
+        if let Some(slot) = workspace.page_mut(page_id) {
+            *slot = page;
         }
-        apply_rows(workspace, &row_registers);
+        project_page_rows(doc, workspace, page_id)?;
         Ok(())
     }
 
@@ -189,6 +170,304 @@ impl CrdtStore {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .clear();
     }
+}
+
+/// Seed the structure, property and row maps for one page.
+pub(crate) fn seed_page_objects(
+    doc: &Doc,
+    page: &Page,
+    workspace: &Workspace,
+) -> Result<(), String> {
+    let structure = doc.get_or_insert_map("structure");
+    let properties = doc.get_or_insert_map("properties");
+    let rows = doc.get_or_insert_map("rows");
+    let mut txn = doc.transact_mut();
+    seed_structure(&structure, &mut txn, &page.blocks, None)?;
+    for (key, property) in &page.properties {
+        let json = serde_json::to_string(property).map_err(|error| error.to_string())?;
+        properties.insert(&mut txn, key.clone(), json);
+    }
+    seed_rows(workspace, &page.id, &rows, &mut txn)
+}
+
+/// Project structural blocks and page properties from the Yrs maps.
+pub(crate) fn project_page_objects(doc: &Doc, page: &mut Page) -> Result<(), String> {
+    let structure = doc.get_or_insert_map("structure");
+    let properties = doc.get_or_insert_map("properties");
+    let blocks = {
+        let txn = doc.transact();
+        project_structure(&structure, &txn)?
+    };
+    page.blocks = blocks;
+    let txn = doc.transact();
+    page.properties = project_properties(&properties, &txn)?;
+    Ok(())
+}
+
+/// Project data-source rows for one page into the workspace.
+pub(crate) fn project_page_rows(
+    doc: &Doc,
+    workspace: &mut Workspace,
+    page_id: &str,
+) -> Result<(), String> {
+    let _ = page_id;
+    let rows = doc.get_or_insert_map("rows");
+    let txn = doc.transact();
+    let registers = project_rows(&rows, &txn)?;
+    drop(txn);
+    apply_rows(workspace, &registers);
+    Ok(())
+}
+
+/// Set one block structure entry and return the full document update.
+#[cfg(feature = "desktop")]
+pub(crate) fn set_structure(
+    doc: &Doc,
+    block: &Block,
+    parent_id: Option<&str>,
+    position: u32,
+) -> Result<Vec<u8>, String> {
+    let mut stored = block.clone();
+    stored.children.clear();
+    let entry = BlockStructure {
+        parent_id: parent_id.map(str::to_string),
+        position,
+        block: stored,
+    };
+    let json = serde_json::to_string(&entry).map_err(|error| error.to_string())?;
+    let map = doc.get_or_insert_map("structure");
+    let mut txn = doc.transact_mut();
+    map.insert(&mut txn, block.id.clone(), json);
+    Ok(txn.encode_diff_v1(&StateVector::default()))
+}
+
+/// Remove one block structure entry.
+#[cfg(feature = "desktop")]
+pub(crate) fn remove_structure(doc: &Doc, block_id: &str) -> Vec<u8> {
+    let map = doc.get_or_insert_map("structure");
+    let mut txn = doc.transact_mut();
+    map.remove(&mut txn, block_id);
+    txn.encode_diff_v1(&StateVector::default())
+}
+
+/// Set one page property.
+#[cfg(feature = "desktop")]
+pub(crate) fn set_property(
+    doc: &Doc,
+    key: &str,
+    property: &PageProperty,
+) -> Result<Vec<u8>, String> {
+    let json = serde_json::to_string(property).map_err(|error| error.to_string())?;
+    let map = doc.get_or_insert_map("properties");
+    let mut txn = doc.transact_mut();
+    map.insert(&mut txn, key.to_string(), json);
+    Ok(txn.encode_diff_v1(&StateVector::default()))
+}
+
+/// Remove one page property.
+#[cfg(feature = "desktop")]
+pub(crate) fn remove_property(doc: &Doc, key: &str) -> Vec<u8> {
+    let map = doc.get_or_insert_map("properties");
+    let mut txn = doc.transact_mut();
+    map.remove(&mut txn, key);
+    txn.encode_diff_v1(&StateVector::default())
+}
+
+/// Set one data-source row register.
+#[cfg(feature = "desktop")]
+pub(crate) fn set_row(doc: &Doc, data_source_id: &str, row: &Page) -> Result<Vec<u8>, String> {
+    let entry = RowRegister {
+        data_source_id: data_source_id.to_string(),
+        page: row.clone(),
+        deleted: false,
+    };
+    let json = serde_json::to_string(&entry).map_err(|error| error.to_string())?;
+    let map = doc.get_or_insert_map("rows");
+    let mut txn = doc.transact_mut();
+    map.insert(&mut txn, format!("{data_source_id}/{}", row.id), json);
+    Ok(txn.encode_diff_v1(&StateVector::default()))
+}
+
+/// Mark one data-source row register deleted.
+#[cfg(feature = "desktop")]
+pub(crate) fn remove_row(doc: &Doc, data_source_id: &str, row_id: &str) -> Vec<u8> {
+    let entry = RowRegister {
+        data_source_id: data_source_id.to_string(),
+        page: Page::new(row_id, "", ""),
+        deleted: true,
+    };
+    let map = doc.get_or_insert_map("rows");
+    let mut txn = doc.transact_mut();
+    if let Ok(json) = serde_json::to_string(&entry) {
+        map.insert(&mut txn, format!("{data_source_id}/{row_id}"), json);
+    }
+    txn.encode_diff_v1(&StateVector::default())
+}
+
+/// Plan one page's structural/property/row changes as a single Yrs update.
+///
+/// Returns `None` when the change includes fields outside this CRDT scope
+/// (title, page flags, data-source schema) so the caller can use the REST
+/// path instead.
+#[cfg(feature = "desktop")]
+pub(crate) fn plan_page_changes(
+    doc: &Doc,
+    old: &Page,
+    new: &Page,
+    old_workspace: &Workspace,
+    new_workspace: &Workspace,
+) -> Result<Option<Vec<u8>>, String> {
+    if old.title != new.title || !page_meta_equal(old, new) {
+        return Ok(None);
+    }
+    let old_blocks = flatten_blocks(&old.blocks, None);
+    let new_blocks = flatten_blocks(&new.blocks, None);
+    if !data_source_schema_equal(old_workspace, new_workspace, &old.id) {
+        return Ok(None);
+    }
+
+    let mut changed = false;
+    for (id, (parent, position, block)) in &new_blocks {
+        let differs = match old_blocks.get(id) {
+            Some((old_parent, old_position, old_block)) => {
+                old_parent != parent
+                    || old_position != position
+                    || !structure_equivalent(old_block, block)
+            }
+            None => true,
+        };
+        if differs {
+            set_structure(doc, block, parent.as_deref(), *position)?;
+            changed = true;
+        }
+    }
+    for id in old_blocks.keys() {
+        if !new_blocks.contains_key(id) {
+            remove_structure(doc, id);
+            changed = true;
+        }
+    }
+
+    for (key, property) in &new.properties {
+        if old.properties.get(key) != Some(property) {
+            set_property(doc, key, property)?;
+            changed = true;
+        }
+    }
+    for key in old.properties.keys() {
+        if !new.properties.contains_key(key) {
+            remove_property(doc, key);
+            changed = true;
+        }
+    }
+
+    let old_rows = attached_rows(old_workspace, &old.id);
+    let new_rows = attached_rows(new_workspace, &new.id);
+    for (key, (data_source_id, row)) in &new_rows {
+        if old_rows.get(key) != Some(&(data_source_id.clone(), row.clone())) {
+            set_row(doc, data_source_id, row)?;
+            changed = true;
+        }
+    }
+    for (data_source_id, row) in old_rows.values() {
+        let key = (data_source_id.clone(), row.id.clone());
+        if !new_rows.contains_key(&key) {
+            remove_row(doc, data_source_id, &row.id);
+            changed = true;
+        }
+    }
+
+    if !changed {
+        return Ok(None);
+    }
+    let txn = doc.transact();
+    Ok(Some(txn.encode_diff_v1(&StateVector::default())))
+}
+
+#[cfg(feature = "desktop")]
+fn flatten_blocks(
+    blocks: &[Block],
+    parent: Option<&str>,
+) -> BTreeMap<String, (Option<String>, u32, Block)> {
+    let mut out = BTreeMap::new();
+    for (position, block) in blocks.iter().enumerate() {
+        let mut stored = block.clone();
+        stored.children.clear();
+        out.insert(
+            block.id.clone(),
+            (parent.map(str::to_string), position as u32, stored),
+        );
+        out.extend(flatten_blocks(&block.children, Some(&block.id)));
+    }
+    out
+}
+
+#[cfg(feature = "desktop")]
+fn structure_equivalent(left: &Block, right: &Block) -> bool {
+    fn normalize(mut block: Block) -> Block {
+        block.text.clear();
+        block.rich_text.clear();
+        block.children.clear();
+        block.last_edited_time.clear();
+        block.last_edited_by = None;
+        block
+    }
+    normalize(left.clone()) == normalize(right.clone())
+}
+
+#[cfg(feature = "desktop")]
+fn page_meta_equal(left: &Page, right: &Page) -> bool {
+    fn normalize(mut page: Page) -> Page {
+        page.title.clear();
+        page.blocks.clear();
+        page.properties.clear();
+        page.updated_at.clear();
+        page
+    }
+    normalize(left.clone()) == normalize(right.clone())
+}
+
+#[cfg(feature = "desktop")]
+fn attached_rows(
+    workspace: &Workspace,
+    page_id: &str,
+) -> BTreeMap<(String, String), (String, Page)> {
+    let mut rows = BTreeMap::new();
+    for data_source in &workspace.data_sources {
+        let belongs = page_of_parent(workspace, &data_source.database_parent).as_deref()
+            == Some(page_id)
+            || page_of_parent(workspace, &data_source.parent).as_deref() == Some(page_id);
+        if !belongs {
+            continue;
+        }
+        for row in &data_source.rows {
+            rows.insert(
+                (data_source.id.clone(), row.id.clone()),
+                (data_source.id.clone(), row.clone()),
+            );
+        }
+    }
+    rows
+}
+
+#[cfg(feature = "desktop")]
+fn data_source_schema_equal(left: &Workspace, right: &Workspace, page_id: &str) -> bool {
+    fn schemas(workspace: &Workspace, page_id: &str) -> BTreeMap<String, DataSource> {
+        workspace
+            .data_sources
+            .iter()
+            .filter(|data_source| {
+                page_of_parent(workspace, &data_source.database_parent).as_deref() == Some(page_id)
+                    || page_of_parent(workspace, &data_source.parent).as_deref() == Some(page_id)
+            })
+            .map(|data_source| {
+                let mut copy = data_source.clone();
+                copy.rows.clear();
+                (data_source.id.clone(), copy)
+            })
+            .collect()
+    }
+    schemas(left, page_id) == schemas(right, page_id)
 }
 
 fn seed_structure(

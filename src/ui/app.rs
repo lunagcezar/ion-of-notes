@@ -443,7 +443,7 @@ impl NotionApp {
         let templates_open = demo == "templates";
         let mut crdt = CrdtSession::new();
         if let Some(page) = workspace.page(&demo_current_page) {
-            crdt.open_page(page);
+            crdt.open_page_with_workspace(page, &workspace);
         }
         let crdt_rx = client.subscribe_realtime();
         let awareness_session = format!("ui-{}", uuid::Uuid::new_v4());

@@ -5,8 +5,8 @@
 //! update for the server. Remote updates are applied back and projected into
 //! the page.
 
-use crate::model::Page;
-use std::collections::BTreeMap;
+use crate::model::{Block, Page, Workspace};
+use std::collections::{BTreeMap, HashSet};
 use yrs::updates::decoder::Decode;
 use yrs::updates::encoder::Encode;
 use yrs::{Doc, GetString, ReadTxn, StateVector, Text, TextRef, Transact, Update};
@@ -16,6 +16,7 @@ pub struct CrdtSession {
     doc: Doc,
     page_id: Option<String>,
     last_text: BTreeMap<String, String>,
+    structure_ids: HashSet<String>,
 }
 
 impl CrdtSession {
@@ -30,11 +31,13 @@ impl CrdtSession {
         self.doc = Doc::new();
         self.page_id = Some(page_id.to_string());
         self.last_text.clear();
+        self.structure_ids.clear();
     }
 
     /// Refresh the local diff baseline from the merged document.
     pub fn baseline_page(&mut self, page: &Page) {
         self.last_text.clear();
+        self.track_structure(page);
         let mut texts = BTreeMap::new();
         crate::crdt_text::collect_block_texts(&self.doc, &page.blocks, &mut texts);
         let txn = self.doc.transact();
@@ -45,6 +48,11 @@ impl CrdtSession {
 
     /// Start a fresh document from the current page snapshot.
     pub fn open_page(&mut self, page: &Page) {
+        self.open_page_with_workspace(page, &Workspace::new(""));
+    }
+
+    /// Start a fresh document from the page and its data-source rows.
+    pub fn open_page_with_workspace(&mut self, page: &Page, workspace: &Workspace) {
         self.doc = Doc::new();
         self.page_id = Some(page.id.clone());
         self.last_text.clear();
@@ -58,6 +66,27 @@ impl CrdtSession {
                     text.insert(&mut txn, 0, &value);
                 }
                 self.last_text.insert(block_id, value);
+            }
+        }
+        let _ = crate::server::crdt::seed_page_objects(&self.doc, page, workspace);
+        self.track_structure(page);
+    }
+
+    fn track_structure(&mut self, page: &Page) {
+        self.structure_ids.clear();
+        collect_block_ids(&page.blocks, &mut self.structure_ids);
+    }
+
+    /// Insert structure entries for blocks created after the document opened.
+    /// This keeps a split block visible before the next full structure commit.
+    pub fn sync_new_blocks(&mut self, page: &Page) {
+        let mut missing = Vec::new();
+        collect_missing_blocks(&page.blocks, None, &self.structure_ids, &mut missing);
+        for (parent, position, block) in missing {
+            if crate::server::crdt::set_structure(&self.doc, block, parent.as_deref(), position)
+                .is_ok()
+            {
+                self.structure_ids.insert(block.id.clone());
             }
         }
     }
@@ -123,14 +152,36 @@ impl CrdtSession {
         Ok(Some(txn.encode_diff_v1(&StateVector::default())))
     }
 
-    /// Write the merged title/block text back into a page.
-    pub fn project_page(&self, page: &mut Page) {
+    /// Write the merged title/structure/properties/block text back into a page.
+    pub fn project_page(&self, page: &mut Page) -> Result<(), String> {
+        crate::server::crdt::project_page_objects(&self.doc, page)?;
         let title = self.doc.get_or_insert_text("title");
         let mut texts = BTreeMap::new();
         crate::crdt_text::collect_block_texts(&self.doc, &page.blocks, &mut texts);
         let txn = self.doc.transact();
         page.title = title.get_string(&txn);
         crate::crdt_text::project_blocks(&texts, &txn, &mut page.blocks);
+        Ok(())
+    }
+
+    /// Write merged data-source rows for this page into the workspace.
+    pub fn project_rows(&self, workspace: &mut Workspace) -> Result<(), String> {
+        let page_id = self
+            .page_id
+            .as_deref()
+            .ok_or_else(|| "no CRDT page is open".to_string())?;
+        crate::server::crdt::project_page_rows(&self.doc, workspace, page_id)
+    }
+
+    /// Plan structure/property/row differences as one update.
+    pub fn plan_page_changes(
+        &self,
+        old: &Page,
+        new: &Page,
+        old_workspace: &Workspace,
+        new_workspace: &Workspace,
+    ) -> Result<Option<Vec<u8>>, String> {
+        crate::server::crdt::plan_page_changes(&self.doc, old, new, old_workspace, new_workspace)
     }
 
     fn refresh_last_text(&mut self) {
@@ -148,5 +199,26 @@ impl CrdtSession {
         for (key, text) in refs {
             self.last_text.insert(key, text.get_string(&txn));
         }
+    }
+}
+
+fn collect_block_ids(blocks: &[Block], out: &mut HashSet<String>) {
+    for block in blocks {
+        out.insert(block.id.clone());
+        collect_block_ids(&block.children, out);
+    }
+}
+
+fn collect_missing_blocks<'a>(
+    blocks: &'a [Block],
+    parent: Option<&'a str>,
+    known: &HashSet<String>,
+    out: &mut Vec<(Option<String>, u32, &'a Block)>,
+) {
+    for (position, block) in blocks.iter().enumerate() {
+        if !known.contains(&block.id) {
+            out.push((parent.map(str::to_string), position as u32, block));
+        }
+        collect_missing_blocks(&block.children, Some(&block.id), known, out);
     }
 }

@@ -14,6 +14,11 @@ impl NotionApp {
                 text,
             } => {
                 if page_id == self.collaboration.page
+                    && let Some(page) = self.workspace.page(&page_id).cloned()
+                {
+                    self.collaboration.crdt.sync_new_blocks(&page);
+                }
+                if page_id == self.collaboration.page
                     && let Ok(Some(update)) = self.collaboration.crdt.local_text(&block_id, &text)
                 {
                     if self.remote.is_remote() {
