@@ -9,7 +9,7 @@
 //! `server::handlers`; shared response shaping lives in `server::response`.
 
 use crate::auth::{self, AuthStore, NoAuthStore};
-use crate::collab::{Access, ChangeOp, CollabState, Role, general_access};
+use crate::collab::{ChangeOp, CollabState, Role};
 use crate::model::Workspace;
 use crate::store::{
     CollabStore, JsonCollabStore, JsonStore, NoCollabStore, NoStore, WorkspaceStore,
@@ -23,6 +23,7 @@ use std::time::Duration;
 
 mod authentication;
 mod authorization;
+pub use authorization::ReadView;
 mod contract;
 pub mod crdt;
 mod error;
@@ -474,52 +475,6 @@ impl WorkspaceServer {
             .map(|member| member.role)
     }
 
-    /// Whether the connection belongs to the workspace owner.
-    pub fn is_owner(&self, connection: &Connection) -> bool {
-        self.role_for(connection) == Some(Role::Owner)
-    }
-
-    /// Resolve the effective access a connection has to one page.
-    ///
-    /// Direct shares win over page-general rules, which win over the
-    /// workspace-general rule. An owner always has full access.
-    pub fn page_access(&self, connection: &Connection, page_id: &str) -> Access {
-        let Some(member) = self
-            .collab
-            .members
-            .iter()
-            .find(|member| member.id == connection.member_id)
-        else {
-            return Access::None;
-        };
-        if member.role == Role::Owner {
-            return Access::Full;
-        }
-        let direct = self
-            .collab
-            .shares
-            .iter()
-            .filter(|share| share.page_id == page_id)
-            .filter(|share| {
-                share.subject == member.id
-                    || share.subject.eq_ignore_ascii_case(&member.email)
-                    || share.subject == member.name
-            })
-            .max_by_key(|share| access_rank(share.access))
-            .map(|share| share.access);
-        direct.unwrap_or_else(|| general_access(&self.collab.shares, page_id))
-    }
-
-    /// Whether the connection may read a page.
-    pub fn can_read_page(&self, connection: &Connection, page_id: &str) -> bool {
-        self.page_access(connection, page_id) != Access::None
-    }
-
-    /// Whether the connection may modify a page.
-    pub fn can_write_page(&self, connection: &Connection, page_id: &str) -> bool {
-        self.page_access(connection, page_id).can_write()
-    }
-
     /// In-memory request log for `/api/v2`; the same IDs are written to the
     /// HTTP response and (in a production adapter) to structured logs.
     pub fn request_log(&self) -> &[RequestLogEntry] {
@@ -860,14 +815,5 @@ fn capabilities_for_role(role: Role) -> Vec<Capability> {
             Capability::ReadComments,
             Capability::UserInfoWithoutEmail,
         ],
-    }
-}
-
-fn access_rank(access: Access) -> u8 {
-    match access {
-        Access::None => 0,
-        Access::View => 1,
-        Access::Edit => 2,
-        Access::Full => 3,
     }
 }

@@ -294,3 +294,21 @@ fn crdt_and_webhook_routes_are_scoped_to_the_connection() {
     let webhooks = server.handle(&v2(&member, Method::Get, "/api/v2/webhooks", None));
     assert_eq!(webhooks.status, 403);
 }
+
+#[test]
+fn read_view_matches_the_server_projection() {
+    let mut server = server();
+    let member = login(&mut server, "member@workspace.local");
+    let connection = server
+        .connection_for_token(&member)
+        .expect("member connection");
+    let view = ion_of_notes::server::ReadView::new(&server.workspace, &server.collab);
+    assert_eq!(
+        view.project_workspace(&connection),
+        server.project_workspace(&connection)
+    );
+    assert_eq!(
+        view.visible_page_summaries(&connection),
+        server.visible_page_summaries(&connection)
+    );
+}

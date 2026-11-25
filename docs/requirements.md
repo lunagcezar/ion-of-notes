@@ -374,6 +374,9 @@ capabilities) is implemented; the rest are planned.
 - FR-111: Writes, versions, comments and blocks are attributed to the
   authenticated member; a session-store failure is a 503, not an invalid token
   (implemented in `spec-142`).
+- FR-112: Read authorization and projection share one implementation between the
+  mutable server and an immutable `ReadView`; v1 snapshot reads release the
+  workspace lock before projecting and serializing (implemented in `spec-143`).
 
 ## 2. Non-functional requirements
 
@@ -552,6 +555,7 @@ capabilities) is implemented; the rest are planned.
 | FR-109 (implemented)          | `spec-140-awareness-ssrf-and-ws-budget.md` |
 | FR-110 (implemented)          | `spec-141-typing-and-overlay-latency.md` |
 | FR-111 (implemented)          | `spec-142-actor-identity-and-session-errors.md` |
+| FR-112 (implemented)          | `spec-143-read-view-outside-lock.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 
@@ -570,3 +574,4 @@ capabilities) is implemented; the rest are planned.
 - **Public API alignment (planned):** FR-78..FR-94 and NFR-17..NFR-20 come from
   the B4 public-documentation review and ADR-006. They are scheduled in
   specs 030–038 and are not part of the current v1 behavior.
+

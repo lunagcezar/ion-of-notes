@@ -1,7 +1,7 @@
 use super::*;
 use crate::model::{Page, PageSummary, Workspace};
 use crate::server::response::{forbidden, json, not_found, service_unavailable, unauthorized};
-use crate::server::{Connection, Envelope};
+use crate::server::{Connection, Envelope, ReadView};
 use axum::extract::ConnectInfo;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{OnceLock, RwLock};
@@ -100,42 +100,44 @@ fn read_snapshot(
     request: &ApiRequest,
 ) -> Option<ApiResponse> {
     let path = request.path.split('?').next().unwrap_or("");
-    let guard = server
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let connection = match authenticate(&guard, request) {
-        Ok(connection) => connection,
-        Err(response) => return Some(response),
-    };
-    if path == "/api/workspace" {
-        let projected = if guard.is_owner(&connection) {
-            snapshot_for(&guard, cache).as_ref().clone()
-        } else {
-            guard.project_workspace(&connection)
+    // Hold the lock only long enough to authenticate and take the snapshot;
+    // projection and JSON serialization run after it is released (spec-143).
+    let (connection, workspace, collab) = {
+        let guard = server
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let connection = match authenticate(&guard, request) {
+            Ok(connection) => connection,
+            Err(response) => return Some(response),
         };
-        drop(guard);
+        let workspace = snapshot_for(&guard, cache);
+        let collab = guard.collab.clone();
+        (connection, workspace, collab)
+    };
+    let view = ReadView::new(&workspace, &collab);
+    if path == "/api/workspace" {
+        let projected = if view.is_owner(&connection) {
+            (*workspace).clone()
+        } else {
+            view.project_workspace(&connection)
+        };
         return Some(json(200, Envelope::ok(projected)));
     }
     if path == "/api/pages" {
-        let pages: Vec<PageSummary> = if guard.is_owner(&connection) {
-            let workspace = snapshot_for(&guard, cache);
+        let pages: Vec<PageSummary> = if view.is_owner(&connection) {
             workspace.pages.iter().map(Page::summary).collect()
         } else {
-            guard.visible_page_summaries(&connection)
+            view.visible_page_summaries(&connection)
         };
-        drop(guard);
         return Some(json(200, Envelope::ok(pages)));
     }
     let page_id = path.strip_prefix("/api/pages/")?;
     if page_id.is_empty() || page_id.contains('/') {
         return None;
     }
-    if !guard.can_read_page(&connection, page_id) {
-        drop(guard);
+    if !view.can_read_page(&connection, page_id) {
         return Some(forbidden("read access to this page is not allowed"));
     }
-    let workspace = snapshot_for(&guard, cache);
-    drop(guard);
     match workspace.page(page_id) {
         Some(page) => Some(json(200, Envelope::ok(page.clone()))),
         None => Some(not_found("page not found")),

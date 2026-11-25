@@ -235,6 +235,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Snapshot cache relies on `workspace.version`; projections clone only
   authorized resources.
 
+### Performance - spec-143 read view outside the workspace lock
+
+- Authorization and projection rules are shared by ReadView and WorkspaceServer through one macro.
+- The v1 snapshot reader clones the workspace and collaboration state, releases the mutex, then authorizes, projects and serializes.
+
 ### Fixed - spec-142 actor identity and session errors
 
 - Writes, versions, comments and blocks are attributed to the authenticated
@@ -1711,3 +1716,4 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   for each spec was observed before implementation. `cargo build` and
   `cargo test` are clean and green, and `--screenshot` was compared by eye
   with the 29 reference pictures after each build.
+

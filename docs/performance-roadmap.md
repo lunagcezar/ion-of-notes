@@ -57,7 +57,7 @@ remain staged.
 | Workspace projection clone | Fixed in spec-141: the projection clones only authorized pages/resources. | Move to borrowed DTOs if allocation profiling shows it matters. |
 | Snapshot cache invalidation | Fixed in spec-141: cache keyed by `workspace.version`; writes no longer clear it. | Replace the under-lock clone with an immutable `Arc` snapshot on write. |
 | Request actor identity | Fixed in spec-142: member id from the session reaches writes, versions, comments and blocks. | Add the actor to webhook aggregates where they are not already covered. |
-| Single-writer workspace mutex | Still the main limit: every v2 request and WebSocket operation takes one lock. | Introduce an immutable read snapshot plus short serialized write transactions; do not just swap to `RwLock`. |
+| Single-writer workspace mutex | v1 reads now clone and project outside the lock (spec-143); v2 reads and all writes still take one lock. | Publish an immutable per-workspace snapshot on write for v2 reads; do not just swap to `RwLock`. |
 | Block lookup index | `block()` / `page_id_for_block()` still scan pages and trees. | Add a block→page index with explicit invalidation and an orphan check. |
 | Session cache | Every bearer request resolves the session in the auth store. | Add a bounded in-memory cache with expiry and logout invalidation. |
 | Patch-based undo | A typing burst still snapshots the whole workspace at 0.8 s intervals. | Record per-block before/after patches and group typing into one command. |
@@ -99,3 +99,4 @@ stay cheap.
 - A browser UI.
 - A full CRDT model for every workspace object.
 - Multi-node rate limiting beyond the shared SQLite limiter.
+
