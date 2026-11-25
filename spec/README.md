@@ -158,6 +158,7 @@ Status vocabulary:
 | [118](spec-118-query-window-pagination.md) | Query-window pagination | implemented | Index selection and page windows, no full-row clone |
 | [119](spec-119-block-height-index.md) | Block height index | implemented | Fenwick tree, visible-window rendering |
 | [120](spec-120-http-auth-seam-and-parser-hardening.md) | HTTP auth seam and parser hardening | implemented | One authentication seam; bounded parsing |
+| [121](spec-121-single-serving-path.md) | Single serving path | implemented | `serve_on` hands the listener to Axum |
 
 ## 3. Work status
 

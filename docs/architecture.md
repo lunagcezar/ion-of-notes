@@ -119,7 +119,8 @@ src/
     events.rs        DomainEvent + notify for webhook-emitting writes
     error.rs         HandlerError, HandlerResult and body() for v2 handlers
     response.rs      Envelope/json/error helpers
-    http.rs          legacy loopback HTTP/1.1 adapter (tests/fallback)
+    http.rs          legacy HTTP/1.1 parser/formatter and serve_once helper;
+                     serve_on hands the listener to Axum
     web/             Axum/Tokio HTTP + WebSocket adapter for --serve
       mod.rs         router, state, startup, webhook worker
       http.rs        HTTP translation and response helpers

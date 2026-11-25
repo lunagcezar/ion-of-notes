@@ -156,7 +156,8 @@ src/
     events.rs      DomainEvent + notify for webhook-emitting writes
     error.rs       HandlerError, HandlerResult and body() for v2 handlers
     response.rs    Envelope/json/error helpers
-    http.rs        legacy loopback HTTP/1.1 adapter (parse/format/tests)
+    http.rs        legacy loopback HTTP/1.1 parser/formatter and serve_once
+                   (parse/format/tests); serve_on uses Axum
     url.rs         percent-encoding/decoding shared by client and server
     contract.rs    v2 versioning, ApiError, capabilities, request IDs
     pagination.rs  v2 list envelope, opaque cursors, page_size validation

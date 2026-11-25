@@ -75,6 +75,13 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   only, rejects ambiguous or truncated `Content-Length`, and returns `400` for
   malformed requests instead of `/health`.
 
+### Changed - spec-121 single serving path
+
+- `serve_on` now hands its listener to the Axum router, so loopback and
+  `--serve` share one HTTP implementation.
+- `parse_http_request`, `format_http_response` and `serve_once` remain as a
+  low-level parser and test helper.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

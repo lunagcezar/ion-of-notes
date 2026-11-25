@@ -286,7 +286,7 @@ fn v2_http_roundtrip_has_request_id_header() {
     stream.read_to_string(&mut response).unwrap();
 
     assert!(response.starts_with("HTTP/1.1 200"));
-    assert!(response.contains("X-Request-Id: req_"));
+    assert!(response.to_ascii_lowercase().contains("x-request-id: req_"));
 }
 
 #[test]

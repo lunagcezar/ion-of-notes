@@ -143,5 +143,5 @@ if the host network must be restricted beyond the IP checks.
   `process_webhook_deliveries` test/tooling wrapper sends inline.
 - Windows session-file ACLs are inherited from the profile rather than set
   explicitly.
-- The loopback HTTP/1.1 parser is hand-written and bounded; production traffic
-  uses Axum. Retiring it remains a refactor.
+- The loopback HTTP/1.1 parser/formatter remains as a bounded test helper;
+  `serve_on` and `--serve` use the Axum router.

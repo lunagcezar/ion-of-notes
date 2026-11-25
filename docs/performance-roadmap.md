@@ -47,7 +47,7 @@ remain staged.
 | Webhook I/O under the workspace lock | Fixed in spec-117: events queue, the worker sends outside the lock and applies results afterwards. | Keep the worker single and add idempotency keys for at-least-once delivery. |
 | Query-level database pagination | Fixed in spec-118: index selection plus `PageWindow` materializes only the requested slice. | Add keyset cursors on property values if cursor stability becomes a requirement. |
 | Renderer height tree | Fixed in spec-119: a Fenwick tree renders only the visible window. | Add a variable-width cache if resizing becomes a measured bottleneck. |
-| Three HTTP layers | The auth seam and parser framing are shared/hardened (spec-120). | Retire the hand-written loopback parser or route `serve_on` through Axum behind the same contract. |
+| Three HTTP layers | Fixed in spec-120/spec-121: one auth seam, a bounded parser helper, and `serve_on` now uses the Axum router. | Remove `serve_once` if its parser tests move to the Axum contract suite. |
 
 ## 3. Measurement plan
 

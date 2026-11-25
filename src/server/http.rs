@@ -173,42 +173,19 @@ pub fn serve_once<A: RequestTransport>(api: &mut A, stream: &mut TcpStream) -> s
 
 /// Serve connections from an already-bound listener.
 ///
-/// Requests are read on the connection thread; the server state is locked only
-/// for `handle`, so a slow client cannot hold the state while it is still
-/// sending its request (spec-021).
+/// The listener is handed to the Axum adapter, so the loopback and `--serve`
+/// paths share one HTTP implementation. `serve_once` remains a lower-level
+/// helper for tests of the parser and response formatter.
 pub fn serve_on(listener: TcpListener, server: WorkspaceServer) -> std::io::Result<()> {
-    let server = Arc::new(Mutex::new(server));
-    for incoming in listener.incoming() {
-        match incoming {
-            Ok(mut stream) => {
-                let server = Arc::clone(&server);
-                std::thread::spawn(move || {
-                    let response = match read_request(&mut stream) {
-                        Ok(Some(request)) => match server.lock() {
-                            Ok(mut guard) => guard.handle(&request),
-                            Err(error) => {
-                                eprintln!("server lock poisoned: {error}");
-                                return;
-                            }
-                        },
-                        Ok(None) => bad("malformed HTTP request"),
-                        Err(error) => {
-                            eprintln!("request error: {error}");
-                            return;
-                        }
-                    };
-                    if let Err(error) = stream
-                        .write_all(&format_http_response(&response))
-                        .and_then(|()| stream.flush())
-                    {
-                        eprintln!("response error: {error}");
-                    }
-                });
-            }
-            Err(error) => eprintln!("connection error: {error}"),
-        }
-    }
-    Ok(())
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+    runtime.block_on(async move {
+        listener.set_nonblocking(true)?;
+        let listener = tokio::net::TcpListener::from_std(listener)?;
+        let server = Arc::new(Mutex::new(server));
+        axum::serve(listener, super::web::router_with_server(server)).await
+    })
 }
 
 /// Blocking loopback API server. Only used by `--serve`.

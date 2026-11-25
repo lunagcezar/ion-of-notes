@@ -38,7 +38,7 @@ single place to check whether a finding was fixed, mitigated or planned.
 | Webhook network I/O under the global mutex | fixed | events queue in the outbox; the worker sends outside the lock (spec-117) | `tests/webhooks.rs` |
 | Database view pagination after loading every row | fixed | index selection + `PageWindow`; only the requested slice is cloned (spec-118) | `tests/model.rs`, `tests/pagination.rs` |
 | Renderer still visits every block; height tree absent | fixed | Fenwick height index renders only the visible window (spec-119) | `tests/ui.rs`, screenshot |
-| Hand-written loopback HTTP parser and three HTTP layers | partially fixed | shared auth seam and bounded parser (spec-120); parser retirement/one adapter remains | `tests/server.rs` |
+| Hand-written loopback HTTP parser and three HTTP layers | fixed | shared auth seam, bounded parser (spec-120) and `serve_on` now uses Axum (spec-121) | `tests/server.rs`, `tests/contract.rs` |
 | Windows session-file ACL | deferred | inherits the profile ACL; keychain/ACL work is platform-specific | roadmap |
 
 The security items above are enforced server-side. The desktop UI is not an
