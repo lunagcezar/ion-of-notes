@@ -385,6 +385,8 @@ capabilities) is implemented; the rest are planned.
 - FR-115: Undo records a page patch for text-only frames and a full workspace
   snapshot for structural commands; undo/redo move the entry without cloning
   (implemented in `spec-146`).
+- FR-116: The sidebar flattens the expanded tree and renders only rows that
+  intersect the viewport, keeping the scroll range (implemented in `spec-147`).
 
 ## 2. Non-functional requirements
 
@@ -567,6 +569,7 @@ capabilities) is implemented; the rest are planned.
 | FR-113 (implemented)          | `spec-144-block-page-index.md` |
 | FR-114 (implemented)          | `spec-145-session-cache.md` |
 | FR-115 (implemented)          | `spec-146-patch-based-undo.md` |
+| FR-116 (implemented)          | `spec-147-sidebar-virtualization.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

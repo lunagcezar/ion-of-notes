@@ -19,7 +19,7 @@ use ion_of_notes::ui::{
     EMOJI, ICONS, UndoCapture, UndoEntry, app_bar_left_width, block_outside_viewport,
     catalog_matches, drop_index, estimate_block_height, frame_may_mutate, glyph_visual_offset,
     index_cursors, inline_comment_input, inline_threads, page_icon_letter, search_page_matches,
-    selection_rects, split_index,
+    selection_rects, split_index, visible_tree_rows,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -737,4 +737,29 @@ fn unchanged_page_patch_produces_no_undo_entry() {
         page: workspace.page("p-home").cloned().map(Box::new),
     };
     assert!(UndoEntry::from_capture(capture, &workspace).is_none());
+}
+
+#[test]
+fn sidebar_tree_rows_follow_expansion_and_skip_archived_pages() {
+    let mut workspace = Workspace::seed("rows");
+    let collapsed = visible_tree_rows(&workspace, &HashSet::new());
+    assert!(collapsed.iter().any(|row| row.page_id == "p-projects"));
+    assert!(!collapsed.iter().any(|row| row.page_id == "p-tasks"));
+
+    let mut expanded = HashSet::new();
+    expanded.insert("p-projects".to_string());
+    let rows = visible_tree_rows(&workspace, &expanded);
+    let task = rows
+        .iter()
+        .find(|row| row.page_id == "p-tasks")
+        .expect("child row");
+    assert_eq!(task.depth, 1);
+    assert!(
+        rows.iter()
+            .any(|row| row.page_id == "p-projects" && row.has_children)
+    );
+
+    workspace.page_mut("p-start").expect("page").archived = true;
+    let rows = visible_tree_rows(&workspace, &expanded);
+    assert!(!rows.iter().any(|row| row.page_id == "p-start"));
 }

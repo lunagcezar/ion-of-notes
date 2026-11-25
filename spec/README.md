@@ -184,6 +184,7 @@ Status vocabulary:
 | [144](spec-144-block-page-index.md) | Block-to-page index | implemented | Derived map with verified fallback |
 | [145](spec-145-session-cache.md) | Bounded session cache | implemented | TTL + FIFO cap, invalidated on logout |
 | [146](spec-146-patch-based-undo.md) | Patch-based undo | implemented | Page patches for typing, snapshots for structure |
+| [147](spec-147-sidebar-virtualization.md) | Viewport-limited sidebar tree | implemented | Flat rows, clip-limited painting |
 
 ## 3. Work status
 
@@ -241,6 +242,7 @@ Where the code goes and why.
 6. A retired spec keeps a status note at the top and is not silently rewritten.
 7. Historical plans keep their checkboxes honest: `[x]` only when the item is
    actually done, with a note when a later spec completed it.
+
 
 
 

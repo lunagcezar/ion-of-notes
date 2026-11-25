@@ -235,6 +235,10 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Snapshot cache relies on `workspace.version`; projections clone only
   authorized resources.
 
+### Performance - spec-147 viewport-limited sidebar tree
+
+- The sidebar flattens the expanded tree and paints only rows intersecting the clip rect, allocating the rest for the scroll range.
+
 ### Performance - spec-146 patch-based undo
 
 - Typing frames record a page patch instead of cloning the workspace; undo/redo move the entry between stacks.
@@ -1730,6 +1734,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   for each spec was observed before implementation. `cargo build` and
   `cargo test` are clean and green, and `--screenshot` was compared by eye
   with the 29 reference pictures after each build.
+
 
 
 

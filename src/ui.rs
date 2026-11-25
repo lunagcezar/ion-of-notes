@@ -29,6 +29,7 @@ mod remote_worker;
 mod render;
 mod search_cache;
 mod settings_search;
+mod sidebar_rows;
 mod switcher;
 mod undo;
 mod view;
@@ -52,4 +53,5 @@ pub use palette::{
 pub use render::{app_bar_left_width, index_cursors, selection_rects};
 pub use search_cache::SearchCache;
 pub use settings_search::{SettingsRow, rows_for, section_matches, settings_matches, visible_rows};
+pub use sidebar_rows::{TreeRow, visible_tree_rows};
 pub use undo::{UndoCapture, UndoEntry};

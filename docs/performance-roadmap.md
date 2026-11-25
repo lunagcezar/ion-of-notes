@@ -61,7 +61,7 @@ remain staged.
 | Block lookup index | Fixed in spec-144: derived map with verified fallback; refreshed on page changes, structural commands, server appends and CRDT projection. | Add an orphan/consistency check to the model test suite. |
 | Session cache | Fixed in spec-145: 30 s TTL, 1024 entries, logout invalidation. | Move to a shared cache when multiple server instances must revoke across processes. |
 | Patch-based undo | Fixed in spec-146: text-only frames record a page patch; structural frames keep a snapshot; undo/redo move the entry. | Move to per-block command patches if page-level patches show up in profiling. |
-| Sidebar virtualization | The tree still draws every expanded node. | Flatten visible nodes into a list and use `show_rows`. |
+| Sidebar virtualization | Fixed in spec-147: flat rows painted only inside the clip rect; scroll range preserved. | Move to `show_rows` if the outer scroll area is split in a future redesign. |
 | WebSocket query token | `?token=` remains as a browser fallback. | Add a short-lived single-use connection ticket and redact the query in logs. |
 | Release checksums | Tagged archives are not signed and have no `SHA256SUMS`. | Publish a checksum file and consider Sigstore in the release workflow. |
 
@@ -99,6 +99,7 @@ stay cheap.
 - A browser UI.
 - A full CRDT model for every workspace object.
 - Multi-node rate limiting beyond the shared SQLite limiter.
+
 
 
 

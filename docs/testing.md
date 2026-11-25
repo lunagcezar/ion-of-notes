@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (365 tests across the two feature passes, 2026-11-25)
+## 3. Test-crate map (366 tests across the two feature passes, 2026-11-25)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -52,7 +52,7 @@ flowchart TD
 | `tests/authorization.rs` | 9 | direct and nested page shares, workspace/search/sync projections, CRDT and webhook scope |
 | `tests/moves.rs` | 4 | destination-page checks for database moves, upload creator/page access, delete-event visibility |
 | `tests/security.rs` | 9 | auth boundary, owner token, login budgets, password resolution, session growth |
-| `tests/ui.rs` | 35 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, caret geometry, inline threads/input, catalog normalization |
+| `tests/ui.rs` | 36 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, caret geometry, inline threads/input, catalog normalization |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
 | `tests/contract.rs` | 20 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/routes.rs` | 5 | declarative route policy: capability, owner-only, page-scoped, block limit |
@@ -97,7 +97,7 @@ Run the two feature passes:
 # 316 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
-# 50 desktop tests: the four UI crates, with the default-on desktop feature
+# 51 desktop tests: the four UI crates, with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
 
 cargo clippy --all-targets -- -D warnings
@@ -120,10 +120,10 @@ ION_OF_NOTES_POSTGRES_TEST_URL=... ION_OF_NOTES_REDIS_TEST_URL=... \
   --test postgres_store --test redis_limits
 ```
 
-`cargo test --all-targets` runs all 365 default-feature tests with the
+`cargo test --all-targets` runs all 366 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 366 unique tests because each feature pass includes its
+(spec-048) and cover 367 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam
@@ -413,6 +413,7 @@ public Notion service.
 - [ ] `--screenshot` was checked if the UI changed.
 - [ ] Requirements, data model, ADR, docs and `CHANGELOG.md` are updated.
 - [ ] The spec is committed with a message naming it.
+
 
 
 

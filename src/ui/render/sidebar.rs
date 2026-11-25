@@ -22,6 +22,7 @@ use super::super::icons::{
     page_icon_letter,
 };
 use super::super::palette::Palette;
+use super::super::sidebar_rows::{TreeRow, visible_tree_rows};
 use super::super::view::ViewState;
 
 /// One draggable item in customize-sidebar mode.
@@ -1132,78 +1133,92 @@ fn render_sidebar_bottom(
 fn render_tree(
     ui: &mut egui::Ui,
     ws: &Workspace,
-    parent: Option<&str>,
-    depth: usize,
+    _parent: Option<&str>,
+    _depth: usize,
     width: f32,
     view: &ViewState,
     palette: &Palette,
     commands: &mut Vec<Command>,
 ) {
-    let children = ws.children(parent);
-    for page in children {
-        if page.archived {
+    let rows = visible_tree_rows(ws, &view.expanded);
+    let clip = ui.clip_rect();
+    let row_height = SIDEBAR_SHORTCUT_HEIGHT;
+    let mut index = 0;
+    while index < rows.len() {
+        let top = ui.cursor().top();
+        if top + row_height < clip.top() {
+            ui.allocate_space(Vec2::new(width, row_height));
+            index += 1;
             continue;
         }
-        let has_children = !ws.children(Some(&page.id)).is_empty();
-        let open = view.expanded.contains(&page.id);
-        let indent = ROW_ICON_INSET + depth as f32 * ICON_SIZE;
-        let (rect, response) =
-            ui.allocate_exact_size(Vec2::new(width, SIDEBAR_SHORTCUT_HEIGHT), Sense::click());
-        let fill = if view.current_page == page.id && !view.library_open {
-            palette.selected
-        } else if response.hovered() {
-            palette.hover
-        } else {
-            Color32::TRANSPARENT
-        };
-        if fill != Color32::TRANSPARENT {
-            ui.painter()
-                .rect_filled(rect, CornerRadius::same(ROW_RADIUS), fill);
+        if top > clip.bottom() {
+            // Keep the scroll range correct without painting the rest.
+            ui.allocate_space(Vec2::new(width, (rows.len() - index) as f32 * row_height));
+            break;
         }
-        let glyph_rect = Rect::from_min_size(
-            rect.min + Vec2::new(indent, SPACE_6),
-            Vec2::splat(ICON_SIZE),
+        let row = &rows[index];
+        if let Some(page) = ws.page(&row.page_id) {
+            render_tree_row(ui, page, row, width, view, palette, commands);
+        }
+        index += 1;
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_tree_row(
+    ui: &mut egui::Ui,
+    page: &crate::model::Page,
+    row: &TreeRow,
+    width: f32,
+    view: &ViewState,
+    palette: &Palette,
+    commands: &mut Vec<Command>,
+) {
+    let indent = ROW_ICON_INSET + row.depth as f32 * ICON_SIZE;
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(width, SIDEBAR_SHORTCUT_HEIGHT), Sense::click());
+    let fill = if view.current_page == page.id && !view.library_open {
+        palette.selected
+    } else if response.hovered() {
+        palette.hover
+    } else {
+        Color32::TRANSPARENT
+    };
+    if fill != Color32::TRANSPARENT {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(ROW_RADIUS), fill);
+    }
+    let glyph_rect = Rect::from_min_size(
+        rect.min + Vec2::new(indent, SPACE_6),
+        Vec2::splat(ICON_SIZE),
+    );
+    if row.has_children {
+        draw_chevron(ui.painter(), glyph_rect, row.open, palette.muted);
+    } else {
+        draw_page_icon(
+            ui.painter(),
+            glyph_rect,
+            &page_icon_letter(&page.icon, &page.title),
+            palette,
+            false,
         );
-        if has_children {
-            draw_chevron(ui.painter(), glyph_rect, open, palette.muted);
+    }
+    ui.painter().text(
+        rect.min + Vec2::new(indent + SPACE_24, SPACE_14),
+        Align2::LEFT_CENTER,
+        &page.title,
+        FontId::proportional(FONT_ROW),
+        palette.text,
+    );
+    if response.clicked() {
+        let on_chevron = response
+            .interact_pointer_pos()
+            .map(|pos| glyph_rect.contains(pos))
+            .unwrap_or(false);
+        if row.has_children && on_chevron {
+            commands.push(Command::Sidebar(SidebarCmd::ToggleExpand(page.id.clone())));
         } else {
-            draw_page_icon(
-                ui.painter(),
-                glyph_rect,
-                &page_icon_letter(&page.icon, &page.title),
-                palette,
-                false,
-            );
-        }
-        ui.painter().text(
-            rect.min + Vec2::new(indent + SPACE_24, SPACE_14),
-            Align2::LEFT_CENTER,
-            &page.title,
-            FontId::proportional(FONT_ROW),
-            palette.text,
-        );
-        if response.clicked() {
-            let on_chevron = response
-                .interact_pointer_pos()
-                .map(|pos| glyph_rect.contains(pos))
-                .unwrap_or(false);
-            if has_children && on_chevron {
-                commands.push(Command::Sidebar(SidebarCmd::ToggleExpand(page.id.clone())));
-            } else {
-                commands.push(Command::SelectPage(page.id.clone()));
-            }
-        }
-        if open {
-            render_tree(
-                ui,
-                ws,
-                Some(&page.id),
-                depth + 1,
-                width,
-                view,
-                palette,
-                commands,
-            );
+            commands.push(Command::SelectPage(page.id.clone()));
         }
     }
 }
