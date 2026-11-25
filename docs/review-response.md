@@ -42,6 +42,7 @@ single place to check whether a finding was fixed, mitigated or planned.
 | No concurrent latency baseline | fixed | opt-in 8-thread read/write p50/p95 harness (spec-126) | `tests/load.rs` |
 | PowerShell-free quality gate | fixed | Markdown checks run in `tests/docs.rs` and `scripts/quality.sh` needs no pwsh (spec-128) | `tests/docs.rs` |
 | Concurrent SQLite instances could fail on startup/count | fixed | busy timeout, bounded schema retry and a four-connection count test (spec-129) | `tests/shared_limits.rs` |
+| No tagged binaries | fixed | `v*` tag workflow builds Linux server and Windows desktop/server archives (spec-130) | `.github/workflows/release.yml` |
 | Webhook network I/O under the global mutex | fixed | events queue in the outbox; the worker sends outside the lock (spec-117) | `tests/webhooks.rs` |
 | Database view pagination after loading every row | fixed | index selection + `PageWindow`; only the requested slice is cloned (spec-118) | `tests/model.rs`, `tests/pagination.rs` |
 | Renderer still visits every block; height tree absent | fixed | Fenwick height index renders only the visible window (spec-119) | `tests/ui.rs`, screenshot |
@@ -88,7 +89,6 @@ authorization boundary.
 | Password reset / registration / account UI | Product decision and email delivery are missing | `docs/authorization.md`, roadmap |
 | Browser UI | Out of scope for the desktop-first product | roadmap |
 | Block anchors for inline comments | Needs a comment model change | roadmap |
-| Release artifacts / prebuilt binaries | CI packaging work | roadmap |
 
 ## 4. Review scope and limitations
 

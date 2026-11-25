@@ -133,6 +133,11 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - Added a four-connection rate-limit test asserting exactly 100 allowed and 100
   denied checks for a limit of 100.
 
+### Added - spec-130 tagged release artifacts
+
+- A `v*` tag workflow builds and packages the Linux headless server and the
+  Windows desktop/server binaries, then publishes them with `gh release`.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

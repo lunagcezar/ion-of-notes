@@ -167,6 +167,7 @@ Status vocabulary:
 | [127](spec-127-windows-session-acl.md) | Windows session-file DACL | implemented | Owner-only ACL before the token write |
 | [128](spec-128-portable-docs-gate.md) | PowerShell-free docs gate | implemented | Markdown checks in `tests/docs.rs` + `quality.sh` |
 | [129](spec-129-sqlite-concurrent-instances.md) | SQLite concurrent instances | implemented | Busy timeout + bounded schema retry |
+| [130](spec-130-release-artifacts.md) | Tagged release artifacts | implemented | Linux server + Windows desktop/server on `v*` |
 
 ## 3. Work status
 

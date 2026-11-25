@@ -298,3 +298,16 @@ faster.
 - [ ] Log rotation and host disk monitoring are in place.
 - [ ] The container remains non-root with `cap_drop: [ALL]` and
       `no-new-privileges`.
+
+## 11. Tagged releases
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`. It publishes:
+
+- `ion-of-notes-server-<tag>-x86_64-unknown-linux-gnu.tar.gz`;
+- `ion-of-notes-<tag>-x86_64-pc-windows-msvc.zip`;
+- `ion-of-notes-server-<tag>-x86_64-pc-windows-msvc.zip`.
+
+The workflow builds with `--locked` and uses `gh release upload --clobber`, so a
+re-run replaces the same asset names. Signing, macOS bundles and installers
+remain separate packaging work. For the container path, use `compose.yml` or
+`compose.prod.yml` as described above.
