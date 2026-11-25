@@ -6,11 +6,11 @@ use super::super::contract::{
 };
 use super::super::error::{HandlerError, HandlerResult, fail, ok};
 use super::super::events::DomainEvent;
-use super::super::pagination::{PageRequest, paginate};
+use super::super::pagination::{PageRequest, page_window};
 use super::super::response::{json, parse_body, query_value, v2_error};
 use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
 use crate::collab::ChangeOp;
-use crate::model::{View, ViewConfig, ViewInput, ViewQueryInput, ViewQueryResult, now_iso};
+use crate::model::{Page, View, ViewConfig, ViewInput, ViewQueryInput, ViewQueryResult, now_iso};
 
 impl WorkspaceServer {
     pub(in crate::server) fn handle_v2_view(
@@ -148,7 +148,7 @@ impl WorkspaceServer {
             };
             let filter = input.filter.as_ref().or(view.filter.as_ref());
             let sorts = input.sorts.as_deref().or(view.sorts.as_deref());
-            let rows = self.workspace.query_view_rows(view, filter, sorts);
+            let indices = self.workspace.query_view_row_indices(view, filter, sorts);
             let page_request = match PageRequest::from_query(query) {
                 Ok(page) => page,
                 Err(error) => {
@@ -162,8 +162,8 @@ impl WorkspaceServer {
                 }
             };
             let sort = format!("view_query:{}", view.id);
-            let page = match paginate(&rows, &page_request, &sort, "page") {
-                Ok(page) => page,
+            let window = match page_window(&page_request, &sort, indices.len()) {
+                Ok(window) => window,
                 Err(error) => {
                     return fail(v2_error(
                         400,
@@ -174,9 +174,21 @@ impl WorkspaceServer {
                     ));
                 }
             };
-            let groups = self.workspace.group_view_rows(view, &rows);
+            let rows = self.workspace.view_rows(view);
+            let page_rows: Vec<Page> = indices[window.start..window.end]
+                .iter()
+                .map(|&index| rows[index].clone())
+                .collect();
+            let groups = if matches!(
+                view.configuration.as_ref(),
+                Some(ViewConfig::Board { .. } | ViewConfig::Calendar { .. })
+            ) {
+                self.workspace.group_view_rows_indices(view, &indices)
+            } else {
+                Vec::new()
+            };
             let result =
-                ViewQueryResult::new(view, groups, page.results, page.has_more, page.next_cursor);
+                ViewQueryResult::new(view, groups, page_rows, window.has_more, window.next_cursor);
             return ok(json(200, Envelope::ok(result)));
         }
 

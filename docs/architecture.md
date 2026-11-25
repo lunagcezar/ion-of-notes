@@ -114,6 +114,7 @@ src/
                      handler errors
     authorization.rs owning-page resolution, resource access and
                      principal-aware workspace/search/sync projections
+    authentication.rs bearer/local authentication seam shared by the HTTP adapters
     services/        auth and webhook service modules
     events.rs        DomainEvent + notify for webhook-emitting writes
     error.rs         HandlerError, HandlerResult and body() for v2 handlers
@@ -167,7 +168,7 @@ src/
                      ai, settings, page_actions, crdt, server
     render.rs        render facade
     render/          chrome, sidebar, content, library, database
-    render/content/  page, blocks, cursors
+    render/content/  page, blocks, cursors, height index
     dialogs.rs       dialog facade
     dialogs/         settings, sharing, page actions, menus, help,
                      search window, onboarding, templates

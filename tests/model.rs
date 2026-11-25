@@ -34,6 +34,21 @@ fn seed_has_expected_pages() {
 }
 
 #[test]
+fn view_row_indices_materialize_the_same_rows_as_the_legacy_query() {
+    let mut ws = Workspace::seed("indices");
+    ws.ensure_data_sources();
+    ws.ensure_views();
+    let view = ws.view("view-ds-p-tasks").expect("default view").clone();
+
+    let expected = ws.query_view_rows(&view, None, None);
+    let indices = ws.query_view_row_indices(&view, None, None);
+    let rows = ws.view_rows(&view);
+    let materialized: Vec<Page> = indices.iter().map(|&index| rows[index].clone()).collect();
+    assert_eq!(expected, materialized);
+    assert_eq!(indices.len(), rows.len());
+}
+
+#[test]
 fn duplicate_page_id_is_rejected() {
     let mut ws = Workspace::new("w");
     ws.add_page(page("a", "A", None)).unwrap();

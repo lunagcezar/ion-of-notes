@@ -318,6 +318,34 @@ impl Workspace {
         filter: Option<&Filter>,
         sorts: Option<&[Sort]>,
     ) -> Vec<Page> {
+        let indices = self.query_view_row_indices(view, filter, sorts);
+        let rows = self.view_rows(view);
+        indices
+            .into_iter()
+            .map(|index| rows[index].clone())
+            .collect()
+    }
+
+    /// The rows behind a view's data source.
+    pub fn view_rows<'a>(&'a self, view: &View) -> &'a [Page] {
+        let Some(data_source_id) = view.data_source_id.as_deref() else {
+            return &[];
+        };
+        self.data_source(data_source_id)
+            .map(|data_source| data_source.rows.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Filtered and sorted row indices, without cloning the rows.
+    ///
+    /// The caller materializes only the requested page window, so a large
+    /// data source no longer clones every matching row before pagination.
+    pub fn query_view_row_indices(
+        &self,
+        view: &View,
+        filter: Option<&Filter>,
+        sorts: Option<&[Sort]>,
+    ) -> Vec<usize> {
         let Some(data_source_id) = view.data_source_id.as_deref() else {
             return Vec::new();
         };
@@ -326,19 +354,51 @@ impl Workspace {
         };
         let filter = filter.or(view.filter.as_ref());
         let sorts = sorts.or(view.sorts.as_deref());
-        let mut rows: Vec<Page> = data_source
+        let mut indices: Vec<usize> = data_source
             .rows
             .iter()
-            .filter(|row| filter.is_none_or(|filter| matches_filter(data_source, row, filter)))
-            .cloned()
+            .enumerate()
+            .filter(|(_, row)| filter.is_none_or(|filter| matches_filter(data_source, row, filter)))
+            .map(|(index, _)| index)
             .collect();
         if let Some(sorts) = sorts {
-            rows.sort_by(|a, b| compare_pages(data_source, a, b, sorts));
+            indices.sort_by(|&a, &b| {
+                compare_pages(
+                    data_source,
+                    &data_source.rows[a],
+                    &data_source.rows[b],
+                    sorts,
+                )
+            });
         }
-        rows
+        indices
     }
 
     pub fn group_view_rows(&self, view: &View, rows: &[Page]) -> Vec<ViewGroup> {
+        self.group_rows_from(view, rows.iter())
+    }
+
+    /// Group a filtered index set without first cloning every row.
+    pub fn group_view_rows_indices(&self, view: &View, indices: &[usize]) -> Vec<ViewGroup> {
+        let Some(data_source_id) = view.data_source_id.as_deref() else {
+            return Vec::new();
+        };
+        let Some(data_source) = self.data_source(data_source_id) else {
+            return Vec::new();
+        };
+        self.group_rows_from(
+            view,
+            indices
+                .iter()
+                .filter_map(|&index| data_source.rows.get(index)),
+        )
+    }
+
+    fn group_rows_from<'a>(
+        &self,
+        view: &View,
+        rows: impl Iterator<Item = &'a Page>,
+    ) -> Vec<ViewGroup> {
         let Some(data_source_id) = view.data_source_id.as_deref() else {
             return Vec::new();
         };

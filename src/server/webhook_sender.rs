@@ -6,6 +6,7 @@
 
 use crate::webhooks::{is_private_ip, url_host};
 use std::net::{SocketAddr, ToSocketAddrs};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use ureq::config::Config;
 use ureq::http::Uri;
@@ -19,13 +20,13 @@ pub trait WebhookSender: Send + Sync {
     fn send(&self, url: &str, body: &str, signature: &str) -> Result<u16, String>;
 
     /// Allow private/loopback destinations for explicit development setups.
-    fn allow_private_targets(&mut self, _allow: bool) {}
+    fn allow_private_targets(&self, _allow: bool) {}
 }
 
 /// Production sender using ureq + rustls.
 pub struct UreqWebhookSender {
     config: Config,
-    allow_private: bool,
+    allow_private: AtomicBool,
 }
 
 /// Resolver that returns exactly the addresses validated by the caller.
@@ -76,7 +77,7 @@ impl UreqWebhookSender {
             .build();
         Self {
             config,
-            allow_private,
+            allow_private: AtomicBool::new(allow_private),
         }
     }
 }
@@ -102,7 +103,9 @@ impl WebhookSender for UreqWebhookSender {
         if addresses.is_empty() {
             return Err("webhook target did not resolve".to_string());
         }
-        if !self.allow_private && addresses.iter().any(|address| is_private_ip(address.ip())) {
+        if !self.allow_private.load(Ordering::Relaxed)
+            && addresses.iter().any(|address| is_private_ip(address.ip()))
+        {
             return Err("webhook target resolves to a private address".to_string());
         }
         let agent = Agent::with_parts(
@@ -119,8 +122,8 @@ impl WebhookSender for UreqWebhookSender {
         Ok(response.status().as_u16())
     }
 
-    fn allow_private_targets(&mut self, allow: bool) {
-        self.allow_private = allow;
+    fn allow_private_targets(&self, allow: bool) {
+        self.allow_private.store(allow, Ordering::Relaxed);
     }
 }
 

@@ -139,8 +139,9 @@ if the host network must be restricted beyond the IP checks.
 
 - No registration, password reset or account-management UI yet.
 - No external security audit.
-- Webhook delivery still performs network I/O while the workspace mutex is
-  held; a transactional outbox with an independent sender is the next step.
+- Webhook delivery runs outside the workspace mutex; only the synchronous
+  `process_webhook_deliveries` test/tooling wrapper sends inline.
 - Windows session-file ACLs are inherited from the profile rather than set
   explicitly.
-- The loopback HTTP/1.1 parser is hand-written; production traffic uses Axum.
+- The loopback HTTP/1.1 parser is hand-written and bounded; production traffic
+  uses Axum. Retiring it remains a refactor.

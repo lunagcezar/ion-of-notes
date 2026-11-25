@@ -35,10 +35,10 @@ single place to check whether a finding was fixed, mitigated or planned.
 | Focused text field cloned the workspace every frame | fixed | snapshot only when a text/key event arrives | spec-116, `tests/ui.rs` |
 | Block fingerprint hashed all text; selection was a Vec | fixed | cheap metadata fingerprint and `HashSet` | spec-116 |
 | String-prefix connection identity | fixed | `ConnectionKind` | spec-116 |
-| Webhook network I/O under the global mutex | deferred | needs a transactional outbox + independent worker; tracked in the roadmap | spec-116 |
-| Database view pagination after loading every row | deferred | needs a query layer; correctness unchanged | roadmap |
-| Renderer still visits every block; height tree absent | deferred | fingerprints are now cheap; a height tree is the next step | roadmap |
-| Hand-written loopback HTTP parser and three HTTP layers | deferred | production traffic uses Axum; consolidation is a separate refactor | roadmap |
+| Webhook network I/O under the global mutex | fixed | events queue in the outbox; the worker sends outside the lock (spec-117) | `tests/webhooks.rs` |
+| Database view pagination after loading every row | fixed | index selection + `PageWindow`; only the requested slice is cloned (spec-118) | `tests/model.rs`, `tests/pagination.rs` |
+| Renderer still visits every block; height tree absent | fixed | Fenwick height index renders only the visible window (spec-119) | `tests/ui.rs`, screenshot |
+| Hand-written loopback HTTP parser and three HTTP layers | partially fixed | shared auth seam and bounded parser (spec-120); parser retirement/one adapter remains | `tests/server.rs` |
 | Windows session-file ACL | deferred | inherits the profile ACL; keychain/ACL work is platform-specific | roadmap |
 
 The security items above are enforced server-side. The desktop UI is not an
@@ -78,7 +78,7 @@ authorization boundary.
 | CRDT coverage for structure/properties/databases | Needs conflict semantics per object family | `docs/performance-roadmap.md` |
 | Awareness queue while offline | WebSocket lifecycle work | `docs/performance-roadmap.md` |
 | Multi-line caret overlay | Text-layout projection work | `docs/performance-roadmap.md` |
-| Incremental persistence | Measure snapshot cost first | `docs/performance-roadmap.md` |
+| Per-block persistence | Page rows are incremental (spec-114); block-level tables would add schema and migration complexity | `docs/performance-roadmap.md` |
 | PostgreSQL / Redis | SQLite is intentionally single-node for now | `docs/performance-roadmap.md` |
 | Password reset / registration / account UI | Product decision and email delivery are missing | `docs/authorization.md`, roadmap |
 | Browser UI | Out of scope for the desktop-first product | roadmap |

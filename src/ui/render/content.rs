@@ -6,6 +6,7 @@
 
 mod blocks;
 mod cursors;
+mod heights;
 mod page;
 
 pub use cursors::index_cursors;

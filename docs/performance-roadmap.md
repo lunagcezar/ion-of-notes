@@ -23,6 +23,11 @@ the architecture.
   the order changed (spec-114, spec-116).
 - The in-memory rate limiter purges expired windows at a bound; the shared
   limiter has a local contingency.
+- Webhook events queue in the persisted outbox and the worker sends outside the
+  workspace lock (spec-117).
+- View/data-source queries materialize only the requested window (spec-118),
+  and the renderer jumps to the visible block window through a height index
+  (spec-119).
 
 ## 2. Deferred work
 
@@ -36,13 +41,13 @@ remain staged.
 | CRDT coverage for structure/properties/databases | Needs a merge model for ordered rows, property schemas and deletions. | Start with one object family (database rows) and define its conflict semantics. |
 | Awareness queue while offline | The WebSocket currently drops awareness when disconnected. | Keep the latest awareness per member and flush on reconnect. |
 | Multi-line remote caret overlay | The current overlay approximates first-line positions. | Project the CRDT selection through the text layout and test wrapped paragraphs. |
-| Incremental persistence | Whole-document snapshots are simple and correct today. The spec-097 harness measures ~1.3 s serialize / ~0.9 s deserialize at 50k blocks (debug), ~32 MiB JSON; 1k/10k stay cheap. | Add per-page rows or an operation log when a workspace is expected above ~20k blocks; keep snapshots below that. |
+| Per-block persistence | Page rows are incremental (spec-114); block-level tables add schema and migration complexity. | Add a block table only if page-row size becomes a measured problem above ~20k blocks. |
 | PostgreSQL / Redis | SQLite is single-node and the deployment story is intentionally small. | Keep the ports; add a PostgreSQL adapter and a shared limiter only when multi-node is a real requirement. |
 | Load and contention tests | `tests/perf.rs` now covers workspace size; multi-instance SQLite contention is still unmeasured. | Add a shared-limiter contention test before multi-node work. |
-| Webhook I/O under the workspace lock | `emit_webhook` and the worker still send while holding the server mutex; the 5-second timeout bounds each send. | Move delivery to a transactional outbox: record under the lock, send outside it, then apply the result. |
-| Query-level database pagination | `query_view_rows` filters, clones and sorts the full data source before pagination; correctness is unchanged. | Add an indexed query layer that applies filter/sort/cursor before materializing rows. |
-| Renderer height tree | The renderer now uses cheap fingerprints and a `HashSet`, but still visits every block in order. | Keep an offset/height index and render only the visible window with overscan. |
-| Three HTTP layers | Production uses Axum; the loopback parser and v1 adapter duplicate some translation. | Retire the hand-written parser or route v1 through the Axum adapter behind the same contract. |
+| Webhook I/O under the workspace lock | Fixed in spec-117: events queue, the worker sends outside the lock and applies results afterwards. | Keep the worker single and add idempotency keys for at-least-once delivery. |
+| Query-level database pagination | Fixed in spec-118: index selection plus `PageWindow` materializes only the requested slice. | Add keyset cursors on property values if cursor stability becomes a requirement. |
+| Renderer height tree | Fixed in spec-119: a Fenwick tree renders only the visible window. | Add a variable-width cache if resizing becomes a measured bottleneck. |
+| Three HTTP layers | The auth seam and parser framing are shared/hardened (spec-120). | Retire the hand-written loopback parser or route `serve_on` through Axum behind the same contract. |
 
 ## 3. Measurement plan
 

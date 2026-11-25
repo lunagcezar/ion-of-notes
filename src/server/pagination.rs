@@ -36,6 +36,15 @@ pub struct PageRequest {
     pub page_size: u16,
 }
 
+/// The slice selected by one cursor/page-size pair.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PageWindow {
+    pub start: usize,
+    pub end: usize,
+    pub has_more: bool,
+    pub next_cursor: Option<String>,
+}
+
 impl PageRequest {
     pub fn from_query(query: &str) -> Result<Self, PaginationError> {
         let raw_size = super::response::query_value(query, "page_size");
@@ -60,28 +69,42 @@ impl PageRequest {
     }
 }
 
+pub fn page_window(
+    request: &PageRequest,
+    sort: &str,
+    len: usize,
+) -> Result<PageWindow, PaginationError> {
+    let offset = match request.start_cursor.as_deref() {
+        Some(cursor) => decode_cursor(cursor, sort)?,
+        None => 0,
+    };
+    if offset > len {
+        return Err(PaginationError::InvalidCursor);
+    }
+    let end = (offset + request.page_size as usize).min(len);
+    let has_more = end < len;
+    Ok(PageWindow {
+        start: offset,
+        end,
+        has_more,
+        next_cursor: has_more.then(|| encode_cursor(sort, end)),
+    })
+}
+
 pub fn paginate<T: Clone>(
     items: &[T],
     request: &PageRequest,
     sort: &str,
     type_name: &str,
 ) -> Result<ListResponse<T>, PaginationError> {
-    let offset = match request.start_cursor.as_deref() {
-        Some(cursor) => decode_cursor(cursor, sort)?,
-        None => 0,
-    };
-    if offset > items.len() {
-        return Err(PaginationError::InvalidCursor);
-    }
-    let end = (offset + request.page_size as usize).min(items.len());
-    let results = items[offset..end].to_vec();
-    let has_more = end < items.len();
-    let next_cursor = if has_more {
-        Some(encode_cursor(sort, end))
-    } else {
-        None
-    };
-    Ok(ListResponse::new(type_name, results, has_more, next_cursor))
+    let window = page_window(request, sort, items.len())?;
+    let results = items[window.start..window.end].to_vec();
+    Ok(ListResponse::new(
+        type_name,
+        results,
+        window.has_more,
+        window.next_cursor,
+    ))
 }
 
 fn encode_cursor(sort: &str, offset: usize) -> String {

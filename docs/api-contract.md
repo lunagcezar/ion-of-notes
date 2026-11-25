@@ -547,7 +547,8 @@ and `href`.
 - `Sort` is `{ property, direction }` with ascending/descending.
 - `POST /api/v2/views/{id}/query` filters/sorts the data-source rows, returns
   `ViewQueryResult { view_id, type, groups, pages, has_more, next_cursor }`,
-  and groups board/calendar results.
+  and groups board/calendar results. The filter/sort phase selects row
+  indices; only the requested page is materialized.
 - `ensure_views` creates one default table view per data source.
 
 ### 8.6 v2 comments, users and files (implemented)
@@ -587,18 +588,20 @@ and `href`.
 - Deliveries are signed with `X-Ion-Of-Notes-Signature: sha256=<hex>`, an
   HMAC-SHA256 over the raw JSON body keyed by the verification token.
 - High-frequency page/database/data-source events are aggregated per
-  subscription and entity in a persistent outbox; comment, file-upload and view
-  events deliver immediately.
+  subscription and entity in a persistent outbox. Comment, file-upload and view
+  events are queued in the same outbox and delivered on the worker tick; no
+  webhook network I/O runs while the workspace lock is held.
 - The Axum adapter runs a background worker every
-  `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS` seconds (default 30) to flush the outbox
-  and retry due deliveries.
+  `ION_OF_NOTES_WEBHOOK_INTERVAL_SECS` seconds (default 30). The worker moves
+  the outbox into delivery records under the lock, sends outside it, then
+  applies the results under the lock again.
 - Failed deliveries are retried with exponential backoff up to 8 attempts; the
   delivery log records the last status, error, attempt count, next attempt time
   and `dead_lettered`.
 - `GET /api/v2/webhook_deliveries` lists the log,
   `GET /api/v2/webhook_deliveries/dead_letters` lists exhausted deliveries,
-  `POST /api/v2/webhook_deliveries/retry` forces an immediate retry of due
-  deliveries and `POST /api/v2/webhook_deliveries/requeue` resets one
+  `POST /api/v2/webhook_deliveries/retry` schedules an immediate retry on the
+  next worker tick and `POST /api/v2/webhook_deliveries/requeue` resets one
   dead-lettered delivery (`{"id":"delivery-..."}`).
 - Subscription URLs must be HTTPS; loopback HTTP is accepted only when the
   server enables the explicit development override.

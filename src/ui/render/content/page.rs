@@ -1,10 +1,9 @@
 //! Page header, breadcrumbs and page body entry point.
 
 use crate::i18n;
-use crate::model::{Block, BlockKind, Workspace};
+use crate::model::{BlockKind, Workspace};
 use egui::{Align2, CornerRadius, FontFamily, FontId, Pos2, Rect, Sense, Stroke, Vec2};
-use std::collections::{HashMap, HashSet};
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::collections::HashSet;
 
 use super::super::super::commands::{Command, FontStyle, SidebarCmd};
 use super::super::super::format::format_timestamp;
@@ -17,6 +16,7 @@ use super::super::super::view::ViewState;
 use super::super::database::render_database;
 use super::super::library::render_library;
 use super::blocks::render_block;
+use super::heights::HeightIndex;
 use crate::ui::constants::{
     BLOCK_GAP, BLOCK_HEADING_GAP, BREADCRUMB_ACTION_HEIGHT, BREADCRUMB_ACTION_SIZE, BREADCRUMB_GAP,
     BREADCRUMB_HEIGHT, BREADCRUMB_ICON_INSET, BREADCRUMB_ICON_SIZE, BREADCRUMB_LABEL_INSET,
@@ -250,30 +250,6 @@ fn crumb(ui: &mut egui::Ui, icon: &str, text: &str, palette: &Palette) -> egui::
 
 // ---- Page -----------------------------------------------------------------
 
-#[allow(clippy::too_many_arguments)]
-/// Cached measured height for one block (spec-110).
-#[derive(Clone, Copy)]
-struct BlockHeight {
-    fingerprint: u64,
-    height: f32,
-}
-
-/// A cheap content fingerprint; a change invalidates the cached height.
-///
-/// Cached heights only depend on the block kind and the text volume, so hashing
-/// every character of every block each frame is unnecessary.
-fn block_fingerprint(block: &Block) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    block.text.len().hash(&mut hasher);
-    block.rich_text.len().hash(&mut hasher);
-    std::mem::discriminant(&block.kind).hash(&mut hasher);
-    block.children.len().hash(&mut hasher);
-    block.checked.hash(&mut hasher);
-    block.collapsed.hash(&mut hasher);
-    block.cells.len().hash(&mut hasher);
-    hasher.finish()
-}
-
 fn render_page(
     ui: &mut egui::Ui,
     ws: &mut Workspace,
@@ -378,76 +354,85 @@ fn render_page(
 
     let mut numbered: usize = 0;
     let block_count = page.blocks.len();
-    let height_id = egui::Id::unique(("block_heights", page.id.as_str()));
-    let mut heights: HashMap<String, BlockHeight> = ui
-        .ctx()
-        .data(|data| data.get_temp::<HashMap<String, BlockHeight>>(height_id))
-        .unwrap_or_default();
     let viewport = ui.clip_rect();
     let overscan = (viewport.height() * 1.5).max(400.0);
     let interactive = view.block_selecting || view.drag_from.is_some();
     let selection: HashSet<&str> = view.page_selection.iter().map(String::as_str).collect();
-    for index in 0..page.blocks.len() {
-        let block = &mut page.blocks[index];
-        let top = ui.cursor().top();
-        let forced = view.focus_block.as_deref() == Some(block.id.as_str())
-            || view.slash_for.as_deref() == Some(block.id.as_str())
-            || selection.contains(block.id.as_str());
-        let fingerprint = block_fingerprint(block);
-        let cached = heights
-            .get(&block.id)
-            .copied()
-            .filter(|entry| entry.fingerprint == fingerprint);
-        let below = top > viewport.bottom() + overscan;
-        let height = cached.map(|entry| entry.height).unwrap_or_else(|| {
-            crate::ui::estimate_block_height(block.kind, block.text.chars().count())
-        });
-        let can_skip = !interactive
-            && !forced
-            && (cached.is_some() || below)
-            && crate::ui::block_outside_viewport(
-                top,
-                height,
-                (viewport.top(), viewport.bottom()),
-                overscan,
-            );
-        if can_skip {
+    let mut index = HeightIndex::sync(ui.ctx(), &page.id, &page.blocks);
+
+    if !interactive
+        && view.focus_block.is_none()
+        && view.slash_for.is_none()
+        && selection.is_empty()
+    {
+        // Normal viewing: jump to the visible window through the height tree,
+        // render only that window, and represent the rest with one leading and
+        // one trailing space.
+        let content_top = ui.cursor().top();
+        let target = viewport.top() - overscan - content_top;
+        let start = index.start_index(target);
+        let leading = index.prefix(start);
+        if leading > 0.0 {
+            ui.add_space(leading);
+        }
+        numbered = index.numbered_before(start);
+        let mut cursor = start;
+        while cursor < block_count && ui.cursor().top() <= viewport.bottom() + overscan {
+            let block = &mut page.blocks[cursor];
             if block.kind.is_heading() {
                 ui.add_space(BLOCK_HEADING_GAP);
             }
-            ui.add_space(height + BLOCK_GAP);
-            continue;
+            let before = ui.cursor().top();
+            render_block(
+                ui,
+                block,
+                cursor,
+                &mut numbered,
+                width,
+                gutter,
+                view,
+                &cursors_by_block,
+                palette,
+                commands,
+                block_count,
+            );
+            let content_height = (ui.cursor().top() - before).max(0.0);
+            index.update(cursor, block, content_height);
+            ui.add_space(BLOCK_GAP);
+            cursor += 1;
         }
-        if block.kind.is_heading() {
-            ui.add_space(BLOCK_HEADING_GAP);
+        let trailing = index.total() - index.prefix(cursor);
+        if trailing > 0.0 {
+            ui.add_space(trailing);
         }
-        let before = ui.cursor().top();
-        render_block(
-            ui,
-            block,
-            index,
-            &mut numbered,
-            width,
-            gutter,
-            view,
-            &cursors_by_block,
-            palette,
-            commands,
-            block_count,
-        );
-        let height = (ui.cursor().top() - before).max(0.0);
-        heights.insert(
-            block.id.clone(),
-            BlockHeight {
-                fingerprint,
-                height,
-            },
-        );
-        ui.add_space(BLOCK_GAP);
+    } else {
+        // Selection, drag, focus and slash menus need every block present so
+        // interaction targets cannot be skipped.
+        for cursor in 0..block_count {
+            let block = &mut page.blocks[cursor];
+            if block.kind.is_heading() {
+                ui.add_space(BLOCK_HEADING_GAP);
+            }
+            let before = ui.cursor().top();
+            render_block(
+                ui,
+                block,
+                cursor,
+                &mut numbered,
+                width,
+                gutter,
+                view,
+                &cursors_by_block,
+                palette,
+                commands,
+                block_count,
+            );
+            let content_height = (ui.cursor().top() - before).max(0.0);
+            index.update(cursor, block, content_height);
+            ui.add_space(BLOCK_GAP);
+        }
     }
-    ui.ctx().data_mut(|data| {
-        data.insert_temp(height_id, heights);
-    });
+    index.save(ui.ctx());
 
     // Subtle add-block row.
     ui.horizontal(|ui| {

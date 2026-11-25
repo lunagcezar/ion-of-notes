@@ -175,6 +175,16 @@ fn insecure_urls_require_the_development_override() {
     assert!(server.create_webhook(https).is_ok());
 }
 
+fn deliver(server: &mut WorkspaceServer) {
+    server.flush_webhooks();
+    server.process_webhook_deliveries();
+}
+
+fn retry(server: &mut WorkspaceServer) {
+    server.retry_webhook_deliveries();
+    server.process_webhook_deliveries();
+}
+
 #[test]
 fn injected_webhook_sender_receives_the_delivery() {
     let calls = Arc::new(Mutex::new(Vec::new()));
@@ -194,11 +204,43 @@ fn injected_webhook_sender_receives_the_delivery() {
         "comment-1",
         r#"{"page_id":"p-home"}"#,
     );
+    deliver(&mut server);
 
     let calls = calls.lock().unwrap();
     assert_eq!(calls.len(), 1);
     assert_eq!(calls[0].0, "http://127.0.0.1:9/hook");
     assert!(calls[0].2.starts_with("sha256="));
+}
+
+#[test]
+fn emit_and_flush_do_not_send_until_the_worker_cycle() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let mut server = WorkspaceServer::new(Workspace::seed("x"));
+    server.allow_insecure_webhooks(true);
+    server.set_webhook_sender(RecordingSender {
+        calls: Arc::clone(&calls),
+    });
+    subscribe(
+        &mut server,
+        "http://127.0.0.1:9/hook",
+        vec![WebhookEventType::CommentCreated],
+    );
+
+    server.emit_webhook(
+        WebhookEventType::CommentCreated,
+        "comment",
+        "comment-1",
+        r#"{}"#,
+    );
+    assert_eq!(calls.lock().unwrap().len(), 0, "emit only queues");
+    server.flush_webhooks();
+    assert_eq!(
+        calls.lock().unwrap().len(),
+        0,
+        "flush only creates delivery records"
+    );
+    server.process_webhook_deliveries();
+    assert_eq!(calls.lock().unwrap().len(), 1, "the worker sends");
 }
 
 #[test]
@@ -229,7 +271,7 @@ fn page_event_delivery_has_documented_fields_and_signature() {
         "p-home",
         r#"{"parent":{"id":"root","type":"page"}}"#,
     );
-    server.flush_webhooks();
+    deliver(&mut server);
 
     let received = received.lock().unwrap();
     assert_eq!(received.len(), 1);
@@ -248,7 +290,7 @@ fn page_event_delivery_has_documented_fields_and_signature() {
 }
 
 #[test]
-fn comment_event_is_immediate() {
+fn comment_event_is_delivered_by_the_worker() {
     let (port, received) = start_receiver(false);
     let mut server = WorkspaceServer::new(Workspace::seed("x"));
     server.allow_insecure_webhooks(true);
@@ -263,6 +305,7 @@ fn comment_event_is_immediate() {
         "comment-1",
         r#"{"page_id":"p-home"}"#,
     );
+    deliver(&mut server);
     let received = received.lock().unwrap();
     assert_eq!(received.len(), 1);
     let event: WebhookEvent = serde_json::from_str(&received[0].body).unwrap();
@@ -291,7 +334,7 @@ fn aggregation_keeps_only_the_latest_event_per_entity() {
         "p-home",
         r#"{"version":2}"#,
     );
-    server.flush_webhooks();
+    deliver(&mut server);
 
     let received = received.lock().unwrap();
     assert_eq!(received.len(), 1);
@@ -315,12 +358,13 @@ fn failed_delivery_is_retried() {
         "comment-1",
         r#"{}"#,
     );
+    deliver(&mut server);
     let first = server.webhook_deliveries().to_vec();
     assert_eq!(first.len(), 1);
     assert!(!first[0].delivered);
     assert_eq!(first[0].attempts, 1);
 
-    server.retry_webhook_deliveries();
+    retry(&mut server);
     let deliveries = server.webhook_deliveries();
     assert!(deliveries[0].delivered);
     assert_eq!(deliveries[0].attempts, 2);
@@ -450,7 +494,7 @@ fn aggregated_events_survive_a_restart() {
         calls: Arc::clone(&calls),
     });
     assert_eq!(reopened.webhook_stats().pending, 1);
-    reopened.flush_webhooks();
+    deliver(&mut reopened);
     assert_eq!(reopened.webhook_stats().pending, 0);
     assert_eq!(calls.lock().unwrap().len(), 1);
     assert_eq!(reopened.webhook_deliveries().len(), 1);
@@ -475,8 +519,9 @@ fn failed_delivery_is_dead_lettered_and_can_be_requeued() {
         "comment-1",
         r#"{}"#,
     );
+    deliver(&mut server);
     for _ in 0..8 {
-        server.retry_webhook_deliveries();
+        retry(&mut server);
     }
     let delivery = server.webhook_deliveries()[0].clone();
     assert!(delivery.dead_lettered);

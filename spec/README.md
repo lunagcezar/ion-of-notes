@@ -154,6 +154,10 @@ Status vocabulary:
 | [114](spec-114-incremental-sqlite-persistence.md) | Incremental SQLite page persistence | implemented | Metadata + one row per page |
 | [115](spec-115-resource-scoped-authorization.md) | Resource-scoped authorization | implemented | Nested resources, projections, CRDT and WebSocket |
 | [116](spec-116-operational-hardening.md) | Operational hardening and hot paths | implemented | Proxy trust, fail-closed bind, rate limits, search/UI/SQLite |
+| [117](spec-117-webhook-outbox-isolation.md) | Webhook outbox outside the workspace lock | implemented | Queue, prepare/send/apply, no I/O under the mutex |
+| [118](spec-118-query-window-pagination.md) | Query-window pagination | implemented | Index selection and page windows, no full-row clone |
+| [119](spec-119-block-height-index.md) | Block height index | implemented | Fenwick tree, visible-window rendering |
+| [120](spec-120-http-auth-seam-and-parser-hardening.md) | HTTP auth seam and parser hardening | implemented | One authentication seam; bounded parsing |
 
 ## 3. Work status
 

@@ -5,9 +5,11 @@ use super::super::contract::{
     CODE_INTERNAL, CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR,
 };
 use super::super::error::{HandlerError, HandlerResult, fail, ok};
-use super::super::pagination::PageRequest;
+use super::super::pagination::{PageRequest, page_window};
 use super::super::response::{json, parse_body, v2_error, v2_list_response};
-use super::super::{ApiRequest, ApiResponse, Connection, Envelope, Method, WorkspaceServer};
+use super::super::{
+    ApiRequest, ApiResponse, Connection, Envelope, ListResponse, Method, WorkspaceServer,
+};
 use crate::collab::ChangeOp;
 use crate::model::{
     DataSource, DataSourceInput, DataSourceRef, Database, DatabaseInput, PagePropertiesInput,
@@ -460,14 +462,28 @@ impl WorkspaceServer {
                         ));
                     }
                 };
-                let rows = data_source.rows.clone();
                 let sort = format!("data_source_rows:{data_source_id}");
-                ok(v2_list_response(
-                    rows,
-                    &page_request,
-                    &sort,
-                    "page",
-                    request_id,
+                let window = match page_window(&page_request, &sort, data_source.rows.len()) {
+                    Ok(window) => window,
+                    Err(error) => {
+                        return fail(v2_error(
+                            400,
+                            error.code(),
+                            error.message(),
+                            request_id,
+                            None,
+                        ));
+                    }
+                };
+                let rows = data_source.rows[window.start..window.end].to_vec();
+                ok(json(
+                    200,
+                    Envelope::ok(ListResponse::new(
+                        "page",
+                        rows,
+                        window.has_more,
+                        window.next_cursor,
+                    )),
                 ))
             }
             _ => Ok(None),

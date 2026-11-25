@@ -1,5 +1,6 @@
 //! Webhook subscription, delivery and v2 route use cases.
 
+use super::super::WebhookSender;
 use super::super::contract::{CODE_INVALID_JSON, CODE_NOT_FOUND, CODE_VALIDATION_ERROR};
 use super::super::error::{HandlerResult, fail, ok};
 use super::super::response::{json, parse_body, v2_error};
@@ -11,6 +12,33 @@ use crate::webhooks::{
     WebhookSubscriptionDto, WebhookSubscriptionInput, WebhookVerificationInput, aggregate_events,
     is_allowed_url, sign,
 };
+
+/// One delivery ready to be sent outside the server lock.
+#[derive(Debug, Clone)]
+pub(crate) struct WebhookSendJob {
+    pub(crate) delivery_id: String,
+    pub(crate) url: String,
+    pub(crate) payload: String,
+    pub(crate) signature: String,
+}
+
+impl WebhookSendJob {
+    /// Send this job and pair the outcome with the delivery id.
+    pub(crate) fn send(self, sender: &dyn WebhookSender) -> WebhookSendResult {
+        let result = sender.send(&self.url, &self.payload, &self.signature);
+        WebhookSendResult {
+            delivery_id: self.delivery_id,
+            result,
+        }
+    }
+}
+
+/// The outcome of one send, applied under the lock in a second step.
+#[derive(Debug)]
+pub(crate) struct WebhookSendResult {
+    pub(crate) delivery_id: String,
+    pub(crate) result: Result<u16, String>,
+}
 
 impl WorkspaceServer {
     pub fn list_webhooks(&self) -> &[WebhookSubscription] {
@@ -118,7 +146,8 @@ impl WorkspaceServer {
         Ok(updated)
     }
 
-    /// Queue or deliver an event to active subscriptions.
+    /// Queue an event for the delivery worker. No network I/O happens here:
+    /// the write path holds the workspace lock.
     pub fn emit_webhook(
         &mut self,
         event_type: WebhookEventType,
@@ -139,7 +168,9 @@ impl WorkspaceServer {
             })
             .cloned()
             .collect();
-        let mut queued = false;
+        if subscriptions.is_empty() {
+            return;
+        }
         for subscription in subscriptions {
             let event = WebhookEvent::new(
                 workspace_id.clone(),
@@ -152,32 +183,30 @@ impl WorkspaceServer {
                 actor.clone(),
                 data.clone(),
             );
-            if event_type.is_aggregated() {
-                if let Some(existing) = self.collab.webhook_queue.iter_mut().find(|existing| {
+            if event_type.is_aggregated()
+                && let Some(existing) = self.collab.webhook_queue.iter_mut().find(|existing| {
                     existing.subscription_id == event.subscription_id
                         && existing.entity.id == event.entity.id
                         && existing.r#type == event.r#type
-                }) {
-                    *existing = event;
-                } else {
-                    self.collab.webhook_queue.push(event);
-                }
-                queued = true;
+                })
+            {
+                *existing = event;
             } else {
-                self.deliver_event(&subscription, event);
+                self.collab.webhook_queue.push(event);
             }
         }
-        if queued {
-            self.persist_collab_logged();
-        }
+        self.persist_collab_logged();
     }
 
-    /// Flush aggregated events (the production worker calls this on a timer).
+    /// Move queued events into persisted delivery records. This is the first
+    /// half of the worker cycle and performs no network I/O, so the caller can
+    /// release the server lock before sending.
     pub fn flush_webhooks(&mut self) {
         let queued = std::mem::take(&mut self.collab.webhook_queue);
         if queued.is_empty() {
             return;
         }
+        let now = now_iso();
         for event in aggregate_events(queued) {
             if let Some(subscription) = self
                 .collab
@@ -186,17 +215,19 @@ impl WorkspaceServer {
                 .find(|subscription| subscription.id == event.subscription_id)
                 .cloned()
             {
-                self.deliver_event(&subscription, event);
+                self.enqueue_delivery(&subscription, event, &now);
             }
         }
+        self.prune_deliveries();
         self.persist_collab_logged();
     }
 
-    /// Retry failed deliveries with exponential backoff and a dead-letter
-    /// boundary after eight attempts.
-    pub fn process_webhook_deliveries(&mut self) {
-        let subscriptions: Vec<WebhookSubscription> = self.collab.webhooks.clone();
+    /// Collect due deliveries as send jobs. The caller sends them outside the
+    /// server lock and then calls [`Self::apply_webhook_delivery_results`].
+    pub(crate) fn prepare_webhook_deliveries(&mut self) -> Vec<WebhookSendJob> {
         let now = chrono::Utc::now();
+        let subscriptions: Vec<WebhookSubscription> = self.collab.webhooks.clone();
+        let mut jobs = Vec::new();
         let mut changed = false;
         for delivery in &mut self.collab.webhook_deliveries {
             if delivery.delivered || delivery.dead_lettered {
@@ -223,18 +254,41 @@ impl WorkspaceServer {
                 continue;
             };
             let signature = sign(&subscription.verification_token, &delivery.payload);
-            let result =
-                self.webhooks
-                    .sender
-                    .send(&subscription.url, &delivery.payload, &signature);
+            jobs.push(WebhookSendJob {
+                delivery_id: delivery.id.clone(),
+                url: subscription.url.clone(),
+                payload: delivery.payload.clone(),
+                signature,
+            });
+        }
+        if changed {
+            self.persist_collab_logged();
+        }
+        jobs
+    }
+
+    /// Apply the results of jobs sent outside the lock.
+    pub(crate) fn apply_webhook_delivery_results(&mut self, results: Vec<WebhookSendResult>) {
+        let mut changed = false;
+        for result in results {
+            let Some(delivery) = self
+                .collab
+                .webhook_deliveries
+                .iter_mut()
+                .find(|delivery| delivery.id == result.delivery_id)
+            else {
+                continue;
+            };
             delivery.attempts = delivery.attempts.saturating_add(1);
             changed = true;
-            match result {
+            match result.result {
                 Ok(status) => {
                     delivery.last_status = Some(status);
                     delivery.last_error = None;
-                    delivery.delivered = (200..300).contains(&status);
-                    delivery.next_attempt_at = if delivery.delivered {
+                    let delivered = (200..300).contains(&status);
+                    delivery.delivered = delivered;
+                    delivery.dead_lettered = !delivered && delivery.attempts >= 8;
+                    delivery.next_attempt_at = if delivered || delivery.dead_lettered {
                         None
                     } else {
                         Some(backoff_time(delivery.attempts))
@@ -243,18 +297,36 @@ impl WorkspaceServer {
                 Err(error) => {
                     delivery.last_status = None;
                     delivery.last_error = Some(error);
-                    delivery.next_attempt_at = Some(backoff_time(delivery.attempts));
+                    delivery.dead_lettered = delivery.attempts >= 8;
+                    delivery.next_attempt_at = if delivery.dead_lettered {
+                        None
+                    } else {
+                        Some(backoff_time(delivery.attempts))
+                    };
                 }
             }
         }
         if changed {
+            self.prune_deliveries();
             self.persist_collab_logged();
         }
     }
 
-    /// Force an immediate retry of every non-delivered, non-dead-lettered
-    /// delivery. The worker uses `process_webhook_deliveries` and respects the
-    /// backoff schedule; the manual `/retry` route uses this method.
+    /// Synchronous convenience wrapper used by tests and the manual retry
+    /// route. The production worker uses the split prepare/send/apply cycle.
+    pub fn process_webhook_deliveries(&mut self) {
+        let sender = self.webhook_sender();
+        let jobs = self.prepare_webhook_deliveries();
+        let results = jobs
+            .into_iter()
+            .map(|job| job.send(sender.as_ref()))
+            .collect();
+        self.apply_webhook_delivery_results(results);
+    }
+
+    /// Schedule an immediate retry of every non-delivered, non-dead-lettered
+    /// delivery. The worker performs the send on its next tick; the method
+    /// itself performs no network I/O under the workspace lock.
     pub fn retry_webhook_deliveries(&mut self) {
         let now = now_iso();
         for delivery in &mut self.collab.webhook_deliveries {
@@ -262,38 +334,29 @@ impl WorkspaceServer {
                 delivery.next_attempt_at = Some(now.clone());
             }
         }
-        self.process_webhook_deliveries();
+        self.persist_collab_logged();
     }
 
-    fn deliver_event(&mut self, subscription: &WebhookSubscription, mut event: WebhookEvent) {
+    fn enqueue_delivery(
+        &mut self,
+        subscription: &WebhookSubscription,
+        mut event: WebhookEvent,
+        now: &str,
+    ) {
         event.attempt_number = 1;
         let payload = serde_json::to_string(&event).unwrap_or_default();
-        let signature = sign(&subscription.verification_token, &payload);
-        let result = self
-            .webhooks
-            .sender
-            .send(&subscription.url, &payload, &signature);
-        let delivered = result
-            .as_ref()
-            .is_ok_and(|status| (200..300).contains(status));
         self.collab.webhook_deliveries.push(WebhookDelivery {
             id: format!("delivery-{}", uuid::Uuid::new_v4()),
             subscription_id: subscription.id.clone(),
             event_id: event.id.clone(),
             payload,
-            attempts: 1,
-            last_status: result.as_ref().ok().copied(),
-            last_error: result.err(),
-            delivered,
-            next_attempt_at: if delivered {
-                None
-            } else {
-                Some(backoff_time(1))
-            },
+            attempts: 0,
+            last_status: None,
+            last_error: None,
+            delivered: false,
+            next_attempt_at: Some(now.to_string()),
             dead_lettered: false,
         });
-        self.prune_deliveries();
-        self.persist_collab_logged();
     }
 
     /// Log a failed webhook persistence attempt instead of silently dropping

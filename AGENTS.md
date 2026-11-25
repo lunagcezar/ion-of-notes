@@ -151,6 +151,7 @@ src/
     handlers/      one module per v2 resource family (crdt, comments/users/
                    files, views, databases, blocks, lists, shared adapter)
     authorization.rs  owning-page resolution, resource access and projections
+    authentication.rs bearer/local authentication seam shared by HTTP adapters
     services/      auth and webhook service modules
     events.rs      DomainEvent + notify for webhook-emitting writes
     error.rs       HandlerError, HandlerResult and body() for v2 handlers
@@ -204,7 +205,7 @@ locales/           en.yml, pt-BR.yml, eo.yml key tables
       chrome.rs    tab strip and window controls
       sidebar.rs   search, Library/Settings, favorites, tree, bottom group
       content.rs   facade: render_content entry point
-      content/     page, blocks, cursors
+      content/     page, blocks, cursors, height index
       library.rs   Library table and tabs
       database.rs  inline table / board database
     dialogs.rs     facade for the dialog submodules
@@ -691,9 +692,9 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
-| `cargo test --all-targets --no-default-features` | Core integration tests (289, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (294, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (43) |
-| `cargo test --all-targets`               | All default-feature tests (331; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (336; the core-only seam test is skipped) |
 | `ION_OF_NOTES_PERF=1 cargo test --no-default-features --test perf -- --nocapture` | Opt-in 1k/10k/50k block load/search/CRDT timings |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |

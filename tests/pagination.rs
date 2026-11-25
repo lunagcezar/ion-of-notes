@@ -7,13 +7,33 @@ use ion_of_notes::client::Client;
 use ion_of_notes::model::{Page, PageSummary, Workspace};
 use ion_of_notes::server::{
     ApiResponse, ListResponse, Method, PageRequest, PaginationError, RequestTransport,
-    WorkspaceServer, paginate,
+    WorkspaceServer, page_window, paginate,
 };
 
 fn v2_error_code(response: &ApiResponse) -> String {
     serde_json::from_str::<ion_of_notes::ApiError>(&response.body)
         .expect("v2 error body")
         .code
+}
+
+#[test]
+fn page_window_selects_the_same_slice_without_cloning_the_list() {
+    let first = PageRequest::from_query("page_size=2").unwrap();
+    let window = page_window(&first, "rows", 5).unwrap();
+    assert_eq!((window.start, window.end), (0, 2));
+    assert!(window.has_more);
+    let cursor = window.next_cursor.expect("cursor");
+    let second = PageRequest::from_query(&format!("page_size=2&start_cursor={cursor}")).unwrap();
+    let window = page_window(&second, "rows", 5).unwrap();
+    assert_eq!((window.start, window.end), (2, 4));
+    let third = PageRequest::from_query(&format!(
+        "page_size=2&start_cursor={}",
+        window.next_cursor.expect("cursor")
+    ))
+    .unwrap();
+    let window = page_window(&third, "rows", 5).unwrap();
+    assert_eq!((window.start, window.end), (4, 5));
+    assert!(!window.has_more);
 }
 
 #[test]

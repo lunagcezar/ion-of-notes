@@ -5,7 +5,13 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use super::response::bad;
 use super::{ApiRequest, ApiResponse, Method, RequestTransport, WorkspaceServer};
+
+/// Bound for the request line and headers of the loopback parser.
+const MAX_HEAD_BYTES: usize = 16 * 1024;
+/// Bound for the number of header fields.
+const MAX_HEADERS: usize = 100;
 
 /// Parse one HTTP/1.1 request into an `ApiRequest`.
 pub fn parse_http_request(bytes: &[u8]) -> Option<ApiRequest> {
@@ -14,32 +20,45 @@ pub fn parse_http_request(bytes: &[u8]) -> Option<ApiRequest> {
         Some((h, b)) => (h, b),
         None => (text.as_ref(), ""),
     };
+    if head.len() > MAX_HEAD_BYTES {
+        return None;
+    }
     let mut lines = head.split("\r\n");
     let mut words = lines.next().unwrap_or("").split_whitespace();
     let method = Method::parse(words.next().unwrap_or(""))?;
     let path = words.next().unwrap_or("").to_string();
-    if path.is_empty() {
+    if path.is_empty() || !path.starts_with('/') {
         return None;
     }
-    let mut content_length = 0usize;
+    let mut content_length: Option<usize> = None;
     let mut headers = std::collections::BTreeMap::new();
-    for line in lines {
+    for (count, line) in lines.enumerate() {
+        if count >= MAX_HEADERS {
+            return None;
+        }
         if let Some((key, value)) = line.split_once(':') {
             let key = key.trim().to_ascii_lowercase();
             let value = value.trim().to_string();
+            if key.is_empty() {
+                return None;
+            }
             if key == "content-length" {
-                content_length = value.parse().unwrap_or(0);
+                let length = value.parse::<usize>().ok()?;
+                if content_length.is_some_and(|existing| existing != length) {
+                    return None;
+                }
+                content_length = Some(length);
             }
             headers.insert(key, value);
         }
     }
-    let body = if content_length > 0 {
-        let raw = body_bytes.as_bytes();
-        let end = content_length.min(raw.len());
-        Some(String::from_utf8_lossy(&raw[..end]).into_owned())
-    } else {
-        None
-    };
+    let content_length = content_length.unwrap_or(0);
+    let raw = body_bytes.as_bytes();
+    if content_length > raw.len() {
+        return None;
+    }
+    let body =
+        (content_length > 0).then(|| String::from_utf8_lossy(&raw[..content_length]).into_owned());
     Some(ApiRequest {
         method,
         path,
@@ -121,8 +140,9 @@ fn request_complete(buffer: &[u8]) -> bool {
     buffer.len() >= index + 4 + length
 }
 
-/// Read one HTTP request from a connection.
-fn read_request(stream: &mut TcpStream) -> std::io::Result<ApiRequest> {
+/// Read one HTTP request from a connection. `None` means the bytes were not a
+/// valid request (malformed head, bad content length, truncated body).
+fn read_request(stream: &mut TcpStream) -> std::io::Result<Option<ApiRequest>> {
     stream.set_read_timeout(Some(Duration::from_secs(2)))?;
     let mut buffer = Vec::new();
     let mut chunk = [0u8; 4096];
@@ -138,16 +158,15 @@ fn read_request(stream: &mut TcpStream) -> std::io::Result<ApiRequest> {
             Err(e) => return Err(e),
         }
     }
-    Ok(
-        parse_http_request(&buffer)
-            .unwrap_or_else(|| ApiRequest::new(Method::Get, "/health", None)),
-    )
+    Ok(parse_http_request(&buffer))
 }
 
 /// Handle one connection and write one response.
 pub fn serve_once<A: RequestTransport>(api: &mut A, stream: &mut TcpStream) -> std::io::Result<()> {
-    let request = read_request(stream)?;
-    let response = api.handle(&request);
+    let response = match read_request(stream)? {
+        Some(request) => api.handle(&request),
+        None => bad("malformed HTTP request"),
+    };
     stream.write_all(&format_http_response(&response))?;
     stream.flush()
 }
@@ -164,17 +183,17 @@ pub fn serve_on(listener: TcpListener, server: WorkspaceServer) -> std::io::Resu
             Ok(mut stream) => {
                 let server = Arc::clone(&server);
                 std::thread::spawn(move || {
-                    let request = match read_request(&mut stream) {
-                        Ok(request) => request,
+                    let response = match read_request(&mut stream) {
+                        Ok(Some(request)) => match server.lock() {
+                            Ok(mut guard) => guard.handle(&request),
+                            Err(error) => {
+                                eprintln!("server lock poisoned: {error}");
+                                return;
+                            }
+                        },
+                        Ok(None) => bad("malformed HTTP request"),
                         Err(error) => {
                             eprintln!("request error: {error}");
-                            return;
-                        }
-                    };
-                    let response = match server.lock() {
-                        Ok(mut guard) => guard.handle(&request),
-                        Err(error) => {
-                            eprintln!("server lock poisoned: {error}");
                             return;
                         }
                     };

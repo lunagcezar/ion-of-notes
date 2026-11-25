@@ -1,6 +1,5 @@
 use super::*;
 use crate::model::{Page, PageSummary, Workspace};
-use crate::server::contract::{AUTH_HEADER, OWNER_TOKEN, parse_bearer};
 use crate::server::response::{forbidden, json, not_found, unauthorized};
 use crate::server::{Connection, Envelope};
 use axum::extract::ConnectInfo;
@@ -146,21 +145,9 @@ fn read_snapshot(
 }
 
 fn authenticate(server: &WorkspaceServer, request: &ApiRequest) -> Result<Connection, ApiResponse> {
-    if server.requires_auth() {
-        let Some(token) = request.header(AUTH_HEADER).and_then(parse_bearer) else {
-            return Err(unauthorized("missing or malformed bearer token"));
-        };
-        server
-            .connection_for_token(token)
-            .ok_or_else(|| unauthorized("invalid bearer token"))
-    } else {
-        Ok(server.connection_for_token(OWNER_TOKEN).unwrap_or_else(|| {
-            Connection::owner(
-                server.collab.owner_id(),
-                server.workspace.settings.id.clone(),
-            )
-        }))
-    }
+    server
+        .authenticate_local_or_session(request)
+        .map_err(|error| unauthorized(error.message()))
 }
 
 fn snapshot_for(

@@ -4,9 +4,9 @@
 //! explicit and each rule can be tested in isolation.
 
 use super::super::contract::{
-    AUTH_HEADER, CODE_MISSING_VERSION, CODE_NOT_FOUND, CODE_RATE_LIMITED, CODE_RESTRICTED_RESOURCE,
+    CODE_MISSING_VERSION, CODE_NOT_FOUND, CODE_RATE_LIMITED, CODE_RESTRICTED_RESOURCE,
     CODE_SERVICE_OVERLOAD, CODE_UNAUTHORIZED, CODE_UNSUPPORTED_VERSION, CODE_VALIDATION_ERROR,
-    SUPPORTED_VERSIONS, VERSION_HEADER, parse_bearer, version_supported,
+    SUPPORTED_VERSIONS, VERSION_HEADER, version_supported,
 };
 use super::super::limits;
 use super::super::rate_limit::{REASON_CONNECTION, RateDecision};
@@ -71,24 +71,9 @@ pub(super) fn authenticate(
     request: &ApiRequest,
     request_id: &str,
 ) -> Result<Connection, ApiResponse> {
-    let Some(token) = request.header(AUTH_HEADER).and_then(parse_bearer) else {
-        return Err(v2_error(
-            401,
-            CODE_UNAUTHORIZED,
-            "missing or malformed bearer token",
-            request_id,
-            None,
-        ));
-    };
-    server.connection_for_token(token).ok_or_else(|| {
-        v2_error(
-            401,
-            CODE_UNAUTHORIZED,
-            "invalid bearer token",
-            request_id,
-            None,
-        )
-    })
+    server
+        .authenticate_bearer(request)
+        .map_err(|error| v2_error(401, CODE_UNAUTHORIZED, error.message(), request_id, None))
 }
 
 pub(super) fn check_runtime(

@@ -41,6 +41,40 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   selection, and no per-frame clone for a merely focused field.
 - Added `ConnectionKind` instead of string-prefix identity.
 
+### Performance - spec-117 webhook outbox isolation
+
+- Webhook events are queued in the persisted outbox for every event type; no
+  network I/O runs on the write path.
+- `flush_webhooks` only creates delivery records; the worker prepares jobs,
+  sends outside the workspace mutex, and applies results in a second locked
+  step.
+- `/retry` schedules retries for the next worker tick instead of sending under
+  the lock.
+- The sender is shared behind an `Arc` and its private-target switch is atomic.
+
+### Performance - spec-118 query-window pagination
+
+- View queries filter and sort row indices and materialize only the requested
+  window; board/calendar groups reuse the same index set.
+- Data-source queries clone only the requested slice.
+- Added `PageWindow`/`page_window`; `paginate` is now a thin wrapper.
+
+### Performance - spec-119 block height index
+
+- Added a per-page Fenwick height index with an ordered-list count tree.
+- A normal frame finds the visible window in O(log n) and renders only that
+  window plus overscan; selection/drag/focus keep the full-block path.
+- Measured block heights update one tree entry; the old per-block hash map is
+  gone.
+
+### Security - spec-120 HTTP auth seam and parser hardening
+
+- Added `server::authentication` (`AuthError`, bearer and local/session
+  resolution); v1, v2 and the snapshot path share it.
+- The loopback parser bounds the head/header count, accepts origin-form paths
+  only, rejects ambiguous or truncated `Content-Length`, and returns `400` for
+  malformed requests instead of `/health`.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

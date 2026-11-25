@@ -1,7 +1,6 @@
 //! Legacy v1 route dispatch. Every route keeps the v1 envelope and status and
 //! delegates the actual work to the shared use cases.
 
-use super::super::contract::{AUTH_HEADER, OWNER_TOKEN, parse_bearer};
 use super::super::response::{
     bad, forbidden, json, not_found, parse_body, query_value, server_error, unauthorized,
 };
@@ -9,9 +8,7 @@ use super::super::usecases::{
     self, UseCaseError, create_page, delete_page, get_page, invite_member, list_members,
     list_shares, page_versions, replace_workspace, set_share,
 };
-use super::super::{
-    ApiRequest, ApiResponse, Capability, Connection, Envelope, Method, WorkspaceServer,
-};
+use super::super::{ApiRequest, ApiResponse, Capability, Envelope, Method, WorkspaceServer};
 use crate::collab::MemberDraft;
 use crate::model::{Page, PageDraft, Workspace};
 
@@ -24,18 +21,9 @@ impl WorkspaceServer {
 
         // The local `NoAuthStore` keeps the in-process desktop flow public;
         // every production-capable store requires a persisted session token.
-        let connection = if self.persistence.auth_store.requires_auth() {
-            let Some(token) = request.header(AUTH_HEADER).and_then(parse_bearer) else {
-                return unauthorized("missing or malformed bearer token");
-            };
-            match self.connection_for_token(token) {
-                Some(connection) => connection,
-                None => return unauthorized("invalid bearer token"),
-            }
-        } else {
-            self.connection_for_token(OWNER_TOKEN).unwrap_or_else(|| {
-                Connection::owner(self.collab.owner_id(), self.workspace.settings.id.clone())
-            })
+        let connection = match self.authenticate_local_or_session(request) {
+            Ok(connection) => connection,
+            Err(error) => return unauthorized(error.message()),
         };
 
         if matches!(

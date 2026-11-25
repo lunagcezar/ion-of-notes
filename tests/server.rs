@@ -166,6 +166,34 @@ fn parse_http_request_extracts_method_path_body() {
 }
 
 #[test]
+fn parse_http_request_rejects_ambiguous_framing_and_truncated_bodies() {
+    assert!(
+        parse_http_request(b"POST /api/pages HTTP/1.1\r\nContent-Length: nope\r\n\r\n{}").is_none()
+    );
+    assert!(
+        parse_http_request(
+            b"POST /api/pages HTTP/1.1\r\nContent-Length: 3\r\nContent-Length: 4\r\n\r\nabcd"
+        )
+        .is_none()
+    );
+    assert!(
+        parse_http_request(b"POST /api/pages HTTP/1.1\r\nContent-Length: 10\r\n\r\nshort")
+            .is_none()
+    );
+    assert!(parse_http_request(b"GET health HTTP/1.1\r\n\r\n").is_none());
+}
+
+#[test]
+fn parse_http_request_rejects_an_oversized_head() {
+    let mut raw = b"GET /health HTTP/1.1\r\n".to_vec();
+    for index in 0..200 {
+        raw.extend_from_slice(format!("X-Test-{index}: value\r\n").as_bytes());
+    }
+    raw.extend_from_slice(b"\r\n");
+    assert!(parse_http_request(&raw).is_none());
+}
+
+#[test]
 fn serve_on_handles_two_concurrent_connections() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();

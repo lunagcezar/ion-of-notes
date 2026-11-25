@@ -20,6 +20,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+mod authentication;
 mod authorization;
 mod contract;
 pub mod crdt;
@@ -39,6 +40,7 @@ mod usecases;
 pub mod web;
 pub mod webhook_sender;
 
+pub use authentication::AuthError;
 pub use contract::{
     API_VERSION, AUTH_HEADER, ApiError, CODE_CONFLICT, CODE_INTERNAL, CODE_INVALID_CURSOR,
     CODE_INVALID_JSON, CODE_MISSING_VERSION, CODE_NOT_FOUND, CODE_RATE_LIMITED,
@@ -54,7 +56,7 @@ pub use limits::{
     MAX_EMAIL_CHARS, MAX_EQUATION_CHARS, MAX_PHONE_CHARS, MAX_REQUEST_BYTES, MAX_RICH_TEXT_CHARS,
     MAX_URL_CHARS, Plan, RequestBudget, validate_request,
 };
-pub use pagination::{PageRequest, PaginationError, paginate};
+pub use pagination::{PageRequest, PageWindow, PaginationError, page_window, paginate};
 pub use rate_limit::{
     REASON_CONNECTION, REASON_WORKSPACE, RateDecision, RateLimitPolicy, RateLimiter,
     SqliteRateLimiter,
@@ -284,7 +286,7 @@ pub const DEFAULT_LOGIN_PER_WORKSPACE: u32 = 100;
 /// Webhook delivery state, separate from the collaboration records.
 struct WebhookRuntime {
     allow_insecure: bool,
-    sender: Box<dyn WebhookSender>,
+    sender: Arc<dyn WebhookSender>,
 }
 
 impl WorkspaceServer {
@@ -385,7 +387,7 @@ impl WorkspaceServer {
             },
             webhooks: WebhookRuntime {
                 allow_insecure: false,
-                sender: Box::new(UreqWebhookSender::new()),
+                sender: Arc::new(UreqWebhookSender::new()),
             },
             realtime: realtime::RealtimeHub::new(256),
             crdt: crdt::CrdtStore::new(),
@@ -624,7 +626,12 @@ impl WorkspaceServer {
 
     /// Inject a custom webhook sender (tests, alternate TLS adapters).
     pub fn set_webhook_sender(&mut self, sender: impl WebhookSender + 'static) {
-        self.webhooks.sender = Box::new(sender);
+        self.webhooks.sender = Arc::new(sender);
+    }
+
+    /// Clone the sender handle so a worker can deliver outside the server lock.
+    pub(crate) fn webhook_sender(&self) -> Arc<dyn WebhookSender> {
+        Arc::clone(&self.webhooks.sender)
     }
 
     /// Simulate a temporarily overloaded service (`529 service_overload`).

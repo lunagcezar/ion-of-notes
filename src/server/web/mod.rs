@@ -125,12 +125,32 @@ fn spawn_webhook_worker(server: Arc<Mutex<WorkspaceServer>>) {
         ticker.tick().await;
         loop {
             ticker.tick().await;
-            let server = Arc::clone(&server);
+            let shared = Arc::clone(&server);
+            let prepared = tokio::task::spawn_blocking(move || {
+                let mut server = shared
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                server.flush_webhooks();
+                let sender = server.webhook_sender();
+                let jobs = server.prepare_webhook_deliveries();
+                (sender, jobs)
+            })
+            .await;
+            let Ok((sender, jobs)) = prepared else {
+                continue;
+            };
+            // Sending happens outside the workspace lock so a slow endpoint
+            // cannot stall API writes.
+            let results = jobs
+                .into_iter()
+                .map(|job| job.send(sender.as_ref()))
+                .collect::<Vec<_>>();
+            let shared = Arc::clone(&server);
             let _ = tokio::task::spawn_blocking(move || {
-                if let Ok(mut server) = server.lock() {
-                    server.flush_webhooks();
-                    server.process_webhook_deliveries();
-                }
+                let mut server = shared
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                server.apply_webhook_delivery_results(results);
             })
             .await;
         }
