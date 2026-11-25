@@ -1,10 +1,13 @@
 //! Remote cursor and selection overlay.
+//!
+//! Positions come from the laid-out `Galley`, so a caret or selection that
+//! wraps onto later rows lands on the correct row and column instead of being
+//! approximated from a first-line text width.
 
 use crate::server::realtime::Awareness;
-use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Stroke};
+use egui::text::CCursor;
+use egui::{Align2, Color32, CornerRadius, FontId, Galley, Pos2, Rect, Stroke};
 use std::collections::HashMap;
-use std::hash::{DefaultHasher, Hash, Hasher};
-use std::sync::{Arc, Mutex};
 
 use super::super::super::palette::Palette;
 
@@ -26,92 +29,75 @@ pub fn index_cursors<'a>(
     by_block
 }
 
+/// Selection rectangles in galley-local coordinates, one per visual row.
+pub fn selection_rects(galley: &Galley, start: usize, end: usize) -> Vec<Rect> {
+    let (start, end) = if start <= end {
+        (start, end)
+    } else {
+        (end, start)
+    };
+    if start == end {
+        return Vec::new();
+    }
+    let start_cursor = galley.layout_from_cursor(CCursor::new(start));
+    let end_cursor = galley.layout_from_cursor(CCursor::new(end));
+    let mut rects = Vec::new();
+    for row_index in start_cursor.row..=end_cursor.row {
+        let Some(row) = galley.rows.get(row_index) else {
+            continue;
+        };
+        let left = if row_index == start_cursor.row {
+            row.pos.x + row.x_offset(start_cursor.column)
+        } else {
+            row.rect().left()
+        };
+        let right = if row_index == end_cursor.row {
+            row.pos.x + row.x_offset(end_cursor.column)
+        } else {
+            row.rect().right()
+        };
+        if right > left {
+            rects.push(Rect::from_min_max(
+                Pos2::new(left, row.rect().top()),
+                Pos2::new(right, row.rect().bottom()),
+            ));
+        }
+    }
+    rects
+}
+
 pub(super) fn draw_remote_cursors(
     ui: &mut egui::Ui,
-    rect: &Rect,
-    text: &str,
-    font: &FontId,
+    galley: &Galley,
+    galley_pos: Pos2,
     cursors: &[&Awareness],
     palette: &Palette,
 ) {
+    let painter = ui.painter();
     for cursor in cursors {
         let color = parse_hex_color(&cursor.color).unwrap_or(palette.accent);
         if let Some(end) = cursor.selection_end {
-            let start = cursor.index.min(end);
-            let end = cursor.index.max(end);
-            let start_x = rect.min.x + text_width(ui, text, start, font, color);
-            let end_x = rect.min.x + text_width(ui, text, end, font, color);
-            ui.painter().rect_filled(
-                Rect::from_min_max(Pos2::new(start_x, rect.min.y), Pos2::new(end_x, rect.max.y)),
-                CornerRadius::same(2),
-                Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 40),
-            );
+            for rect in selection_rects(galley, cursor.index, end) {
+                painter.rect_filled(
+                    rect.translate(galley_pos.to_vec2()),
+                    CornerRadius::same(2),
+                    Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 40),
+                );
+            }
         }
-        let x = (rect.min.x + text_width(ui, text, cursor.index, font, color))
-            .clamp(rect.min.x, rect.max.x - 2.0);
-        ui.painter()
-            .vline(x, rect.y_range(), Stroke::new(2.0, color));
-        ui.painter().text(
-            Pos2::new(x + 3.0, rect.min.y - 2.0),
+        let caret = galley.pos_from_cursor(CCursor::new(cursor.index));
+        let x = galley_pos.x + caret.center().x;
+        let top = galley_pos.y + caret.top();
+        let bottom = galley_pos.y + caret.bottom();
+        painter.vline(x, top..=bottom, Stroke::new(2.0, color));
+        painter.text(
+            Pos2::new(x + 3.0, top - 2.0),
             Align2::LEFT_BOTTOM,
             &cursor.name,
             FontId::proportional(10.0),
             color,
         );
     }
-}
-
-const CURSOR_WIDTH_CACHE_CAP: usize = 1024;
-
-type WidthCache = Arc<Mutex<HashMap<CursorWidthKey, f32>>>;
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-struct CursorWidthKey {
-    text_hash: u64,
-    chars: usize,
-    font_size: u32,
-    family: u64,
-}
-
-fn text_width(ui: &egui::Ui, text: &str, chars: usize, font: &FontId, color: Color32) -> f32 {
-    let mut hasher = DefaultHasher::new();
-    text.hash(&mut hasher);
-    let mut family = DefaultHasher::new();
-    std::mem::discriminant(&font.family).hash(&mut family);
-    let key = CursorWidthKey {
-        text_hash: hasher.finish(),
-        chars,
-        font_size: font.size.to_bits(),
-        family: family.finish(),
-    };
-    let id = egui::Id::unique("cursor_width_cache");
-    let cache = ui
-        .ctx()
-        .data(|data| data.get_temp::<WidthCache>(id))
-        .unwrap_or_else(|| {
-            let cache: WidthCache = Arc::new(Mutex::new(HashMap::new()));
-            ui.ctx()
-                .data_mut(|data| data.insert_temp(id, Arc::clone(&cache)));
-            cache
-        });
-    if let Ok(map) = cache.lock()
-        && let Some(width) = map.get(&key)
-    {
-        return *width;
-    }
-    let prefix: String = text.chars().take(chars).collect();
-    let width = ui
-        .painter()
-        .layout_no_wrap(prefix, font.clone(), color)
-        .size()
-        .x;
-    if let Ok(mut map) = cache.lock() {
-        if map.len() >= CURSOR_WIDTH_CACHE_CAP {
-            map.clear();
-        }
-        map.insert(key, width);
-    }
-    width
 }
 
 fn parse_hex_color(value: &str) -> Option<Color32> {

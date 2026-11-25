@@ -8,7 +8,8 @@ use ion_of_notes::client::Client;
 use ion_of_notes::collab::{ChangeOp, CollabState, Role};
 use ion_of_notes::model::{PageDraft, Workspace, now_iso};
 use ion_of_notes::remote::{
-    RemoteApi, RemoteRest, RemoteSession, clear_session_at, load_session_at, login, save_session_at,
+    PendingAwareness, RemoteApi, RemoteRest, RemoteSession, clear_session_at, load_session_at,
+    login, save_session_at,
 };
 use ion_of_notes::server::WorkspaceServer;
 use ion_of_notes::server::realtime::{Awareness, ServerMessage};
@@ -199,6 +200,33 @@ async fn remote_rest_client_roundtrips_without_the_websocket() {
     let results = client.search("Home").expect("search");
     assert!(!results.is_empty());
     handle.abort();
+}
+
+#[test]
+fn pending_awareness_keeps_only_the_latest_cursor() {
+    let pending = PendingAwareness::new();
+    let first = Awareness {
+        session_id: "s".to_string(),
+        member_id: "m-owner".to_string(),
+        name: "You".to_string(),
+        color: "#4C8BF5".to_string(),
+        page_id: "p-home".to_string(),
+        block_id: "h1".to_string(),
+        index: 1,
+        selection_end: None,
+    };
+    let mut second = first.clone();
+    second.index = 7;
+
+    pending.record(first.clone());
+    pending.record(second.clone());
+    assert_eq!(pending.snapshot(), Some(second.clone()));
+
+    // A late clear for the older cursor must not delete the newer one.
+    pending.clear_if(&first);
+    assert_eq!(pending.snapshot(), Some(second.clone()));
+    pending.clear_if(&second);
+    assert_eq!(pending.snapshot(), None);
 }
 
 #[cfg(unix)]

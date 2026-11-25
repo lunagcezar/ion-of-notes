@@ -1,6 +1,8 @@
 use super::*;
+use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 pub(super) fn spawn_ws(
     base: String,
@@ -8,6 +10,7 @@ pub(super) fn spawn_ws(
     workspace_id: String,
     realtime_tx: broadcast::Sender<ServerMessage>,
     mut ws_rx: mpsc::Receiver<WsCommand>,
+    pending_awareness: Arc<PendingAwareness>,
 ) {
     std::thread::spawn(move || {
         let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
@@ -30,6 +33,9 @@ pub(super) fn spawn_ws(
                 }
                 if let Ok((mut socket, _)) = tokio_tungstenite::connect_async(request).await {
                     backoff = 1;
+                    if !flush_awareness(&mut socket, &pending_awareness).await {
+                        continue;
+                    }
                     loop {
                         tokio::select! {
                             message = socket.next() => match message {
@@ -51,9 +57,9 @@ pub(super) fn spawn_ws(
                                 _ => {}
                             },
                             command = ws_rx.recv() => match command {
-                                Some(WsCommand::Awareness(awareness)) => {
-                                    if let Ok(text) = serde_json::to_string(&ClientMessage::Awareness { awareness }) {
-                                        let _ = socket.send(Message::Text(text.into())).await;
+                                Some(WsCommand::Awareness) => {
+                                    if !flush_awareness(&mut socket, &pending_awareness).await {
+                                        break;
                                     }
                                 }
                                 None => return,
@@ -73,4 +79,25 @@ fn websocket_url(base: &str, workspace_id: &str) -> String {
         .replacen("https://", "wss://", 1)
         .replacen("http://", "ws://", 1);
     format!("{base}/ws/workspace/{workspace_id}")
+}
+
+/// Send the latest pending cursor, if any. Returns false when the socket is
+/// gone so the caller can fall back to the reconnect loop.
+async fn flush_awareness(
+    socket: &mut WebSocketStream<MaybeTlsStream<TcpStream>>,
+    pending: &Arc<PendingAwareness>,
+) -> bool {
+    let Some(awareness) = pending.snapshot() else {
+        return true;
+    };
+    let Ok(text) = serde_json::to_string(&ClientMessage::Awareness {
+        awareness: awareness.clone(),
+    }) else {
+        return true;
+    };
+    if socket.send(Message::Text(text.into())).await.is_err() {
+        return false;
+    }
+    pending.clear_if(&awareness);
+    true
 }

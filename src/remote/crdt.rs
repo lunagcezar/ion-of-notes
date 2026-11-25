@@ -76,11 +76,12 @@ impl CollabTransport for RemoteApi {
     }
 
     fn publish_awareness(&mut self, awareness: Awareness) -> Result<(), String> {
-        match self.ws_tx.try_send(WsCommand::Awareness(awareness)) {
+        self.pending_awareness.record(awareness);
+        match self.ws_tx.try_send(WsCommand::Awareness) {
             Ok(()) | Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => Ok(()),
-            Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
-                Err("realtime channel closed".to_string())
-            }
+            // The worker may be reconnecting. The latest cursor stays in the
+            // pending slot and is flushed on the next connection.
+            Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => Ok(()),
         }
     }
 }

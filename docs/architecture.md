@@ -146,6 +146,7 @@ src/
     collab.rs        CRDT and realtime transport methods
     retry.rs         RetryPolicy + RetryDecision
   remote/            remote REST/WebSocket transport
+    awareness.rs     one-entry pending cursor flushed on reconnect
     mod.rs           RemoteApi, login and transport impls
     session.rs       remembered session persistence
     http.rs          ureq agent and request helpers

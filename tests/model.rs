@@ -49,6 +49,99 @@ fn view_row_indices_materialize_the_same_rows_as_the_legacy_query() {
 }
 
 #[test]
+fn randomized_workspace_mutations_keep_indices_and_block_ownership_consistent() {
+    use std::collections::HashSet;
+
+    let mut workspace = Workspace::seed("invariants");
+    let mut state = 0x1234_5678_9abc_def0u64;
+    let mut next = || {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1);
+        state
+    };
+
+    for step in 0..400 {
+        match next() % 5 {
+            0 => {
+                let parent = if workspace.pages.is_empty() || next() % 2 == 0 {
+                    None
+                } else {
+                    let index = (next() as usize) % workspace.pages.len();
+                    Some(workspace.pages[index].id.clone())
+                };
+                let mut page = Page::new(format!("f-{step}"), format!("Fuzz {step}"), "P");
+                page.parent = parent;
+                let _ = workspace.add_page(page);
+            }
+            1 if !workspace.pages.is_empty() => {
+                let index = (next() as usize) % workspace.pages.len();
+                let id = workspace.pages[index].id.clone();
+                let _ = workspace.remove_page(&id);
+            }
+            2 if !workspace.pages.is_empty() => {
+                let index = (next() as usize) % workspace.pages.len();
+                let page_id = workspace.pages[index].id.clone();
+                if let Some(page) = workspace.page_mut(&page_id) {
+                    page.blocks.push(Block::new(
+                        format!("fuzz-block-{step}"),
+                        BlockKind::Paragraph,
+                        format!("block {step}"),
+                    ));
+                }
+            }
+            3 if !workspace.pages.is_empty() => {
+                let page_index = (next() as usize) % workspace.pages.len();
+                let page_id = workspace.pages[page_index].id.clone();
+                if let Some(page) = workspace.page_mut(&page_id)
+                    && !page.blocks.is_empty()
+                {
+                    let block_index = (next() as usize) % page.blocks.len();
+                    page.blocks[block_index].text = format!("edited {step}");
+                }
+            }
+            _ => workspace.bump_version(),
+        }
+
+        let page_ids: HashSet<&str> = workspace.pages.iter().map(|p| p.id.as_str()).collect();
+        assert_eq!(
+            page_ids.len(),
+            workspace.pages.len(),
+            "page ids stay unique"
+        );
+        for page in &workspace.pages {
+            assert_eq!(
+                workspace.page(&page.id).map(|found| found.id.as_str()),
+                Some(page.id.as_str())
+            );
+            let children: HashSet<&str> = workspace
+                .children(Some(page.id.as_str()))
+                .into_iter()
+                .map(|child| child.id.as_str())
+                .collect();
+            let expected: HashSet<&str> = workspace
+                .pages
+                .iter()
+                .filter(|candidate| candidate.parent.as_deref() == Some(page.id.as_str()))
+                .map(|candidate| candidate.id.as_str())
+                .collect();
+            assert_eq!(children, expected);
+            assert!(!workspace.breadcrumbs(&page.id).is_empty());
+            for block in &page.blocks {
+                assert_eq!(
+                    workspace.page_id_for_block(&block.id).as_deref(),
+                    Some(page.id.as_str())
+                );
+            }
+        }
+        for result in workspace.search("Fuzz") {
+            assert!(workspace.page(&result.page_id).is_some());
+        }
+        assert!(workspace.block_count() >= workspace.pages.len() as u64);
+    }
+}
+
+#[test]
 fn duplicate_page_id_is_rejected() {
     let mut ws = Workspace::new("w");
     ws.add_page(page("a", "A", None)).unwrap();

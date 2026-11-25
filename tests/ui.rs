@@ -15,10 +15,36 @@ use ion_of_notes::ui::{
 use ion_of_notes::ui::{
     EMOJI, ICONS, app_bar_left_width, block_outside_viewport, catalog_matches, drop_index,
     estimate_block_height, frame_may_mutate, glyph_visual_offset, index_cursors, page_icon_letter,
-    search_page_matches, split_index,
+    search_page_matches, selection_rects, split_index,
 };
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
+
+#[test]
+fn remote_selection_rects_follow_wrapped_rows() {
+    let context = egui::Context::default();
+    let mut rects = Vec::new();
+    let mut output = context.run_pass(egui::RawInput::default(), |ctx| {
+        let galley = ctx.fonts_mut(|fonts| {
+            fonts.layout(
+                "a long line that wraps across several rows in a narrow column".to_owned(),
+                egui::FontId::proportional(14.0),
+                egui::Color32::BLACK,
+                80.0,
+            )
+        });
+        let end = galley.job.text.chars().count();
+        rects = selection_rects(&galley, 0, end);
+        assert!(selection_rects(&galley, 4, 4).is_empty());
+    });
+    output.textures_delta.clear();
+    assert!(rects.len() > 1, "the text must wrap");
+    assert!(
+        rects[1].top() > rects[0].top(),
+        "the second row starts below the first"
+    );
+    assert!(rects.iter().all(|rect| rect.width() > 0.0));
+}
 
 #[test]
 fn ui_constants_are_declaration_only_and_even() {

@@ -82,6 +82,30 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - `parse_http_request`, `format_http_response` and `serve_once` remain as a
   low-level parser and test helper.
 
+### Fixed - spec-122 offline awareness queue
+
+- The remote client keeps the latest awareness in a one-entry slot when the
+  WebSocket is disconnected or its command channel is full.
+- Reconnects flush the pending cursor; a stale clear cannot delete a newer one.
+
+### Fixed - spec-123 galley-based remote caret
+
+- Remote carets and selections use the block's laid-out `Galley`, so wrapped
+  rows get correct vertical positions and multi-line selections paint one
+  rectangle per row.
+- Removed the per-character cursor width cache.
+
+### Added - spec-124 workspace and sync observability
+
+- `/metrics` now exposes pages, blocks, members, workspace version, sync
+  sequence and request-log size; the webhook worker traces its job count.
+
+### Added - spec-125 workspace invariant fuzz
+
+- A deterministic 400-step mixed-mutation test checks page uniqueness, page
+  lookup, child filtering, block ownership, breadcrumbs, search and block
+  counts after every step.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

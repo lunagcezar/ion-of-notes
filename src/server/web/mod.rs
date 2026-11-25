@@ -141,6 +141,7 @@ fn spawn_webhook_worker(server: Arc<Mutex<WorkspaceServer>>) {
             };
             // Sending happens outside the workspace lock so a slow endpoint
             // cannot stall API writes.
+            tracing::debug!(jobs = jobs.len(), "webhook worker cycle");
             let results = jobs
                 .into_iter()
                 .map(|job| job.send(sender.as_ref()))

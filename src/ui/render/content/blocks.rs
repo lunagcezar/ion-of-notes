@@ -183,7 +183,7 @@ pub(super) fn render_block(
                 .get(block_id_for_edit.as_str())
                 .map(Vec::as_slice)
                 .unwrap_or(&[]);
-            draw_remote_cursors(ui, &output.response.rect, text, &font, remote, palette);
+            draw_remote_cursors(ui, &output.galley, output.galley_pos, remote, palette);
             if output.response.changed() {
                 pending_commands
                     .borrow_mut()

@@ -110,6 +110,12 @@ async fn metrics_route_exposes_prometheus_text() {
     assert!(body.contains("ion_of_notes_webhook_pending"));
     assert!(body.contains("ion_of_notes_webhook_dead_letters"));
     assert!(body.contains("ion_of_notes_webhook_deliveries_total"));
+    assert!(body.contains("ion_of_notes_pages"));
+    assert!(body.contains("ion_of_notes_blocks"));
+    assert!(body.contains("ion_of_notes_members"));
+    assert!(body.contains("ion_of_notes_workspace_version"));
+    assert!(body.contains("ion_of_notes_sync_seq"));
+    assert!(body.contains("ion_of_notes_request_log_entries"));
 }
 
 #[tokio::test]

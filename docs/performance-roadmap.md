@@ -39,11 +39,11 @@ remain staged.
 | ---- | ------------------ | ------------------- |
 | Asynchronous remote CRUD | Requires a UI request/response model and loading states; it is a product change, not a local refactor. | Add a background command queue with per-request cancellation and a busy indicator. |
 | CRDT coverage for structure/properties/databases | Needs a merge model for ordered rows, property schemas and deletions. | Start with one object family (database rows) and define its conflict semantics. |
-| Awareness queue while offline | The WebSocket currently drops awareness when disconnected. | Keep the latest awareness per member and flush on reconnect. |
-| Multi-line remote caret overlay | The current overlay approximates first-line positions. | Project the CRDT selection through the text layout and test wrapped paragraphs. |
+| Awareness queue while offline | Fixed in spec-122: a one-entry pending cursor is flushed on reconnect. | Add a fixed-port reconnect integration test if the harness becomes stable. |
+| Multi-line remote caret overlay | Fixed in spec-123: carets and selections use the laid-out galley. | Add bidi affinity tests if the target scripts require them. |
 | Per-block persistence | Page rows are incremental (spec-114); block-level tables add schema and migration complexity. | Add a block table only if page-row size becomes a measured problem above ~20k blocks. |
 | PostgreSQL / Redis | SQLite is single-node and the deployment story is intentionally small. | Keep the ports; add a PostgreSQL adapter and a shared limiter only when multi-node is a real requirement. |
-| Load and contention tests | `tests/perf.rs` now covers workspace size; multi-instance SQLite contention is still unmeasured. | Add a shared-limiter contention test before multi-node work. |
+| Load and contention tests | `tests/perf.rs` covers workspace size and spec-125 covers mixed invariants; multi-client latency is still unmeasured. | Add a gated `tests/load.rs` with p50/p95 read/write timings before multi-node work. |
 | Webhook I/O under the workspace lock | Fixed in spec-117: events queue, the worker sends outside the lock and applies results afterwards. | Keep the worker single and add idempotency keys for at-least-once delivery. |
 | Query-level database pagination | Fixed in spec-118: index selection plus `PageWindow` materializes only the requested slice. | Add keyset cursors on property values if cursor stability becomes a requirement. |
 | Renderer height tree | Fixed in spec-119: a Fenwick tree renders only the visible window. | Add a variable-width cache if resizing becomes a measured bottleneck. |

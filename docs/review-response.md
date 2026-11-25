@@ -35,6 +35,10 @@ single place to check whether a finding was fixed, mitigated or planned.
 | Focused text field cloned the workspace every frame | fixed | snapshot only when a text/key event arrives | spec-116, `tests/ui.rs` |
 | Block fingerprint hashed all text; selection was a Vec | fixed | cheap metadata fingerprint and `HashSet` | spec-116 |
 | String-prefix connection identity | fixed | `ConnectionKind` | spec-116 |
+| Offline awareness lost while disconnected | fixed | one-entry pending cursor flushed on reconnect (spec-122) | `tests/remote.rs` |
+| Multi-line remote caret used a first-line width | fixed | galley row geometry and per-row selection (spec-123) | `tests/ui.rs` |
+| Observability stopped at request/webhook counters | fixed | pages, blocks, members, version, sync, request-log gauges (spec-124) | `tests/web.rs` |
+| No randomized invariant coverage | fixed | deterministic mixed-mutation fuzz test (spec-125) | `tests/model.rs` |
 | Webhook network I/O under the global mutex | fixed | events queue in the outbox; the worker sends outside the lock (spec-117) | `tests/webhooks.rs` |
 | Database view pagination after loading every row | fixed | index selection + `PageWindow`; only the requested slice is cloned (spec-118) | `tests/model.rs`, `tests/pagination.rs` |
 | Renderer still visits every block; height tree absent | fixed | Fenwick height index renders only the visible window (spec-119) | `tests/ui.rs`, screenshot |
@@ -76,17 +80,14 @@ authorization boundary.
 | ------- | ------------ | ------------------- |
 | Asynchronous remote CRUD | Requires a UI request model and loading states | `docs/performance-roadmap.md` |
 | CRDT coverage for structure/properties/databases | Needs conflict semantics per object family | `docs/performance-roadmap.md` |
-| Awareness queue while offline | WebSocket lifecycle work | `docs/performance-roadmap.md` |
-| Multi-line caret overlay | Text-layout projection work | `docs/performance-roadmap.md` |
 | Per-block persistence | Page rows are incremental (spec-114); block-level tables would add schema and migration complexity | `docs/performance-roadmap.md` |
 | PostgreSQL / Redis | SQLite is intentionally single-node for now | `docs/performance-roadmap.md` |
 | Password reset / registration / account UI | Product decision and email delivery are missing | `docs/authorization.md`, roadmap |
 | Browser UI | Out of scope for the desktop-first product | roadmap |
 | Block anchors for inline comments | Needs a comment model change | roadmap |
 | Release artifacts / prebuilt binaries | CI packaging work | roadmap |
-| Observability beyond `/metrics` | Tracing/outbox/sync-lag metrics | roadmap |
 | PowerShell-free quality gate | A pure-cargo fallback is a tooling task | roadmap |
-| Fuzzing and load tests | A dedicated test-infrastructure slice | roadmap |
+| Load/contention harness | The invariant fuzz test is in place; multi-client latency baselines remain | `docs/performance-roadmap.md` |
 
 ## 4. Review scope and limitations
 

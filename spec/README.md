@@ -159,6 +159,10 @@ Status vocabulary:
 | [119](spec-119-block-height-index.md) | Block height index | implemented | Fenwick tree, visible-window rendering |
 | [120](spec-120-http-auth-seam-and-parser-hardening.md) | HTTP auth seam and parser hardening | implemented | One authentication seam; bounded parsing |
 | [121](spec-121-single-serving-path.md) | Single serving path | implemented | `serve_on` hands the listener to Axum |
+| [122](spec-122-offline-awareness-queue.md) | Offline awareness queue | implemented | One-entry pending cursor flushed on reconnect |
+| [123](spec-123-galley-remote-caret.md) | Galley-based remote caret overlay | implemented | Row-accurate caret and multi-line selection |
+| [124](spec-124-workspace-sync-observability.md) | Workspace and sync observability | implemented | Pages/blocks/version/sync metrics |
+| [125](spec-125-workspace-invariant-fuzz.md) | Workspace invariant fuzz | implemented | Deterministic mixed-mutation invariants |
 
 ## 3. Work status
 

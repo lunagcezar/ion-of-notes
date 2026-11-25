@@ -9,5 +9,5 @@ mod cursors;
 mod heights;
 mod page;
 
-pub use cursors::index_cursors;
+pub use cursors::{index_cursors, selection_rects};
 pub(crate) use page::render_content;

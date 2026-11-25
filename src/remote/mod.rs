@@ -26,14 +26,17 @@ use tokio::sync::{broadcast, mpsc};
 use tokio_tungstenite::tungstenite::Message;
 
 enum WsCommand {
-    Awareness(Awareness),
+    /// Wake the socket loop to flush the latest pending awareness.
+    Awareness,
 }
 
+mod awareness;
 mod crdt;
 mod http;
 mod realtime;
 mod session;
 
+pub use awareness::PendingAwareness;
 use http::{agent, execute, get_json};
 use realtime::spawn_ws;
 pub use session::{
@@ -160,6 +163,9 @@ pub struct RemoteApi {
     rest: RemoteRest,
     realtime_rx: Arc<Mutex<Option<broadcast::Receiver<ServerMessage>>>>,
     ws_tx: mpsc::Sender<WsCommand>,
+    /// Latest cursor that could not be handed to the socket yet. Bounded to one
+    /// entry; reconnecting flushes it.
+    pending_awareness: Arc<PendingAwareness>,
 }
 
 impl RemoteApi {
@@ -171,17 +177,20 @@ impl RemoteApi {
         let workspace_id = workspace.settings.id;
         let (realtime_tx, realtime_rx) = broadcast::channel(256);
         let (ws_tx, ws_rx) = mpsc::channel(64);
+        let pending_awareness = Arc::new(PendingAwareness::new());
         spawn_ws(
             rest.base.clone(),
             rest.token.clone(),
             workspace_id,
             realtime_tx.clone(),
             ws_rx,
+            Arc::clone(&pending_awareness),
         );
         Ok(Self {
             rest,
             realtime_rx: Arc::new(Mutex::new(Some(realtime_rx))),
             ws_tx,
+            pending_awareness,
         })
     }
 

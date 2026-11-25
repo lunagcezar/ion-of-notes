@@ -42,16 +42,16 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (336 tests across the two feature passes, 2026-11-24)
+## 3. Test-crate map (339 tests across the two feature passes, 2026-11-24)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
-| `tests/model.rs` | 29 | entities, tree, search, diff, index, settings, comments, view indices, JSON round-trip |
+| `tests/model.rs` | 30 | entities, tree, search, diff, index, settings, comments, view indices, invariant fuzz, JSON round-trip |
 | `tests/server.rs` | 14 | routes, envelopes, status codes, HTTP parse/format, malformed framing, concurrent loopback |
 | `tests/collab.rs` | 12 | members, shares, access resolution, sync log, versions, export, realtime contract |
 | `tests/authorization.rs` | 8 | direct and nested page shares, workspace/search/sync projections, CRDT and webhook scope |
 | `tests/security.rs` | 9 | auth boundary, owner token, login budgets, password resolution, session growth |
-| `tests/ui.rs` | 30 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, catalog normalization |
+| `tests/ui.rs` | 31 | palette, block menu, status colors, commit plan, debounce, invite parsing, Library filters, settings matcher/row filtering, search cache, frame mutation gate, cursor index, caret geometry, catalog normalization |
 | `tests/client.rs` | 15 | typed client methods, v1/v2 error mapping, retry policy, encode/decode failures |
 | `tests/contract.rs` | 20 | v2 versioning, structured errors, auth, capabilities, request IDs, HTTP headers |
 | `tests/routes.rs` | 5 | declarative route policy: capability, owner-only, page-scoped, block limit |
@@ -66,7 +66,7 @@ flowchart TD
 | `tests/realtime.rs` | 7 | WebSocket auth, ready, backlog, live change, presence, awareness, ping |
 | `tests/crdt.rs` | 3 | Yrs convergence, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 5 | client Yrs diff, empty-sync baseline, projection, convergence |
-| `tests/remote.rs` | 5 | login, remote REST/CRDT and WebSocket change/awareness, remembered session |
+| `tests/remote.rs` | 6 | login, remote REST/CRDT and WebSocket change/awareness, pending awareness, remembered session |
 | `tests/auth.rs` | 7 | Argon2id, login, logout, demo token, sessions, SQLite restart, password-file secret |
 | `tests/sqlite_store.rs` | 4 | workspace/collab round-trip, accounts/sessions, JSON migration |
 | `tests/limits.rs` | 14 | rate/workspace budgets, size/block boundaries, block limit, 409/503/529, Retry-After |
@@ -89,10 +89,10 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 294 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 296 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
-# 43 desktop tests: the four UI crates, with the default-on desktop feature
+# 44 desktop tests: the four UI crates, with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
 
 cargo clippy --all-targets -- -D warnings
@@ -103,10 +103,10 @@ cargo fmt --check
 pwsh -File scripts/quality.ps1
 ```
 
-`cargo test --all-targets` runs all 336 default-feature tests with the
+`cargo test --all-targets` runs all 339 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 337 unique tests because each feature pass includes its
+(spec-048) and cover 340 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam
