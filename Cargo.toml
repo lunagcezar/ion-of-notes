@@ -37,6 +37,15 @@ ureq = { version = "3.5.1", features = ["rustls"] }
 yrs = "0.28.1"
 base64 = "0.23.1"
 
+# Windows-only: explicit DACL for the remembered session token (spec-127).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System_Threading",
+] }
+
 [[bin]]
 name = "ion-of-notes"
 path = "src/main.rs"

@@ -43,9 +43,16 @@ fn write_private_file(path: &Path, text: &str) -> io::Result<()> {
     }
     #[cfg(not(unix))]
     {
-        // Windows does not expose a portable file ACL through std; the file
-        // inherits the user profile directory's ACL. Documented limitation.
-        std::fs::write(path, text)?;
+        // Create the file before applying the DACL so the token is never
+        // written to an unhardened path.
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)?;
+        super::windows_acl::restrict_to_current_user(path)?;
+        file.write_all(text.as_bytes())?;
     }
     Ok(())
 }

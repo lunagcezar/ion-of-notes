@@ -47,6 +47,7 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Shared limits    | SQLite `rate_limits` + `RateLimitStore` | Multi-server workspace budgets (spec-041)        |
 | CRDT             | Yrs per-page text documents         | Server merge (042) + client session/awareness (043) |
 | Remote desktop   | ureq REST + tokio-tungstenite WS    | Remembered session + background connect (spec-055)   |
+| Windows ACL      | windows-sys (target-specific)       | Owner-only DACL for `remote-session.json` (spec-127) |
 | Deployment       | Docker multi-stage + Compose + Caddy | `ion-of-notes-server`, production TLS stack, secrets, `/ready`, `/metrics` (specs 050-056) |
 | IDs / time       | `uuid` (v4), `chrono`               | Stable page/block ids and display timestamps        |
 | Tests            | `cargo test` (integration crates)   | One file per module in `tests/`, no external framework |
@@ -172,6 +173,7 @@ src/
   remote/
     awareness.rs   one-entry pending cursor flushed on reconnect
     realtime.rs    reconnect loop, change/awareness messages
+    windows_acl.rs current-user DACL for the session file (Windows only)
   client.rs        Client<A: WorkspaceApi> — the only UI-facing data access
   client/
     retry.rs       RetryPolicy + RetryDecision
@@ -696,10 +698,11 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
-| `cargo test --all-targets --no-default-features` | Core integration tests (296, no desktop stack) |
+| `cargo test --all-targets --no-default-features` | Core integration tests (297, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (44) |
-| `cargo test --all-targets`               | All default-feature tests (339; the core-only seam test is skipped) |
+| `cargo test --all-targets`               | All default-feature tests (340; the core-only seam test is skipped) |
 | `ION_OF_NOTES_PERF=1 cargo test --no-default-features --test perf -- --nocapture` | Opt-in 1k/10k/50k block load/search/CRDT timings |
+| `ION_OF_NOTES_LOAD=1 cargo test --no-default-features --test load -- --nocapture` | Opt-in 8-thread read/write p50/p95 under the workspace lock |
 | `cargo clippy --all-targets -- -D warnings` | Lint gate                             |
 | `cargo fmt --check`                      | Formatting gate                          |
 | `pwsh -File scripts/quality.ps1`         | Full gate: fmt, clippy, core + desktop tests, docs |

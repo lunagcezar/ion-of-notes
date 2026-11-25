@@ -9,7 +9,7 @@ in what order, and which document is the source of truth for each concern.
 | -------- | ------------------ |
 | New contributor | `README.md` → `docs/architecture.md` → `docs/contributor-guide.md` → `docs/testing.md` → `docs/glossary.md` |
 | Agent starting a task | `AGENTS.md` → `spec/README.md` → `docs/architecture.md` → the relevant spec → `docs/review-findings.md` |
-| Working on the server/API | `docs/api-contract.md` → `docs/security-hardening.md` → `docs/authorization.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014 |
+| Working on the server/API | `docs/api-contract.md` → `docs/security-hardening.md` → `docs/authorization.md` → `docs/public-api-analysis.md` → `docs/api-observations.md` → `docs/clean-room.md` → ADR-003/ADR-006/ADR-007/ADR-008/ADR-009/ADR-010/ADR-011/ADR-012/ADR-013/ADR-014/ADR-015 |
 | Reviewing a security finding | `docs/review-response.md` → `docs/security-hardening.md` → `docs/authorization.md` → the relevant spec |
 | Deploying the server | `docs/deployment.md` → `compose.yml` → `Dockerfile` → `spec-050`/`spec-051` |
 | Reviewing quality | `docs/review-findings.md` → `docs/refactoring-roadmap.md` → `docs/testing.md` → `CHANGELOG.md` |
@@ -43,7 +43,7 @@ in what order, and which document is the source of truth for each concern.
   (deterministic performance harness); `spec-098` is implemented
   (sidebar command grouping); `spec-099` is implemented
   (block/comment DTO separation); `spec-100` is implemented
-  (domain events for webhook-emitting writes); `spec-101`-`spec-125` implement
+  (domain events for webhook-emitting writes); `spec-101`-`spec-127` implement
   the performance pass (frame mutation gating, normalized emoji filtering,
   cursor indexing, search-body reuse, frame tracing, a shared expanded set, a
   bounded awareness queue, the background remote request worker, an incremental
@@ -155,7 +155,7 @@ flowchart TD
 | `docs/reverse-engineering-log.md` | reviewers, agents | Auditable clean-room log of observations vs inferences |
 | `docs/visual-reference-inventory.md` | UI contributors | What the 72 `screenshots/` pictures show and their gaps |
 | `docs/unknowns.md` | everyone | Open reconstruction questions and their status |
-| `docs/adr-001..014` | maintainers | Accepted architecture, API, modularization, clean-room, storage and transport decisions |
+| `docs/adr-001..015` | maintainers | Accepted architecture, API, modularization, clean-room, storage and transport decisions |
 | `scripts/README.md` | contributors, agents | Reusable link/Mermaid/table/test/quality checks |
 | `spec/README.md` | everyone | Spec index, status, and the SDD lifecycle |
 | `CHANGELOG.md` | everyone | What changed, in what spec, with verification notes |

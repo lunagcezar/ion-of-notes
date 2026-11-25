@@ -39,11 +39,12 @@ single place to check whether a finding was fixed, mitigated or planned.
 | Multi-line remote caret used a first-line width | fixed | galley row geometry and per-row selection (spec-123) | `tests/ui.rs` |
 | Observability stopped at request/webhook counters | fixed | pages, blocks, members, version, sync, request-log gauges (spec-124) | `tests/web.rs` |
 | No randomized invariant coverage | fixed | deterministic mixed-mutation fuzz test (spec-125) | `tests/model.rs` |
+| No concurrent latency baseline | fixed | opt-in 8-thread read/write p50/p95 harness (spec-126) | `tests/load.rs` |
 | Webhook network I/O under the global mutex | fixed | events queue in the outbox; the worker sends outside the lock (spec-117) | `tests/webhooks.rs` |
 | Database view pagination after loading every row | fixed | index selection + `PageWindow`; only the requested slice is cloned (spec-118) | `tests/model.rs`, `tests/pagination.rs` |
 | Renderer still visits every block; height tree absent | fixed | Fenwick height index renders only the visible window (spec-119) | `tests/ui.rs`, screenshot |
 | Hand-written loopback HTTP parser and three HTTP layers | fixed | shared auth seam, bounded parser (spec-120) and `serve_on` now uses Axum (spec-121) | `tests/server.rs`, `tests/contract.rs` |
-| Windows session-file ACL | deferred | inherits the profile ACL; keychain/ACL work is platform-specific | roadmap |
+| Windows session-file ACL | fixed | explicit current-user DACL through `windows-sys` (spec-127) | `tests/remote.rs` |
 
 The security items above are enforced server-side. The desktop UI is not an
 authorization boundary.
@@ -87,7 +88,7 @@ authorization boundary.
 | Block anchors for inline comments | Needs a comment model change | roadmap |
 | Release artifacts / prebuilt binaries | CI packaging work | roadmap |
 | PowerShell-free quality gate | A pure-cargo fallback is a tooling task | roadmap |
-| Load/contention harness | The invariant fuzz test is in place; multi-client latency baselines remain | `docs/performance-roadmap.md` |
+| Multi-process SQLite contention | The in-process load harness is in place; multi-instance contention needs a shared database | `docs/performance-roadmap.md` |
 
 ## 4. Review scope and limitations
 

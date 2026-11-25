@@ -106,6 +106,17 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   lookup, child filtering, block ownership, breadcrumbs, search and block
   counts after every step.
 
+### Added - spec-126 lock-contention harness
+
+- `tests/load.rs` (opt-in with `ION_OF_NOTES_LOAD=1`) runs eight threads of
+  mixed reads/writes against a 1,000-page workspace and prints p50/p95/max.
+
+### Security - spec-127 Windows session-file DACL
+
+- Added a Windows-only `windows-sys` adapter that creates the remote-session
+  file, applies an owner-only DACL, and only then writes the token.
+- Recorded the dependency decision in ADR-015.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

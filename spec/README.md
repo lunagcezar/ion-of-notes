@@ -163,6 +163,8 @@ Status vocabulary:
 | [123](spec-123-galley-remote-caret.md) | Galley-based remote caret overlay | implemented | Row-accurate caret and multi-line selection |
 | [124](spec-124-workspace-sync-observability.md) | Workspace and sync observability | implemented | Pages/blocks/version/sync metrics |
 | [125](spec-125-workspace-invariant-fuzz.md) | Workspace invariant fuzz | implemented | Deterministic mixed-mutation invariants |
+| [126](spec-126-lock-contention-harness.md) | Lock-contention harness | implemented | Opt-in 8-thread read/write p50/p95 |
+| [127](spec-127-windows-session-acl.md) | Windows session-file DACL | implemented | Owner-only ACL before the token write |
 
 ## 3. Work status
 

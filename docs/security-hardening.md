@@ -45,8 +45,9 @@ session token. The reverse proxy is not an authentication layer.
   the same `401`, reducing user-enumeration timing differences.
 - The remembered remote session is written with mode `0600` on Unix; an
   existing file is tightened with `set_permissions` before the token is
-  rewritten. On Windows the file relies on the user profile's ACL; use a
-  dedicated OS account for the desktop app.
+  rewritten. On Windows the file is created empty, receives an owner-only DACL
+  through `SetNamedSecurityInfoW` (`remote/windows_acl.rs`), and only then gets
+  the token. A DACL failure aborts the save. See ADR-015.
 - `ConnectionKind` distinguishes a persisted session from the local demo owner;
   logout does not depend on a `"session-"` id prefix.
 
@@ -141,7 +142,5 @@ if the host network must be restricted beyond the IP checks.
 - No external security audit.
 - Webhook delivery runs outside the workspace mutex; only the synchronous
   `process_webhook_deliveries` test/tooling wrapper sends inline.
-- Windows session-file ACLs are inherited from the profile rather than set
-  explicitly.
 - The loopback HTTP/1.1 parser/formatter remains as a bounded test helper;
   `serve_on` and `--serve` use the Axum router.

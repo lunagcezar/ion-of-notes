@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (339 tests across the two feature passes, 2026-11-24)
+## 3. Test-crate map (340 tests across the two feature passes, 2026-11-24)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -82,6 +82,7 @@ flowchart TD
 | `tests/i18n.rs` | 2 | key completeness across locales, fallback |
 | `tests/deployment.rs` | 6 | Dockerfile, Compose hardening, Caddy TLS, build profiles, toolchain pins |
 | `tests/perf.rs` | 1 | opt-in load/serialize/search/CRDT timings at 1k/10k/50k blocks |
+| `tests/load.rs` | 1 | opt-in 8-thread read/write p50/p95 under the workspace lock |
 | `tests/smoke.rs` | 1 | real listener: health/ready/metrics and authenticated v2 workspace |
 | `tests/screenshot.rs` | 2 | `ColorImage` → RGBA, PNG output |
 | `tests/integration.rs` | 1 | client → server → store end to end |
@@ -89,7 +90,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 296 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 297 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 44 desktop tests: the four UI crates, with the default-on desktop feature
@@ -103,10 +104,10 @@ cargo fmt --check
 pwsh -File scripts/quality.ps1
 ```
 
-`cargo test --all-targets` runs all 339 default-feature tests with the
+`cargo test --all-targets` runs all 340 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 340 unique tests because each feature pass includes its
+(spec-048) and cover 341 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam

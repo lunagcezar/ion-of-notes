@@ -35,6 +35,8 @@ mod crdt;
 mod http;
 mod realtime;
 mod session;
+#[cfg(windows)]
+mod windows_acl;
 
 pub use awareness::PendingAwareness;
 use http::{agent, execute, get_json};
