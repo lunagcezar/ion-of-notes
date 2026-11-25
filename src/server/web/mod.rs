@@ -11,7 +11,8 @@
 use super::http::retry_after_seconds;
 use super::realtime::{ClientMessage, PresenceMember, RealtimeHub, ServerMessage};
 use super::{
-    ApiRequest, ApiResponse, Connection, Method, RequestTransport, WorkspaceServer, parse_bearer,
+    ApiRequest, ApiResponse, Connection, Method, RequestTransport, WorkspaceServer,
+    WorkspaceSnapshot, parse_bearer,
 };
 use crate::collab::Change;
 
@@ -50,10 +51,38 @@ const REQUEST_TIMEOUT_SECS: u64 = 30;
 #[derive(Clone)]
 struct AppState {
     server: Arc<Mutex<WorkspaceServer>>,
-    /// Immutable workspace snapshot for read-only v1 routes (spec-111).
-    snapshot: Arc<RwLock<Option<Arc<crate::model::Workspace>>>>,
+    /// Immutable workspace snapshot for read-only routes (spec-111, spec-150).
+    snapshot: Arc<RwLock<Option<WorkspaceSnapshot>>>,
     started: Instant,
     requests: Arc<AtomicU64>,
+}
+
+/// Reuse the cached read snapshot until the workspace or collaboration version
+/// changes, otherwise clone both documents once (while the caller holds the
+/// server lock) and cache the pair.
+pub(crate) fn workspace_snapshot(
+    server: &WorkspaceServer,
+    cache: &RwLock<Option<WorkspaceSnapshot>>,
+) -> WorkspaceSnapshot {
+    let version = server.workspace.version;
+    let collab_version = server.collab.version;
+    if let Ok(guard) = cache.read()
+        && let Some(cached) = guard.as_ref()
+        && cached.version == version
+        && cached.collab_version == collab_version
+    {
+        return cached.clone();
+    }
+    let snapshot = WorkspaceSnapshot {
+        workspace: Arc::new(server.workspace.clone()),
+        collab: Arc::new(server.collab.clone()),
+        version,
+        collab_version,
+    };
+    if let Ok(mut guard) = cache.write() {
+        *guard = Some(snapshot.clone());
+    }
+    snapshot
 }
 
 /// Build the Axum router around one server instance.

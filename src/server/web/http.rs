@@ -1,7 +1,12 @@
 use super::*;
-use crate::model::{Page, PageSummary, Workspace};
-use crate::server::response::{forbidden, json, not_found, service_unavailable, unauthorized};
-use crate::server::{Connection, Envelope, ReadView};
+use crate::model::{Page, PageSummary};
+use crate::server::contract::{CODE_NOT_FOUND, CODE_RESTRICTED_RESOURCE};
+use crate::server::pagination::PageRequest;
+use crate::server::response::{
+    forbidden, json, not_found, query_value, service_unavailable, unauthorized, v2_error,
+    v2_list_response,
+};
+use crate::server::{Connection, Envelope, V2ReadContext, WorkspaceSnapshot, new_request_id};
 use axum::extract::ConnectInfo;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{OnceLock, RwLock};
@@ -47,6 +52,11 @@ pub(super) async fn handle(State(state): State<AppState>, request: Request) -> R
         client_ip,
     };
 
+    if api_request.method == Method::Get
+        && let Some(response) = snapshot_v2_read(&state, &api_request).await
+    {
+        return to_http(response);
+    }
     if api_request.method == Method::Get
         && let Some(response) = snapshot_read(&state, &api_request).await
     {
@@ -96,13 +106,13 @@ async fn snapshot_read(state: &AppState, request: &ApiRequest) -> Option<ApiResp
 
 fn read_snapshot(
     server: &std::sync::Mutex<WorkspaceServer>,
-    cache: &RwLock<Option<Arc<Workspace>>>,
+    cache: &RwLock<Option<WorkspaceSnapshot>>,
     request: &ApiRequest,
 ) -> Option<ApiResponse> {
     let path = request.path.split('?').next().unwrap_or("");
     // Hold the lock only long enough to authenticate and take the snapshot;
     // projection and JSON serialization run after it is released (spec-143).
-    let (connection, workspace, collab) = {
+    let (connection, snapshot) = {
         let guard = server
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -110,14 +120,14 @@ fn read_snapshot(
             Ok(connection) => connection,
             Err(response) => return Some(response),
         };
-        let workspace = snapshot_for(&guard, cache);
-        let collab = guard.collab.clone();
-        (connection, workspace, collab)
+        let snapshot = workspace_snapshot(&guard, cache);
+        (connection, snapshot)
     };
-    let view = ReadView::new(&workspace, &collab);
+    let view = snapshot.view();
+    let workspace = &snapshot.workspace;
     if path == "/api/workspace" {
         let projected = if view.is_owner(&connection) {
-            (*workspace).clone()
+            (**workspace).clone()
         } else {
             view.project_workspace(&connection)
         };
@@ -153,22 +163,117 @@ fn authenticate(server: &WorkspaceServer, request: &ApiRequest) -> Result<Connec
         })
 }
 
-fn snapshot_for(
-    server: &WorkspaceServer,
-    cache: &RwLock<Option<Arc<Workspace>>>,
-) -> Arc<Workspace> {
-    let version = server.workspace.version;
-    if let Ok(guard) = cache.read()
-        && let Some(cached) = guard.as_ref()
-        && cached.version == version
+/// Serve the heavy v2 GET routes from an immutable snapshot: version, auth,
+/// rate-limit and capability checks run under the lock, then projection and
+/// serialization run after it is released (spec-150).
+async fn snapshot_v2_read(state: &AppState, request: &ApiRequest) -> Option<ApiResponse> {
+    let path = request.path.split('?').next().unwrap_or("");
+    let is_page = path
+        .strip_prefix("/api/v2/pages/")
+        .is_some_and(|id| !id.is_empty() && !id.contains('/'));
+    if path != "/api/v2/workspace"
+        && path != "/api/v2/pages"
+        && path != "/api/v2/search"
+        && !is_page
     {
-        return Arc::clone(cached);
+        return None;
     }
-    let workspace = Arc::new(server.workspace.clone());
-    if let Ok(mut guard) = cache.write() {
-        *guard = Some(Arc::clone(&workspace));
+    let server = Arc::clone(&state.server);
+    let cache = Arc::clone(&state.snapshot);
+    let prepare_request = request.clone();
+    let request_id = new_request_id();
+    let prepared = tokio::task::spawn_blocking(move || {
+        let mut guard = server
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match guard.prepare_v2_read(&prepare_request, &request_id, &cache) {
+            Ok(context) => Ok(context),
+            Err(mut response) => {
+                let status = response.status;
+                response.request_id = Some(request_id.clone());
+                guard.record_request(&prepare_request, status, &request_id);
+                Err(response)
+            }
+        }
+    })
+    .await
+    .ok()?;
+    let context = match prepared {
+        Ok(context) => context,
+        Err(response) => return Some(response),
+    };
+    let response = build_v2_read(&context);
+    let status = response.status;
+    let log_id = context.request_id.clone();
+    let server = Arc::clone(&state.server);
+    let log_request = request.clone();
+    tokio::task::spawn_blocking(move || {
+        if let Ok(mut guard) = server.lock() {
+            guard.record_request(&log_request, status, &log_id);
+        }
+    })
+    .await
+    .ok()?;
+    Some(ApiResponse {
+        request_id: Some(context.request_id),
+        ..response
+    })
+}
+
+fn build_v2_read(context: &V2ReadContext) -> ApiResponse {
+    let view = context.snapshot.view();
+    let workspace = &context.snapshot.workspace;
+    let request_id = &context.request_id;
+    if context.path == "/api/v2/workspace" {
+        let projected = if view.is_owner(&context.connection) {
+            (**workspace).clone()
+        } else {
+            view.project_workspace(&context.connection)
+        };
+        return json(200, Envelope::ok(projected));
     }
-    workspace
+    if context.path == "/api/v2/pages" {
+        let page = match PageRequest::from_query(&context.query) {
+            Ok(page) => page,
+            Err(error) => {
+                return v2_error(400, error.code(), error.message(), request_id, None);
+            }
+        };
+        let items: Vec<PageSummary> = if view.is_owner(&context.connection) {
+            workspace.pages.iter().map(Page::summary).collect()
+        } else {
+            view.visible_page_summaries(&context.connection)
+        };
+        return v2_list_response(items, &page, "pages", "page", request_id);
+    }
+    if context.path == "/api/v2/search" {
+        let page = match PageRequest::from_query(&context.query) {
+            Ok(page) => page,
+            Err(error) => {
+                return v2_error(400, error.code(), error.message(), request_id, None);
+            }
+        };
+        let q = query_value(&context.query, "q");
+        let results = view.visible_search(&context.connection, &q);
+        let sort = format!("search:{q}");
+        return v2_list_response(results, &page, &sort, "search_result", request_id);
+    }
+    let Some(page_id) = context.path.strip_prefix("/api/v2/pages/") else {
+        return v2_error(404, CODE_NOT_FOUND, "unknown route", request_id, None);
+    };
+    if !view.can_read_page(&context.connection, page_id) {
+        return v2_error(
+            403,
+            CODE_RESTRICTED_RESOURCE,
+            "read access to this page is not allowed",
+            request_id,
+            Some(serde_json::json!({ "required_access": "read" })),
+        );
+    }
+    match workspace.page(page_id) {
+        Some(page) => json(200, Envelope::ok(page.clone())),
+        None => v2_error(404, CODE_NOT_FOUND, "page not found", request_id, None),
+    }
 }
 
 fn api_method(method: &str) -> Option<Method> {

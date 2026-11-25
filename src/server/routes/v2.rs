@@ -11,6 +11,56 @@ impl WorkspaceServer {
     /// Dispatch a v2 request: version, auth, capability, then the shared v1
     /// use case. The v2 layer changes the envelope/error shape and adds a
     /// request id; it does not duplicate the business logic.
+    /// Prepare a v2 GET that can be served from an immutable snapshot.
+    ///
+    /// Runs the same version, auth, rate-limit, capability and route
+    /// authorization checks as `handle_v2`, then returns the snapshot so the
+    /// HTTP adapter can project and serialize after releasing the lock
+    /// (spec-150).
+    pub(crate) fn prepare_v2_read(
+        &mut self,
+        request: &ApiRequest,
+        request_id: &str,
+        cache: &std::sync::RwLock<Option<crate::server::WorkspaceSnapshot>>,
+    ) -> Result<crate::server::V2ReadContext, ApiResponse> {
+        let (path, query) = match request.path.split_once('?') {
+            Some((p, q)) => (p, q),
+            None => (request.path.as_str(), ""),
+        };
+        pipeline::check_version(request, request_id)?;
+        let connection = pipeline::authenticate(self, request, request_id)?;
+        self.set_actor(&connection.member_id);
+        pipeline::check_runtime(self, &connection, request, path, request_id)?;
+        pipeline::check_capability(&connection, request, path, request_id)?;
+        pipeline::check_authorization(self, &connection, request, path, request_id)?;
+        // Mirrors `handle_v2_inner`: generated defaults are part of the
+        // workspace view, and a change bumps the snapshot version.
+        let before = (
+            self.workspace.databases.len(),
+            self.workspace.data_sources.len(),
+            self.workspace.views.len(),
+        );
+        self.workspace.ensure_data_sources();
+        self.workspace.ensure_views();
+        if before
+            != (
+                self.workspace.databases.len(),
+                self.workspace.data_sources.len(),
+                self.workspace.views.len(),
+            )
+        {
+            self.workspace.version = self.workspace.version.wrapping_add(1);
+        }
+        let snapshot = crate::server::web::workspace_snapshot(self, cache);
+        Ok(crate::server::V2ReadContext {
+            request_id: request_id.to_string(),
+            connection,
+            path: path.to_string(),
+            query: query.to_string(),
+            snapshot,
+        })
+    }
+
     pub(super) fn handle_v2(&mut self, request: &ApiRequest) -> ApiResponse {
         let request_id = new_request_id();
         let (path, query) = match request.path.split_once('?') {

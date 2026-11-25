@@ -244,7 +244,12 @@ The format follows "Keep a Changelog" and the SDD cycle described in
 - `POST /api/v2/realtime/ticket` exchanges a session for a 30 s, single-use ticket; the socket accepts a Bearer header or `?ticket=`.
 - `?token=` on the WebSocket URL is rejected, and tests use the header.
 
-### Performance - spec-147 viewport-limited sidebar tree
+### Performance - spec-150 v2 reads from an immutable snapshot
+
+- `WorkspaceSnapshot` caches workspace + collaboration by version; v2 workspace/pages/search/page reads project and serialize after releasing the workspace lock.
+- `CollabState::version` bumps on every recorded change so the cache is invalidated by writes.
+
+### Security - spec-149 release checksums
 
 - The sidebar flattens the expanded tree and paints only rows intersecting the clip rect, allocating the rest for the scroll range.
 
@@ -1743,6 +1748,7 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   for each spec was observed before implementation. `cargo build` and
   `cargo test` are clean and green, and `--screenshot` was compared by eye
   with the 29 reference pictures after each build.
+
 
 
 

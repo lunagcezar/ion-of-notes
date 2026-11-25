@@ -260,6 +260,10 @@ pub struct CollabState {
     pub shares: Vec<Share>,
     pub changes: std::collections::VecDeque<Change>,
     pub next_seq: u64,
+    /// Bumped by every recorded change; keys the read snapshot cache
+    /// (spec-150).
+    #[serde(default)]
+    pub version: u64,
     #[serde(default)]
     pub versions: Vec<PageVersion>,
     #[serde(default)]
@@ -305,6 +309,7 @@ impl CollabState {
             }],
             changes: std::collections::VecDeque::new(),
             next_seq: 1,
+            version: 0,
             versions: Vec::new(),
             webhooks: Vec::new(),
             webhook_deliveries: Vec::new(),
@@ -390,6 +395,7 @@ impl CollabState {
             actor: actor.to_string(),
         };
         self.next_seq += 1;
+        self.version = self.version.wrapping_add(1);
         self.changes.push_back(change.clone());
         if self.changes.len() > MAX_CHANGES {
             let excess = self.changes.len() - MAX_CHANGES;

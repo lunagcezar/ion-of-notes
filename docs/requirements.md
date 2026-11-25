@@ -392,6 +392,9 @@ capabilities) is implemented; the rest are planned.
   URL (implemented in `spec-148`).
 - FR-118: Tagged releases publish a deterministic `SHA256SUMS` after every
   platform archive (implemented in `spec-149`).
+- FR-119: V2 workspace, page, page-detail and search reads use a version-keyed
+  immutable snapshot and project/serialize outside the workspace lock
+  (implemented in `spec-150`).
 
 ## 2. Non-functional requirements
 
@@ -577,6 +580,7 @@ capabilities) is implemented; the rest are planned.
 | FR-116 (implemented)          | `spec-147-sidebar-virtualization.md` |
 | FR-117 (implemented)          | `spec-148-websocket-tickets.md` |
 | FR-118 (implemented)          | `spec-149-release-checksums.md` |
+| FR-119 (implemented)          | `spec-150-v2-snapshot-reads.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

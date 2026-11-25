@@ -351,3 +351,38 @@ async fn unknown_route_returns_a_structured_404() {
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(error(&body).code, "object_not_found");
 }
+
+#[tokio::test]
+async fn v2_snapshot_reads_are_invalidated_by_writes() {
+    let app = router(server());
+    let (status, _, body) = send(&app, v2_request("GET", "/api/v2/workspace", None)).await;
+    assert_eq!(status, StatusCode::OK);
+    let before: Envelope<Workspace> = serde_json::from_str(&body).unwrap();
+    let before = before.data.expect("workspace").pages.len();
+
+    let draft = serde_json::json!({
+        "title": "Snapshot page",
+        "icon": "",
+        "parent": null,
+    })
+    .to_string();
+    let (status, _, _) = send(&app, v2_request("POST", "/api/v2/pages", Some(draft))).await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, _, body) = send(&app, v2_request("GET", "/api/v2/workspace", None)).await;
+    assert_eq!(status, StatusCode::OK);
+    let after: Envelope<Workspace> = serde_json::from_str(&body).unwrap();
+    assert_eq!(after.data.expect("workspace").pages.len(), before + 1);
+
+    let (status, _, body) = send(&app, v2_request("GET", "/api/v2/search?q=Snapshot", None)).await;
+    assert_eq!(status, StatusCode::OK);
+    let results: Envelope<ListResponse<serde_json::Value>> = serde_json::from_str(&body).unwrap();
+    let results = results.data.expect("search list");
+    assert!(
+        results
+            .results
+            .iter()
+            .any(|item| item["page_title"] == "Snapshot page"),
+        "{body}"
+    );
+}

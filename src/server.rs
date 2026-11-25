@@ -24,6 +24,35 @@ use std::time::Duration;
 mod authentication;
 mod authorization;
 pub use authorization::ReadView;
+
+/// Immutable workspace + collaboration pair used by read-only HTTP paths
+/// (spec-150). The version pair lets the adapter reuse the snapshot until the
+/// next mutation.
+#[derive(Clone)]
+pub struct WorkspaceSnapshot {
+    pub workspace: Arc<Workspace>,
+    pub collab: Arc<CollabState>,
+    pub version: u64,
+    pub collab_version: u64,
+}
+
+impl WorkspaceSnapshot {
+    /// A borrowed read view over this snapshot.
+    pub fn view(&self) -> ReadView<'_> {
+        ReadView::new(&self.workspace, &self.collab)
+    }
+}
+
+/// Prepared context for a v2 GET served from an immutable snapshot
+/// (spec-150). The version, authentication, rate-limit, capability and route
+/// authorization checks already ran under the server lock.
+pub struct V2ReadContext {
+    pub request_id: String,
+    pub connection: Connection,
+    pub path: String,
+    pub query: String,
+    pub snapshot: WorkspaceSnapshot,
+}
 mod contract;
 pub mod crdt;
 mod error;
@@ -622,6 +651,21 @@ impl WorkspaceServer {
     /// HTTP response and (in a production adapter) to structured logs.
     pub fn request_log(&self) -> &[RequestLogEntry] {
         &self.runtime.request_log
+    }
+
+    /// Append one v2 request-log entry (used by the snapshot read fast path,
+    /// which records after the response body is built).
+    pub fn record_request(&mut self, request: &ApiRequest, status: u16, request_id: &str) {
+        self.runtime.request_log.push(RequestLogEntry {
+            request_id: request_id.to_string(),
+            method: request.method.as_str().to_string(),
+            path: request.path.clone(),
+            status,
+        });
+        if self.runtime.request_log.len() > self.runtime.request_log_cap {
+            let excess = self.runtime.request_log.len() - self.runtime.request_log_cap;
+            self.runtime.request_log.drain(0..excess);
+        }
     }
 
     /// Number of registered runtime connections (the demo owner only in local

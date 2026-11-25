@@ -42,7 +42,7 @@ flowchart TD
 | End-to-end | client + server + store work together | milliseconds |
 | Visual checks | the window still matches the reference pictures | seconds, manual |
 
-## 3. Test-crate map (368 tests across the two feature passes, 2026-11-25)
+## 3. Test-crate map (369 tests across the two feature passes, 2026-11-25)
 
 | File | Tests | Covers |
 | ---- | ----: | ------ |
@@ -63,7 +63,7 @@ flowchart TD
 | `tests/comments.rs` | 9 | comment CRUD/pagination, anchors, attachments, users, file uploads |
 | `tests/webhooks.rs` | 16 | subscriptions, verification, signatures, outbox/worker, delivery/retry, dead letter/requeue |
 | `tests/shared_limits.rs` | 3 | SQLite shared workspace budget, window reset and four-connection contention |
-| `tests/web.rs` | 15 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, projections, `/ready`, `/metrics` |
+| `tests/web.rs` | 16 | Axum adapter, request IDs, Retry-After, body limits, query strings, webhooks, projections, `/ready`, `/metrics` |
 | `tests/realtime.rs` | 9 | WebSocket auth, ready/backlog/resync, live change, presence, awareness, ping, message budget |
 | `tests/crdt.rs` | 6 | Yrs convergence, structure/property/row registers, server projection, WebSocket CRDT sync |
 | `tests/ui_crdt.rs` | 7 | client Yrs diff, structure/property/row planning, empty-sync baseline, projection, convergence |
@@ -94,7 +94,7 @@ flowchart TD
 Run the two feature passes:
 
 ```sh
-# 318 core tests: no eframe/egui/wgpu, no binary and no UI test crates
+# 319 core tests: no eframe/egui/wgpu, no binary and no UI test crates
 cargo test --all-targets --no-default-features
 
 # 51 desktop tests: the four UI crates, with the default-on desktop feature
@@ -120,10 +120,10 @@ ION_OF_NOTES_POSTGRES_TEST_URL=... ION_OF_NOTES_REDIS_TEST_URL=... \
   --test postgres_store --test redis_limits
 ```
 
-`cargo test --all-targets` runs all 368 default-feature tests with the
+`cargo test --all-targets` runs all 369 default-feature tests with the
 `desktop` feature, but it links the window into every test binary. Prefer the
 two passes above; they are the gate used by `scripts/check-tests.ps1`
-(spec-048) and cover 369 unique tests because each feature pass includes its
+(spec-048) and cover 370 unique tests because each feature pass includes its
 own seam test.
 
 ### 3.1 Build profile and feature seam
@@ -413,6 +413,7 @@ public Notion service.
 - [ ] `--screenshot` was checked if the UI changed.
 - [ ] Requirements, data model, ADR, docs and `CHANGELOG.md` are updated.
 - [ ] The spec is committed with a message naming it.
+
 
 
 
