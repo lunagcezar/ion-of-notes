@@ -71,7 +71,7 @@ authorization boundary.
 | Finding | What is done | What remains |
 | ------- | ------------ | ------------ |
 | Principal-aware authorization | Direct and nested resources, projections, CRDT/WebSocket, webhooks and export are enforced (spec-115) | Client-side hiding and page-level-only grant granularity |
-| Session storage | Session tokens are hashed at rest; remote session file is private on Unix | OS keychain integration and explicit Windows ACLs are not implemented |
+| Session storage | Session tokens are hashed at rest; the remote session file is private on Unix and has an owner-only DACL on Windows (spec-127) | OS credential-store/keychain integration would be a further hardening step |
 | Webhook egress | Private hosts are rejected and the validated DNS answer is pinned | An operator egress allowlist is still recommended |
 | Documentation | Security, authorization, persistence, performance and review response are documented | Architecture/API status text still needs a full reconciliation pass |
 
