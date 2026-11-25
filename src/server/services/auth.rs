@@ -129,6 +129,7 @@ impl WorkspaceServer {
             }
             // The demo owner token is not a persisted session; keep it usable.
             if connection.kind == crate::server::contract::ConnectionKind::Session {
+                self.invalidate_session(&connection.token);
                 self.runtime
                     .connections
                     .retain(|existing| existing.token != connection.token);

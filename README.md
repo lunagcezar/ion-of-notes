@@ -319,7 +319,7 @@ Accepted values: `library`, `share`, `inbox`, `settings`, `settings-general`,
 
 ```sh
 cargo build
-# 315 core tests without eframe/egui/wgpu
+# 316 core tests without eframe/egui/wgpu
 cargo test --all-targets --no-default-features
 # 48 desktop tests with the default-on desktop feature
 cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot
@@ -327,7 +327,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-`cargo test --all-targets` still runs all default-feature tests (362), but the
+`cargo test --all-targets` still runs all default-feature tests (363), but the
 two passes above avoid linking the window into the core test binaries.
 
 Full gate, including Markdown link/Mermaid/table checks:
@@ -406,7 +406,7 @@ src/
   screenshot.rs    PNG output (desktop feature)
   cli.rs           argument parsing
   i18n.rs          locale switching
-tests/             one integration-test crate per module (315 tests)
+tests/             one integration-test crate per module (316 tests)
 Dockerfile         multi-stage server-only image
 compose.yml        development/self-hosted server stack
 compose.prod.yml   production app + Caddy TLS + optional backup profile
@@ -523,6 +523,7 @@ directly to the public internet without TLS termination, a reverse proxy,
 backups and a security review. The development owner password must not be used
 in production; set `secrets/owner_password.txt` (or
 `ION_OF_NOTES_OWNER_PASSWORD`) before the first SQLite run.
+
 
 
 

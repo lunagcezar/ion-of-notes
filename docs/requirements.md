@@ -379,6 +379,9 @@ capabilities) is implemented; the rest are planned.
   workspace lock before projecting and serializing (implemented in `spec-143`).
 - FR-113: Block lookup uses a derived block→page map with verified fallback,
   refreshed after structural changes (implemented in `spec-144`).
+- FR-114: Resolved bearer sessions are cached for a short TTL, bounded and
+  invalidated on logout, while the auth store stays the source of truth
+  (implemented in `spec-145`).
 
 ## 2. Non-functional requirements
 
@@ -559,6 +562,7 @@ capabilities) is implemented; the rest are planned.
 | FR-111 (implemented)          | `spec-142-actor-identity-and-session-errors.md` |
 | FR-112 (implemented)          | `spec-143-read-view-outside-lock.md` |
 | FR-113 (implemented)          | `spec-144-block-page-index.md` |
+| FR-114 (implemented)          | `spec-145-session-cache.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

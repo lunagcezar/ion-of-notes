@@ -213,3 +213,75 @@ fn owner_password_file_is_trimmed_and_empty_is_rejected() {
 
     common::remove(&path);
 }
+
+#[derive(Default)]
+struct CountingAuthStore {
+    inner: MemoryAuthStore,
+    lookups: std::sync::Arc<std::sync::atomic::AtomicU64>,
+}
+
+impl AuthStore for CountingAuthStore {
+    fn find_account(&self, email: &str) -> std::io::Result<Option<Account>> {
+        self.inner.find_account(email)
+    }
+    fn upsert_account(&self, account: &Account) -> std::io::Result<()> {
+        self.inner.upsert_account(account)
+    }
+    fn save_session(&self, session: &Session) -> std::io::Result<()> {
+        self.inner.save_session(session)
+    }
+    fn find_session(&self, token_hash: &str) -> std::io::Result<Option<Session>> {
+        self.lookups
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.inner.find_session(token_hash)
+    }
+    fn delete_session(&self, token_hash: &str) -> std::io::Result<()> {
+        self.inner.delete_session(token_hash)
+    }
+    fn prune_sessions(&self, now: &str) -> std::io::Result<()> {
+        self.inner.prune_sessions(now)
+    }
+}
+
+#[test]
+fn resolved_sessions_are_cached_and_invalidated_on_logout() {
+    use std::sync::Arc;
+    use std::sync::atomic::Ordering;
+
+    let workspace = Workspace::seed("session-cache");
+    let collab = CollabState::new();
+    let store = CountingAuthStore::default();
+    let lookups = Arc::clone(&store.lookups);
+    let token = "sess_cache_test";
+    store
+        .save_session(&Session {
+            token_hash: hash_token(token),
+            member_id: collab.owner_id(),
+            created_at: now_iso(),
+            expires_at: (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
+        })
+        .expect("session");
+    let server =
+        WorkspaceServer::with_stores_and_auth(workspace, collab, NoStore, NoCollabStore, store);
+
+    assert!(server.resolve_connection(token).expect("first").is_some());
+    assert!(server.resolve_connection(token).expect("cached").is_some());
+    assert_eq!(
+        lookups.load(Ordering::Relaxed),
+        1,
+        "second lookup is cached"
+    );
+
+    server.invalidate_session(token);
+    assert!(
+        server
+            .resolve_connection(token)
+            .expect("after logout")
+            .is_some()
+    );
+    assert_eq!(
+        lookups.load(Ordering::Relaxed),
+        2,
+        "invalidated session goes back to the store"
+    );
+}

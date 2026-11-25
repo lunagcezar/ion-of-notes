@@ -182,6 +182,7 @@ Status vocabulary:
 | [142](spec-142-actor-identity-and-session-errors.md) | Actor identity and session errors | implemented | Member attribution and 503 on store failure |
 | [143](spec-143-read-view-outside-lock.md) | Read view outside the workspace lock | implemented | Shared authorization macro + v1 projection after unlock |
 | [144](spec-144-block-page-index.md) | Block-to-page index | implemented | Derived map with verified fallback |
+| [145](spec-145-session-cache.md) | Bounded session cache | implemented | TTL + FIFO cap, invalidated on logout |
 
 ## 3. Work status
 
@@ -239,5 +240,6 @@ Where the code goes and why.
 6. A retired spec keeps a status note at the top and is not silently rewritten.
 7. Historical plans keep their checkboxes honest: `[x]` only when the item is
    actually done, with a note when a later spec completed it.
+
 
 

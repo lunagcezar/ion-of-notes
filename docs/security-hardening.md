@@ -127,6 +127,13 @@ Webhook URLs are validated in two layers:
 Remaining limitation: the process still needs an operator-level egress policy
 if the host network must be restricted beyond the IP checks.
 
+## 5.1 Session cache
+
+Resolved bearer sessions are cached in memory for 30 seconds (bounded at 1024
+entries, FIFO). Logout removes the entry immediately; any other revocation is
+observed within the TTL. The auth store remains the source of truth and a store
+failure is still answered with 503.
+
 ## 6. Operational checklist
 
 - [ ] Set a strong owner password or mount a secret file.
@@ -148,3 +155,4 @@ if the host network must be restricted beyond the IP checks.
   `process_webhook_deliveries` test/tooling wrapper sends inline.
 - The loopback HTTP/1.1 parser/formatter remains as a bounded test helper;
   `serve_on` and `--serve` use the Axum router.
+

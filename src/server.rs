@@ -279,6 +279,56 @@ struct Runtime {
     shared_rate_store: Option<Arc<dyn crate::store::RateLimitStore>>,
     uploads_dir: std::path::PathBuf,
     actor: Option<String>,
+    session_cache: std::sync::Mutex<SessionCache>,
+}
+
+/// Bounded, short-lived cache of resolved bearer sessions (spec-145).
+///
+/// The auth store remains the source of truth; the cache only avoids a store
+/// round trip per request. Entries expire after [`SESSION_CACHE_TTL`] and are
+/// removed on logout, so a revoked session stops working within that window.
+struct SessionCache {
+    entries: std::collections::HashMap<String, (Connection, std::time::Instant)>,
+    order: std::collections::VecDeque<String>,
+    cap: usize,
+}
+
+const SESSION_CACHE_TTL: Duration = Duration::from_secs(30);
+const SESSION_CACHE_CAP: usize = 1024;
+
+impl SessionCache {
+    fn new() -> Self {
+        Self {
+            entries: std::collections::HashMap::new(),
+            order: std::collections::VecDeque::new(),
+            cap: SESSION_CACHE_CAP,
+        }
+    }
+
+    fn get(&mut self, token_hash: &str, now: std::time::Instant) -> Option<Connection> {
+        let (connection, expires_at) = self.entries.get(token_hash)?;
+        if *expires_at <= now {
+            self.remove(token_hash);
+            return None;
+        }
+        Some(connection.clone())
+    }
+
+    fn insert(&mut self, token_hash: String, connection: Connection, now: std::time::Instant) {
+        if self.entries.len() >= self.cap
+            && let Some(oldest) = self.order.pop_front()
+        {
+            self.entries.remove(&oldest);
+        }
+        self.order.push_back(token_hash.clone());
+        self.entries
+            .insert(token_hash, (connection, now + SESSION_CACHE_TTL));
+    }
+
+    fn remove(&mut self, token_hash: &str) {
+        self.entries.remove(token_hash);
+        self.order.retain(|key| key != token_hash);
+    }
 }
 
 /// Keep the in-memory request log bounded (spec-073).
@@ -400,6 +450,7 @@ impl WorkspaceServer {
                     .map(|dir| dir.join("uploads"))
                     .unwrap_or_else(|| std::env::temp_dir().join("ion-of-notes-uploads")),
                 actor: None,
+                session_cache: std::sync::Mutex::new(SessionCache::new()),
             },
             webhooks: WebhookRuntime {
                 allow_insecure: false,
@@ -443,6 +494,15 @@ impl WorkspaceServer {
             return Ok(Some(connection.clone()));
         }
         let token_hash = auth::hash_token(token);
+        if let Some(connection) = self
+            .runtime
+            .session_cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(&token_hash, std::time::Instant::now())
+        {
+            return Ok(Some(connection));
+        }
         let Some(session) = self.persistence.auth_store.find_session(&token_hash)? else {
             return Ok(None);
         };
@@ -455,7 +515,7 @@ impl WorkspaceServer {
             .members
             .iter()
             .find(|member| member.id == session.member_id);
-        Ok(member.map(|member| {
+        let connection = member.map(|member| {
             Connection::new(
                 format!("session-{}", member.id),
                 token,
@@ -463,7 +523,25 @@ impl WorkspaceServer {
                 self.workspace.settings.id.clone(),
                 capabilities_for_role(member.role),
             )
-        }))
+        });
+        if let Some(connection) = &connection {
+            self.runtime
+                .session_cache
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .insert(token_hash, connection.clone(), std::time::Instant::now());
+        }
+        Ok(connection)
+    }
+
+    /// Drop a cached session (logout or explicit revocation).
+    pub fn invalidate_session(&self, token: &str) {
+        let token_hash = auth::hash_token(token);
+        self.runtime
+            .session_cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .remove(&token_hash);
     }
 
     /// The workspace role of a connection, if its member still exists.
