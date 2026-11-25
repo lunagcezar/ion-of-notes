@@ -286,6 +286,8 @@ session.
 | `ION_OF_NOTES_ALLOW_DEFAULT_PASSWORD` | unset | `1` allows the development owner password in debug builds only |
 | `ION_OF_NOTES_ALLOW_INSECURE_SERVER` | unset | `1` allows an unauthenticated `NoAuthStore` server on a non-loopback address (isolated development only) |
 | `ION_OF_NOTES_TRUSTED_PROXIES` | loopback only | Comma-separated proxy IPs (or `*`) whose `X-Forwarded-For` / `X-Real-IP` are trusted |
+| `ION_OF_NOTES_POSTGRES_URL` | unset | Use PostgreSQL for workspace/collab/auth (build with `--features postgres`) |
+| `ION_OF_NOTES_REDIS_URL` | unset | Use Redis for shared rate limits (build with `--features redis`) |
 | `ION_OF_NOTES_BIND` | `127.0.0.1` | Host bind address published by `compose.yml` |
 | `ION_OF_NOTES_PORT` | `8787` | Host port published by `compose.yml` |
 | `ION_OF_NOTES_SHOW` | unset | Open one pictured UI state for screenshots |

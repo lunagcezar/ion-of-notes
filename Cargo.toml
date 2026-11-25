@@ -11,6 +11,10 @@ default-run = "ion-of-notes"
 # `--no-default-features` so they do not link eframe/egui/wgpu.
 default = ["desktop"]
 desktop = ["dep:eframe", "dep:egui", "dep:image"]
+# Optional external stores (spec-137). Enable with `--features postgres,redis`.
+postgres = ["dep:postgres"]
+redis = ["dep:redis"]
+external = ["postgres", "redis"]
 
 [dependencies]
 eframe = { version = "0.37", optional = true }
@@ -36,6 +40,8 @@ tokio-tungstenite = "0.29.0"
 ureq = { version = "3.5.1", features = ["rustls"] }
 yrs = "0.28.1"
 base64 = "0.23.1"
+postgres = { version = "0.19", optional = true }
+redis = { version = "0.32", optional = true }
 
 # Windows-only: explicit DACL for the remembered session token (spec-127).
 [target.'cfg(windows)'.dependencies]

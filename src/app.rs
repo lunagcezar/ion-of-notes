@@ -118,11 +118,63 @@ pub fn build_server_at_paths(
 /// The desktop binary and the server-only binary share this wiring, so the
 /// JSON/SQLite choice and the listener startup exist once.
 pub fn serve(addr: &str, database: Option<PathBuf>) -> io::Result<()> {
-    let server = match database {
+    #[cfg(feature = "postgres")]
+    if let Ok(url) = std::env::var("ION_OF_NOTES_POSTGRES_URL") {
+        let mut server = build_server_postgres(&url)?;
+        configure_redis(&mut server)?;
+        return crate::server::serve_axum(addr, server);
+    }
+
+    let mut server = match database {
         Some(database) => build_server_sqlite(database)?,
         None => build_server()?,
     };
+    configure_redis(&mut server)?;
     crate::server::serve_axum(addr, server)
+}
+
+/// Compose a server backed by PostgreSQL, migrating the JSON documents when the
+/// database is empty.
+#[cfg(feature = "postgres")]
+pub fn build_server_postgres(url: &str) -> io::Result<WorkspaceServer> {
+    use crate::store::SnapshotStore;
+
+    let postgres = store::PostgresStore::open(url)?;
+    let workspace_path = store::data_path();
+    let collab_path = store::collab_path();
+    let collab = match postgres.load_collab()? {
+        Some(collab) => collab,
+        None => store::load_collab_or_seed(&collab_path),
+    };
+    let workspace = match postgres.load_workspace()? {
+        Some(workspace) => workspace,
+        None => {
+            let workspace = store::load_or_seed(&workspace_path)?;
+            postgres.persist_snapshots(&workspace, &collab)?;
+            workspace
+        }
+    };
+    seed_owner_account(&postgres, &collab, None)?;
+    let mut server = WorkspaceServer::with_stores_and_auth(
+        workspace,
+        collab,
+        postgres.clone(),
+        postgres.clone(),
+        postgres.clone(),
+    );
+    server.use_snapshot_store(postgres);
+    Ok(server)
+}
+
+/// Replace the shared rate limiter with Redis when configured.
+fn configure_redis(server: &mut WorkspaceServer) -> io::Result<()> {
+    #[cfg(feature = "redis")]
+    if let Ok(url) = std::env::var("ION_OF_NOTES_REDIS_URL") {
+        let store = store::RedisRateLimitStore::open(&url)?;
+        server.use_shared_rate_limits(Arc::new(store));
+    }
+    let _ = server;
+    Ok(())
 }
 
 /// Compose a server backed by SQLite, migrating the default JSON documents
@@ -179,8 +231,8 @@ pub fn build_server_sqlite_at_with_password(
     Ok(server)
 }
 
-fn seed_owner_account(
-    store: &SqliteStore,
+fn seed_owner_account<A: AuthStore>(
+    store: &A,
     collab: &CollabState,
     explicit_password: Option<&str>,
 ) -> io::Result<()> {

@@ -174,6 +174,7 @@ Status vocabulary:
 | [134](spec-134-crdt-structure-properties-rows.md) | CRDT structure/properties/rows | implemented | Yrs maps for block order, page properties and row cells |
 | [135](spec-135-desktop-crdt-operations.md) | Desktop CRDT operations | implemented | Session seeds/projects and plans object-map updates |
 | [136](spec-136-inline-comment-threads.md) | Inline comment threads | implemented | Anchored threads rendered in the page panel |
+| [137](spec-137-postgres-and-redis.md) | PostgreSQL and Redis adapters | implemented | Optional persistence/auth + shared rate limits |
 
 ## 3. Work status
 

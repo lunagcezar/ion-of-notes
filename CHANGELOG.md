@@ -187,6 +187,15 @@ The format follows "Keep a Changelog" and the SDD cycle described in
   inline comments can be deleted through the v2 client.
 - Strings are localized in en, pt-BR and eo.
 
+### Added - spec-137 PostgreSQL and Redis
+
+- Optional `postgres` feature: `PostgresStore` implements workspace,
+  collaboration, snapshot and auth ports with the SQLite schema posture.
+- Optional `redis` feature: `RedisRateLimitStore` keeps shared fixed-window
+  budgets in Redis with an atomic Lua INCR/EXPIRE.
+- `ION_OF_NOTES_POSTGRES_URL` and `ION_OF_NOTES_REDIS_URL` select them at
+  startup; default builds remain JSON/SQLite-only. Recorded in ADR-016.
+
 ### Performance - spec-101..spec-110
 
 - Skip the per-frame workspace clone and diff on idle and popup-only frames

@@ -354,6 +354,10 @@ capabilities) is implemented; the rest are planned.
   databases, data sources, views, CRDT sync/update and WebSocket messages,
   enforces the owning page's read/write share; workspace, page lists, search
   and sync return a principal-aware projection (implemented in `spec-115`).
+- FR-106: Optional PostgreSQL persistence/authentication and Redis shared rate
+  limits are available behind the `postgres`/`redis` features and selected via
+  `ION_OF_NOTES_POSTGRES_URL`/`ION_OF_NOTES_REDIS_URL` (implemented in
+  `spec-137`).
 
 ## 2. Non-functional requirements
 
@@ -526,6 +530,7 @@ capabilities) is implemented; the rest are planned.
 | FR-76 (implemented)           | `spec-028-i18n-coverage.md` |
 | FR-77 (implemented)           | `spec-027-onboarding-and-templates.md` |
 | FR-105 (implemented)          | `spec-115-resource-scoped-authorization.md` |
+| FR-106 (implemented)          | `spec-137-postgres-and-redis.md` |
 
 ## 4. Scope notes (see `docs/unknowns.md` and ADR-003)
 

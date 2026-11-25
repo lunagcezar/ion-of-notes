@@ -41,6 +41,8 @@ and in `docs/adr-002-architecture-guidelines.md`.
 | Display fonts    | Segoe UI (Windows system fonts)     | Optional bold "Strong" family; egui built-ins are the fallback |
 | Server transport | Axum 0.8 + Tokio + Tower/Tower-HTTP | Optional HTTP server for `--serve` (spec-038)        |
 | Persistence      | JSON files + `rusqlite` (bundled)   | `SqliteStore` behind the existing store ports (spec-039) |
+| PostgreSQL       | `postgres` (optional `postgres`)    | Workspace/collab/auth adapter (spec-137)             |
+| Redis            | `redis` (optional `redis`)          | Shared fixed-window rate limits (spec-137)           |
 | Auth             | Argon2id + opaque sessions          | Hashed passwords and session tokens (spec-039)      |
 | Real-time        | Axum WebSocket + Tokio broadcast    | Change feed, presence and resume (spec-040)          |
 | Webhooks         | ureq + rustls, no redirects         | Persistent outbox, background worker, dead-letter store (spec-054) |
@@ -142,6 +144,8 @@ src/
   store.rs         WorkspaceStore + CollabStore + AuthStore ports, JSON/null adapters
   store/
     sqlite.rs      SQLite adapter for workspace, collaboration and auth (spec-039)
+    postgres.rs    optional PostgreSQL adapter (feature `postgres`, spec-137)
+    redis_store.rs optional Redis rate-limit store (feature `redis`, spec-137)
   server.rs        facade: contract DTOs, WorkspaceApi, WorkspaceServer state
                    (Persistence, Runtime, WebhookRuntime), constructors,
                    persistence helpers
@@ -699,6 +703,8 @@ routes stay stable. Full analysis: `docs/public-api-analysis.md`.
 | `cargo build`                            | Build the desktop app (default `desktop` feature) |
 | `cargo build --no-default-features`      | Build the core library without eframe/egui/wgpu |
 | `cargo build --release --no-default-features --bin ion-of-notes-server` | Build the headless server binary |
+| `cargo build --no-default-features --features postgres,redis` | Build the server with external stores |
+| `cargo test --no-default-features --features postgres,redis --test postgres_store --test redis_limits` | Opt-in PostgreSQL/Redis integration tests (need URLs) |
 | `cargo test --all-targets --no-default-features` | Core integration tests (307, no desktop stack) |
 | `cargo test --features desktop --test ui --test fidelity --test ui_crdt --test screenshot` | Desktop UI tests (48) |
 | `cargo test --all-targets`               | All default-feature tests (354; the core-only seam test is skipped) |

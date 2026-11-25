@@ -98,6 +98,8 @@ src/
   store/
     sqlite.rs        SQLite adapter for metadata, pages, blocks, collaboration,
                      auth and atomic snapshots
+    postgres.rs      optional PostgreSQL adapter (feature `postgres`, spec-137)
+    redis_store.rs   optional Redis rate-limit store (feature `redis`, spec-137)
   server.rs          facade: contract DTOs, transport traits, WorkspaceServer state,
                      constructors, persistence and top-level dispatch
   server/

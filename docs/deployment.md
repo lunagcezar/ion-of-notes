@@ -311,3 +311,23 @@ The workflow builds with `--locked` and uses `gh release upload --clobber`, so a
 re-run replaces the same asset names. Signing, macOS bundles and installers
 remain separate packaging work. For the container path, use `compose.yml` or
 `compose.prod.yml` as described above.
+
+## 12. Optional PostgreSQL and Redis
+
+Build the headless server with the optional adapters:
+
+```sh
+cargo build --release --no-default-features --features postgres,redis --bin ion-of-notes-server
+```
+
+Then set:
+
+- `ION_OF_NOTES_POSTGRES_URL` switches workspace, collaboration and auth to
+  PostgreSQL. An empty database is seeded from the JSON documents and the
+  configured owner password; tables are created idempotently.
+- `ION_OF_NOTES_REDIS_URL` switches the shared rate limiter to Redis on any
+  backend.
+
+Without the features the variables are ignored. SQLite remains the default
+zero-service store. Real-time WebSocket fan-out is still per process; running
+multiple server instances needs a shared change feed or sticky routing.

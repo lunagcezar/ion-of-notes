@@ -84,6 +84,8 @@ flowchart TD
 | `tests/perf.rs` | 1 | opt-in load/serialize/search/CRDT timings at 1k/10k/50k blocks |
 | `tests/load.rs` | 1 | opt-in 8-thread read/write p50/p95 under the workspace lock |
 | `tests/docs.rs` | 1 | relative links, table columns and Mermaid fences |
+| `tests/postgres_store.rs` | opt-in | PostgreSQL workspace/collab/auth round-trip |
+| `tests/redis_limits.rs` | opt-in | Redis fixed-window shared limit |
 | `tests/smoke.rs` | 1 | real listener: health/ready/metrics and authenticated v2 workspace |
 | `tests/screenshot.rs` | 2 | `ColorImage` → RGBA, PNG output |
 | `tests/integration.rs` | 1 | client → server → store end to end |
@@ -106,6 +108,12 @@ pwsh -File scripts/quality.ps1
 
 # PowerShell-free equivalent (docs checks are in tests/docs.rs):
 sh scripts/quality.sh
+
+# Optional external stores:
+cargo check --no-default-features --features postgres,redis
+ION_OF_NOTES_POSTGRES_TEST_URL=... ION_OF_NOTES_REDIS_TEST_URL=... \
+  cargo test --no-default-features --features postgres,redis \
+  --test postgres_store --test redis_limits
 ```
 
 `cargo test --all-targets` runs all 354 default-feature tests with the

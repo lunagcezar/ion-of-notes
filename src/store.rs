@@ -14,6 +14,14 @@ use serde::de::DeserializeOwned;
 
 pub mod sqlite;
 pub use sqlite::SqliteStore;
+#[cfg(feature = "postgres")]
+pub mod postgres;
+#[cfg(feature = "postgres")]
+pub use postgres::PostgresStore;
+#[cfg(feature = "redis")]
+pub mod redis_store;
+#[cfg(feature = "redis")]
+pub use redis_store::RedisRateLimitStore;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
